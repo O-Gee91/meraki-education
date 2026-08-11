@@ -271,6 +271,14 @@ function ClassDetailPage() {
           <ClassFeed scope={{ classId }} />
         </TabsContent>
 
+        <TabsContent value="files" className="mt-4">
+          <FileLibrary
+            classId={classId}
+            emptyLabel="No class files yet. Upload handouts, slides, spreadsheets or video."
+          />
+        </TabsContent>
+
+
         <TabsContent value="seating">
           <SeatingPlan
             classId={classId}
