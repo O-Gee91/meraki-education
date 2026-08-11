@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       announcements: {
         Row: {
+          audience: Database["public"]["Enums"]["post_audience"]
           author_id: string | null
           body: string
           class_id: string | null
@@ -24,6 +25,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          audience?: Database["public"]["Enums"]["post_audience"]
           author_id?: string | null
           body: string
           class_id?: string | null
@@ -32,6 +34,7 @@ export type Database = {
           title: string
         }
         Update: {
+          audience?: Database["public"]["Enums"]["post_audience"]
           author_id?: string | null
           body?: string
           class_id?: string | null
@@ -254,6 +257,7 @@ export type Database = {
       }
       calendar_events: {
         Row: {
+          audience: Database["public"]["Enums"]["post_audience"]
           category: string
           class_id: string | null
           created_at: string
@@ -268,6 +272,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience?: Database["public"]["Enums"]["post_audience"]
           category?: string
           class_id?: string | null
           created_at?: string
@@ -282,6 +287,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience?: Database["public"]["Enums"]["post_audience"]
           category?: string
           class_id?: string | null
           created_at?: string
@@ -1064,6 +1070,10 @@ export type Database = {
     }
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
+      can_see_audience: {
+        Args: { _audience: Database["public"]["Enums"]["post_audience"] }
+        Returns: boolean
+      }
       can_view_class: { Args: { _class_id: string }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
@@ -1079,6 +1089,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "parent"
+      post_audience: "everyone" | "students" | "parents" | "teachers"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1207,6 +1218,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "teacher", "student", "parent"],
+      post_audience: ["everyone", "students", "parents", "teachers"],
     },
   },
 } as const
