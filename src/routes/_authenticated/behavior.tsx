@@ -49,8 +49,8 @@ function BehaviorPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("behavior_notes")
-        .select("id, kind, note, occurred_on, students(first_name, last_name)")
-        .order("occurred_on", { ascending: false })
+        .select("id, kind, notes, date, students(first_name, last_name)")
+        .order("date", { ascending: false })
         .limit(60);
       if (error) throw error;
       return data;
@@ -77,8 +77,8 @@ function BehaviorPage() {
       const { error } = await supabase.from("behavior_notes").insert({
         student_id: form.studentId,
         kind: form.kind,
-        note: form.note.trim().slice(0, 1000),
-        occurred_on: form.date || new Date().toISOString().slice(0, 10),
+        notes: form.note.trim().slice(0, 1000),
+        date: form.date || new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
     },
@@ -174,10 +174,10 @@ function BehaviorPage() {
                     {n.students?.last_name}, {n.students?.first_name}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDate(n.occurred_on)}
+                    {formatDate(n.date)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">{n.note}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{n.notes}</p>
               </article>
             ))
           )}
