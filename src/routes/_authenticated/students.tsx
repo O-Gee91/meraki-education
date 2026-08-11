@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { StudentImport } from "@/components/students/StudentImport";
 
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
@@ -93,10 +94,12 @@ function StudentsPage() {
       title="Students"
       description="The school directory used across gradebook, attendance and billing."
       actions={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>Add student</Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap gap-2">
+          <StudentImport />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>Add student</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add student</DialogTitle>
@@ -159,7 +162,8 @@ function StudentsPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       }
     >
       <Input
