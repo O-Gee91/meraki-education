@@ -26,7 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClassFeed } from "@/components/class/ClassFeed";
+import { ClassPolls } from "@/components/class/ClassPolls";
+import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+
 
 export const Route = createFileRoute("/_authenticated/classes/$classId")({
   head: () => ({
