@@ -46,7 +46,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("teacher");
+  const [role, setRole] = useState("student");
   const [busy, setBusy] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
 
@@ -210,12 +210,14 @@ function AuthPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="admin">School admin</SelectItem>
                         <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="parent">Parent / guardian</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Teacher and admin access is granted by a school administrator after your
+                      account is created.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
