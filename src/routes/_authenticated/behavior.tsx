@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -22,40 +23,78 @@ import { formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/behavior")({
   head: () => ({
     meta: [
-      { title: "Behavior notes — Meraki Education" },
+      { title: "Behavior & strikes — Meraki Education" },
       {
         name: "description",
-        content: "Log positive recognition and concerns, shared with guardians.",
+        content:
+          "Log recognition and concerns, track a three-strike system and auto-schedule detention with family notifications.",
       },
-      { property: "og:title", content: "Behavior notes — Meraki Education" },
+      { property: "og:title", content: "Behavior & strikes — Meraki Education" },
       {
         property: "og:description",
-        content: "Log positive recognition and concerns, shared with guardians.",
+        content:
+          "Three-strike behavior tracking that notifies students, guardians and admins when detention is required.",
       },
     ],
   }),
   component: BehaviorPage,
 });
 
-const KINDS = ["positive", "concern", "incident"] as const;
+const KINDS = ["positive", "concern", "incident", "strike"] as const;
+
+function kindTone(kind: string) {
+  if (kind === "positive") return "default";
+  if (kind === "strike") return "destructive";
+  return "secondary";
+}
 
 function BehaviorPage() {
   const { isStaff } = useAuth();
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
 
-  const { data: notes = [] } = useQuery({
+  return (
+    <AppShell
+      title="Behavior & strikes"
+      description="Recognition, concerns and a three-strike system that schedules detention automatically."
+    >
+      <Tabs defaultValue="log">
+        <TabsList>
+          <TabsTrigger value="log">Behavior log</TabsTrigger>
+          <TabsTrigger value="strikes">Strike tracker</TabsTrigger>
+          <TabsTrigger value="detentions">Detentions</TabsTrigger>
+        </TabsList>
+        <TabsContent value="log">
+          <BehaviorLog isStaff={isStaff} />
+        </TabsContent>
+        <TabsContent value="strikes">
+          <StrikeTracker />
+        </TabsContent>
+        <TabsContent value="detentions">
+          <Detentions isStaff={isStaff} />
+        </TabsContent>
+      </Tabs>
+    </AppShell>
+  );
+}
+
+function useNotes() {
+  return useQuery({
     queryKey: ["behavior"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("behavior_notes")
-        .select("id, kind, notes, date, students(first_name, last_name)")
+        .select("id, kind, notes, date, student_id, students(first_name, last_name)")
         .order("date", { ascending: false })
-        .limit(60);
+        .limit(200);
       if (error) throw error;
       return data;
     },
   });
+}
+
+function BehaviorLog({ isStaff }: { isStaff: boolean }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
+  const { data: notes = [] } = useNotes();
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -81,108 +120,262 @@ function BehaviorPage() {
         date: form.date || new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
+      return form.kind;
     },
-    onSuccess: () => {
-      toast.success("Note logged");
-      setForm({ studentId: "", kind: "positive", note: "", date: "" });
+    onSuccess: (kind) => {
+      toast.success(
+        kind === "strike"
+          ? "Strike logged — every third strike schedules detention and notifies the family"
+          : "Note logged",
+      );
+      setForm({ studentId: "", kind: form.kind, note: "", date: "" });
       queryClient.invalidateQueries({ queryKey: ["behavior"] });
+      queryClient.invalidateQueries({ queryKey: ["detentions"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <AppShell
-      title="Behavior"
-      description="A shared record of recognition and concerns for each student."
-    >
-      <div className="grid gap-6 lg:grid-cols-3">
-        {isStaff && (
-          <section className="panel h-fit p-5">
-            <h2 className="text-lg font-semibold">Log a note</h2>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="student">Student</Label>
-                <Select
-                  value={form.studentId}
-                  onValueChange={(v) => setForm({ ...form, studentId: v })}
-                >
-                  <SelectTrigger id="student">
-                    <SelectValue placeholder="Choose a student" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.last_name}, {s.first_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="kind">Type</Label>
-                <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v })}>
-                  <SelectTrigger id="kind">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KINDS.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {k}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="note">Note</Label>
-                <Textarea
-                  id="note"
-                  value={form.note}
-                  maxLength={1000}
-                  onChange={(e) => setForm({ ...form, note: e.target.value })}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={() => create.mutate()}
-                disabled={create.isPending}
+    <div className="mt-4 grid gap-6 lg:grid-cols-3">
+      {isStaff && (
+        <section className="panel h-fit p-5">
+          <h2 className="text-lg font-semibold">Log a note</h2>
+          <div className="mt-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="student">Student</Label>
+              <Select
+                value={form.studentId}
+                onValueChange={(v) => setForm({ ...form, studentId: v })}
               >
-                {create.isPending ? "Saving…" : "Log note"}
-              </Button>
+                <SelectTrigger id="student">
+                  <SelectValue placeholder="Choose a student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.last_name}, {s.first_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </section>
-        )}
-
-        <section className={`panel divide-y divide-border ${isStaff ? "lg:col-span-2" : "lg:col-span-3"}`}>
-          {notes.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No behavior notes recorded.</p>
-          ) : (
-            notes.map((n) => (
-              <article key={n.id} className="p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={n.kind === "positive" ? "default" : "secondary"}>{n.kind}</Badge>
-                  <span className="text-sm font-medium">
-                    {n.students?.last_name}, {n.students?.first_name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(n.date)}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{n.notes}</p>
-              </article>
-            ))
-          )}
+            <div className="space-y-1.5">
+              <Label htmlFor="kind">Type</Label>
+              <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v })}>
+                <SelectTrigger id="kind">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {KINDS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {k === "strike" ? "strike (counts toward detention)" : k}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="note">Note</Label>
+              <Textarea
+                id="note"
+                value={form.note}
+                maxLength={1000}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+              />
+            </div>
+            <Button className="w-full" onClick={() => create.mutate()} disabled={create.isPending}>
+              {create.isPending ? "Saving…" : "Log note"}
+            </Button>
+            {form.kind === "strike" ? (
+              <p className="text-xs text-muted-foreground">
+                Three strikes automatically schedules detention and messages the student, their
+                guardian and administrators.
+              </p>
+            ) : null}
+          </div>
         </section>
-      </div>
-    </AppShell>
+      )}
+
+      <section
+        className={`panel divide-y divide-border ${isStaff ? "lg:col-span-2" : "lg:col-span-3"}`}
+      >
+        {notes.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">No behavior notes recorded.</p>
+        ) : (
+          notes.map((n) => (
+            <article key={n.id} className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant={kindTone(n.kind)}>{n.kind}</Badge>
+                <span className="text-sm font-medium">
+                  {n.students?.last_name}, {n.students?.first_name}
+                </span>
+                <span className="text-xs text-muted-foreground">{formatDate(n.date)}</span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{n.notes}</p>
+            </article>
+          ))
+        )}
+      </section>
+    </div>
+  );
+}
+
+function StrikeTracker() {
+  const { data: notes = [] } = useNotes();
+
+  const rows = useMemo(() => {
+    const map = new Map<string, { name: string; strikes: number; last: string }>();
+    for (const n of notes) {
+      if (n.kind !== "strike") continue;
+      const name = `${n.students?.last_name ?? "Student"}, ${n.students?.first_name ?? ""}`;
+      const current = map.get(n.student_id);
+      if (current) {
+        current.strikes += 1;
+        if (n.date > current.last) current.last = n.date;
+      } else {
+        map.set(n.student_id, { name, strikes: 1, last: n.date });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.strikes - a.strikes);
+  }, [notes]);
+
+  return (
+    <div className="panel mt-4 p-5">
+      <h2 className="text-sm font-semibold">Three-strike tracker</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Strikes reset in cycles of three — reaching the third strike schedules detention.
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">No strikes on record. </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border">
+          {rows.map((r) => {
+            const inCycle = r.strikes % 3 === 0 ? 3 : r.strikes % 3;
+            return (
+              <li key={r.name} className="flex flex-wrap items-center gap-3 py-3">
+                <span className="text-sm font-medium">{r.name}</span>
+                <span className="flex gap-1">
+                  {[1, 2, 3].map((i) => (
+                    <span
+                      key={i}
+                      className={
+                        "h-2.5 w-6 rounded-full " +
+                        (i <= inCycle ? "bg-destructive" : "bg-secondary")
+                      }
+                    />
+                  ))}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {inCycle}/3 in current cycle · {r.strikes} total · last {formatDate(r.last)}
+                </span>
+                {inCycle === 3 ? (
+                  <Badge variant="destructive" className="ml-auto">
+                    Detention required
+                  </Badge>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const STATUSES = ["scheduled", "served", "waived"] as const;
+
+function Detentions({ isStaff }: { isStaff: boolean }) {
+  const queryClient = useQueryClient();
+
+  const { data: detentions = [] } = useQuery({
+    queryKey: ["detentions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("detentions")
+        .select(
+          "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email)",
+        )
+        .order("scheduled_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const update = useMutation({
+    mutationFn: async (input: { id: string; patch: Record<string, unknown> }) => {
+      const { error } = await supabase.from("detentions").update(input.patch).eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["detentions"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (detentions.length === 0) {
+    return (
+      <p className="panel mt-4 p-6 text-sm text-muted-foreground">
+        No detentions scheduled. They are created automatically when a student reaches three
+        strikes.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      {detentions.map((d) => (
+        <article key={d.id} className="panel flex flex-wrap items-center gap-3 p-4">
+          <div className="min-w-52">
+            <p className="text-sm font-semibold">
+              {d.students?.last_name}, {d.students?.first_name}
+            </p>
+            <p className="text-xs text-muted-foreground">{d.reason}</p>
+          </div>
+          <Badge variant="destructive">{d.strike_count} strikes</Badge>
+          <span className="text-xs text-muted-foreground">
+            Scheduled {formatDate(d.scheduled_date)}
+          </span>
+          {isStaff ? (
+            <div className="ml-auto flex items-center gap-2">
+              <Input
+                type="date"
+                className="w-40"
+                defaultValue={d.scheduled_date}
+                onChange={(e) =>
+                  e.target.value && update.mutate({ id: d.id, patch: { scheduled_date: e.target.value } })
+                }
+              />
+              <Select
+                value={d.status}
+                onValueChange={(status) => update.mutate({ id: d.id, patch: { status } })}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <Badge variant="outline" className="ml-auto">
+              {d.status}
+            </Badge>
+          )}
+        </article>
+      ))}
+    </div>
   );
 }
