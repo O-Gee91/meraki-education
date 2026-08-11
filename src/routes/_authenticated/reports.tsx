@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+import { ElaCatalog } from "@/components/standards/ElaCatalog";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -327,6 +328,7 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
 
   return (
     <div className="mt-4 space-y-4">
+      <ElaCatalog isStaff={isStaff} />
       {isStaff && (
         <div className="panel grid gap-3 p-5 sm:grid-cols-4">
           <div>
