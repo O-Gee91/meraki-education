@@ -13,21 +13,21 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "Meridian — Middle School Gradebook, Attendance & Family Portal" },
+      meta: [
+      { title: "Meraki — K-12 School Gradebook, Attendance & Family Portal" },
       {
         name: "description",
         content:
-          "One platform for grades 6-8: gradebook and assignments, attendance and behavior, family messaging, enrollment applications and tuition invoices.",
+          "One platform for grades 5-9: gradebook and assignments, attendance and behavior, family messaging, enrollment applications and tuition invoices.",
       },
       {
         property: "og:title",
-        content: "Meridian — Middle School Gradebook, Attendance & Family Portal",
+        content: "Meraki — K-12 School Gradebook, Attendance & Family Portal",
       },
       {
         property: "og:description",
         content:
-          "Teachers, students, guardians and admins in one middle school platform: grades, attendance, behavior, messaging, enrollment and tuition.",
+          "Teachers, students, guardians and admins in one K-12 school platform: grades, attendance, behavior, messaging, enrollment and tuition.",
       },
     ],
   }),
@@ -93,7 +93,7 @@ function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <GraduationCap className="size-6 text-accent" />
-            <span className="font-display text-lg font-semibold">Meridian</span>
+            <span className="font-display text-lg font-semibold">Meraki</span>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
@@ -110,10 +110,10 @@ function Landing() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-primary-foreground/70">
-              Grades 6 – 8
+              GRADES 5 – 9
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
-              Simplify teaching for your middle school
+              Simplify teaching for your school
             </h1>
             <p className="mt-5 max-w-lg text-base text-primary-foreground/80">
               Gradebook, attendance, behavior, family messaging, enrollment and tuition — one
@@ -135,7 +135,7 @@ function Landing() {
           </div>
           <img
             src={heroImage}
-            alt="Teacher entering grades on a laptop in a middle school classroom"
+            alt="Teacher entering grades on a laptop in a classroom"
             width={1600}
             height={1100}
             className="rounded-xl shadow-[var(--shadow-float)]"
@@ -190,7 +190,7 @@ function Landing() {
 
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
-          <span>Meridian Middle School Platform</span>
+          <span>Meraki K-12 School Platform</span>
           <Link to="/apply" className="hover:text-foreground">
             Enrollment application
           </Link>
