@@ -12,7 +12,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { provisionStudentAccounts } from "@/lib/roster.functions";
+import { AccountResults, type ProvisionedAccount } from "./AccountResults";
 
 type ParsedRow = {
   first_name: string;
@@ -20,6 +25,7 @@ type ParsedRow = {
   grade_level: number;
   student_number: string | null;
   guardian_email: string | null;
+  student_email: string | null;
 };
 
 const HEADER_MAP: Record<string, keyof ParsedRow> = {
@@ -42,6 +48,10 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   studentid: "student_number",
   "student number": "student_number",
   guardian: "guardian_email",
+  "student email": "student_email",
+  studentemail: "student_email",
+  "school email": "student_email",
+  "student login": "student_email",
   "guardian email": "guardian_email",
   "parent email": "guardian_email",
   email: "guardian_email",
@@ -61,6 +71,9 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   const email = (mapped["guardian_email"] ?? "").toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: `invalid guardian email for ${first} ${last}` };
+  const studentEmail = (mapped["student_email"] ?? "").toLowerCase();
+  if (studentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(studentEmail))
+    return { error: `invalid student email for ${first} ${last}` };
   return {
     row: {
       first_name: first,
@@ -68,6 +81,7 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
       grade_level: grade,
       student_number: (mapped["student_number"] ?? "").slice(0, 20) || null,
       guardian_email: email.slice(0, 255) || null,
+      student_email: studentEmail.slice(0, 255) || null,
     },
   };
 }
@@ -80,11 +94,15 @@ export function StudentImport() {
   const [problems, setProblems] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
+  const [createLogins, setCreateLogins] = useState(true);
+  const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+  const provision = useServerFn(provisionStudentAccounts);
 
   const reset = () => {
     setRows([]);
     setProblems([]);
     setFileName("");
+    setAccounts([]);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -122,15 +140,40 @@ export function StudentImport() {
   const importRows = useMutation({
     mutationFn: async () => {
       if (rows.length === 0) throw new Error("Nothing to import");
-      const { error } = await supabase.from("students").insert(rows);
+      const { data, error } = await supabase
+        .from("students")
+        .insert(rows.map(({ student_email: _ignored, ...rest }) => rest))
+        .select("id, first_name, last_name, guardian_email");
       if (error) throw error;
-      return rows.length;
+
+      let created: ProvisionedAccount[] = [];
+      if (createLogins && data) {
+        const entries = data
+          .map((inserted, i) => ({
+            student_id: inserted.id,
+            first_name: inserted.first_name,
+            last_name: inserted.last_name,
+            student_email: rows[i]?.student_email ?? null,
+            guardian_email: inserted.guardian_email,
+          }))
+          .filter((e) => e.student_email || e.guardian_email);
+        if (entries.length > 0) {
+          const result = await provision({ data: { entries } });
+          created = result.accounts as ProvisionedAccount[];
+        }
+      }
+      return { count: rows.length, accounts: created };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ count, accounts: created }) => {
       toast.success(`Imported ${count} student${count === 1 ? "" : "s"}`);
       queryClient.invalidateQueries({ queryKey: ["students"] });
-      setOpen(false);
-      reset();
+      if (created.length > 0) {
+        setAccounts(created);
+        setRows([]);
+      } else {
+        setOpen(false);
+        reset();
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -151,7 +194,7 @@ export function StudentImport() {
           <DialogTitle>Import students from a spreadsheet</DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
-            First name, Last name, Grade, Student ID and Guardian email.
+            First name, Last name, Grade, Student ID, Student email and Guardian email.
           </DialogDescription>
         </DialogHeader>
 
@@ -216,7 +259,42 @@ export function StudentImport() {
           </div>
         ) : null}
 
+        {accounts.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Accounts created — copy these before closing</p>
+            <AccountResults accounts={accounts} />
+          </div>
+        ) : null}
+
+        <div className="flex items-start gap-2 rounded-md border border-border p-3">
+          <Checkbox
+            id="create-logins"
+            checked={createLogins}
+            onCheckedChange={(v) => setCreateLogins(v === true)}
+          />
+          <div className="space-y-1">
+            <Label htmlFor="create-logins" className="cursor-pointer">
+              Create logins and profiles automatically
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Student and guardian accounts are created with a temporary password wherever an email
+              is provided, then linked to the student profile.
+            </p>
+          </div>
+        </div>
+
         <DialogFooter>
+          {accounts.length > 0 ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                reset();
+              }}
+            >
+              Done
+            </Button>
+          ) : null}
           <Button
             onClick={() => importRows.mutate()}
             disabled={rows.length === 0 || importRows.isPending}
