@@ -67,7 +67,47 @@ const MODULES = [
   },
 ];
 
+const PILLARS = [
+  {
+    title: "Community",
+    blurb:
+      "Safe, social spaces for every class and group in the school, plus a news river families actually read.",
+    items: [
+      "Social classrooms with posts, replies and pinned updates",
+      "Groups for clubs, teams and professional learning — school-wide or staff-only",
+      "School news river for students and guardians",
+      "Confidential messaging with no address books to manage",
+      "Shared links and resources preserved in each space",
+    ],
+  },
+  {
+    title: "Classroom Management",
+    blurb:
+      "Everything a teacher does between the bells: seating, roll, quick checks and how students are really doing.",
+    items: [
+      "Seating plans generated from the roster, printable for substitutes",
+      "Real-time attendance with tardies, absences and notes",
+      "Emotional check-ins with research-based follow-up strategies",
+      "Instant polls with optional shared results",
+      "Behavior logging for both recognition and concerns",
+    ],
+  },
+  {
+    title: "Assessment & Reporting",
+    blurb:
+      "One gradebook that rolls straight into standards coverage, report cards and portfolios of real work.",
+    items: [
+      "Feature-rich gradebook with categories, comments and averages",
+      "Standards-based grading tied to expectations and outcomes",
+      "Term report cards generated from the gradebook, published when you're ready",
+      "Portfolios of learning evidence students and families can see",
+      "Letter grades, weighting and at-a-glance class insight",
+    ],
+  },
+];
+
 const AUDIENCES = [
+
   {
     who: "Teachers",
     copy: "Take roll in seconds, enter grades inline, and log behavior without leaving the class page.",
