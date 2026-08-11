@@ -161,11 +161,15 @@ function ClassDetailPage() {
       }
     >
       <Tabs defaultValue="gradebook">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="roster">Roster</TabsTrigger>
+          <TabsTrigger value="feed">Class feed</TabsTrigger>
+          <TabsTrigger value="seating">Seating plan</TabsTrigger>
+          <TabsTrigger value="polls">Polls</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="gradebook">
           <div className="panel mt-4 overflow-x-auto p-0">
