@@ -212,23 +212,139 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
         {notes.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No behavior notes recorded.</p>
         ) : (
-          notes.map((n) => (
-            <article key={n.id} className="p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant={kindTone(n.kind)}>{n.kind}</Badge>
-                <span className="text-sm font-medium">
-                  {n.students?.last_name}, {n.students?.first_name}
-                </span>
-                <span className="text-xs text-muted-foreground">{formatDate(n.date)}</span>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{n.notes}</p>
-            </article>
-          ))
+          notes.map((n) => <NoteRow key={n.id} note={n} isStaff={isStaff} />)
         )}
       </section>
     </div>
   );
 }
+
+type NoteRecord = {
+  id: string;
+  kind: string;
+  notes: string | null;
+  date: string;
+  student_id: string;
+  students: { first_name: string; last_name: string } | null;
+};
+
+function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    kind: note.kind,
+    date: note.date,
+    notes: note.notes ?? "",
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["behavior"] });
+    queryClient.invalidateQueries({ queryKey: ["detentions"] });
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (draft.notes.trim().length < 4) throw new Error("Add a short note");
+      const { error } = await supabase
+        .from("behavior_notes")
+        .update({
+          kind: draft.kind,
+          date: draft.date,
+          notes: draft.notes.trim().slice(0, 1000),
+        })
+        .eq("id", note.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Note updated");
+      setEditing(false);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("behavior_notes").delete().eq("id", note.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Note deleted");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (editing) {
+    return (
+      <article className="space-y-3 p-4">
+        <div className="flex flex-wrap gap-3">
+          <Select value={draft.kind} onValueChange={(kind) => setDraft({ ...draft, kind })}>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KINDS.map((k) => (
+                <SelectItem key={k} value={k}>
+                  {k}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            className="w-40"
+            value={draft.date}
+            onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+          />
+        </div>
+        <Textarea
+          value={draft.notes}
+          maxLength={1000}
+          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge variant={kindTone(note.kind)}>{note.kind}</Badge>
+        <span className="text-sm font-medium">
+          {note.students?.last_name}, {note.students?.first_name}
+        </span>
+        <span className="text-xs text-muted-foreground">{formatDate(note.date)}</span>
+        {isStaff && (
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{note.notes}</p>
+    </article>
+  );
+}
+
 
 function StrikeTracker() {
   const { data: notes = [] } = useNotes();
@@ -312,11 +428,29 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
   });
 
   const update = useMutation({
-    mutationFn: async (input: { id: string; patch: { status?: string; scheduled_date?: string } }) => {
+    mutationFn: async (input: {
+      id: string;
+      patch: { status?: string; scheduled_date?: string; reason?: string; notes?: string };
+    }) => {
       const { error } = await supabase.from("detentions").update(input.patch).eq("id", input.id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["detentions"] }),
+    onSuccess: () => {
+      toast.success("Detention updated");
+      queryClient.invalidateQueries({ queryKey: ["detentions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("detentions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Detention deleted");
+      queryClient.invalidateQueries({ queryKey: ["detentions"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -344,7 +478,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
             Scheduled {formatDate(d.scheduled_date)}
           </span>
           {isStaff ? (
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Input
                 type="date"
                 className="w-40"
@@ -368,8 +502,37 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                className="w-56"
+                placeholder="Reason"
+                defaultValue={d.reason ?? ""}
+                onBlur={(e) => {
+                  const reason = e.target.value.trim();
+                  if (reason && reason !== d.reason)
+                    update.mutate({ id: d.id, patch: { reason } });
+                }}
+              />
+              <Input
+                className="w-56"
+                placeholder="Staff notes"
+                defaultValue={d.notes ?? ""}
+                onBlur={(e) => {
+                  const notes = e.target.value.trim();
+                  if (notes !== (d.notes ?? "")) update.mutate({ id: d.id, patch: { notes } });
+                }}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(d.id)}
+              >
+                Delete
+              </Button>
             </div>
           ) : (
+
             <Badge variant="outline" className="ml-auto">
               {d.status}
             </Badge>
