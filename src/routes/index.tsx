@@ -93,7 +93,7 @@ function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <GraduationCap className="size-6 text-accent" />
-            <span className="font-display text-lg font-semibold">Meraki</span>
+            <span className="font-display text-lg font-semibold">Meraki Education</span>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
@@ -190,7 +190,7 @@ function Landing() {
 
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
-          <span>Meraki K-12 School Platform</span>
+          <span>Merika Education Platform</span>
           <Link to="/apply" className="hover:text-foreground">
             Enrollment application
           </Link>
