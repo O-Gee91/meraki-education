@@ -255,7 +255,27 @@ function ClassDetailPage() {
         <TabsContent value="roster">
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} />
         </TabsContent>
+
+        <TabsContent value="feed">
+          <ClassFeed scope={{ classId }} />
+        </TabsContent>
+
+        <TabsContent value="seating">
+          <SeatingPlan
+            classId={classId}
+            isStaff={isStaff}
+            students={roster
+              .map((r) => r.students)
+              .filter((s): s is NonNullable<typeof s> => !!s)
+              .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="polls">
+          <ClassPolls classId={classId} isStaff={isStaff} />
+        </TabsContent>
       </Tabs>
+
     </AppShell>
   );
 }
