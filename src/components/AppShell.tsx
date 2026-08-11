@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   BookOpen,
   CalendarCheck,
+  FolderOpen,
   ClipboardCheck,
   GraduationCap,
   HeartPulse,
@@ -79,6 +80,12 @@ const NAV: NavItem[] = [
     label: "Tuition",
     icon: Receipt,
     roles: ["admin", "parent", "student"],
+  },
+  {
+    to: "/files",
+    label: "Files",
+    icon: FolderOpen,
+    roles: ["admin", "teacher", "student", "parent"],
   },
   { to: "/admissions", label: "Admissions", icon: Users, roles: ["admin"] },
   { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },

@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClassFeed } from "@/components/class/ClassFeed";
+import { FileLibrary } from "@/components/files/FileLibrary";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
@@ -172,6 +173,7 @@ function ClassDetailPage() {
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="feed">Class feed</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
           <TabsTrigger value="polls">Polls</TabsTrigger>
         </TabsList>
@@ -269,6 +271,14 @@ function ClassDetailPage() {
         <TabsContent value="feed">
           <ClassFeed scope={{ classId }} />
         </TabsContent>
+
+        <TabsContent value="files" className="mt-4">
+          <FileLibrary
+            classId={classId}
+            emptyLabel="No class files yet. Upload handouts, slides, spreadsheets or video."
+          />
+        </TabsContent>
+
 
         <TabsContent value="seating">
           <SeatingPlan
