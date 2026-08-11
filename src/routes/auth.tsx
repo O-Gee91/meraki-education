@@ -212,11 +212,13 @@ function AuthPage() {
                       <SelectContent>
                         <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="parent">Parent / guardian</SelectItem>
+                        <SelectItem value="educator">Educator / staff</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Teacher and admin access is granted by a school administrator after your
-                      account is created.
+                      {role === "educator"
+                        ? "Educator accounts start with student-level access. A school administrator reviews and grants teaching permissions after signup."
+                        : "Teacher and admin access is granted by a school administrator after your account is created."}
                     </p>
                   </div>
                   <div className="space-y-2">
