@@ -120,14 +120,14 @@ function AuthPage() {
         </Link>
         <div>
           <h2 className="text-3xl font-semibold leading-tight">
-            The middle school day, in one place.
+            The whole school day, in one place.
           </h2>
           <p className="mt-4 max-w-sm text-sm text-primary-foreground/80">
             Grades, roll, behavior notes, family messages, enrollment and tuition — for teachers,
             students, guardians and admins.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">Grades 6 – 8 · Fall 2026 term</p>
+        <p className="text-xs text-primary-foreground/60">Grades 5 – 9 · Fall 2026 term</p>
       </div>
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">

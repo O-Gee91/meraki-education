@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Meraki Education is a middle school platform for gradebook, attendance, behavior, family messaging, enrollment and tuition.",
+          "Meraki Education is a K-12 school platform for gradebook, attendance, behavior, family messaging, enrollment and tuition.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
