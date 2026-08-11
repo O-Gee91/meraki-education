@@ -92,12 +92,15 @@ export async function provisionRosterAccounts(
         status = "created";
       }
 
-      const update: Record<string, string> = { [column]: userId };
-      if (target.role === "parent") update["guardian_email"] = target.email;
+      const update =
+        target.role === "student"
+          ? { user_id: userId }
+          : { guardian_user_id: userId, guardian_email: target.email };
       const { error: linkError } = await admin
         .from("students")
         .update(update)
         .eq("id", entry.student_id);
+
 
       results.push({
         student: name,
