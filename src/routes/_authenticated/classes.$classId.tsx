@@ -442,6 +442,109 @@ function AssignmentsTab({
   );
 }
 
+function AssignmentStandards({
+  assignmentId,
+  isStaff,
+}: {
+  assignmentId: string;
+  isStaff: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [adding, setAdding] = useState(false);
+
+  const { data: standards = [] } = useQuery({
+    queryKey: ["standards"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("standards")
+        .select("id, code, description")
+        .order("code");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: links = [] } = useQuery({
+    queryKey: ["assignment-standards", assignmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignment_standards")
+        .select("id, standard_id")
+        .eq("assignment_id", assignmentId);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const tag = useMutation({
+    mutationFn: async (standardId: string) => {
+      const { error } = await supabase
+        .from("assignment_standards")
+        .insert({ assignment_id: assignmentId, standard_id: standardId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdding(false);
+      queryClient.invalidateQueries({ queryKey: ["assignment-standards"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const untag = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assignment_standards").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["assignment-standards"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const codeFor = (id: string) => standards.find((s) => s.id === id)?.code ?? "standard";
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      {links.map((l) => (
+        <Badge key={l.id} variant="outline" className="gap-1">
+          {codeFor(l.standard_id)}
+          {isStaff ? (
+            <button onClick={() => untag.mutate(l.id)} className="text-muted-foreground">
+              ×
+            </button>
+          ) : null}
+        </Badge>
+      ))}
+      {isStaff &&
+        (adding ? (
+          <div className="w-64">
+            <Select onValueChange={(v) => tag.mutate(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a standard" />
+              </SelectTrigger>
+              <SelectContent>
+                {standards
+                  .filter((s) => !links.some((l) => l.standard_id === s.id))
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.code}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-xs text-accent hover:underline"
+          >
+            + tag standard
+          </button>
+        ))}
+    </div>
+  );
+}
+
+
+
 type RosterRow = {
   id: string;
   student_id: string;
