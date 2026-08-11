@@ -671,11 +671,17 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
           </div>
         )}
 
-        <div className="mt-4">
-          <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
-            Add question
+        <div className="mt-4 flex items-center gap-2">
+          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+            {editingId ? "Save changes" : "Add question"}
           </Button>
+          {editingId && (
+            <Button size="sm" variant="ghost" onClick={reset}>
+              Cancel edit
+            </Button>
+          )}
         </div>
+
       </div>
     </div>
   );
