@@ -14,7 +14,7 @@ const SUBJECT = "English Language Arts";
 
 export function ElaCatalog({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
-  const [grade, setGrade] = useState(String(ELA_STANDARDS[0].grade));
+  const [grade, setGrade] = useState(String(ELA_STANDARDS[0]?.grade ?? 5));
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
