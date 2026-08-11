@@ -53,19 +53,31 @@ function AuthPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     const parsed = credentials.safeParse({ email, password });
-    if (!parsed.success) return toast.error(parsed.error.issues[0].message);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Check your details");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     navigate({ to: "/dashboard" });
   }
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
     const parsed = credentials.safeParse({ email, password });
-    if (!parsed.success) return toast.error(parsed.error.issues[0].message);
-    if (fullName.trim().length < 2) return toast.error("Enter your full name");
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Check your details");
+      return;
+    }
+    if (fullName.trim().length < 2) {
+      toast.error("Enter your full name");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       ...parsed.data,
@@ -75,7 +87,10 @@ function AuthPage() {
       },
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (!data.session) {
       setPendingConfirm(true);
       return;
@@ -87,9 +102,13 @@ function AuthPage() {
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (result.error) return toast.error("Google sign-in failed. Please try again.");
+    if (result.error) {
+      toast.error("Google sign-in failed. Please try again.");
+      return;
+    }
     if (result.redirected) return;
     navigate({ to: "/dashboard" });
+
   }
 
   return (
