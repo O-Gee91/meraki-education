@@ -243,7 +243,7 @@ function Stat({
   icon: typeof BookOpen;
   label: string;
   value: string;
-  tone?: string;
+  tone?: string | undefined;
 }) {
   return (
     <div className="panel p-4">
