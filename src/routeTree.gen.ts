@@ -17,6 +17,7 @@ import { Route as AuthenticatedBehaviorRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
+import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
 import { Route as AuthenticatedClassesIndexRouteImport } from './routes/_authenticated/classes.index'
 import { Route as AuthenticatedClassesClassIdRouteImport } from './routes/_authenticated/classes.$classId'
 
@@ -59,6 +60,11 @@ const AuthenticatedMessagesRoute = AuthenticatedMessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedClassesIndexRoute =
   AuthenticatedClassesIndexRouteImport.update({
     id: '/classes/',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
+  '/students': typeof AuthenticatedStudentsRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/classes/': typeof AuthenticatedClassesIndexRoute
 }
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
+  '/students': typeof AuthenticatedStudentsRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/classes': typeof AuthenticatedClassesIndexRoute
 }
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
+  '/_authenticated/students': typeof AuthenticatedStudentsRoute
   '/_authenticated/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/_authenticated/classes/': typeof AuthenticatedClassesIndexRoute
 }
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/dashboard'
     | '/messages'
+    | '/students'
     | '/classes/$classId'
     | '/classes/'
   fileRoutesByTo: FileRoutesByTo
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/dashboard'
     | '/messages'
+    | '/students'
     | '/classes/$classId'
     | '/classes'
   id:
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/billing'
     | '/_authenticated/dashboard'
     | '/_authenticated/messages'
+    | '/_authenticated/students'
     | '/_authenticated/classes/$classId'
     | '/_authenticated/classes/'
   fileRoutesById: FileRoutesById
@@ -208,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMessagesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/students': {
+      id: '/_authenticated/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof AuthenticatedStudentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/classes/': {
       id: '/_authenticated/classes/'
       path: '/classes'
@@ -231,6 +250,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
+  AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
   AuthenticatedClassesClassIdRoute: typeof AuthenticatedClassesClassIdRoute
   AuthenticatedClassesIndexRoute: typeof AuthenticatedClassesIndexRoute
 }
@@ -241,6 +261,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
+  AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
   AuthenticatedClassesClassIdRoute: AuthenticatedClassesClassIdRoute,
   AuthenticatedClassesIndexRoute: AuthenticatedClassesIndexRoute,
 }
