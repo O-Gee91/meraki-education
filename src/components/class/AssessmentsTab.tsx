@@ -151,6 +151,11 @@ export function AssessmentsTab({
                         />
                         <span className="text-muted-foreground">Open to students</span>
                       </div>
+                      <EditAssessment
+                        classId={classId}
+                        assessment={a}
+                        assignments={assignments}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"
@@ -160,6 +165,7 @@ export function AssessmentsTab({
                       >
                         Delete
                       </Button>
+
                     </>
                   )}
                   <Button
