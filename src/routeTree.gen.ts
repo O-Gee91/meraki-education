@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
 import { Route as AuthenticatedBehaviorRouteImport } from './routes/_authenticated/behavior'
+import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedClassesIndexRouteImport } from './routes/_authenticated/classes.index'
@@ -41,6 +42,11 @@ const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
 const AuthenticatedBehaviorRoute = AuthenticatedBehaviorRouteImport.update({
   id: '/behavior',
   path: '/behavior',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/behavior': typeof AuthenticatedBehaviorRoute
+  '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/behavior': typeof AuthenticatedBehaviorRoute
+  '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
   '/_authenticated/behavior': typeof AuthenticatedBehaviorRoute
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/classes/$classId': typeof AuthenticatedClassesClassIdRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/attendance'
     | '/behavior'
+    | '/billing'
     | '/dashboard'
     | '/messages'
     | '/classes/$classId'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/attendance'
     | '/behavior'
+    | '/billing'
     | '/dashboard'
     | '/messages'
     | '/classes/$classId'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/attendance'
     | '/_authenticated/behavior'
+    | '/_authenticated/billing'
     | '/_authenticated/dashboard'
     | '/_authenticated/messages'
     | '/_authenticated/classes/$classId'
@@ -175,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBehaviorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AuthenticatedBillingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -209,6 +228,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
   AuthenticatedBehaviorRoute: typeof AuthenticatedBehaviorRoute
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedClassesClassIdRoute: typeof AuthenticatedClassesClassIdRoute
@@ -218,6 +238,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
   AuthenticatedBehaviorRoute: AuthenticatedBehaviorRoute,
+  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedClassesClassIdRoute: AuthenticatedClassesClassIdRoute,
