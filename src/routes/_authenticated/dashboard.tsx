@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -237,7 +240,53 @@ function DashboardPage() {
   );
 }
 
+function SetupCard() {
+  const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const { data: adminExists, isLoading } = useQuery({
+    queryKey: ["admin-exists"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_exists");
+      if (error) throw error;
+      return data as boolean;
+    },
+  });
+
+  const claim = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("claim_first_admin");
+      if (error) throw error;
+      return data as boolean;
+    },
+    onSuccess: (ok) => {
+      if (!ok) {
+        toast.error("This school already has an administrator.");
+      } else {
+        toast.success("You are now the school administrator.");
+      }
+      queryClient.invalidateQueries();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  if (isLoading || adminExists || isAdmin) return null;
+
+  return (
+    <section className="panel mb-6 border-accent/40 p-5">
+      <h2 className="text-lg font-semibold">Finish setting up your school</h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        No administrator has been set up yet. Claim administrator access to create classes, add
+        students and staff, and grant teaching permissions. Only the first person can do this.
+      </p>
+      <Button className="mt-4" onClick={() => claim.mutate()} disabled={claim.isPending}>
+        {claim.isPending ? "Setting up…" : "Claim administrator access"}
+      </Button>
+    </section>
+  );
+}
+
 function Stat({
+
   icon: Icon,
   label,
   value,
