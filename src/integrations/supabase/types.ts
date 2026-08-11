@@ -336,6 +336,60 @@ export type Database = {
         }
         Relationships: []
       }
+      detentions: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          reason: string
+          scheduled_date: string
+          status: string
+          strike_count: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          scheduled_date?: string
+          status?: string
+          strike_count?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          scheduled_date?: string
+          status?: string
+          strike_count?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detentions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detentions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           class_id: string
