@@ -37,7 +37,13 @@ const NAV: NavItem[] = [
     to: "/attendance",
     label: "Attendance",
     icon: CalendarCheck,
-    roles: ["admin", "teacher"],
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  {
+    to: "/behavior",
+    label: "Behavior",
+    icon: ShieldCheck,
+    roles: ["admin", "teacher", "student", "parent"],
   },
   {
     to: "/messages",
@@ -51,7 +57,7 @@ const NAV: NavItem[] = [
     icon: Receipt,
     roles: ["admin", "parent", "student"],
   },
-  { to: "/admin", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
+  { to: "/admissions", label: "Admissions", icon: Users, roles: ["admin"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
