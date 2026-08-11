@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency, formatDate } from "@/lib/school";
+import { money, formatDate } from "@/lib/school";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
@@ -187,7 +187,7 @@ function BillingPage() {
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Outstanding balance
         </p>
-        <p className="mt-2 text-3xl font-semibold">{formatCurrency(outstanding)}</p>
+        <p className="mt-2 text-3xl font-semibold">{money(outstanding)}</p>
       </div>
 
       <div className="panel mt-6 divide-y divide-border">
@@ -203,7 +203,7 @@ function BillingPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-semibold">{formatCurrency(Number(i.amount_cents))}</span>
+                <span className="font-semibold">{money(Number(i.amount_cents))}</span>
                 <Badge variant={i.status === "paid" ? "default" : "secondary"}>{i.status}</Badge>
                 {isStaff && i.status !== "paid" && (
                   <Button size="sm" variant="outline" onClick={() => markPaid.mutate(i.id)}>
