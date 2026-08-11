@@ -38,18 +38,18 @@ export const ASSESSMENT_KIND_LABELS: Record<AssessmentKind, string> = {
 };
 
 export type AnswerKey = {
-  choice?: number;
-  choices?: number[];
-  accepted?: string[];
-  value?: number;
-  tolerance?: number;
+  choice?: number | undefined;
+  choices?: number[] | undefined;
+  accepted?: string[] | undefined;
+  value?: number | undefined;
+  tolerance?: number | undefined;
 };
 
 export type AnswerResponse = {
-  choice?: number;
-  choices?: number[];
-  text?: string;
-  value?: number;
+  choice?: number | undefined;
+  choices?: number[] | undefined;
+  text?: string | undefined;
+  value?: number | undefined;
 };
 
 export type PaperQuestion = {
