@@ -1,0 +1,349 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
+
+const ResponseSchema = z.object({
+  choice: z.number().int().min(0).max(50).optional(),
+  choices: z.array(z.number().int().min(0).max(50)).optional(),
+  text: z.string().max(20000).optional(),
+  value: z.number().optional(),
+});
+
+/** Students/parents fetch a paper without answer keys. */
+export const getAssessmentPaper = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ assessmentId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: assessment, error } = await context.supabase
+      .from("assessments")
+      .select(
+        "id, class_id, assignment_id, title, instructions, kind, time_limit_minutes, due_at, published, grammar_check_enabled",
+      )
+      .eq("id", data.assessmentId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!assessment) throw new Error("Assessment not found");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error: qErr } = await supabaseAdmin
+      .from("assessment_questions")
+      .select("id, position, kind, prompt, options, points, rubric")
+      .eq("assessment_id", assessment.id)
+      .order("position", { ascending: true });
+    if (qErr) throw qErr;
+
+    const questions: PaperQuestion[] = (rows ?? []).map((q) => ({
+      id: q.id,
+      position: q.position,
+      kind: q.kind as QuestionKind,
+      prompt: q.prompt,
+      options: Array.isArray(q.options) ? (q.options as string[]) : [],
+      points: Number(q.points),
+      rubric: q.rubric,
+    }));
+
+    return { assessment, questions };
+  });
+
+/** Submit an attempt; objective questions are graded instantly. */
+export const submitAssessment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        assessmentId: z.string().uuid(),
+        answers: z
+          .array(z.object({ questionId: z.string().uuid(), response: ResponseSchema }))
+          .max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: student, error: sErr } = await context.supabase
+      .from("students")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (sErr) throw sErr;
+    if (!student) throw new Error("Only enrolled students can submit an assessment");
+
+    const { data: assessment, error: aErr } = await context.supabase
+      .from("assessments")
+      .select("id, class_id, assignment_id, published")
+      .eq("id", data.assessmentId)
+      .maybeSingle();
+    if (aErr) throw aErr;
+    if (!assessment?.published) throw new Error("This assessment is not open");
+
+    const { data: enrollment } = await context.supabase
+      .from("enrollments")
+      .select("id")
+      .eq("class_id", assessment.class_id)
+      .eq("student_id", student.id)
+      .maybeSingle();
+    if (!enrollment) throw new Error("You are not enrolled in this class");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { autoGrade } = await import("@/lib/grading.server");
+
+    const { data: questions, error: qErr } = await supabaseAdmin
+      .from("assessment_questions")
+      .select("id, kind, points, answer_key")
+      .eq("assessment_id", assessment.id);
+    if (qErr) throw qErr;
+
+    const { data: existing } = await supabaseAdmin
+      .from("assessment_submissions")
+      .select("id, status")
+      .eq("assessment_id", assessment.id)
+      .eq("student_id", student.id)
+      .maybeSingle();
+    if (existing) throw new Error("You have already submitted this assessment");
+
+    const totalPoints = (questions ?? []).reduce((sum, q) => sum + Number(q.points), 0);
+    let autoScore = 0;
+    let needsReview = false;
+
+    const graded = (questions ?? []).map((q) => {
+      const submitted = data.answers.find((a) => a.questionId === q.id);
+      const result = autoGrade(
+        q.kind as QuestionKind,
+        (q.answer_key ?? {}) as AnswerKey,
+        submitted?.response ?? {},
+        Number(q.points),
+      );
+      if (result) autoScore += result.pointsAwarded;
+      else needsReview = true;
+      return {
+        question_id: q.id,
+        response: submitted?.response ?? {},
+        is_correct: result?.isCorrect ?? null,
+        points_awarded: result?.pointsAwarded ?? null,
+      };
+    });
+
+    const { data: submission, error: subErr } = await supabaseAdmin
+      .from("assessment_submissions")
+      .insert({
+        assessment_id: assessment.id,
+        student_id: student.id,
+        status: needsReview ? "needs_review" : "graded",
+        auto_score: autoScore,
+        manual_score: 0,
+        total_points: totalPoints,
+        graded_at: needsReview ? null : new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (subErr) throw subErr;
+
+    if (graded.length > 0) {
+      const { error: ansErr } = await supabaseAdmin
+        .from("assessment_answers")
+        .insert(graded.map((g) => ({ ...g, submission_id: submission.id })));
+      if (ansErr) throw ansErr;
+    }
+
+    if (assessment.assignment_id && !needsReview) {
+      await supabaseAdmin.from("grades").upsert(
+        {
+          assignment_id: assessment.assignment_id,
+          student_id: student.id,
+          points_earned: autoScore,
+          comment: "Auto-graded assessment",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "assignment_id,student_id" },
+      );
+    }
+
+    return {
+      submissionId: submission.id,
+      autoScore,
+      totalPoints,
+      needsReview,
+    };
+  });
+
+/** Staff: release manual/essay scores and sync to the gradebook. */
+export const scoreEssayAnswer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        answerId: z.string().uuid(),
+        points: z.number().min(0).max(10000),
+        feedback: z.string().max(5000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isStaff } = await context.supabase.rpc("is_staff");
+    if (!isStaff) throw new Error("Only teachers and admins can grade responses");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error } = await supabaseAdmin
+      .from("assessment_answers")
+      .update({
+        points_awarded: data.points,
+        feedback: data.feedback ?? null,
+        is_correct: null,
+      })
+      .eq("id", data.answerId);
+    if (error) throw error;
+
+    const { data: answer } = await supabaseAdmin
+      .from("assessment_answers")
+      .select("submission_id")
+      .eq("id", data.answerId)
+      .maybeSingle();
+    if (!answer) return { ok: true };
+
+    const { data: answers } = await supabaseAdmin
+      .from("assessment_answers")
+      .select("points_awarded, question_id, assessment_questions(kind)")
+      .eq("submission_id", answer.submission_id);
+
+    const manual = (answers ?? [])
+      .filter((a) => (a.assessment_questions as { kind: string } | null)?.kind === "essay")
+      .reduce((sum, a) => sum + Number(a.points_awarded ?? 0), 0);
+    const pendingEssay = (answers ?? []).some(
+      (a) =>
+        (a.assessment_questions as { kind: string } | null)?.kind === "essay" &&
+        a.points_awarded == null,
+    );
+
+    const { data: submission } = await supabaseAdmin
+      .from("assessment_submissions")
+      .update({
+        manual_score: manual,
+        status: pendingEssay ? "needs_review" : "graded",
+        graded_at: pendingEssay ? null : new Date().toISOString(),
+      })
+      .eq("id", answer.submission_id)
+      .select("id, student_id, auto_score, assessment_id")
+      .single();
+
+    if (submission && !pendingEssay) {
+      const { data: assessment } = await supabaseAdmin
+        .from("assessments")
+        .select("assignment_id")
+        .eq("id", submission.assessment_id)
+        .maybeSingle();
+      if (assessment?.assignment_id) {
+        await supabaseAdmin.from("grades").upsert(
+          {
+            assignment_id: assessment.assignment_id,
+            student_id: submission.student_id,
+            points_earned: Number(submission.auto_score) + manual,
+            comment: "Assessment graded",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "assignment_id,student_id" },
+        );
+      }
+    }
+
+    return { ok: true };
+  });
+
+/** Staff: AI grammar + writing proof of an essay response. */
+export const proofreadEssay = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ answerId: z.string().uuid(), gradeLevel: z.number().int().min(1).max(12).optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isStaff } = await context.supabase.rpc("is_staff");
+    if (!isStaff) throw new Error("Only teachers and admins can run grammar proofing");
+
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI is not configured for this school");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: answer, error } = await supabaseAdmin
+      .from("assessment_answers")
+      .select("id, response, question_id, assessment_questions(prompt, rubric, points)")
+      .eq("id", data.answerId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!answer) throw new Error("Response not found");
+
+    const question = answer.assessment_questions as
+      | { prompt: string; rubric: string | null; points: number }
+      | null;
+    const essay = ((answer.response ?? {}) as { text?: string }).text ?? "";
+    if (essay.trim().length < 20) throw new Error("This response is too short to proof");
+
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { generateText, Output, NoObjectGeneratedError } = await import("ai");
+    const gateway = createLovableAiGatewayProvider(apiKey);
+
+    const schema = z.object({
+      summary: z.string(),
+      suggestedPoints: z.number(),
+      issues: z.array(
+        z.object({
+          type: z.string(),
+          excerpt: z.string(),
+          suggestion: z.string(),
+          explanation: z.string(),
+        }),
+      ),
+    });
+
+    const prompt = [
+      `You are an experienced ${data.gradeLevel ? `grade ${data.gradeLevel} ` : ""}English teacher proofreading a student essay.`,
+      `Prompt: ${question?.prompt ?? "(not provided)"}`,
+      question?.rubric ? `Rubric: ${question.rubric}` : "",
+      `Points possible: ${question?.points ?? 10}`,
+      "",
+      "Student essay:",
+      essay.slice(0, 12000),
+      "",
+      "Return a short encouraging summary (max 3 sentences) covering grammar, mechanics, structure and evidence; a suggestedPoints value between 0 and the points possible; and up to 12 concrete issues. For each issue give the category (grammar, spelling, punctuation, run-on, fragment, word choice, clarity, structure, evidence), the exact excerpt from the essay, a corrected suggestion, and a one-sentence explanation a student can understand.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    let parsed: z.infer<typeof schema>;
+    try {
+      const { output } = await generateText({
+        model: gateway("google/gemini-3.6-flash"),
+        output: Output.object({ schema }),
+        prompt,
+      });
+      parsed = output;
+    } catch (e) {
+      if (NoObjectGeneratedError.isInstance(e) && e.text) {
+        try {
+          parsed = schema.parse(JSON.parse(e.text));
+        } catch {
+          throw new Error("The grammar proof could not be read. Please try again.");
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    const maxPoints = Number(question?.points ?? 10);
+    const suggested = Math.max(0, Math.min(maxPoints, Number(parsed.suggestedPoints ?? 0)));
+    const issues: EssayIssue[] = parsed.issues.slice(0, 12);
+
+    const { data: review, error: rErr } = await supabaseAdmin
+      .from("essay_reviews")
+      .insert({
+        answer_id: answer.id,
+        summary: parsed.summary.slice(0, 2000),
+        issues,
+        suggested_points: suggested,
+        created_by: context.userId,
+      })
+      .select("id, summary, issues, suggested_points, created_at")
+      .single();
+    if (rErr) throw rErr;
+
+    return review;
+  });
