@@ -58,6 +58,7 @@ const NAV: NavItem[] = [
     roles: ["admin", "parent", "student"],
   },
   { to: "/admissions", label: "Admissions", icon: Users, roles: ["admin"] },
+  { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
