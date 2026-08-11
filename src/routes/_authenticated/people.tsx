@@ -125,14 +125,11 @@ function PeoplePage() {
                 className="flex flex-wrap items-center justify-between gap-3 py-4"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {p.full_name || "Unnamed"}{" "}
-                    {p.id === user?.id ? (
-                      <Badge variant="secondary" className="ml-1">
-                        you
-                      </Badge>
-                    ) : null}
-                  </p>
+                  <div className="flex items-center gap-2 truncate text-sm font-semibold">
+                    <span className="truncate">{p.full_name || "Unnamed"}</span>
+                    {p.id === user?.id ? <Badge variant="secondary">you</Badge> : null}
+                  </div>
+
                   <p className="truncate text-xs text-muted-foreground">{p.email}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
