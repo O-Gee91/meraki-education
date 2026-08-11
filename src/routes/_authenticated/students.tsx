@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { StudentImport } from "@/components/students/StudentImport";
+import { CreateLogins } from "@/components/students/CreateLogins";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function StudentsPage() {
   const queryClient = useQueryClient();
+  const { isStaff } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({
@@ -49,7 +52,9 @@ function StudentsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, first_name, last_name, grade_level, guardian_email, student_number")
+        .select(
+          "id, first_name, last_name, grade_level, guardian_email, student_number, user_id, guardian_user_id",
+        )
         .order("last_name");
       if (error) throw error;
       return data;
@@ -180,12 +185,13 @@ function StudentsPage() {
               <th className="px-4 py-3">Grade</th>
               <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Guardian email</th>
+              <th className="px-4 py-3">Accounts</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={5} className="px-4 py-6 text-muted-foreground">
                   No students found.
                 </td>
               </tr>
@@ -198,6 +204,16 @@ function StudentsPage() {
                   <td className="px-4 py-3">{s.grade_level}</td>
                   <td className="px-4 py-3 text-muted-foreground">{s.student_number ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{s.guardian_email ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {s.user_id ? "Student ✓" : "No student login"}
+                        {" · "}
+                        {s.guardian_user_id ? "Guardian ✓" : "No guardian login"}
+                      </span>
+                      {isStaff ? <CreateLogins student={s} /> : null}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
