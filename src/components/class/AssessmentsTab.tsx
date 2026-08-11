@@ -1,0 +1,646 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ASSESSMENT_KINDS,
+  ASSESSMENT_KIND_LABELS,
+  QUESTION_KINDS,
+  QUESTION_KIND_LABELS,
+  type AnswerKey,
+  type AssessmentKind,
+  type QuestionKind,
+} from "@/lib/assessments";
+import { formatDate } from "@/lib/school";
+import { AssessmentGrading } from "@/components/class/AssessmentGrading";
+import { TakeAssessment } from "@/components/class/TakeAssessment";
+
+type AssessmentRow = {
+  id: string;
+  title: string;
+  kind: string;
+  instructions: string | null;
+  due_at: string | null;
+  time_limit_minutes: number | null;
+  published: boolean;
+  grammar_check_enabled: boolean;
+  assignment_id: string | null;
+};
+
+export function AssessmentsTab({
+  classId,
+  isStaff,
+  assignments,
+}: {
+  classId: string;
+  isStaff: boolean;
+  assignments: { id: string; title: string; points_possible: number }[];
+}) {
+  const queryClient = useQueryClient();
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const { data: assessments = [] } = useQuery({
+    queryKey: ["assessments", classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select(
+          "id, title, kind, instructions, due_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
+        )
+        .eq("class_id", classId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AssessmentRow[];
+    },
+  });
+
+  const update = useMutation({
+    mutationFn: async (input: { id: string; patch: Partial<AssessmentRow> }) => {
+      const { error } = await supabase
+        .from("assessments")
+        .update(input.patch)
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["assessments", classId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assessments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assessment deleted");
+      queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const visible = isStaff ? assessments : assessments.filter((a) => a.published);
+
+  return (
+    <div className="mt-4 space-y-4">
+      {isStaff && <NewAssessment classId={classId} assignments={assignments} />}
+
+      {visible.length === 0 ? (
+        <p className="panel p-6 text-sm text-muted-foreground">
+          {isStaff
+            ? "No assessments yet. Build a quiz, test, exit ticket or essay — objective questions grade themselves the moment a student submits."
+            : "No assessments have been posted for this class yet."}
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {visible.map((a) => (
+            <li key={a.id} className="panel p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">{a.title}</h3>
+                    <Badge variant="secondary">
+                      {ASSESSMENT_KIND_LABELS[a.kind as AssessmentKind] ?? a.kind}
+                    </Badge>
+                    {a.published ? (
+                      <Badge>Open</Badge>
+                    ) : (
+                      <Badge variant="outline">Draft</Badge>
+                    )}
+                    {a.grammar_check_enabled && (
+                      <Badge variant="outline">Grammar proof on</Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {a.due_at ? `Due ${formatDate(a.due_at.slice(0, 10))}` : "No due date"}
+                    {a.time_limit_minutes ? ` · ${a.time_limit_minutes} min limit` : ""}
+                    {a.assignment_id ? " · syncs to gradebook" : " · not linked to gradebook"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isStaff && (
+                    <>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Switch
+                          checked={a.published}
+                          onCheckedChange={(v) =>
+                            update.mutate({ id: a.id, patch: { published: v } })
+                          }
+                          aria-label="Published"
+                        />
+                        <span className="text-muted-foreground">Open to students</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Delete "${a.title}"?`)) remove.mutate(a.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setOpenId(openId === a.id ? null : a.id)}
+                  >
+                    {openId === a.id ? "Close" : isStaff ? "Build & grade" : "Open"}
+                  </Button>
+                </div>
+              </div>
+
+              {openId === a.id &&
+                (isStaff ? (
+                  <div className="mt-4 space-y-6 border-t border-border pt-4">
+                    <QuestionBuilder assessmentId={a.id} />
+                    <AssessmentGrading
+                      assessmentId={a.id}
+                      grammarEnabled={a.grammar_check_enabled}
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <TakeAssessment assessmentId={a.id} />
+                  </div>
+                ))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function NewAssessment({
+  classId,
+  assignments,
+}: {
+  classId: string;
+  assignments: { id: string; title: string; points_possible: number }[];
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    kind: "quiz" as AssessmentKind,
+    instructions: "",
+    due: "",
+    limit: "",
+    assignmentId: "none",
+    grammar: true,
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const { error } = await supabase.from("assessments").insert({
+        class_id: classId,
+        title: form.title.trim().slice(0, 160),
+        kind: form.kind,
+        instructions: form.instructions.trim().slice(0, 2000) || null,
+        due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+        time_limit_minutes: form.limit ? Number(form.limit) : null,
+        assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+        grammar_check_enabled: form.grammar,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assessment created — add questions next");
+      setOpen(false);
+      setForm({
+        title: "",
+        kind: "quiz",
+        instructions: "",
+        due: "",
+        limit: "",
+        assignmentId: "none",
+        grammar: true,
+      });
+      queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">New assessment</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New assessment</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="a-title">Title</Label>
+            <Input
+              id="a-title"
+              value={form.title}
+              maxLength={160}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="a-kind">Type</Label>
+              <Select
+                value={form.kind}
+                onValueChange={(v) => setForm({ ...form, kind: v as AssessmentKind })}
+              >
+                <SelectTrigger id="a-kind">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSESSMENT_KINDS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {ASSESSMENT_KIND_LABELS[k]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="a-limit">Time limit (min)</Label>
+              <Input
+                id="a-limit"
+                inputMode="numeric"
+                value={form.limit}
+                onChange={(e) => setForm({ ...form, limit: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="a-due">Due date</Label>
+              <Input
+                id="a-due"
+                type="date"
+                value={form.due}
+                onChange={(e) => setForm({ ...form, due: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="a-assignment">Gradebook column</Label>
+              <Select
+                value={form.assignmentId}
+                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              >
+                <SelectTrigger id="a-assignment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not linked</SelectItem>
+                  {assignments.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="a-instructions">Instructions</Label>
+            <Textarea
+              id="a-instructions"
+              rows={3}
+              value={form.instructions}
+              onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={form.grammar}
+              onCheckedChange={(v) => setForm({ ...form, grammar: v === true })}
+            />
+            Enable AI grammar proofing for written responses
+          </label>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => create.mutate()} disabled={create.isPending}>
+            Create
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type QuestionRow = {
+  id: string;
+  position: number;
+  kind: string;
+  prompt: string;
+  options: unknown;
+  answer_key: unknown;
+  points: number;
+  rubric: string | null;
+};
+
+function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
+  const queryClient = useQueryClient();
+  const [kind, setKind] = useState<QuestionKind>("multiple_choice");
+  const [prompt, setPrompt] = useState("");
+  const [points, setPoints] = useState("1");
+  const [rubric, setRubric] = useState("");
+  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
+  const [correct, setCorrect] = useState<number[]>([]);
+  const [accepted, setAccepted] = useState("");
+  const [numeric, setNumeric] = useState({ value: "", tolerance: "0" });
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ["assessment-questions", assessmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assessment_questions")
+        .select("id, position, kind, prompt, options, answer_key, points, rubric")
+        .eq("assessment_id", assessmentId)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as QuestionRow[];
+    },
+  });
+
+  function reset() {
+    setPrompt("");
+    setPoints("1");
+    setRubric("");
+    setOptions(["", "", "", ""]);
+    setCorrect([]);
+    setAccepted("");
+    setNumeric({ value: "", tolerance: "0" });
+  }
+
+  const add = useMutation({
+    mutationFn: async () => {
+      if (prompt.trim().length < 3) throw new Error("Write the question prompt");
+      const pts = Number(points);
+      if (Number.isNaN(pts) || pts <= 0) throw new Error("Points must be greater than zero");
+
+      let opts: string[] = [];
+      let key: AnswerKey = {};
+
+      if (kind === "multiple_choice" || kind === "multi_select") {
+        opts = options.map((o) => o.trim()).filter(Boolean);
+        if (opts.length < 2) throw new Error("Add at least two answer choices");
+        const valid = correct.filter((i) => i < opts.length);
+        if (valid.length === 0) throw new Error("Mark the correct answer(s)");
+        key =
+          kind === "multiple_choice" ? { choice: valid[0] } : { choices: [...valid].sort() };
+      } else if (kind === "true_false") {
+        opts = ["True", "False"];
+        if (correct.length === 0) throw new Error("Choose True or False as the answer");
+        key = { choice: correct[0] };
+      } else if (kind === "short_answer") {
+        const list = accepted
+          .split(/\n|,/)
+          .map((a) => a.trim())
+          .filter(Boolean);
+        if (list.length === 0) throw new Error("Add at least one accepted answer");
+        key = { accepted: list };
+      } else if (kind === "numeric") {
+        const value = Number(numeric.value);
+        if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
+        key = { value, tolerance: Number(numeric.tolerance) || 0 };
+      }
+
+      const { error } = await supabase.from("assessment_questions").insert({
+        assessment_id: assessmentId,
+        position: questions.length,
+        kind,
+        prompt: prompt.trim().slice(0, 2000),
+        options: opts,
+        answer_key: key,
+        points: pts,
+        rubric: rubric.trim().slice(0, 2000) || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Question added");
+      reset();
+      queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assessment_questions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const total = questions.reduce((s, q) => s + Number(q.points), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Questions
+        </h4>
+        <span className="text-xs text-muted-foreground">
+          {questions.length} questions · {total} points
+        </span>
+      </div>
+
+      {questions.length > 0 && (
+        <ol className="space-y-2">
+          {questions.map((q, i) => (
+            <li
+              key={q.id}
+              className="flex items-start justify-between gap-3 rounded-lg border border-border bg-secondary/30 p-3 text-sm"
+            >
+              <div>
+                <p className="font-medium">
+                  {i + 1}. {q.prompt}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {QUESTION_KIND_LABELS[q.kind as QuestionKind] ?? q.kind} · {q.points} pts ·{" "}
+                  {q.kind === "essay" ? "teacher / AI reviewed" : "auto-graded"}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => remove.mutate(q.id)}>
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <div className="rounded-lg border border-dashed border-border p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="q-kind">Question type</Label>
+            <Select value={kind} onValueChange={(v) => setKind(v as QuestionKind)}>
+              <SelectTrigger id="q-kind">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {QUESTION_KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {QUESTION_KIND_LABELS[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="q-points">Points</Label>
+            <Input
+              id="q-points"
+              inputMode="decimal"
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-1.5">
+          <Label htmlFor="q-prompt">Prompt</Label>
+          <Textarea
+            id="q-prompt"
+            rows={2}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
+
+        {(kind === "multiple_choice" || kind === "multi_select") && (
+          <div className="mt-3 space-y-2">
+            <Label>Answer choices (tick the correct one{kind === "multi_select" && "s"})</Label>
+            {options.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Checkbox
+                  checked={correct.includes(i)}
+                  onCheckedChange={(v) => {
+                    if (v === true) {
+                      setCorrect(kind === "multiple_choice" ? [i] : [...correct, i]);
+                    } else {
+                      setCorrect(correct.filter((c) => c !== i));
+                    }
+                  }}
+                  aria-label={`Choice ${i + 1} correct`}
+                />
+                <Input
+                  value={opt}
+                  placeholder={`Choice ${i + 1}`}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[i] = e.target.value;
+                    setOptions(next);
+                  }}
+                />
+              </div>
+            ))}
+            <Button variant="ghost" size="sm" onClick={() => setOptions([...options, ""])}>
+              Add choice
+            </Button>
+          </div>
+        )}
+
+        {kind === "true_false" && (
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="q-tf">Correct answer</Label>
+            <Select
+              value={correct[0] === 0 ? "true" : correct[0] === 1 ? "false" : ""}
+              onValueChange={(v) => setCorrect([v === "true" ? 0 : 1])}
+            >
+              <SelectTrigger id="q-tf">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">True</SelectItem>
+                <SelectItem value="false">False</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {kind === "short_answer" && (
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="q-accepted">Accepted answers (one per line)</Label>
+            <Textarea
+              id="q-accepted"
+              rows={3}
+              value={accepted}
+              placeholder={"photosynthesis\nphoto synthesis"}
+              onChange={(e) => setAccepted(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Matching ignores case, spacing and punctuation.
+            </p>
+          </div>
+        )}
+
+        {kind === "numeric" && (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="q-value">Correct value</Label>
+              <Input
+                id="q-value"
+                inputMode="decimal"
+                value={numeric.value}
+                onChange={(e) => setNumeric({ ...numeric, value: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="q-tol">± tolerance</Label>
+              <Input
+                id="q-tol"
+                inputMode="decimal"
+                value={numeric.tolerance}
+                onChange={(e) => setNumeric({ ...numeric, tolerance: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+
+        {kind === "essay" && (
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="q-rubric">Rubric (guides AI grammar proof and scoring)</Label>
+            <Textarea
+              id="q-rubric"
+              rows={3}
+              value={rubric}
+              onChange={(e) => setRubric(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="mt-4">
+          <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
+            Add question
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
