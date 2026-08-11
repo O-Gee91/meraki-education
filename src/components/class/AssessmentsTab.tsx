@@ -512,7 +512,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
           {questions.map((q, i) => (
             <li
               key={q.id}
-              className="flex items-start justify-between gap-3 rounded-lg border border-border bg-secondary/30 p-3 text-sm"
+              className={`flex items-start justify-between gap-3 rounded-lg border p-3 text-sm ${
+                editingId === q.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-secondary/30"
+              }`}
             >
               <div>
                 <p className="font-medium">
@@ -521,12 +525,19 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {QUESTION_KIND_LABELS[q.kind as QuestionKind] ?? q.kind} · {q.points} pts ·{" "}
                   {q.kind === "essay" ? "teacher / AI reviewed" : "auto-graded"}
+                  {editingId === q.id ? " · editing" : ""}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => remove.mutate(q.id)}>
-                Remove
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="outline" size="sm" onClick={() => startEdit(q)}>
+                  Edit
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => remove.mutate(q.id)}>
+                  Remove
+                </Button>
+              </div>
             </li>
+
           ))}
         </ol>
       )}
