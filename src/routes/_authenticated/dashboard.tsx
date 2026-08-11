@@ -109,7 +109,10 @@ function DashboardPage() {
           : "Grades, attendance and announcements for the current term."
       }
     >
+      <SetupCard />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
         <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
         {isStaff ? (
           <Stat icon={Users} label="Students" value={String(students.length)} />
