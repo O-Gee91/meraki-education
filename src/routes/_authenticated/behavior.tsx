@@ -428,11 +428,29 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
   });
 
   const update = useMutation({
-    mutationFn: async (input: { id: string; patch: { status?: string; scheduled_date?: string } }) => {
+    mutationFn: async (input: {
+      id: string;
+      patch: { status?: string; scheduled_date?: string; reason?: string; notes?: string };
+    }) => {
       const { error } = await supabase.from("detentions").update(input.patch).eq("id", input.id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["detentions"] }),
+    onSuccess: () => {
+      toast.success("Detention updated");
+      queryClient.invalidateQueries({ queryKey: ["detentions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("detentions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Detention deleted");
+      queryClient.invalidateQueries({ queryKey: ["detentions"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -460,7 +478,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
             Scheduled {formatDate(d.scheduled_date)}
           </span>
           {isStaff ? (
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Input
                 type="date"
                 className="w-40"
@@ -484,8 +502,37 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                className="w-56"
+                placeholder="Reason"
+                defaultValue={d.reason ?? ""}
+                onBlur={(e) => {
+                  const reason = e.target.value.trim();
+                  if (reason && reason !== d.reason)
+                    update.mutate({ id: d.id, patch: { reason } });
+                }}
+              />
+              <Input
+                className="w-56"
+                placeholder="Staff notes"
+                defaultValue={d.notes ?? ""}
+                onBlur={(e) => {
+                  const notes = e.target.value.trim();
+                  if (notes !== (d.notes ?? "")) update.mutate({ id: d.id, patch: { notes } });
+                }}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(d.id)}
+              >
+                Delete
+              </Button>
             </div>
           ) : (
+
             <Badge variant="outline" className="ml-auto">
               {d.status}
             </Badge>
