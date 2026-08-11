@@ -312,7 +312,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
   });
 
   const update = useMutation({
-    mutationFn: async (input: { id: string; patch: Record<string, unknown> }) => {
+    mutationFn: async (input: { id: string; patch: { status?: string; scheduled_date?: string } }) => {
       const { error } = await supabase.from("detentions").update(input.patch).eq("id", input.id);
       if (error) throw error;
     },
