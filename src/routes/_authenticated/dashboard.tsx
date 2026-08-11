@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { SchoolCalendar } from "@/components/SchoolCalendar";
+
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -194,6 +196,9 @@ function DashboardPage() {
           </div>
         </section>
       </div>
+
+      <SchoolCalendar />
+
 
       {!isStaff && (
         <section className="panel mt-6 p-5">
