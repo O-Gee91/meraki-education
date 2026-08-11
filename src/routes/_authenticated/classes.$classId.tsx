@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClassFeed } from "@/components/class/ClassFeed";
+import { FileLibrary } from "@/components/files/FileLibrary";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
