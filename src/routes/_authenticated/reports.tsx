@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+import { ElaCatalog } from "@/components/standards/ElaCatalog";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
