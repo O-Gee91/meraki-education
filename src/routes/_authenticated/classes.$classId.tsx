@@ -420,12 +420,13 @@ function AssignmentsTab({
           <p className="p-6 text-sm text-muted-foreground">No assignments yet.</p>
         ) : (
           assignments.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
+            <div key={a.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+              <div className="min-w-0">
                 <p className="font-medium">{a.title}</p>
                 {a.description ? (
                   <p className="mt-1 max-w-xl text-sm text-muted-foreground">{a.description}</p>
                 ) : null}
+                <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Badge variant="secondary">{a.category}</Badge>
@@ -434,6 +435,7 @@ function AssignmentsTab({
               </div>
             </div>
           ))
+
         )}
       </div>
     </div>
