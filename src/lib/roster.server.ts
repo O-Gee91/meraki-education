@@ -61,7 +61,7 @@ export async function provisionRosterAccounts(
         continue;
       }
 
-      const column = target.role === "student" ? "user_id" : "guardian_user_id";
+      
       let userId = await findExistingUserId(admin, target.email);
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
