@@ -268,7 +268,7 @@ function EssayReview({
   });
 
   const latest = reviews[0];
-  const issues = ((latest?.issues ?? []) as EssayIssue[]) ?? [];
+  const issues = (latest?.issues ?? []) as EssayIssue[];
 
   return (
     <div className="mt-3 space-y-3">

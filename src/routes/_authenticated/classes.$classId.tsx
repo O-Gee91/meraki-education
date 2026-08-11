@@ -29,6 +29,7 @@ import {
 import { ClassFeed } from "@/components/class/ClassFeed";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
+import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 
 
@@ -168,6 +169,7 @@ function ClassDetailPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="assessments">Assessments</TabsTrigger>
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="feed">Class feed</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
@@ -254,6 +256,10 @@ function ClassDetailPage() {
 
         <TabsContent value="assignments">
           <AssignmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
+        </TabsContent>
+
+        <TabsContent value="assessments">
+          <AssessmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
         </TabsContent>
 
         <TabsContent value="roster">
