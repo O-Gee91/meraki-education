@@ -17,10 +17,12 @@ import { Route as AuthenticatedAdmissionsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
 import { Route as AuthenticatedBehaviorRouteImport } from './routes/_authenticated/behavior'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
+import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
+import { Route as AuthenticatedWellbeingRouteImport } from './routes/_authenticated/wellbeing'
 import { Route as AuthenticatedClassesIndexRouteImport } from './routes/_authenticated/classes.index'
 import { Route as AuthenticatedClassesClassIdRouteImport } from './routes/_authenticated/classes.$classId'
 
@@ -63,6 +65,11 @@ const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommunityRoute = AuthenticatedCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -81,6 +88,11 @@ const AuthenticatedPeopleRoute = AuthenticatedPeopleRouteImport.update({
 const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWellbeingRoute = AuthenticatedWellbeingRouteImport.update({
+  id: '/wellbeing',
+  path: '/wellbeing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedClassesIndexRoute =
@@ -104,10 +116,12 @@ export interface FileRoutesByFullPath {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/behavior': typeof AuthenticatedBehaviorRoute
   '/billing': typeof AuthenticatedBillingRoute
+  '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/wellbeing': typeof AuthenticatedWellbeingRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/classes/': typeof AuthenticatedClassesIndexRoute
 }
@@ -119,10 +133,12 @@ export interface FileRoutesByTo {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/behavior': typeof AuthenticatedBehaviorRoute
   '/billing': typeof AuthenticatedBillingRoute
+  '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/wellbeing': typeof AuthenticatedWellbeingRoute
   '/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/classes': typeof AuthenticatedClassesIndexRoute
 }
@@ -136,10 +152,12 @@ export interface FileRoutesById {
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
   '/_authenticated/behavior': typeof AuthenticatedBehaviorRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
+  '/_authenticated/wellbeing': typeof AuthenticatedWellbeingRoute
   '/_authenticated/classes/$classId': typeof AuthenticatedClassesClassIdRoute
   '/_authenticated/classes/': typeof AuthenticatedClassesIndexRoute
 }
@@ -153,10 +171,12 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/behavior'
     | '/billing'
+    | '/community'
     | '/dashboard'
     | '/messages'
     | '/people'
     | '/students'
+    | '/wellbeing'
     | '/classes/$classId'
     | '/classes/'
   fileRoutesByTo: FileRoutesByTo
@@ -168,10 +188,12 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/behavior'
     | '/billing'
+    | '/community'
     | '/dashboard'
     | '/messages'
     | '/people'
     | '/students'
+    | '/wellbeing'
     | '/classes/$classId'
     | '/classes'
   id:
@@ -184,10 +206,12 @@ export interface FileRouteTypes {
     | '/_authenticated/attendance'
     | '/_authenticated/behavior'
     | '/_authenticated/billing'
+    | '/_authenticated/community'
     | '/_authenticated/dashboard'
     | '/_authenticated/messages'
     | '/_authenticated/people'
     | '/_authenticated/students'
+    | '/_authenticated/wellbeing'
     | '/_authenticated/classes/$classId'
     | '/_authenticated/classes/'
   fileRoutesById: FileRoutesById
@@ -257,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/community': {
+      id: '/_authenticated/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof AuthenticatedCommunityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -285,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/wellbeing': {
+      id: '/_authenticated/wellbeing'
+      path: '/wellbeing'
+      fullPath: '/wellbeing'
+      preLoaderRoute: typeof AuthenticatedWellbeingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/classes/': {
       id: '/_authenticated/classes/'
       path: '/classes'
@@ -307,10 +345,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
   AuthenticatedBehaviorRoute: typeof AuthenticatedBehaviorRoute
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
+  AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
+  AuthenticatedWellbeingRoute: typeof AuthenticatedWellbeingRoute
   AuthenticatedClassesClassIdRoute: typeof AuthenticatedClassesClassIdRoute
   AuthenticatedClassesIndexRoute: typeof AuthenticatedClassesIndexRoute
 }
@@ -320,10 +360,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
   AuthenticatedBehaviorRoute: AuthenticatedBehaviorRoute,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
+  AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
+  AuthenticatedWellbeingRoute: AuthenticatedWellbeingRoute,
   AuthenticatedClassesClassIdRoute: AuthenticatedClassesClassIdRoute,
   AuthenticatedClassesIndexRoute: AuthenticatedClassesIndexRoute,
 }
