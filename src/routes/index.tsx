@@ -150,7 +150,7 @@ function Landing() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-primary-foreground/70">
-              GRADES 5 – 9
+              {"\n"}
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
               Simplify teaching for your school
