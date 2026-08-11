@@ -26,7 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClassFeed } from "@/components/class/ClassFeed";
+import { ClassPolls } from "@/components/class/ClassPolls";
+import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+
 
 export const Route = createFileRoute("/_authenticated/classes/$classId")({
   head: () => ({
@@ -161,11 +165,15 @@ function ClassDetailPage() {
       }
     >
       <Tabs defaultValue="gradebook">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="roster">Roster</TabsTrigger>
+          <TabsTrigger value="feed">Class feed</TabsTrigger>
+          <TabsTrigger value="seating">Seating plan</TabsTrigger>
+          <TabsTrigger value="polls">Polls</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="gradebook">
           <div className="panel mt-4 overflow-x-auto p-0">
@@ -251,7 +259,27 @@ function ClassDetailPage() {
         <TabsContent value="roster">
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} />
         </TabsContent>
+
+        <TabsContent value="feed">
+          <ClassFeed scope={{ classId }} />
+        </TabsContent>
+
+        <TabsContent value="seating">
+          <SeatingPlan
+            classId={classId}
+            isStaff={isStaff}
+            students={roster
+              .map((r) => r.students)
+              .filter((s): s is NonNullable<typeof s> => !!s)
+              .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="polls">
+          <ClassPolls classId={classId} isStaff={isStaff} />
+        </TabsContent>
       </Tabs>
+
     </AppShell>
   );
 }
@@ -392,12 +420,13 @@ function AssignmentsTab({
           <p className="p-6 text-sm text-muted-foreground">No assignments yet.</p>
         ) : (
           assignments.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
+            <div key={a.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+              <div className="min-w-0">
                 <p className="font-medium">{a.title}</p>
                 {a.description ? (
                   <p className="mt-1 max-w-xl text-sm text-muted-foreground">{a.description}</p>
                 ) : null}
+                <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Badge variant="secondary">{a.category}</Badge>
@@ -406,11 +435,115 @@ function AssignmentsTab({
               </div>
             </div>
           ))
+
         )}
       </div>
     </div>
   );
 }
+
+function AssignmentStandards({
+  assignmentId,
+  isStaff,
+}: {
+  assignmentId: string;
+  isStaff: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [adding, setAdding] = useState(false);
+
+  const { data: standards = [] } = useQuery({
+    queryKey: ["standards"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("standards")
+        .select("id, code, description")
+        .order("code");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: links = [] } = useQuery({
+    queryKey: ["assignment-standards", assignmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignment_standards")
+        .select("id, standard_id")
+        .eq("assignment_id", assignmentId);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const tag = useMutation({
+    mutationFn: async (standardId: string) => {
+      const { error } = await supabase
+        .from("assignment_standards")
+        .insert({ assignment_id: assignmentId, standard_id: standardId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setAdding(false);
+      queryClient.invalidateQueries({ queryKey: ["assignment-standards"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const untag = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assignment_standards").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["assignment-standards"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const codeFor = (id: string) => standards.find((s) => s.id === id)?.code ?? "standard";
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      {links.map((l) => (
+        <Badge key={l.id} variant="outline" className="gap-1">
+          {codeFor(l.standard_id)}
+          {isStaff ? (
+            <button onClick={() => untag.mutate(l.id)} className="text-muted-foreground">
+              ×
+            </button>
+          ) : null}
+        </Badge>
+      ))}
+      {isStaff &&
+        (adding ? (
+          <div className="w-64">
+            <Select onValueChange={(v) => tag.mutate(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a standard" />
+              </SelectTrigger>
+              <SelectContent>
+                {standards
+                  .filter((s) => !links.some((l) => l.standard_id === s.id))
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.code}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-xs text-accent hover:underline"
+          >
+            + tag standard
+          </button>
+        ))}
+    </div>
+  );
+}
+
+
 
 type RosterRow = {
   id: string;

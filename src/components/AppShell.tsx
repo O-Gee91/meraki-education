@@ -4,14 +4,18 @@ import type { ReactNode } from "react";
 import {
   BookOpen,
   CalendarCheck,
+  ClipboardCheck,
   GraduationCap,
+  HeartPulse,
   LayoutDashboard,
   MessageSquare,
   Receipt,
   ShieldCheck,
   Users,
+  Users2,
   LogOut,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -32,7 +36,26 @@ const NAV: NavItem[] = [
     icon: BookOpen,
     roles: ["admin", "teacher", "student", "parent"],
   },
+  {
+    to: "/community",
+    label: "Community",
+    icon: Users2,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  {
+    to: "/reports",
+    label: "Assessment",
+    icon: ClipboardCheck,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  {
+    to: "/wellbeing",
+    label: "Well-being",
+    icon: HeartPulse,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
   { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
+
   {
     to: "/attendance",
     label: "Attendance",

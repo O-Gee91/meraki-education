@@ -85,6 +85,39 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_standards: {
+        Row: {
+          assignment_id: string
+          id: string
+          standard_id: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          standard_id: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          standard_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_standards_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_standards_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           category: string
@@ -219,6 +252,54 @@ export type Database = {
           },
         ]
       }
+      checkins: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          date: string
+          id: string
+          mood: number
+          note: string | null
+          staff_note: string | null
+          student_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          mood?: number
+          note?: string | null
+          staff_note?: string | null
+          student_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          mood?: number
+          note?: string | null
+          staff_note?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
@@ -229,6 +310,7 @@ export type Database = {
           subject: string | null
           teacher_id: string | null
           term: string
+          weights: Json
         }
         Insert: {
           created_at?: string
@@ -239,6 +321,7 @@ export type Database = {
           subject?: string | null
           teacher_id?: string | null
           term?: string
+          weights?: Json
         }
         Update: {
           created_at?: string
@@ -249,6 +332,7 @@ export type Database = {
           subject?: string | null
           teacher_id?: string | null
           term?: string
+          weights?: Json
         }
         Relationships: []
       }
@@ -330,6 +414,76 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          visibility: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name: string
+          visibility?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount_cents: number
@@ -398,6 +552,210 @@ export type Database = {
         }
         Relationships: []
       }
+      poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          class_id: string
+          closed: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          options: string[]
+          question: string
+          share_results: boolean
+        }
+        Insert: {
+          class_id: string
+          closed?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          options?: string[]
+          question: string
+          share_results?: boolean
+        }
+        Update: {
+          class_id?: string
+          closed?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          options?: string[]
+          question?: string
+          share_results?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_items: {
+        Row: {
+          added_by: string | null
+          class_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          link: string | null
+          student_id: string
+          title: string
+        }
+        Insert: {
+          added_by?: string | null
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          student_id: string
+          title: string
+        }
+        Update: {
+          added_by?: string | null
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          student_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_items_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_items_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          author_id: string
+          body: string
+          class_id: string | null
+          created_at: string
+          group_id: string | null
+          id: string
+          link: string | null
+          pinned: boolean
+        }
+        Insert: {
+          author_id: string
+          body: string
+          class_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          link?: string | null
+          pinned?: boolean
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          class_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          link?: string | null
+          pinned?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -416,6 +774,126 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+        }
+        Relationships: []
+      }
+      report_cards: {
+        Row: {
+          class_id: string
+          comment: string | null
+          created_by: string | null
+          grade_pct: number | null
+          id: string
+          letter: string | null
+          published: boolean
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          comment?: string | null
+          created_by?: string | null
+          grade_pct?: number | null
+          id?: string
+          letter?: string | null
+          published?: boolean
+          student_id: string
+          term?: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          comment?: string | null
+          created_by?: string | null
+          grade_pct?: number | null
+          id?: string
+          letter?: string | null
+          published?: boolean
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_cards_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_cards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seats: {
+        Row: {
+          class_id: string
+          col_index: number
+          id: string
+          row_index: number
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          col_index?: number
+          id?: string
+          row_index?: number
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          col_index?: number
+          id?: string
+          row_index?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seats_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      standards: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          grade_level: number | null
+          id: string
+          subject: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          grade_level?: number | null
+          id?: string
+          subject?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          grade_level?: number | null
+          id?: string
+          subject?: string | null
         }
         Relationships: []
       }
