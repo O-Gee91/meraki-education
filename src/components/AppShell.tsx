@@ -1,0 +1,167 @@
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import {
+  BookOpen,
+  CalendarCheck,
+  GraduationCap,
+  LayoutDashboard,
+  MessageSquare,
+  Receipt,
+  ShieldCheck,
+  Users,
+  LogOut,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth, type Role } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type NavItem = { to: string; label: string; icon: typeof BookOpen; roles: Role[] };
+
+const NAV: NavItem[] = [
+  {
+    to: "/dashboard",
+    label: "Overview",
+    icon: LayoutDashboard,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  {
+    to: "/classes",
+    label: "Classes",
+    icon: BookOpen,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
+  {
+    to: "/attendance",
+    label: "Attendance",
+    icon: CalendarCheck,
+    roles: ["admin", "teacher"],
+  },
+  {
+    to: "/messages",
+    label: "Messages",
+    icon: MessageSquare,
+    roles: ["admin", "teacher", "student", "parent"],
+  },
+  {
+    to: "/billing",
+    label: "Tuition",
+    icon: Receipt,
+    roles: ["admin", "parent", "student"],
+  },
+  { to: "/admin", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
+];
+
+const ROLE_LABEL: Record<Role, string> = {
+  admin: "School admin",
+  teacher: "Teacher",
+  student: "Student",
+  parent: "Guardian",
+};
+
+export function AppShell({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  const { profile, primaryRole, user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const items = NAV.filter((item) => item.roles.includes(primaryRole));
+
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
+        <Link to="/" className="mb-8 flex items-center gap-2 px-2">
+          <GraduationCap className="size-6 text-sidebar-primary" />
+          <span className="font-display text-lg font-semibold tracking-tight">Meridian</span>
+        </Link>
+        <nav className="flex flex-1 flex-col gap-1">
+          {items.map((item) => {
+            const active = pathname === item.to || pathname.startsWith(item.to + "/");
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="mt-6 rounded-lg bg-sidebar-accent/60 p-3">
+          <p className="truncate text-sm font-semibold">
+            {profile?.full_name || user?.email || "Signed in"}
+          </p>
+          <p className="text-xs text-sidebar-foreground/70">{ROLE_LABEL[primaryRole]}</p>
+          <button
+            onClick={signOut}
+            className="mt-3 flex items-center gap-2 text-xs font-medium text-sidebar-foreground/80 hover:text-sidebar-primary"
+          >
+            <LogOut className="size-3.5" /> Sign out
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold">{title}</h1>
+            {description ? (
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            {actions}
+            <Button variant="ghost" size="sm" className="lg:hidden" onClick={signOut}>
+              Sign out
+            </Button>
+          </div>
+        </header>
+
+        <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-4 py-2 lg:hidden">
+          {items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "whitespace-nowrap rounded-md px-3 py-1.5 text-sm",
+                pathname.startsWith(item.to)
+                  ? "bg-secondary font-medium text-secondary-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <main className="flex-1 px-6 py-6">{children}</main>
+      </div>
+    </div>
+  );
+}
