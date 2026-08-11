@@ -172,6 +172,7 @@ function ClassDetailPage() {
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="feed">Class feed</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
           <TabsTrigger value="polls">Polls</TabsTrigger>
         </TabsList>
