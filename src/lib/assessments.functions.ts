@@ -286,10 +286,11 @@ export const proofreadEssay = createServerFn({ method: "POST" })
       suggestedPoints: z.number(),
       issues: z.array(
         z.object({
-          type: z.string(),
-          excerpt: z.string(),
-          suggestion: z.string(),
-          explanation: z.string(),
+          type: z.string().optional(),
+          excerpt: z.string().optional(),
+          original: z.string().optional(),
+          suggestion: z.string().optional(),
+          explanation: z.string().optional(),
         }),
       ),
     });
@@ -303,7 +304,7 @@ export const proofreadEssay = createServerFn({ method: "POST" })
       "Student essay:",
       essay.slice(0, 12000),
       "",
-      "Return a short encouraging summary (max 3 sentences) covering grammar, mechanics, structure and evidence; a suggestedPoints value between 0 and the points possible; and up to 12 concrete issues. For each issue give the category (grammar, spelling, punctuation, run-on, fragment, word choice, clarity, structure, evidence), the exact excerpt from the essay, a corrected suggestion, and a one-sentence explanation a student can understand.",
+      'Return JSON with exactly these keys: "summary" (max 3 sentences on grammar, mechanics, structure and evidence), "suggestedPoints" (number between 0 and the points possible), and "issues" (up to 12 items). Every issue object must use exactly these key names: "type" (grammar, spelling, punctuation, run-on, fragment, word choice, clarity, structure or evidence), "excerpt" (the exact wording copied from the essay), "suggestion" (the corrected wording), "explanation" (one student-friendly sentence). Do not use the key "original".',
     ]
       .filter(Boolean)
       .join("\n");
@@ -330,7 +331,12 @@ export const proofreadEssay = createServerFn({ method: "POST" })
 
     const maxPoints = Number(question?.points ?? 10);
     const suggested = Math.max(0, Math.min(maxPoints, Number(parsed.suggestedPoints ?? 0)));
-    const issues: EssayIssue[] = parsed.issues.slice(0, 12);
+    const issues: EssayIssue[] = parsed.issues.slice(0, 12).map((i) => ({
+      type: i.type ?? "writing",
+      excerpt: i.excerpt ?? i.original ?? "",
+      suggestion: i.suggestion ?? "",
+      explanation: i.explanation ?? "",
+    }));
 
     const { data: review, error: rErr } = await supabaseAdmin
       .from("essay_reviews")
