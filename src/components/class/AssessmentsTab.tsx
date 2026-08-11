@@ -356,6 +356,176 @@ function NewAssessment({
   );
 }
 
+function EditAssessment({
+  classId,
+  assessment,
+  assignments,
+}: {
+  classId: string;
+  assessment: AssessmentRow;
+  assignments: { id: string; title: string; points_possible: number }[];
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    title: assessment.title,
+    kind: assessment.kind as AssessmentKind,
+    instructions: assessment.instructions ?? "",
+    due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
+    limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
+    assignmentId: assessment.assignment_id ?? "none",
+    grammar: assessment.grammar_check_enabled,
+  });
+
+  function openChange(next: boolean) {
+    if (next) {
+      setForm({
+        title: assessment.title,
+        kind: assessment.kind as AssessmentKind,
+        instructions: assessment.instructions ?? "",
+        due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
+        limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
+        assignmentId: assessment.assignment_id ?? "none",
+        grammar: assessment.grammar_check_enabled,
+      });
+    }
+    setOpen(next);
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const { error } = await supabase
+        .from("assessments")
+        .update({
+          title: form.title.trim().slice(0, 160),
+          kind: form.kind,
+          instructions: form.instructions.trim().slice(0, 2000) || null,
+          due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+          time_limit_minutes: form.limit ? Number(form.limit) : null,
+          assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+          grammar_check_enabled: form.grammar,
+        })
+        .eq("id", assessment.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assessment updated");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={openChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit assessment</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-title-${assessment.id}`}>Title</Label>
+            <Input
+              id={`e-title-${assessment.id}`}
+              value={form.title}
+              maxLength={160}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-kind-${assessment.id}`}>Type</Label>
+              <Select
+                value={form.kind}
+                onValueChange={(v) => setForm({ ...form, kind: v as AssessmentKind })}
+              >
+                <SelectTrigger id={`e-kind-${assessment.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSESSMENT_KINDS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {ASSESSMENT_KIND_LABELS[k]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-limit-${assessment.id}`}>Time limit (min)</Label>
+              <Input
+                id={`e-limit-${assessment.id}`}
+                inputMode="numeric"
+                value={form.limit}
+                onChange={(e) => setForm({ ...form, limit: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-due-${assessment.id}`}>Due date</Label>
+              <Input
+                id={`e-due-${assessment.id}`}
+                type="date"
+                value={form.due}
+                onChange={(e) => setForm({ ...form, due: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-assign-${assessment.id}`}>Gradebook assignment</Label>
+              <Select
+                value={form.assignmentId}
+                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              >
+                <SelectTrigger id={`e-assign-${assessment.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not linked</SelectItem>
+                  {assignments.map((as) => (
+                    <SelectItem key={as.id} value={as.id}>
+                      {as.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-instr-${assessment.id}`}>Instructions</Label>
+            <Textarea
+              id={`e-instr-${assessment.id}`}
+              rows={3}
+              value={form.instructions}
+              onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={form.grammar}
+              onCheckedChange={(v) => setForm({ ...form, grammar: v === true })}
+            />
+            Enable AI grammar proofing for written responses
+          </label>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            Save changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+
 type QuestionRow = {
   id: string;
   position: number;
