@@ -200,6 +200,34 @@ function Landing() {
         </div>
       </section>
 
+      <section className="border-t border-border bg-secondary/40">
+        <div className="mx-auto max-w-6xl px-6 py-16">
+          <h2 className="text-2xl font-semibold">Three pillars of the platform</h2>
+          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+            Community, classroom management, and assessment and reporting — connected, so nothing
+            has to be re-entered.
+          </p>
+          <div className="mt-8 grid gap-6 lg:grid-cols-3">
+            {PILLARS.map((p) => (
+              <div key={p.title} className="panel p-6">
+                <h3 className="font-display text-xl font-semibold">{p.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{p.blurb}</p>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {p.items.map((item) => (
+                    <li key={item} className="flex gap-2">
+                      <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+                      <span className="text-muted-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+
       <section className="border-y border-border bg-secondary/50">
         <div className="mx-auto max-w-6xl px-6 py-16">
           <h2 className="text-2xl font-semibold">Everybody wins</h2>
