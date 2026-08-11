@@ -363,6 +363,7 @@ type QuestionRow = {
 
 function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [kind, setKind] = useState<QuestionKind>("multiple_choice");
   const [prompt, setPrompt] = useState("");
   const [points, setPoints] = useState("1");
@@ -386,6 +387,8 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   });
 
   function reset() {
+    setEditingId(null);
+    setKind("multiple_choice");
     setPrompt("");
     setPoints("1");
     setRubric("");
@@ -395,53 +398,83 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setNumeric({ value: "", tolerance: "0" });
   }
 
-  const add = useMutation({
+  function startEdit(q: QuestionRow) {
+    const key = (q.answer_key ?? {}) as AnswerKey;
+    const opts = Array.isArray(q.options) ? (q.options as string[]) : [];
+    setEditingId(q.id);
+    setKind(q.kind as QuestionKind);
+    setPrompt(q.prompt);
+    setPoints(String(q.points));
+    setRubric(q.rubric ?? "");
+    setOptions(opts.length > 0 ? opts : ["", "", "", ""]);
+    setCorrect(key.choices ?? (key.choice != null ? [key.choice] : []));
+    setAccepted((key.accepted ?? []).join("\n"));
+    setNumeric({
+      value: key.value != null ? String(key.value) : "",
+      tolerance: String(key.tolerance ?? 0),
+    });
+  }
+
+  function buildPayload() {
+    if (prompt.trim().length < 3) throw new Error("Write the question prompt");
+    const pts = Number(points);
+    if (Number.isNaN(pts) || pts <= 0) throw new Error("Points must be greater than zero");
+
+    let opts: string[] = [];
+    let key: AnswerKey = {};
+
+    if (kind === "multiple_choice" || kind === "multi_select") {
+      opts = options.map((o) => o.trim()).filter(Boolean);
+      if (opts.length < 2) throw new Error("Add at least two answer choices");
+      const valid = correct.filter((i) => i < opts.length);
+      if (valid.length === 0) throw new Error("Mark the correct answer(s)");
+      key = kind === "multiple_choice" ? { choice: valid[0] } : { choices: [...valid].sort() };
+    } else if (kind === "true_false") {
+      opts = ["True", "False"];
+      if (correct.length === 0) throw new Error("Choose True or False as the answer");
+      key = { choice: correct[0] };
+    } else if (kind === "short_answer") {
+      const list = accepted
+        .split(/\n|,/)
+        .map((a) => a.trim())
+        .filter(Boolean);
+      if (list.length === 0) throw new Error("Add at least one accepted answer");
+      key = { accepted: list };
+    } else if (kind === "numeric") {
+      const value = Number(numeric.value);
+      if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
+      key = { value, tolerance: Number(numeric.tolerance) || 0 };
+    }
+
+    return {
+      kind,
+      prompt: prompt.trim().slice(0, 2000),
+      options: opts,
+      answer_key: key,
+      points: pts,
+      rubric: rubric.trim().slice(0, 2000) || null,
+    };
+  }
+
+  const save = useMutation({
     mutationFn: async () => {
-      if (prompt.trim().length < 3) throw new Error("Write the question prompt");
-      const pts = Number(points);
-      if (Number.isNaN(pts) || pts <= 0) throw new Error("Points must be greater than zero");
-
-      let opts: string[] = [];
-      let key: AnswerKey = {};
-
-      if (kind === "multiple_choice" || kind === "multi_select") {
-        opts = options.map((o) => o.trim()).filter(Boolean);
-        if (opts.length < 2) throw new Error("Add at least two answer choices");
-        const valid = correct.filter((i) => i < opts.length);
-        if (valid.length === 0) throw new Error("Mark the correct answer(s)");
-        key =
-          kind === "multiple_choice" ? { choice: valid[0] } : { choices: [...valid].sort() };
-      } else if (kind === "true_false") {
-        opts = ["True", "False"];
-        if (correct.length === 0) throw new Error("Choose True or False as the answer");
-        key = { choice: correct[0] };
-      } else if (kind === "short_answer") {
-        const list = accepted
-          .split(/\n|,/)
-          .map((a) => a.trim())
-          .filter(Boolean);
-        if (list.length === 0) throw new Error("Add at least one accepted answer");
-        key = { accepted: list };
-      } else if (kind === "numeric") {
-        const value = Number(numeric.value);
-        if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
-        key = { value, tolerance: Number(numeric.tolerance) || 0 };
+      const payload = buildPayload();
+      if (editingId) {
+        const { error } = await supabase
+          .from("assessment_questions")
+          .update(payload)
+          .eq("id", editingId);
+        if (error) throw error;
+        return "updated" as const;
       }
-
-      const { error } = await supabase.from("assessment_questions").insert({
-        assessment_id: assessmentId,
-        position: questions.length,
-        kind,
-        prompt: prompt.trim().slice(0, 2000),
-        options: opts,
-        answer_key: key,
-        points: pts,
-        rubric: rubric.trim().slice(0, 2000) || null,
-      });
+      const { error } = await supabase
+        .from("assessment_questions")
+        .insert({ assessment_id: assessmentId, position: questions.length, ...payload });
       if (error) throw error;
+      return "added" as const;
     },
-    onSuccess: () => {
-      toast.success("Question added");
+    onSuccess: (result) => {
+      toast.success(result === "updated" ? "Question updated" : "Question added");
       reset();
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
     },
@@ -453,12 +486,15 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       const { error } = await supabase.from("assessment_questions").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] }),
+    onSuccess: (_d, id) => {
+      if (editingId === id) reset();
+      queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const total = questions.reduce((s, q) => s + Number(q.points), 0);
+
 
   return (
     <div className="space-y-4">
