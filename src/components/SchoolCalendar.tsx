@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { useAuth } from "@/hooks/useAuth";
 
 const CATEGORIES = [
@@ -41,6 +42,7 @@ type EventRow = {
   end_time: string | null;
   location: string | null;
   category: string;
+  audience: string;
 };
 
 function toKey(d: Date) {
@@ -69,6 +71,7 @@ export function SchoolCalendar() {
     title: "",
     description: "",
     category: "event",
+    audience: "everyone",
     start_time: "",
     end_time: "",
     location: "",
@@ -82,7 +85,7 @@ export function SchoolCalendar() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calendar_events")
-        .select("id, title, description, event_date, start_time, end_time, location, category")
+        .select("id, title, description, event_date, start_time, end_time, location, category, audience")
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
         .order("event_date")
@@ -120,6 +123,7 @@ export function SchoolCalendar() {
         title: form.title.trim(),
         description: form.description.trim() || null,
         category: form.category,
+        audience: form.audience as "everyone" | "students" | "parents" | "teachers",
         event_date: selectedDate,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
@@ -134,6 +138,7 @@ export function SchoolCalendar() {
         title: "",
         description: "",
         category: "event",
+        audience: "everyone",
         start_time: "",
         end_time: "",
         location: "",
@@ -290,6 +295,24 @@ export function SchoolCalendar() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="cal-audience">Who can see this</Label>
+                <Select
+                  value={form.audience}
+                  onValueChange={(audience) => setForm({ ...form, audience })}
+                >
+                  <SelectTrigger id="cal-audience">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCES.map((a) => (
+                      <SelectItem key={a.value} value={a.value}>
+                        {a.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="cal-start">Starts</Label>
@@ -351,6 +374,11 @@ export function SchoolCalendar() {
                         {CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category}
                       </span>
                       <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
+                      {e.audience !== "everyone" && (
+                        <p className="text-xs text-muted-foreground">
+                          Visible to {audienceLabel(e.audience).toLowerCase()}
+                        </p>
+                      )}
                     </div>
                     {isStaff && (
                       <Button
