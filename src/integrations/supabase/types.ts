@@ -747,6 +747,69 @@ export type Database = {
           },
         ]
       }
+      file_uploads: {
+        Row: {
+          audience: Database["public"]["Enums"]["post_audience"]
+          class_id: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number
+          storage_path: string
+          student_id: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          audience?: Database["public"]["Enums"]["post_audience"]
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number
+          storage_path: string
+          student_id?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["post_audience"]
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number
+          storage_path?: string
+          student_id?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_uploads_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_uploads_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grades: {
         Row: {
           assignment_id: string
