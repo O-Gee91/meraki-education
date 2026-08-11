@@ -21,9 +21,9 @@ import { attendanceTone, formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/attendance")({
   head: () => ({
     meta: [
-      { title: "Attendance — Meridian" },
+      { title: "Attendance — Meraki Education" },
       { name: "description", content: "Take daily roll and review attendance history." },
-      { property: "og:title", content: "Attendance — Meridian" },
+      { property: "og:title", content: "Attendance — Meraki Education" },
       { property: "og:description", content: "Take daily roll and review attendance history." },
     ],
   }),

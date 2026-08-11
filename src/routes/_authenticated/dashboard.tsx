@@ -12,12 +12,12 @@ import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Overview — Meridian" },
+      { title: "Overview — Meraki Education" },
       {
         name: "description",
         content: "Your classes, grades, attendance and school announcements at a glance.",
       },
-      { property: "og:title", content: "Overview — Meridian" },
+      { property: "og:title", content: "Overview — Meraki Education" },
       {
         property: "og:description",
         content: "Your classes, grades, attendance and school announcements at a glance.",

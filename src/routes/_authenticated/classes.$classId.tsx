@@ -31,12 +31,12 @@ import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/classes/$classId")({
   head: () => ({
     meta: [
-      { title: "Class gradebook — Meridian" },
+      { title: "Class gradebook — Meraki Education" },
       {
         name: "description",
         content: "Gradebook, assignments and roster for a single class section.",
       },
-      { property: "og:title", content: "Class gradebook — Meridian" },
+      { property: "og:title", content: "Class gradebook — Meraki Education" },
       {
         property: "og:description",
         content: "Gradebook, assignments and roster for a single class section.",

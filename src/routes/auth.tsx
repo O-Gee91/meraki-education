@@ -20,16 +20,16 @@ import {
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Meridian Middle School Platform" },
+      { title: "Sign in — Meraki Education Platform" },
       {
         name: "description",
         content:
-          "Sign in or create an account to reach your Meridian gradebook, attendance, messages and tuition information.",
+          "Sign in or create an account to reach your Meraki Education gradebook, attendance, messages and tuition information.",
       },
-      { property: "og:title", content: "Sign in — Meridian Middle School Platform" },
+      { property: "og:title", content: "Sign in — Meraki Education Platform" },
       {
         property: "og:description",
-        content: "Teacher, student, guardian and admin access to the Meridian school platform.",
+        content: "Teacher, student, guardian and admin access to the Meraki Education school platform.",
       },
     ],
   }),
@@ -116,7 +116,7 @@ function AuthPage() {
       <div className="surface-deep hidden w-2/5 flex-col justify-between p-10 lg:flex">
         <Link to="/" className="flex items-center gap-2">
           <GraduationCap className="size-6" />
-          <span className="font-display text-lg font-semibold">Meridian</span>
+          <span className="font-display text-lg font-semibold">Meraki Education</span>
         </Link>
         <div>
           <h2 className="text-3xl font-semibold leading-tight">

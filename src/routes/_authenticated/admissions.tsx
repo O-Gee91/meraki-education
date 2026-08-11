@@ -10,9 +10,9 @@ import { formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/admissions")({
   head: () => ({
     meta: [
-      { title: "Admissions — Meridian" },
+      { title: "Admissions — Meraki Education" },
       { name: "description", content: "Review and process new enrollment applications." },
-      { property: "og:title", content: "Admissions — Meridian" },
+      { property: "og:title", content: "Admissions — Meraki Education" },
       { property: "og:description", content: "Review and process new enrollment applications." },
     ],
   }),

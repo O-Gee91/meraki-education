@@ -98,7 +98,7 @@ export function AppShell({
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/" className="mb-8 flex items-center gap-2 px-2">
           <GraduationCap className="size-6 text-sidebar-primary" />
-          <span className="font-display text-lg font-semibold tracking-tight">Meridian</span>
+          <span className="font-display text-lg font-semibold tracking-tight">Meraki Education</span>
         </Link>
         <nav className="flex flex-1 flex-col gap-1">
           {items.map((item) => {

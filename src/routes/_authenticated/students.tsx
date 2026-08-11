@@ -19,9 +19,9 @@ import {
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
     meta: [
-      { title: "Students — Meridian" },
+      { title: "Students — Meraki Education" },
       { name: "description", content: "Student directory with grade level and guardian contact." },
-      { property: "og:title", content: "Students — Meridian" },
+      { property: "og:title", content: "Students — Meraki Education" },
       {
         property: "og:description",
         content: "Student directory with grade level and guardian contact.",
