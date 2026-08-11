@@ -4,14 +4,18 @@ import type { ReactNode } from "react";
 import {
   BookOpen,
   CalendarCheck,
+  ClipboardCheck,
   GraduationCap,
+  HeartPulse,
   LayoutDashboard,
   MessageSquare,
   Receipt,
   ShieldCheck,
   Users,
+  Users2,
   LogOut,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
