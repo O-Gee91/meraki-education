@@ -79,11 +79,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Meridian — Middle School Gradebook & SIS" },
+      { title: "Meraki Education — Middle School Gradebook & SIS" },
       {
         name: "description",
         content:
-          "Meridian is a middle school platform for gradebook, attendance, behavior, family messaging, enrollment and tuition.",
+          "Meraki Education is a K-12 school platform for gradebook, attendance, behavior, family messaging, enrollment and tuition.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

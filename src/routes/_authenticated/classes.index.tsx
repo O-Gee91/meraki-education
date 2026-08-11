@@ -20,9 +20,9 @@ import {
 export const Route = createFileRoute("/_authenticated/classes/")({
   head: () => ({
     meta: [
-      { title: "Classes — Meridian" },
+      { title: "Classes — Meraki Education" },
       { name: "description", content: "All class sections for the current term." },
-      { property: "og:title", content: "Classes — Meridian" },
+      { property: "og:title", content: "Classes — Meraki Education" },
       { property: "og:description", content: "All class sections for the current term." },
     ],
   }),

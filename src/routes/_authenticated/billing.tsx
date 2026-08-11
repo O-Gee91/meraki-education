@@ -29,9 +29,9 @@ import { money, formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
     meta: [
-      { title: "Billing — Meridian" },
+      { title: "Billing — Meraki Education" },
       { name: "description", content: "School fees, lunch balances and invoice status." },
-      { property: "og:title", content: "Billing — Meridian" },
+      { property: "og:title", content: "Billing — Meraki Education" },
       { property: "og:description", content: "School fees, lunch balances and invoice status." },
     ],
   }),

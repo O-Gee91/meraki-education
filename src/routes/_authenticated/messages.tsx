@@ -23,12 +23,12 @@ import { formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/messages")({
   head: () => ({
     meta: [
-      { title: "Messages — Meridian" },
+      { title: "Messages — Meraki Education" },
       {
         name: "description",
         content: "Direct messages between staff, students and guardians, plus school announcements.",
       },
-      { property: "og:title", content: "Messages — Meridian" },
+      { property: "og:title", content: "Messages — Meraki Education" },
       {
         property: "og:description",
         content: "Direct messages between staff, students and guardians, plus school announcements.",

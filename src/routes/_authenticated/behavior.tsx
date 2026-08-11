@@ -22,12 +22,12 @@ import { formatDate } from "@/lib/school";
 export const Route = createFileRoute("/_authenticated/behavior")({
   head: () => ({
     meta: [
-      { title: "Behavior notes — Meridian" },
+      { title: "Behavior notes — Meraki Education" },
       {
         name: "description",
         content: "Log positive recognition and concerns, shared with guardians.",
       },
-      { property: "og:title", content: "Behavior notes — Meridian" },
+      { property: "og:title", content: "Behavior notes — Meraki Education" },
       {
         property: "og:description",
         content: "Log positive recognition and concerns, shared with guardians.",

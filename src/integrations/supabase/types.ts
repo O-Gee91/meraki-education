@@ -478,8 +478,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_exists: { Args: never; Returns: boolean }
       can_view_class: { Args: { _class_id: string }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
+      claim_first_admin: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

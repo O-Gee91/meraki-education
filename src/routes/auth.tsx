@@ -20,16 +20,16 @@ import {
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Meridian Middle School Platform" },
+      { title: "Sign in — Meraki Education Platform" },
       {
         name: "description",
         content:
-          "Sign in or create an account to reach your Meridian gradebook, attendance, messages and tuition information.",
+          "Sign in or create an account to reach your Meraki Education gradebook, attendance, messages and tuition information.",
       },
-      { property: "og:title", content: "Sign in — Meridian Middle School Platform" },
+      { property: "og:title", content: "Sign in — Meraki Education Platform" },
       {
         property: "og:description",
-        content: "Teacher, student, guardian and admin access to the Meridian school platform.",
+        content: "Teacher, student, guardian and admin access to the Meraki Education school platform.",
       },
     ],
   }),
@@ -116,18 +116,18 @@ function AuthPage() {
       <div className="surface-deep hidden w-2/5 flex-col justify-between p-10 lg:flex">
         <Link to="/" className="flex items-center gap-2">
           <GraduationCap className="size-6" />
-          <span className="font-display text-lg font-semibold">Meridian</span>
+          <span className="font-display text-lg font-semibold">Meraki Education</span>
         </Link>
         <div>
           <h2 className="text-3xl font-semibold leading-tight">
-            The middle school day, in one place.
+            The whole school day, in one place.
           </h2>
           <p className="mt-4 max-w-sm text-sm text-primary-foreground/80">
             Grades, roll, behavior notes, family messages, enrollment and tuition — for teachers,
             students, guardians and admins.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">Grades 6 – 8 · Fall 2026 term</p>
+        <p className="text-xs text-primary-foreground/60">Grades 5 – 9 · Fall 2026 term</p>
       </div>
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">

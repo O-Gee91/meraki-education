@@ -12,17 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/apply")({
   head: () => ({
     meta: [
-      { title: "Apply to Meridian Middle School" },
+      { title: "Apply to Meraki Education Middle School" },
       {
         name: "description",
         content:
-          "Submit an enrollment application for grades 6–8 at Meridian. Takes about two minutes.",
+          "Submit an enrollment application for grades 6–8 at Meraki Education. Takes about two minutes.",
       },
-      { property: "og:title", content: "Apply to Meridian Middle School" },
+      { property: "og:title", content: "Apply to Meraki Education Middle School" },
       {
         property: "og:description",
         content:
-          "Submit an enrollment application for grades 6–8 at Meridian. Takes about two minutes.",
+          "Submit an enrollment application for grades 6–8 at Meraki Education. Takes about two minutes.",
       },
     ],
   }),
@@ -71,7 +71,7 @@ function ApplyPage() {
     <main className="min-h-screen bg-background px-4 py-16">
       <div className="mx-auto max-w-2xl">
         <Link to="/" className="text-sm text-accent hover:underline">
-          ← Back to Meridian
+          ← Back to Meraki Education
         </Link>
         <h1 className="mt-6 font-display text-4xl font-semibold">Enrollment application</h1>
         <p className="mt-2 text-muted-foreground">
