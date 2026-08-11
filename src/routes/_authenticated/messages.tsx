@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate } from "@/lib/school";
+import { AUDIENCES, audienceLabel } from "@/lib/audience";
 
 export const Route = createFileRoute("/_authenticated/messages")({
   head: () => ({
@@ -42,7 +43,7 @@ function MessagesPage() {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
   const [compose, setCompose] = useState({ recipient: "", subject: "", body: "" });
-  const [post, setPost] = useState({ title: "", body: "" });
+  const [post, setPost] = useState({ title: "", body: "", audience: "everyone" });
 
   const { data: inbox = [] } = useQuery({
     queryKey: ["messages", user?.id],
@@ -75,7 +76,7 @@ function MessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
-        .select("id, title, body, created_at")
+        .select("id, title, body, created_at, audience")
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
@@ -111,13 +112,14 @@ function MessagesPage() {
       const { error } = await supabase.from("announcements").insert({
         title: post.title.trim().slice(0, 140),
         body: post.body.trim().slice(0, 4000),
+        audience: post.audience as "everyone" | "students" | "parents" | "teachers",
         author_id: user!.id,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Announcement posted");
-      setPost({ title: "", body: "" });
+      setPost({ title: "", body: "", audience: post.audience });
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -222,6 +224,24 @@ function MessagesPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
+                    <Label htmlFor="audience">Who can see this</Label>
+                    <Select
+                      value={post.audience}
+                      onValueChange={(audience) => setPost({ ...post, audience })}
+                    >
+                      <SelectTrigger id="audience">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AUDIENCES.map((a) => (
+                          <SelectItem key={a.value} value={a.value}>
+                            {a.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="announcement">Details</Label>
                     <Textarea
                       id="announcement"
@@ -249,7 +269,12 @@ function MessagesPage() {
               ) : (
                 announcements.map((a) => (
                   <article key={a.id} className="p-4">
-                    <h3 className="text-sm font-semibold">{a.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold">{a.title}</h3>
+                      <Badge variant={a.audience === "everyone" ? "secondary" : "outline"}>
+                        {audienceLabel(a.audience)}
+                      </Badge>
+                    </div>
                     <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
                       {a.body}
                     </p>
