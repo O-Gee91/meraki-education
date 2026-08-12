@@ -472,7 +472,7 @@ function AssignmentsTab({
                   assignment={a}
                   classId={classId}
                   isStaff={isStaff}
-                  roster={roster}
+                  roster={students}
                 />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
