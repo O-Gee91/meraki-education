@@ -10,7 +10,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   MessageSquare,
-  Receipt,
   ShieldCheck,
   Users,
   Users2,

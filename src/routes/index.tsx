@@ -3,7 +3,6 @@ import {
   BookOpen,
   CalendarCheck,
   ClipboardList,
-  CreditCard,
   MessageSquare,
   ShieldCheck,
   GraduationCap,
