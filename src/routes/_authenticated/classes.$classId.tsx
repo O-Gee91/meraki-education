@@ -208,6 +208,7 @@ function ClassDetailPage() {
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
           <TabsTrigger value="polls">Polls</TabsTrigger>
+          <TabsTrigger value="grading">Setup grading</TabsTrigger>
         </TabsList>
 
 
