@@ -244,17 +244,17 @@ function ClassDetailPage() {
                           {r.students?.last_name}, {r.students?.first_name}
                         </td>
                         {assignments.map((a) => {
-                          const g = gradeFor(r.student_id, a.id);
+                          const shown = cellValue(r.student_id, a.id);
                           return (
                             <td key={a.id} className="px-3 py-2">
                               {isStaff ? (
                                 <Input
+                                  key={shown}
                                   className="h-8 w-20"
-                                  inputMode="decimal"
-                                  defaultValue={g?.points_earned ?? ""}
+                                  defaultValue={shown}
                                   onBlur={(e) => {
                                     const value = e.target.value;
-                                    if (value === String(g?.points_earned ?? "")) return;
+                                    if (value.trim() === shown) return;
                                     saveGrade.mutate({
                                       studentId: r.student_id,
                                       assignmentId: a.id,
@@ -264,7 +264,8 @@ function ClassDetailPage() {
                                 />
                               ) : (
                                 <span>
-                                  {g?.points_earned ?? "—"}/{a.points_possible}
+                                  {shown === "" ? "—" : shown}
+                                  {/^\d/.test(shown) ? `/${a.points_possible}` : ""}
                                 </span>
                               )}
                             </td>
@@ -275,7 +276,7 @@ function ClassDetailPage() {
                             <span className="text-muted-foreground">—</span>
                           ) : (
                             <span className={gradeTone(avg)}>
-                              {avg.toFixed(1)}% {letterGrade(avg)}
+                              {avg.toFixed(1)}% {letterFor(avg, setup.scale)}
                             </span>
                           )}
                         </td>
