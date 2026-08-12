@@ -32,7 +32,15 @@ import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
-import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+import { GradingSetupTab } from "@/components/class/GradingSetup";
+import { formatDate, gradeTone } from "@/lib/school";
+import {
+  computeAverage,
+  findMark,
+  letterFor,
+  markCodeFromComment,
+  parseGradingSetup,
+} from "@/lib/grading";
 
 
 export const Route = createFileRoute("/_authenticated/classes/$classId")({
@@ -53,8 +61,6 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
   component: ClassDetailPage,
 });
 
-const CATEGORIES = ["Homework", "Quiz", "Test", "Project", "Participation"];
-
 function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { isStaff } = useAuth();
@@ -65,13 +71,16 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term")
+        .select("id, name, subject, period, room, term, weights")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+
+  const setup = parseGradingSetup(klass?.weights);
+  const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
 
   const { data: roster = [] } = useQuery({
     queryKey: ["roster", classId],
@@ -111,7 +120,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, assignment_id, student_id, points_earned")
+        .select("id, assignment_id, student_id, points_earned, comment")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data;
@@ -121,18 +130,35 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
+  const cellValue = (studentId: string, assignmentId: string) => {
+    const g = gradeFor(studentId, assignmentId);
+    const mark = markCodeFromComment(g?.comment);
+    if (mark) return mark;
+    return g?.points_earned == null ? "" : String(g.points_earned);
+  };
+
   const saveGrade = useMutation({
     mutationFn: async (input: { studentId: string; assignmentId: string; value: string }) => {
       const raw = input.value.trim();
-      const points = raw === "" ? null : Number(raw);
-      if (points != null && (Number.isNaN(points) || points < 0 || points > 10000)) {
-        throw new Error("Enter a valid score");
+      const mark = findMark(raw ? raw.toUpperCase() : null, setup.marks);
+      let points: number | null = null;
+      let comment: string | null = null;
+
+      if (mark) {
+        comment = `MARK:${mark.code.toUpperCase()}`;
+      } else if (raw !== "") {
+        points = Number(raw);
+        if (Number.isNaN(points) || points < 0 || points > 10000) {
+          throw new Error("Enter a valid score or a special mark code");
+        }
       }
+
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: input.assignmentId,
           student_id: input.studentId,
           points_earned: points,
+          comment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -144,15 +170,18 @@ function ClassDetailPage() {
   });
 
   function studentAverage(studentId: string) {
-    let earned = 0;
-    let possible = 0;
-    for (const a of assignments) {
-      const g = gradeFor(studentId, a.id);
-      if (g?.points_earned == null) continue;
-      earned += Number(g.points_earned);
-      possible += Number(a.points_possible);
-    }
-    return possible ? percent(earned, possible) : null;
+    return computeAverage(
+      assignments.map((a) => {
+        const g = gradeFor(studentId, a.id);
+        return {
+          category: a.category,
+          pointsPossible: Number(a.points_possible),
+          pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
+          markCode: markCodeFromComment(g?.comment),
+        };
+      }),
+      setup,
+    );
   }
 
   return (
@@ -179,6 +208,7 @@ function ClassDetailPage() {
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
           <TabsTrigger value="polls">Polls</TabsTrigger>
+          <TabsTrigger value="grading">Setup grading</TabsTrigger>
         </TabsList>
 
 
@@ -215,17 +245,17 @@ function ClassDetailPage() {
                           {r.students?.last_name}, {r.students?.first_name}
                         </td>
                         {assignments.map((a) => {
-                          const g = gradeFor(r.student_id, a.id);
+                          const shown = cellValue(r.student_id, a.id);
                           return (
                             <td key={a.id} className="px-3 py-2">
                               {isStaff ? (
                                 <Input
+                                  key={shown}
                                   className="h-8 w-20"
-                                  inputMode="decimal"
-                                  defaultValue={g?.points_earned ?? ""}
+                                  defaultValue={shown}
                                   onBlur={(e) => {
                                     const value = e.target.value;
-                                    if (value === String(g?.points_earned ?? "")) return;
+                                    if (value.trim() === shown) return;
                                     saveGrade.mutate({
                                       studentId: r.student_id,
                                       assignmentId: a.id,
@@ -235,7 +265,8 @@ function ClassDetailPage() {
                                 />
                               ) : (
                                 <span>
-                                  {g?.points_earned ?? "—"}/{a.points_possible}
+                                  {shown === "" ? "—" : shown}
+                                  {/^\d/.test(shown) ? `/${a.points_possible}` : ""}
                                 </span>
                               )}
                             </td>
@@ -246,7 +277,7 @@ function ClassDetailPage() {
                             <span className="text-muted-foreground">—</span>
                           ) : (
                             <span className={gradeTone(avg)}>
-                              {avg.toFixed(1)}% {letterGrade(avg)}
+                              {avg.toFixed(1)}% {letterFor(avg, setup.scale)}
                             </span>
                           )}
                         </td>
@@ -265,8 +296,14 @@ function ClassDetailPage() {
             isStaff={isStaff}
             assignments={assignments}
             roster={roster}
+            categories={categoryNames.length ? categoryNames : ["Homework"]}
           />
         </TabsContent>
+
+        <TabsContent value="grading">
+          <GradingSetupTab classId={classId} isStaff={isStaff} setup={setup} />
+        </TabsContent>
+
 
         <TabsContent value="assessments">
           <AssessmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
@@ -323,17 +360,19 @@ function AssignmentsTab({
   isStaff,
   assignments,
   roster,
+  categories,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
   roster: RosterRow[];
+  categories: string[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
-    category: "Homework",
+    category: categories[0] ?? "Homework",
     points: "100",
     due: "",
     description: "",
@@ -410,7 +449,7 @@ function AssignmentsTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((c) => (
+                      {categories.map((c: string) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>
