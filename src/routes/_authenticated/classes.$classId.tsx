@@ -33,7 +33,7 @@ import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
-import { formatDate, gradeTone, percent } from "@/lib/school";
+import { formatDate, gradeTone } from "@/lib/school";
 import {
   computeAverage,
   findMark,
