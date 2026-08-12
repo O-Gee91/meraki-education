@@ -19,6 +19,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
+import { PrintTemplates } from "@/components/reports/PrintTemplates";
+
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -53,6 +55,7 @@ function ReportsPage() {
           <TabsTrigger value="reportcards">Report cards</TabsTrigger>
           <TabsTrigger value="standards">Standards</TabsTrigger>
           <TabsTrigger value="portfolios">Portfolios</TabsTrigger>
+          <TabsTrigger value="templates">Print templates</TabsTrigger>
         </TabsList>
         <TabsContent value="reportcards">
           <ReportCards isStaff={isStaff} />
@@ -63,7 +66,11 @@ function ReportsPage() {
         <TabsContent value="portfolios">
           <PortfoliosTab isStaff={isStaff} />
         </TabsContent>
+        <TabsContent value="templates">
+          <PrintTemplates />
+        </TabsContent>
       </Tabs>
+
     </AppShell>
   );
 }
