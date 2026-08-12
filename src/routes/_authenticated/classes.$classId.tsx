@@ -61,8 +61,6 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
   component: ClassDetailPage,
 });
 
-const CATEGORIES = ["Homework", "Quiz", "Test", "Project", "Participation"];
-
 function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { isStaff } = useAuth();
@@ -73,13 +71,16 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term")
+        .select("id, name, subject, period, room, term, weights")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+
+  const setup = parseGradingSetup(klass?.weights);
+  const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
 
   const { data: roster = [] } = useQuery({
     queryKey: ["roster", classId],
