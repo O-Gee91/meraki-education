@@ -32,7 +32,15 @@ import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
-import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+import { GradingSetupTab } from "@/components/class/GradingSetup";
+import { formatDate, gradeTone, percent } from "@/lib/school";
+import {
+  computeAverage,
+  findMark,
+  letterFor,
+  markCodeFromComment,
+  parseGradingSetup,
+} from "@/lib/grading";
 
 
 export const Route = createFileRoute("/_authenticated/classes/$classId")({
