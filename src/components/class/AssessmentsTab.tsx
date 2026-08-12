@@ -156,15 +156,13 @@ export function AssessmentsTab({
                         assessment={a}
                         assignments={assignments}
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`Delete "${a.title}"?`)) remove.mutate(a.id);
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      <ConfirmDeleteButton
+                        title={`Delete "${a.title}"?`}
+                        description="This removes the assessment along with its questions, student submissions and grades."
+                        onConfirm={() => remove.mutate(a.id)}
+                        disabled={remove.isPending}
+                      />
+
 
                     </>
                   )}
