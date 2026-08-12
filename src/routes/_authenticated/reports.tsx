@@ -53,6 +53,7 @@ function ReportsPage() {
           <TabsTrigger value="reportcards">Report cards</TabsTrigger>
           <TabsTrigger value="standards">Standards</TabsTrigger>
           <TabsTrigger value="portfolios">Portfolios</TabsTrigger>
+          <TabsTrigger value="templates">Print templates</TabsTrigger>
         </TabsList>
         <TabsContent value="reportcards">
           <ReportCards isStaff={isStaff} />
@@ -63,7 +64,11 @@ function ReportsPage() {
         <TabsContent value="portfolios">
           <PortfoliosTab isStaff={isStaff} />
         </TabsContent>
+        <TabsContent value="templates">
+          <PrintTemplates />
+        </TabsContent>
       </Tabs>
+
     </AppShell>
   );
 }
