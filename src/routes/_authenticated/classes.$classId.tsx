@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -417,6 +418,19 @@ function AssignmentsTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const removeAssignment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assignments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assignment deleted");
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+    },
+  });
+
   return (
     <div className="mt-4">
       {isStaff && (
@@ -534,7 +548,16 @@ function AssignmentsTab({
                 <Badge variant="secondary">{a.category}</Badge>
                 <span>{a.points_possible} pts</span>
                 <span>Due {formatDate(a.due_date)}</span>
+                {isStaff && (
+                  <ConfirmDeleteButton
+                    title={`Delete "${a.title}"?`}
+                    description="This removes the assignment along with its scores, submissions and linked standards."
+                    onConfirm={() => removeAssignment.mutate(a.id)}
+                    disabled={removeAssignment.isPending}
+                  />
+                )}
               </div>
+
             </div>
           ))
 
