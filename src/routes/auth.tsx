@@ -115,8 +115,8 @@ function AuthPage() {
       return;
     }
     const contactEmail = identifier.trim().toLowerCase();
-    if (contactEmail && !looksLikeEmail(contactEmail)) {
-      toast.error("That email address looks invalid");
+    if (!looksLikeEmail(contactEmail)) {
+      toast.error("Enter the email address where you want notifications sent");
       return;
     }
     setBusy(true);
@@ -131,7 +131,7 @@ function AuthPage() {
           full_name: fullName.trim(),
           role,
           username: normalized,
-          ...(contactEmail ? { contact_email: contactEmail } : {}),
+          contact_email: contactEmail,
         },
       },
     });
@@ -288,7 +288,7 @@ function AuthPage() {
                     <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email (optional)</Label>
+                    <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -297,6 +297,9 @@ function AuthPage() {
                       maxLength={255}
                       onChange={(e) => setIdentifier(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Messages sent to you in Meraki are also delivered to this inbox.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

@@ -40,6 +40,7 @@ export function CreateLogins({ student }: Props) {
   const [guardianUsername, setGuardianUsername] = useState(
     `${suggestUsername(student.first_name, student.last_name)}.parent`.slice(0, 30),
   );
+  const [studentEmail, setStudentEmail] = useState("");
   const [guardianEmail, setGuardianEmail] = useState(student.guardian_email ?? "");
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
 
@@ -47,6 +48,10 @@ export function CreateLogins({ student }: Props) {
     mutationFn: async () => {
       if (!studentUsername.trim() && !guardianUsername.trim())
         throw new Error("Enter a student or guardian username");
+      if (studentUsername.trim() && !studentEmail.trim())
+        throw new Error("Every account needs an email address for notifications");
+      if (guardianUsername.trim() && !guardianEmail.trim())
+        throw new Error("Every account needs an email address for notifications");
       const result = await provision({
         data: {
           entries: [
@@ -55,6 +60,7 @@ export function CreateLogins({ student }: Props) {
               first_name: student.first_name,
               last_name: student.last_name,
               student_username: studentUsername.trim() || null,
+              student_email: studentEmail.trim() || null,
               guardian_username: guardianUsername.trim() || null,
               guardian_email: guardianEmail.trim() || null,
             },
@@ -93,8 +99,8 @@ export function CreateLogins({ student }: Props) {
         <DialogHeader>
           <DialogTitle>Logins for {name}</DialogTitle>
           <DialogDescription>
-            Accounts sign in with a username and password — no email needed. Share the temporary
-            password so they can sign in and change it.
+            Accounts sign in with a username and password. An email address is required for each
+            person so messages and notifications also reach their inbox.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,7 +127,18 @@ export function CreateLogins({ student }: Props) {
           </div>
           <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
           <div className="space-y-1.5">
-            <Label htmlFor="guardian-login-email">Guardian email (optional, for contact)</Label>
+            <Label htmlFor="student-login-email">Student email</Label>
+            <Input
+              id="student-login-email"
+              type="email"
+              value={studentEmail}
+              maxLength={255}
+              placeholder="student@school.org"
+              onChange={(e) => setStudentEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="guardian-login-email">Guardian email</Label>
             <Input
               id="guardian-login-email"
               type="email"
