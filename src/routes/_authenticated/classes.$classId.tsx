@@ -547,7 +547,16 @@ function AssignmentsTab({
                 <Badge variant="secondary">{a.category}</Badge>
                 <span>{a.points_possible} pts</span>
                 <span>Due {formatDate(a.due_date)}</span>
+                {isStaff && (
+                  <ConfirmDeleteButton
+                    title={`Delete "${a.title}"?`}
+                    description="This removes the assignment along with its scores, submissions and linked standards."
+                    onConfirm={() => removeAssignment.mutate(a.id)}
+                    disabled={removeAssignment.isPending}
+                  />
+                )}
               </div>
+
             </div>
           ))
 
