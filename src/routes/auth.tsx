@@ -178,7 +178,7 @@ function AuthPage() {
             students, guardians and admins.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">Grades 5 – 9 · Fall 2026 term</p>
+        <p className="text-xs text-primary-foreground/60">{"\n"}</p>
       </div>
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">
