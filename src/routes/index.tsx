@@ -131,9 +131,6 @@ function Landing() {
             <span className="font-display text-lg font-semibold">Meraki Education</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/apply">Apply to enroll</Link>
-            </Button>
             <Button asChild size="sm">
               <Link to="/auth">Sign in</Link>
             </Button>
@@ -157,14 +154,6 @@ function Landing() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" variant="secondary">
                 <Link to="/auth">Open your gradebook</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                <Link to="/apply">Enroll a student</Link>
               </Button>
             </div>
           </div>
@@ -254,8 +243,8 @@ function Landing() {
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
           <span>Meraki Education Platform</span>
-          <Link to="/apply" className="hover:text-foreground">
-            Enrollment application
+          <Link to="/auth" search={{}} className="hover:text-foreground">
+            Sign in
           </Link>
         </div>
       </footer>
