@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionStudentAccounts } from "@/lib/roster.functions";
+import { isValidUsername, normalizeUsername, suggestUsername } from "@/lib/usernames";
 import { AccountResults, type ProvisionedAccount } from "./AccountResults";
 
 type ParsedRow = {
@@ -26,6 +27,8 @@ type ParsedRow = {
   student_number: string | null;
   guardian_email: string | null;
   student_email: string | null;
+  student_username: string | null;
+  guardian_username: string | null;
 };
 
 const HEADER_MAP: Record<string, keyof ParsedRow> = {
@@ -51,10 +54,14 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   "student email": "student_email",
   studentemail: "student_email",
   "school email": "student_email",
-  "student login": "student_email",
   "guardian email": "guardian_email",
   "parent email": "guardian_email",
   email: "guardian_email",
+  username: "student_username",
+  "student username": "student_username",
+  "student login": "student_username",
+  "guardian username": "guardian_username",
+  "parent username": "guardian_username",
 };
 
 function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: string } {
@@ -71,6 +78,12 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   const email = (mapped["guardian_email"] ?? "").toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: `invalid guardian email for ${first} ${last}` };
+  const studentUsername = normalizeUsername(mapped["student_username"] ?? "");
+  if (studentUsername && !isValidUsername(studentUsername))
+    return { error: `invalid student username for ${first} ${last}` };
+  const guardianUsername = normalizeUsername(mapped["guardian_username"] ?? "");
+  if (guardianUsername && !isValidUsername(guardianUsername))
+    return { error: `invalid guardian username for ${first} ${last}` };
   const studentEmail = (mapped["student_email"] ?? "").toLowerCase();
   if (studentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(studentEmail))
     return { error: `invalid student email for ${first} ${last}` };
@@ -82,6 +95,8 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
       student_number: (mapped["student_number"] ?? "").slice(0, 20) || null,
       guardian_email: email.slice(0, 255) || null,
       student_email: studentEmail.slice(0, 255) || null,
+      student_username: studentUsername || null,
+      guardian_username: guardianUsername || null,
     },
   };
 }
@@ -142,7 +157,16 @@ export function StudentImport() {
       if (rows.length === 0) throw new Error("Nothing to import");
       const { data, error } = await supabase
         .from("students")
-        .insert(rows.map(({ student_email: _ignored, ...rest }) => rest))
+        .insert(
+          rows.map(
+            ({
+              student_email: _email,
+              student_username: _su,
+              guardian_username: _gu,
+              ...rest
+            }) => rest,
+          ),
+        )
         .select("id, first_name, last_name, guardian_email");
       if (error) throw error;
 
@@ -155,8 +179,14 @@ export function StudentImport() {
             last_name: inserted.last_name,
             student_email: rows[i]?.student_email ?? null,
             guardian_email: inserted.guardian_email,
+            student_username:
+              rows[i]?.student_username ??
+              suggestUsername(inserted.first_name, inserted.last_name),
+            guardian_username: rows[i]?.guardian_username ?? null,
           }))
-          .filter((e) => e.student_email || e.guardian_email);
+          .filter(
+            (e) => e.student_username || e.guardian_username || e.student_email || e.guardian_email,
+          );
         if (entries.length > 0) {
           const result = await provision({ data: { entries } });
           created = result.accounts as ProvisionedAccount[];
@@ -194,7 +224,8 @@ export function StudentImport() {
           <DialogTitle>Import students from a spreadsheet</DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
-            First name, Last name, Grade, Student ID, Student email and Guardian email.
+            First name, Last name, Grade, Student ID, Student username, Guardian username and
+            Guardian email.
           </DialogDescription>
         </DialogHeader>
 
@@ -274,7 +305,7 @@ export function StudentImport() {
           />
           <div className="space-y-1">
             <Label htmlFor="create-logins" className="cursor-pointer">
-              Create logins and profiles automatically
+              Create username logins automatically
             </Label>
             <p className="text-xs text-muted-foreground">
               Student and guardian accounts are created with a temporary password wherever an email
