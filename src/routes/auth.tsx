@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import {
+  identifierToEmail,
+  isValidUsername,
+  looksLikeEmail,
+  normalizeUsername,
+  usernameToEmail,
+  USERNAME_RULES,
+} from "@/lib/usernames";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,10 +52,7 @@ function safeNext(next?: string) {
   return next;
 }
 
-const credentials = z.object({
-  email: z.string().trim().email("Enter a valid email").max(255),
-  password: z.string().min(8, "Password must be at least 8 characters").max(72),
-});
+const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -61,7 +66,8 @@ function AuthPage() {
     }
     navigate({ to: "/dashboard" });
   }
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("student");
@@ -70,13 +76,20 @@ function AuthPage() {
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = credentials.safeParse({ email, password });
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Check your details");
+    const parsedPassword = passwordSchema.safeParse(password);
+    if (!identifier.trim()) {
+      toast.error("Enter your username");
+      return;
+    }
+    if (!parsedPassword.success) {
+      toast.error(parsedPassword.error.issues[0]?.message ?? "Check your details");
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword(parsed.data);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: identifierToEmail(identifier),
+      password,
+    });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -87,23 +100,39 @@ function AuthPage() {
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = credentials.safeParse({ email, password });
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Check your details");
+    const parsedPassword = passwordSchema.safeParse(password);
+    const normalized = normalizeUsername(username);
+    if (!isValidUsername(normalized)) {
+      toast.error(`Choose a valid username — ${USERNAME_RULES}`);
+      return;
+    }
+    if (!parsedPassword.success) {
+      toast.error(parsedPassword.error.issues[0]?.message ?? "Check your details");
       return;
     }
     if (fullName.trim().length < 2) {
       toast.error("Enter your full name");
       return;
     }
+    const contactEmail = identifier.trim().toLowerCase();
+    if (contactEmail && !looksLikeEmail(contactEmail)) {
+      toast.error("That email address looks invalid");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
-      ...parsed.data,
+      email: usernameToEmail(normalized),
+      password,
       options: {
         emailRedirectTo: returnTo
           ? `${window.location.origin}${returnTo}`
           : window.location.origin,
-        data: { full_name: fullName.trim(), role },
+        data: {
+          full_name: fullName.trim(),
+          role,
+          username: normalized,
+          ...(contactEmail ? { contact_email: contactEmail } : {}),
+        },
       },
     });
     setBusy(false);
@@ -158,8 +187,8 @@ function AuthPage() {
             <div className="panel p-6 text-center">
               <h1 className="text-xl font-semibold">Check your email</h1>
               <p className="mt-3 text-sm text-muted-foreground">
-                We sent a confirmation link to <span className="font-medium">{email}</span>. Click
-                it to finish creating your account, then come back and sign in.
+                Your account needs confirmation before you can sign in. Ask a school administrator
+                if you need help.
               </p>
               <Button className="mt-6" variant="outline" onClick={() => setPendingConfirm(false)}>
                 Back to sign in
@@ -179,15 +208,18 @@ function AuthPage() {
               <TabsContent value="signin">
                 <form onSubmit={signIn} className="panel mt-4 space-y-4 p-6">
                   <div className="space-y-2">
-                    <Label htmlFor="email">School email</Label>
+                    <Label htmlFor="identifier">Username</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      value={email}
+                      id="identifier"
+                      autoComplete="username"
+                      value={identifier}
                       maxLength={255}
-                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="ava.chen"
+                      onChange={(e) => setIdentifier(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Forgot your password? Ask your teacher or a school administrator to reset it.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
@@ -244,14 +276,26 @@ function AuthPage() {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      autoComplete="username"
+                      value={username}
+                      maxLength={30}
+                      placeholder="ava.chen"
+                      onChange={(e) => setUsername(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email (optional)</Label>
                     <Input
                       id="signup-email"
                       type="email"
                       autoComplete="email"
-                      value={email}
+                      value={identifier}
                       maxLength={255}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => setIdentifier(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
