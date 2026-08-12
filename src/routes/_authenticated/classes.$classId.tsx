@@ -440,7 +440,7 @@ function AssignmentsTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((c) => (
+                      {categories.map((c: string) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>
