@@ -8,6 +8,7 @@ import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ResetAccess } from "@/components/students/ResetAccess";
 
 export const Route = createFileRoute("/_authenticated/people")({
   head: () => ({
@@ -40,7 +41,7 @@ function PeoplePage() {
     enabled: isAdmin,
     queryFn: async () => {
       const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email").order("full_name"),
+        supabase.from("profiles").select("id, full_name, email, username").order("full_name"),
         supabase.from("user_roles").select("id, user_id, role"),
       ]);
       if (pErr) throw pErr;
@@ -96,7 +97,9 @@ function PeoplePage() {
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
-      (p.full_name ?? "").toLowerCase().includes(q) || (p.email ?? "").toLowerCase().includes(q)
+      (p.full_name ?? "").toLowerCase().includes(q) ||
+      (p.username ?? "").toLowerCase().includes(q) ||
+      (p.email ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -107,7 +110,7 @@ function PeoplePage() {
     >
       <div className="panel p-5">
         <Input
-          placeholder="Search by name or email"
+          placeholder="Search by name, username or email"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -130,9 +133,19 @@ function PeoplePage() {
                     {p.id === user?.id ? <Badge variant="secondary">you</Badge> : null}
                   </div>
 
-                  <p className="truncate text-xs text-muted-foreground">{p.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {p.username ?? p.email}
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {p.id === user?.id ? null : (
+                    <ResetAccess
+                      userId={p.id}
+                      label={p.full_name || (p.username ?? "this account")}
+                      currentUsername={p.username}
+                      onDone={() => queryClient.invalidateQueries({ queryKey: ["people"] })}
+                    />
+                  )}
                   {ROLES.map((role) => {
                     const has = p.roles.includes(role);
                     return (
