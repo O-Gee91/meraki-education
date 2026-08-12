@@ -345,6 +345,67 @@ export type Database = {
           },
         ]
       }
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          body: string | null
+          created_at: string
+          file_upload_id: string | null
+          id: string
+          status: string
+          student_id: string
+          submitted_at: string
+          teacher_note: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          body?: string | null
+          created_at?: string
+          file_upload_id?: string | null
+          id?: string
+          status?: string
+          student_id: string
+          submitted_at?: string
+          teacher_note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          body?: string | null
+          created_at?: string
+          file_upload_id?: string | null
+          id?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          teacher_note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_file_upload_id_fkey"
+            columns: ["file_upload_id"]
+            isOneToOne: false
+            referencedRelation: "file_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           category: string
@@ -354,6 +415,7 @@ export type Database = {
           due_date: string | null
           id: string
           points_possible: number
+          submission_mode: string
           title: string
         }
         Insert: {
@@ -364,6 +426,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           points_possible?: number
+          submission_mode?: string
           title: string
         }
         Update: {
@@ -374,6 +437,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           points_possible?: number
+          submission_mode?: string
           title?: string
         }
         Relationships: [
