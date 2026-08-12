@@ -97,6 +97,73 @@ function DashboardPage() {
     },
   });
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: upcomingAssignments = [] } = useQuery({
+    queryKey: ["upcoming-assignments", today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignments")
+        .select("id, title, category, due_date, points_possible, class_id, classes(name)")
+        .not("due_date", "is", null)
+        .gte("due_date", today)
+        .order("due_date")
+        .limit(15);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: upcomingAssessments = [] } = useQuery({
+    queryKey: ["upcoming-assessments", today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("id, title, kind, due_at, class_id, published, classes(name)")
+        .eq("published", true)
+        .not("due_at", "is", null)
+        .gte("due_at", new Date().toISOString())
+        .order("due_at")
+        .limit(15);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const upcoming = [
+    ...upcomingAssignments.map((a) => ({
+      id: `assignment-${a.id}`,
+      title: a.title,
+      type: a.category ? `Assignment · ${a.category}` : "Assignment",
+      due: a.due_date as string,
+      classId: a.class_id,
+      className: a.classes?.name ?? "—",
+    })),
+    ...upcomingAssessments.map((a) => ({
+      id: `assessment-${a.id}`,
+      title: a.title,
+      type: `Assessment · ${a.kind.replace("_", " ")}`,
+      due: a.due_at as string,
+      classId: a.class_id,
+      className: a.classes?.name ?? "—",
+    })),
+  ]
+    .sort((x, y) => new Date(x.due).getTime() - new Date(y.due).getTime())
+    .slice(0, 8);
+
+  const daysUntil = (due: string) => {
+    const d = new Date(due);
+    const diff = Math.ceil(
+      (new Date(d.toISOString().slice(0, 10)).getTime() -
+        new Date(today).getTime()) /
+        86_400_000,
+    );
+    if (diff <= 0) return "Due today";
+    if (diff === 1) return "Due tomorrow";
+    return `In ${diff} days`;
+  };
+
+
   const graded = grades.filter((g) => g.points_earned != null && g.assignments);
   const totalEarned = graded.reduce((sum, g) => sum + Number(g.points_earned ?? 0), 0);
   const totalPossible = graded.reduce(
