@@ -417,6 +417,19 @@ function AssignmentsTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const removeAssignment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("assignments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assignment deleted");
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+    },
+  });
+
   return (
     <div className="mt-4">
       {isStaff && (
