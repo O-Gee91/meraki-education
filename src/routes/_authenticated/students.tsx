@@ -97,7 +97,7 @@ function StudentsPage() {
   return (
     <AppShell
       title="Students"
-      description="The school directory used across gradebook, attendance and billing."
+      description="The school directory used across gradebook, attendance and reporting."
       actions={
         <div className="flex flex-wrap gap-2">
           <StudentImport />
