@@ -9,7 +9,7 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "ignite-learner-zone"
+const SITE_NAME = "Meraki Education"
 const SENDER_DOMAIN = "notify.merakieducation.com"
 const ROOT_DOMAIN = "merakieducation.com"
 const FROM_DOMAIN = "notify.merakieducation.com"
