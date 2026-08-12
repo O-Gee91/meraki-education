@@ -93,7 +93,9 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignments")
-        .select("id, title, category, points_possible, due_date, description")
+        .select(
+          "id, title, category, points_possible, due_date, description, submission_mode",
+        )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
       if (error) throw error;
