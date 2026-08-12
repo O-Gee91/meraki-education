@@ -157,9 +157,9 @@ function Landing() {
           </div>
           <img
             src={heroImage}
-            alt="Teacher entering grades on a laptop in a classroom"
+            alt="Soulful, glowing scene of students learning with flowing light and open books"
             width={1600}
-            height={1100}
+            height={1104}
             className="rounded-xl shadow-[var(--shadow-float)]"
           />
         </div>
