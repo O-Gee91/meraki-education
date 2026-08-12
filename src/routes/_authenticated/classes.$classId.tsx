@@ -353,17 +353,19 @@ function AssignmentsTab({
   isStaff,
   assignments,
   roster,
+  categories,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
   roster: RosterRow[];
+  categories: string[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
-    category: "Homework",
+    category: categories[0] ?? "Homework",
     points: "100",
     due: "",
     description: "",
