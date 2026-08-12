@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
+import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/students")({
