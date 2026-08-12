@@ -264,6 +264,44 @@ function DashboardPage() {
         </section>
       </div>
 
+      <section className="panel mt-6 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Upcoming due dates</h2>
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Assignments &amp; assessments
+          </span>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nothing due right now — you&apos;re all caught up.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border">
+            {upcoming.map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <Link
+                    to="/classes/$classId"
+                    params={{ classId: item.classId }}
+                    className="text-sm font-medium hover:text-accent"
+                  >
+                    {item.title}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {item.className} · {item.type}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold">{daysUntil(item.due)}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(item.due)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+
       <SchoolCalendar />
 
 
