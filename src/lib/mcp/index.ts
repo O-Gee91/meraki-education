@@ -1,4 +1,5 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import type { AnyToolDefinition } from "@lovable.dev/mcp-js";
 import listClasses from "./tools/list-classes";
 import listAssignments from "./tools/list-assignments";
 import listAnnouncements from "./tools/list-announcements";
@@ -25,5 +26,5 @@ export default defineMcp({
     listAnnouncements,
     listCalendarEvents,
     createCalendarEvent,
-  ],
+  ] as unknown as AnyToolDefinition[],
 });
