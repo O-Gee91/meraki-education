@@ -5,6 +5,7 @@ import { isValidUsername, normalizeUsername, tempPassword, usernameToEmail } fro
 export type ResetInput = {
   user_id: string;
   new_username?: string | null;
+  new_email?: string | null;
 };
 
 export type ResetResult = {
@@ -53,15 +54,30 @@ export async function resetAccountAccess(
       .maybeSingle();
     if (taken && taken.id !== input.user_id) throw new Error("That username is already taken");
     username = requested;
-    if (!email || email.endsWith("@meraki.local")) email = usernameToEmail(requested);
   }
 
+  const requestedEmail = (input.new_email ?? "").trim().toLowerCase();
+  if (requestedEmail) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail) || requestedEmail.length > 255)
+      throw new Error("That email address looks invalid");
+    const { data: emailTaken } = await admin
+      .from("profiles")
+      .select("id")
+      .ilike("email", requestedEmail)
+      .maybeSingle();
+    if (emailTaken && emailTaken.id !== input.user_id)
+      throw new Error("Another account already uses that email address");
+    email = requestedEmail;
+  }
+  if (!email) throw new Error("This account needs an email address for notifications");
+
   const password = tempPassword();
+  const signInEmail = username ? usernameToEmail(username) : email;
   const { error: authError } = await admin.auth.admin.updateUserById(input.user_id, {
     password,
-    email,
+    email: signInEmail,
     email_confirm: true,
-    ...(username ? { user_metadata: { username } } : {}),
+    user_metadata: { ...(username ? { username } : {}), contact_email: email },
   });
   if (authError) throw new Error(authError.message);
 
