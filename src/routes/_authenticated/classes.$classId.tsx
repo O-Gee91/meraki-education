@@ -438,6 +438,22 @@ function AssignmentsTab({
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="mode">How is this handed in?</Label>
+                <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
+                  <SelectTrigger id="mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Completed online in the site</SelectItem>
+                    <SelectItem value="collected">Collected in class (e.g. notebooks)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Online work opens for students to type a response or attach a file. Collected work
+                  is checked in by you, then scored.
+                </p>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="description">Instructions</Label>
                 <Textarea
                   id="description"
