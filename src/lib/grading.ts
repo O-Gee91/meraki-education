@@ -47,15 +47,19 @@ export const DEFAULT_SETUP: GradingSetup = {
 
 export function parseGradingSetup(raw: unknown): GradingSetup {
   const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  const categories = Array.isArray(obj.categories)
-    ? (obj.categories as CategoryWeight[]).filter((c) => c && typeof c.name === "string")
+  const rawCategories = obj["categories"];
+  const rawScale = obj["scale"];
+  const rawMarks = obj["marks"];
+  const categories = Array.isArray(rawCategories)
+    ? (rawCategories as CategoryWeight[]).filter((c) => c && typeof c.name === "string")
     : DEFAULT_CATEGORIES;
-  const scale = Array.isArray(obj.scale) && obj.scale.length
-    ? [...(obj.scale as GradeScaleBand[])].sort((a, b) => Number(b.min) - Number(a.min))
-    : DEFAULT_SCALE;
-  const marks = Array.isArray(obj.marks) ? (obj.marks as SpecialMark[]) : DEFAULT_MARKS;
+  const scale =
+    Array.isArray(rawScale) && rawScale.length
+      ? [...(rawScale as GradeScaleBand[])].sort((a, b) => Number(b.min) - Number(a.min))
+      : DEFAULT_SCALE;
+  const marks = Array.isArray(rawMarks) ? (rawMarks as SpecialMark[]) : DEFAULT_MARKS;
   return {
-    mode: obj.mode === "weighted" ? "weighted" : "unweighted",
+    mode: obj["mode"] === "weighted" ? "weighted" : "unweighted",
     categories: categories.length ? categories : DEFAULT_CATEGORIES,
     scale,
     marks,
