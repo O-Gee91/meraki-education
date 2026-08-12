@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { formatDate } from "@/lib/school";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
+import { notifyMessageRecipient } from "@/lib/messaging.functions";
 
 export const Route = createFileRoute("/_authenticated/messages")({
   head: () => ({
@@ -89,13 +90,23 @@ function MessagesPage() {
       if (!compose.recipient) throw new Error("Choose a recipient");
       if (compose.subject.trim().length < 2) throw new Error("Add a subject");
       if (compose.body.trim().length < 2) throw new Error("Write a message");
-      const { error } = await supabase.from("messages").insert({
-        sender_id: user!.id,
-        recipient_id: compose.recipient,
-        subject: compose.subject.trim().slice(0, 140),
-        body: compose.body.trim().slice(0, 4000),
-      });
+      const { data: inserted, error } = await supabase
+        .from("messages")
+        .insert({
+          sender_id: user!.id,
+          recipient_id: compose.recipient,
+          subject: compose.subject.trim().slice(0, 140),
+          body: compose.body.trim().slice(0, 4000),
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      // Also deliver it to the recipient's email inbox (best effort).
+      try {
+        await notifyMessageRecipient({ data: { message_id: inserted.id } });
+      } catch (err) {
+        console.error("Message email notification failed", err);
+      }
     },
     onSuccess: () => {
       toast.success("Message sent");
