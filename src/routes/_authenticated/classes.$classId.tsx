@@ -445,6 +445,12 @@ function AssignmentsTab({
                   <p className="mt-1 max-w-xl text-sm text-muted-foreground">{a.description}</p>
                 ) : null}
                 <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
+                <AssignmentWork
+                  assignment={a}
+                  classId={classId}
+                  isStaff={isStaff}
+                  roster={roster}
+                />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Badge variant="secondary">{a.category}</Badge>
@@ -453,6 +459,7 @@ function AssignmentsTab({
               </div>
             </div>
           ))
+
 
         )}
       </div>
