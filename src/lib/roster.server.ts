@@ -52,7 +52,10 @@ async function findUserIdByUsername(
 type Target = {
   role: "student" | "parent";
   username: string | null;
+  /** The address used to sign in (synthetic when a username is used). */
   email: string;
+  /** The person's real inbox — required so notifications can reach them. */
+  contactEmail: string;
 };
 
 export async function provisionRosterAccounts(
@@ -70,23 +73,21 @@ export async function provisionRosterAccounts(
     const studentEmail = (entry.student_email ?? "").trim().toLowerCase();
     const guardianEmail = (entry.guardian_email ?? "").trim().toLowerCase();
 
-    if (studentUsername)
+    if (studentUsername || studentEmail)
       targets.push({
         role: "student",
-        username: studentUsername,
-        email: usernameToEmail(studentUsername),
+        username: studentUsername || null,
+        email: studentUsername ? usernameToEmail(studentUsername) : studentEmail,
+        contactEmail: studentEmail,
       });
-    else if (studentEmail)
-      targets.push({ role: "student", username: null, email: studentEmail });
 
-    if (guardianUsername)
+    if (guardianUsername || guardianEmail)
       targets.push({
         role: "parent",
-        username: guardianUsername,
-        email: usernameToEmail(guardianUsername),
+        username: guardianUsername || null,
+        email: guardianUsername ? usernameToEmail(guardianUsername) : guardianEmail,
+        contactEmail: guardianEmail,
       });
-    else if (guardianEmail)
-      targets.push({ role: "parent", username: null, email: guardianEmail });
 
     for (const target of targets) {
       const fail = (detail: string) =>
@@ -104,15 +105,15 @@ export async function provisionRosterAccounts(
         fail("invalid username");
         continue;
       }
-      if (!target.username && (!EMAIL_RE.test(target.email) || target.email.length > 255)) {
-        fail("invalid email");
+      if (!EMAIL_RE.test(target.contactEmail) || target.contactEmail.length > 255) {
+        fail("an email address is required");
         continue;
       }
 
       let userId = target.username
         ? await findUserIdByUsername(admin, target.username)
-        : await findUserIdByEmail(admin, target.email);
-      if (!userId) userId = await findUserIdByEmail(admin, target.email);
+        : null;
+      if (!userId) userId = await findUserIdByEmail(admin, target.contactEmail);
 
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
@@ -126,6 +127,7 @@ export async function provisionRosterAccounts(
           user_metadata: {
             full_name: target.role === "student" ? name : `${entry.last_name} guardian`,
             role: target.role,
+            contact_email: target.contactEmail,
             ...(target.username ? { username: target.username } : {}),
           },
         });
@@ -135,15 +137,15 @@ export async function provisionRosterAccounts(
         }
         userId = data.user.id;
         status = "created";
+      } else {
+        // Keep the contact address current so notifications reach them.
+        await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
       }
 
       const update =
         target.role === "student"
           ? { user_id: userId }
-          : {
-              guardian_user_id: userId,
-              ...(target.username ? {} : { guardian_email: target.email }),
-            };
+          : { guardian_user_id: userId, guardian_email: target.contactEmail };
       const { error: linkError } = await admin
         .from("students")
         .update(update)
