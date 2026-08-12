@@ -260,7 +260,12 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <AssignmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
+          <AssignmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            roster={roster}
+          />
         </TabsContent>
 
         <TabsContent value="assessments">
