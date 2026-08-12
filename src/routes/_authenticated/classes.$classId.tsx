@@ -309,16 +309,19 @@ type AssignmentRow = {
   points_possible: number;
   due_date: string | null;
   description: string | null;
+  submission_mode: string;
 };
 
 function AssignmentsTab({
   classId,
   isStaff,
   assignments,
+  roster,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
+  roster: RosterRow[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -328,7 +331,13 @@ function AssignmentsTab({
     points: "100",
     due: "",
     description: "",
+    mode: "collected",
   });
+
+  const students = roster
+    .map((r) => r.students)
+    .filter((s): s is NonNullable<typeof s> => !!s)
+    .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }));
 
   const create = useMutation({
     mutationFn: async () => {
@@ -343,13 +352,21 @@ function AssignmentsTab({
         points_possible: points,
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
+        submission_mode: form.mode,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Assignment added");
       setOpen(false);
-      setForm({ title: "", category: "Homework", points: "100", due: "", description: "" });
+      setForm({
+        title: "",
+        category: "Homework",
+        points: "100",
+        due: "",
+        description: "",
+        mode: "collected",
+      });
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
