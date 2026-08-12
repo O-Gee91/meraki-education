@@ -120,7 +120,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, assignment_id, student_id, points_earned")
+        .select("id, assignment_id, student_id, points_earned, comment")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data;
@@ -130,18 +130,35 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
+  const cellValue = (studentId: string, assignmentId: string) => {
+    const g = gradeFor(studentId, assignmentId);
+    const mark = markCodeFromComment(g?.comment);
+    if (mark) return mark;
+    return g?.points_earned == null ? "" : String(g.points_earned);
+  };
+
   const saveGrade = useMutation({
     mutationFn: async (input: { studentId: string; assignmentId: string; value: string }) => {
       const raw = input.value.trim();
-      const points = raw === "" ? null : Number(raw);
-      if (points != null && (Number.isNaN(points) || points < 0 || points > 10000)) {
-        throw new Error("Enter a valid score");
+      const mark = findMark(raw ? raw.toUpperCase() : null, setup.marks);
+      let points: number | null = null;
+      let comment: string | null = null;
+
+      if (mark) {
+        comment = `MARK:${mark.code.toUpperCase()}`;
+      } else if (raw !== "") {
+        points = Number(raw);
+        if (Number.isNaN(points) || points < 0 || points > 10000) {
+          throw new Error("Enter a valid score or a special mark code");
+        }
       }
+
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: input.assignmentId,
           student_id: input.studentId,
           points_earned: points,
+          comment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -153,15 +170,18 @@ function ClassDetailPage() {
   });
 
   function studentAverage(studentId: string) {
-    let earned = 0;
-    let possible = 0;
-    for (const a of assignments) {
-      const g = gradeFor(studentId, a.id);
-      if (g?.points_earned == null) continue;
-      earned += Number(g.points_earned);
-      possible += Number(a.points_possible);
-    }
-    return possible ? percent(earned, possible) : null;
+    return computeAverage(
+      assignments.map((a) => {
+        const g = gradeFor(studentId, a.id);
+        return {
+          category: a.category,
+          pointsPossible: Number(a.points_possible),
+          pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
+          markCode: markCodeFromComment(g?.comment),
+        };
+      }),
+      setup,
+    );
   }
 
   return (
