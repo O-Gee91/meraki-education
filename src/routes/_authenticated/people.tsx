@@ -134,7 +134,8 @@ function PeoplePage() {
                   </div>
 
                   <p className="truncate text-xs text-muted-foreground">
-                    {p.username ?? p.email}
+                    {p.username ? `${p.username} · ` : ""}
+                    {p.email ?? "no email on file"}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -143,6 +144,7 @@ function PeoplePage() {
                       userId={p.id}
                       label={p.full_name || (p.username ?? "this account")}
                       currentUsername={p.username}
+                      currentEmail={p.email}
                       onDone={() => queryClient.invalidateQueries({ queryKey: ["people"] })}
                     />
                   )}

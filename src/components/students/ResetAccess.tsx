@@ -21,14 +21,23 @@ type Props = {
   userId: string;
   label: string;
   currentUsername?: string | null;
+  currentEmail?: string | null;
   triggerLabel?: string;
   onDone?: () => void;
 };
 
-export function ResetAccess({ userId, label, currentUsername, triggerLabel, onDone }: Props) {
+export function ResetAccess({
+  userId,
+  label,
+  currentUsername,
+  currentEmail,
+  triggerLabel,
+  onDone,
+}: Props) {
   const reset = useServerFn(resetStudentAccess);
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [result, setResult] = useState<{
     username: string | null;
     email: string;
@@ -37,7 +46,13 @@ export function ResetAccess({ userId, label, currentUsername, triggerLabel, onDo
 
   const run = useMutation({
     mutationFn: async () =>
-      reset({ data: { user_id: userId, new_username: username.trim() || null } }),
+      reset({
+        data: {
+          user_id: userId,
+          new_username: username.trim() || null,
+          new_email: email.trim() || null,
+        },
+      }),
     onSuccess: (data) => {
       setResult(data);
       toast.success("New temporary password generated");
@@ -54,6 +69,7 @@ export function ResetAccess({ userId, label, currentUsername, triggerLabel, onDo
         if (!next) {
           setResult(null);
           setUsername("");
+          setEmail("");
         }
       }}
     >
@@ -82,6 +98,22 @@ export function ResetAccess({ userId, label, currentUsername, triggerLabel, onDo
           />
           <p className="text-xs text-muted-foreground">
             Leave blank to keep the current username. {USERNAME_RULES}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor={`reset-email-${userId}`}>Notification email</Label>
+          <Input
+            id={`reset-email-${userId}`}
+            type="email"
+            value={email}
+            maxLength={255}
+            placeholder={currentEmail ?? "name@example.com"}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave blank to keep the current address. Messages are delivered here as well as in the
+            site.
           </p>
         </div>
 
