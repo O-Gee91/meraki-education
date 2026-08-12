@@ -10,7 +10,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   MessageSquare,
-  Receipt,
   ShieldCheck,
   Users,
   Users2,
@@ -76,18 +75,11 @@ const NAV: NavItem[] = [
     roles: ["admin", "teacher", "student", "parent"],
   },
   {
-    to: "/billing",
-    label: "Tuition",
-    icon: Receipt,
-    roles: ["admin", "parent", "student"],
-  },
-  {
     to: "/files",
     label: "Files",
     icon: FolderOpen,
     roles: ["admin", "teacher", "student", "parent"],
   },
-  { to: "/admissions", label: "Admissions", icon: Users, roles: ["admin"] },
   { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },
 ];
 

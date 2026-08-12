@@ -24,7 +24,7 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Sign in or create an account to reach your Meraki Education gradebook, attendance, messages and tuition information.",
+          "Sign in or create an account to reach your Meraki Education gradebook, attendance, messages and class information.",
       },
       { property: "og:title", content: "Sign in — Meraki Education Platform" },
       {
@@ -145,7 +145,7 @@ function AuthPage() {
             The whole school day, in one place.
           </h2>
           <p className="mt-4 max-w-sm text-sm text-primary-foreground/80">
-            Grades, roll, behavior notes, family messages, enrollment and tuition — for teachers,
+            Grades, roll, behavior notes, family messages and reporting — for teachers,
             students, guardians and admins.
           </p>
         </div>
