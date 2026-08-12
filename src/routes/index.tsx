@@ -101,17 +101,16 @@ const PILLARS = [
 ];
 
 const AUDIENCES = [
-
   {
     who: "Teachers",
-    copy: "Take roll in seconds, enter grades inline, and log behavior without leaving the class page.",
+    copy: "Take roll in seconds, enter grades online, and log behavior without leaving the class page.",
   },
   {
     who: "Students",
-    copy: "Every assignment, score and missing item for all six periods on one screen.",
+    copy: "Every assignment, score and missing item for all periods on one screen.",
   },
   {
-    who: "Guardians",
+    who: "Parents/Guardians",
     copy: "Follow your child's grades, attendance and behavior — no phone calls required.",
   },
   {
