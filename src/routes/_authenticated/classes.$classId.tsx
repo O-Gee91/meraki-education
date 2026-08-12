@@ -31,6 +31,7 @@ import { FileLibrary } from "@/components/files/FileLibrary";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
+import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 
 
@@ -93,7 +94,9 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignments")
-        .select("id, title, category, points_possible, due_date, description")
+        .select(
+          "id, title, category, points_possible, due_date, description, submission_mode",
+        )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
       if (error) throw error;
@@ -257,7 +260,12 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <AssignmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
+          <AssignmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            roster={roster}
+          />
         </TabsContent>
 
         <TabsContent value="assessments">
@@ -307,16 +315,19 @@ type AssignmentRow = {
   points_possible: number;
   due_date: string | null;
   description: string | null;
+  submission_mode: string;
 };
 
 function AssignmentsTab({
   classId,
   isStaff,
   assignments,
+  roster,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
+  roster: RosterRow[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -326,7 +337,13 @@ function AssignmentsTab({
     points: "100",
     due: "",
     description: "",
+    mode: "collected",
   });
+
+  const students = roster
+    .map((r) => r.students)
+    .filter((s): s is NonNullable<typeof s> => !!s)
+    .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }));
 
   const create = useMutation({
     mutationFn: async () => {
@@ -341,13 +358,21 @@ function AssignmentsTab({
         points_possible: points,
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
+        submission_mode: form.mode,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Assignment added");
       setOpen(false);
-      setForm({ title: "", category: "Homework", points: "100", due: "", description: "" });
+      setForm({
+        title: "",
+        category: "Homework",
+        points: "100",
+        due: "",
+        description: "",
+        mode: "collected",
+      });
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -413,6 +438,22 @@ function AssignmentsTab({
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="mode">How is this handed in?</Label>
+                <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
+                  <SelectTrigger id="mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Completed online in the site</SelectItem>
+                    <SelectItem value="collected">Collected in class (e.g. notebooks)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Online work opens for students to type a response or attach a file. Collected work
+                  is checked in by you, then scored.
+                </p>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="description">Instructions</Label>
                 <Textarea
                   id="description"
@@ -443,6 +484,12 @@ function AssignmentsTab({
                   <p className="mt-1 max-w-xl text-sm text-muted-foreground">{a.description}</p>
                 ) : null}
                 <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
+                <AssignmentWork
+                  assignment={a}
+                  classId={classId}
+                  isStaff={isStaff}
+                  roster={students}
+                />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Badge variant="secondary">{a.category}</Badge>
@@ -451,6 +498,7 @@ function AssignmentsTab({
               </div>
             </div>
           ))
+
 
         )}
       </div>
