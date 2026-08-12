@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
+import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/students")({
@@ -177,6 +178,7 @@ function StudentsPage() {
         onChange={(e) => setQuery(e.target.value)}
         className="max-w-sm"
       />
+      {isStaff ? <UnlinkedAccounts students={students} /> : null}
       <div className="panel mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
