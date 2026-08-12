@@ -295,8 +295,14 @@ function ClassDetailPage() {
             isStaff={isStaff}
             assignments={assignments}
             roster={roster}
+            categories={categoryNames.length ? categoryNames : ["Homework"]}
           />
         </TabsContent>
+
+        <TabsContent value="grading">
+          <GradingSetupTab classId={classId} isStaff={isStaff} setup={setup} />
+        </TabsContent>
+
 
         <TabsContent value="assessments">
           <AssessmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
