@@ -33,8 +33,16 @@ export const Route = createFileRoute("/auth")({
       },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } =>
+    typeof s["next"] === "string" ? { next: s["next"] } : {},
   component: AuthPage,
 });
+
+/** Only same-origin relative paths may be used as a post-login destination. */
+function safeNext(next?: string) {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+}
 
 const credentials = z.object({
   email: z.string().trim().email("Enter a valid email").max(255),
@@ -43,6 +51,16 @@ const credentials = z.object({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const returnTo = safeNext(next);
+
+  function goToApp() {
+    if (returnTo) {
+      window.location.href = returnTo;
+      return;
+    }
+    navigate({ to: "/dashboard" });
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -64,7 +82,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    navigate({ to: "/dashboard" });
+    goToApp();
   }
 
   async function signUp(e: React.FormEvent) {
@@ -82,7 +100,9 @@ function AuthPage() {
     const { data, error } = await supabase.auth.signUp({
       ...parsed.data,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: returnTo
+          ? `${window.location.origin}${returnTo}`
+          : window.location.origin,
         data: { full_name: fullName.trim(), role },
       },
     });
@@ -95,19 +115,21 @@ function AuthPage() {
       setPendingConfirm(true);
       return;
     }
-    navigate({ to: "/dashboard" });
+    goToApp();
   }
 
   async function googleSignIn() {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: returnTo
+        ? `${window.location.origin}${returnTo}`
+        : window.location.origin,
     });
     if (result.error) {
       toast.error("Google sign-in failed. Please try again.");
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/dashboard" });
+    goToApp();
 
   }
 

@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://qjzryyxpbofeesmtdpvi.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "student-success-hub",
+      "version": "0.1.0",
+      "title": "Student Success Hub"
+    },
+    "tools": [
+      {
+        "name": "list_classes",
+        "title": "List classes",
+        "description": "List the classes visible to the signed-in user (their own classes as a student or guardian, or all classes for staff).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_assignments",
+        "title": "List assignments",
+        "description": "List assignments for a class the signed-in user can see. Use list_classes for ids.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "class_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Class id from list_classes."
+            }
+          },
+          "required": [
+            "class_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_announcements",
+        "title": "List announcements",
+        "description": "List the most recent school and class announcements visible to the signed-in user.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_calendar_events",
+        "title": "List calendar events",
+        "description": "List upcoming school calendar events the signed-in user is allowed to see, optionally from a start date.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Optional ISO date (YYYY-MM-DD). Events on or after this date are returned."
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_calendar_event",
+        "title": "Create calendar event",
+        "description": "Post a school calendar event. Only staff accounts are permitted; other accounts get a permission error.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Event title."
+            },
+            "event_date": {
+              "type": "string",
+              "description": "Event date as YYYY-MM-DD."
+            },
+            "description": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "start_time": {
+              "type": "string",
+              "description": "Optional start time as HH:MM."
+            },
+            "end_time": {
+              "type": "string",
+              "description": "Optional end time as HH:MM."
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "general",
+                "exam",
+                "holiday",
+                "event",
+                "deadline"
+              ],
+              "description": "Event category."
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "everyone",
+                "students",
+                "parents",
+                "teachers"
+              ],
+              "description": "Who can see the event."
+            }
+          },
+          "required": [
+            "title",
+            "event_date"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
