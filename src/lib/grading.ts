@@ -77,7 +77,7 @@ export function letterFor(pct: number, scale: GradeScaleBand[]) {
 export function markCodeFromComment(comment?: string | null) {
   if (!comment) return null;
   const match = /^MARK:([A-Za-z0-9+-]{1,6})/.exec(comment.trim());
-  return match ? match[1].toUpperCase() : null;
+  return match?.[1] ? match[1].toUpperCase() : null;
 }
 
 export function findMark(code: string | null, marks: SpecialMark[]) {
