@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  isValidUsername,
+  normalizeUsername,
+  tempPassword,
+  usernameToEmail,
+} from "./usernames";
 
 export type ProvisionEntry = {
   student_id: string;
@@ -7,11 +13,14 @@ export type ProvisionEntry = {
   last_name: string;
   student_email?: string | null;
   guardian_email?: string | null;
+  student_username?: string | null;
+  guardian_username?: string | null;
 };
 
 export type ProvisionedAccount = {
   student: string;
   role: "student" | "parent";
+  username: string | null;
   email: string;
   password: string | null;
   status: "created" | "linked" | "failed";
@@ -20,19 +29,31 @@ export type ProvisionedAccount = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function tempPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(14));
-  return `Mk-${Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")}`;
-}
-
-async function findExistingUserId(
+async function findUserIdByEmail(
   admin: SupabaseClient<Database>,
   email: string,
 ): Promise<string | null> {
   const { data } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
   return data?.id ?? null;
 }
+
+async function findUserIdByUsername(
+  admin: SupabaseClient<Database>,
+  username: string,
+): Promise<string | null> {
+  const { data } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+type Target = {
+  role: "student" | "parent";
+  username: string | null;
+  email: string;
+};
 
 export async function provisionRosterAccounts(
   admin: SupabaseClient<Database>,
@@ -42,27 +63,57 @@ export async function provisionRosterAccounts(
 
   for (const entry of entries.slice(0, 200)) {
     const name = `${entry.first_name} ${entry.last_name}`.trim();
-    const targets: Array<{ role: "student" | "parent"; email: string }> = [];
+    const targets: Target[] = [];
+
+    const studentUsername = normalizeUsername(entry.student_username ?? "");
+    const guardianUsername = normalizeUsername(entry.guardian_username ?? "");
     const studentEmail = (entry.student_email ?? "").trim().toLowerCase();
     const guardianEmail = (entry.guardian_email ?? "").trim().toLowerCase();
-    if (studentEmail) targets.push({ role: "student", email: studentEmail });
-    if (guardianEmail) targets.push({ role: "parent", email: guardianEmail });
+
+    if (studentUsername)
+      targets.push({
+        role: "student",
+        username: studentUsername,
+        email: usernameToEmail(studentUsername),
+      });
+    else if (studentEmail)
+      targets.push({ role: "student", username: null, email: studentEmail });
+
+    if (guardianUsername)
+      targets.push({
+        role: "parent",
+        username: guardianUsername,
+        email: usernameToEmail(guardianUsername),
+      });
+    else if (guardianEmail)
+      targets.push({ role: "parent", username: null, email: guardianEmail });
 
     for (const target of targets) {
-      if (!EMAIL_RE.test(target.email) || target.email.length > 255) {
+      const fail = (detail: string) =>
         results.push({
           student: name,
           role: target.role,
+          username: target.username,
           email: target.email,
           password: null,
           status: "failed",
-          detail: "invalid email",
+          detail,
         });
+
+      if (target.username && !isValidUsername(target.username)) {
+        fail("invalid username");
+        continue;
+      }
+      if (!target.username && (!EMAIL_RE.test(target.email) || target.email.length > 255)) {
+        fail("invalid email");
         continue;
       }
 
-      
-      let userId = await findExistingUserId(admin, target.email);
+      let userId = target.username
+        ? await findUserIdByUsername(admin, target.username)
+        : await findUserIdByEmail(admin, target.email);
+      if (!userId) userId = await findUserIdByEmail(admin, target.email);
+
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
 
@@ -75,17 +126,11 @@ export async function provisionRosterAccounts(
           user_metadata: {
             full_name: target.role === "student" ? name : `${entry.last_name} guardian`,
             role: target.role,
+            ...(target.username ? { username: target.username } : {}),
           },
         });
         if (error || !data.user) {
-          results.push({
-            student: name,
-            role: target.role,
-            email: target.email,
-            password: null,
-            status: "failed",
-            detail: error?.message ?? "could not create account",
-          });
+          fail(error?.message ?? "could not create account");
           continue;
         }
         userId = data.user.id;
@@ -95,16 +140,19 @@ export async function provisionRosterAccounts(
       const update =
         target.role === "student"
           ? { user_id: userId }
-          : { guardian_user_id: userId, guardian_email: target.email };
+          : {
+              guardian_user_id: userId,
+              ...(target.username ? {} : { guardian_email: target.email }),
+            };
       const { error: linkError } = await admin
         .from("students")
         .update(update)
         .eq("id", entry.student_id);
 
-
       results.push({
         student: name,
         role: target.role,
+        username: target.username,
         email: target.email,
         password,
         status: linkError ? "failed" : status,
