@@ -455,11 +455,28 @@ function StaffCollectPanel({
                         />
                       </div>
                     </div>
-                    {sub?.body ? (
-                      <p className="mt-2 whitespace-pre-wrap rounded-md bg-secondary/40 p-2 text-sm">
-                        {sub.body}
-                      </p>
-                    ) : null}
+                    {sub ? (
+                      <ProofreadEditor
+                        submissionId={sub.id}
+                        body={sub.body ?? ""}
+                        teacherNote={sub.teacher_note}
+                        onNoteSaved={() =>
+                          queryClient.invalidateQueries({
+                            queryKey: ["assignment-submissions", assignment.id],
+                          })
+                        }
+                      />
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-2 h-7"
+                        onClick={() => startFeedback.mutate(s.id)}
+                        disabled={startFeedback.isPending}
+                      >
+                        Proofread & comment
+                      </Button>
+                    )}
                     {sub?.file_uploads ? (
                       <button
                         type="button"
