@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
