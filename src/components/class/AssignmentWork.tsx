@@ -359,6 +359,20 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const startFeedback = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("assignment_submissions").insert({
+        assignment_id: assignment.id,
+        student_id: studentId,
+        status: "submitted",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const score = useMutation({
     mutationFn: async (input: { studentId: string; value: string; note?: string }) => {
       const raw = input.value.trim();
