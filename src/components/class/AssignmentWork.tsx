@@ -289,6 +289,7 @@ function StudentWorkPanel({
                 {mine.teacher_note}
               </p>
             ) : null}
+            {mine ? <ProofreadNotes submissionId={mine.id} /> : null}
           </div>
           <DialogFooter>
             <Button
