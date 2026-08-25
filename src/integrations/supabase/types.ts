@@ -1282,6 +1282,42 @@ export type Database = {
         }
         Relationships: []
       }
+      proofread_marks: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          meaning: string | null
+          sort_order: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          meaning?: string | null
+          sort_order?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          meaning?: string | null
+          sort_order?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       report_cards: {
         Row: {
           class_id: string
@@ -1437,6 +1473,59 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      submission_annotations: {
+        Row: {
+          comment: string | null
+          created_at: string
+          created_by: string | null
+          end_offset: number | null
+          excerpt: string
+          id: string
+          mark_code: string | null
+          mark_label: string | null
+          mark_symbol: string | null
+          start_offset: number | null
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_offset?: number | null
+          excerpt?: string
+          id?: string
+          mark_code?: string | null
+          mark_label?: string | null
+          mark_symbol?: string | null
+          start_offset?: number | null
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_offset?: number | null
+          excerpt?: string
+          id?: string
+          mark_code?: string | null
+          mark_label?: string | null
+          mark_symbol?: string | null
+          start_offset?: number | null
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_annotations_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

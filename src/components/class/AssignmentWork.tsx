@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -288,6 +289,7 @@ function StudentWorkPanel({
                 {mine.teacher_note}
               </p>
             ) : null}
+            {mine ? <ProofreadNotes submissionId={mine.id} /> : null}
           </div>
           <DialogFooter>
             <Button
@@ -349,6 +351,20 @@ function StaffCollectPanel({
         assignment_id: assignment.id,
         student_id: input.studentId,
         status: "collected",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const startFeedback = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("assignment_submissions").insert({
+        assignment_id: assignment.id,
+        student_id: studentId,
+        status: "submitted",
       });
       if (error) throw error;
     },
@@ -453,11 +469,28 @@ function StaffCollectPanel({
                         />
                       </div>
                     </div>
-                    {sub?.body ? (
-                      <p className="mt-2 whitespace-pre-wrap rounded-md bg-secondary/40 p-2 text-sm">
-                        {sub.body}
-                      </p>
-                    ) : null}
+                    {sub ? (
+                      <ProofreadEditor
+                        submissionId={sub.id}
+                        body={sub.body ?? ""}
+                        teacherNote={sub.teacher_note}
+                        onNoteSaved={() =>
+                          queryClient.invalidateQueries({
+                            queryKey: ["assignment-submissions", assignment.id],
+                          })
+                        }
+                      />
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-2 h-7"
+                        onClick={() => startFeedback.mutate(s.id)}
+                        disabled={startFeedback.isPending}
+                      >
+                        Proofread & comment
+                      </Button>
+                    )}
                     {sub?.file_uploads ? (
                       <button
                         type="button"
