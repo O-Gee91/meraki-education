@@ -1557,6 +1557,8 @@ export type Database = {
     }
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
+      can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      can_manage_student: { Args: { _student_id: string }; Returns: boolean }
       can_see_audience: {
         Args: { _audience: Database["public"]["Enums"]["post_audience"] }
         Returns: boolean
@@ -1577,6 +1579,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      teaches_class: { Args: { _class_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "parent"
