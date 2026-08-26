@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -10,6 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,27 +38,32 @@ export const Route = createFileRoute("/_authenticated/classes/")({
   component: ClassesPage,
 });
 
+const GRADE_LEVELS = [5, 6, 7, 8, 9] as const;
+
 const emptyForm = {
   name: "",
   subject: "",
   period: "",
   room: "",
   term: "Fall 2026",
+  teacher_name: "",
+  grade_level: "",
 };
 
 function ClassesPage() {
-  const { isStaff, isAdmin, user } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, teacher_id")
+        .select("id, name, subject, period, room, term, teacher_id, teacher_name, grade_level")
         .order("period");
       if (error) throw error;
       return data;
@@ -61,12 +73,16 @@ function ClassesPage() {
   const saveClass = useMutation({
     mutationFn: async () => {
       if (form.name.trim().length < 2) throw new Error("Class name is required");
+      if (form.teacher_name.trim().length < 2)
+        throw new Error("A teacher name is required for every class");
       const payload = {
         name: form.name.trim().slice(0, 120),
         subject: form.subject.trim().slice(0, 60) || null,
         period: form.period.trim().slice(0, 12) || null,
         room: form.room.trim().slice(0, 20) || null,
         term: form.term.trim().slice(0, 40) || "Fall 2026",
+        teacher_name: form.teacher_name.trim().slice(0, 120),
+        grade_level: form.grade_level ? Number(form.grade_level) : null,
       };
       if (editingId) {
         const { error } = await supabase.from("classes").update(payload).eq("id", editingId);
@@ -88,6 +104,26 @@ function ClassesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const visible = useMemo(
+    () =>
+      gradeFilter === "all"
+        ? classes
+        : gradeFilter === "none"
+          ? classes.filter((c) => c.grade_level == null)
+          : classes.filter((c) => c.grade_level === Number(gradeFilter)),
+    [classes, gradeFilter],
+  );
+
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof visible>();
+    for (const c of visible) {
+      const key = c.grade_level == null ? "Ungraded" : `Grade ${c.grade_level}`;
+      map.set(key, [...(map.get(key) ?? []), c]);
+    }
+    return [...map.entries()].sort(([a], [b]) =>
+      a === "Ungraded" ? 1 : b === "Ungraded" ? -1 : a.localeCompare(b, "en", { numeric: true }),
+    );
+  }, [visible]);
 
   return (
     <AppShell
@@ -109,7 +145,7 @@ function ClassesPage() {
               <Button
                 onClick={() => {
                   setEditingId(null);
-                  setForm(emptyForm);
+                  setForm({ ...emptyForm, teacher_name: profile?.full_name ?? "" });
                 }}
               >
                 New class
@@ -123,6 +159,7 @@ function ClassesPage() {
                 {(
                   [
                     ["name", "Class name", "Math 7 – Section B"],
+                    ["teacher_name", "Teacher name (required)", "Ms. Rivera"],
                     ["subject", "Subject", "Mathematics"],
                     ["period", "Period", "3"],
                     ["room", "Room", "204"],
@@ -140,6 +177,27 @@ function ClassesPage() {
                     />
                   </div>
                 ))}
+                <div className="space-y-1.5">
+                  <Label htmlFor="grade_level">Grade level</Label>
+                  <Select
+                    value={form.grade_level || "none"}
+                    onValueChange={(v) =>
+                      setForm({ ...form, grade_level: v === "none" ? "" : v })
+                    }
+                  >
+                    <SelectTrigger id="grade_level">
+                      <SelectValue placeholder="Select a grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No grade level</SelectItem>
+                      {GRADE_LEVELS.map((g) => (
+                        <SelectItem key={g} value={String(g)}>
+                          Grade {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <DialogFooter>
                 <Button onClick={() => saveClass.mutate()} disabled={saveClass.isPending}>
@@ -166,52 +224,95 @@ function ClassesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {classes.map((c) => {
-            const canEdit = isAdmin || (isStaff && c.teacher_id === user?.id);
-            return (
-              <div key={c.id} className="relative">
-                <Link
-                  to="/classes/$classId"
-                  params={{ classId: c.id }}
-                  className="block panel p-5 transition-shadow hover:shadow-[var(--shadow-float)]"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Period {c.period ?? "—"} · {c.term}
-                  </p>
-                  <h2 className="mt-2 pr-10 text-lg font-semibold">{c.name}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {c.subject ?? "General"} · Room {c.room ?? "—"}
-                  </p>
-                </Link>
-                {canEdit ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Edit ${c.name}`}
-                    className="absolute right-3 top-3"
-                    onClick={() => {
-                      setEditingId(c.id);
-                      setForm({
-                        name: c.name ?? "",
-                        subject: c.subject ?? "",
-                        period: c.period ?? "",
-                        room: c.room ?? "",
-                        term: c.term ?? "Fall 2026",
-                      });
-                      setOpen(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      )}
+        <>
+          <div className="mb-5 flex items-center gap-3">
+            <Label htmlFor="grade-filter" className="text-xs uppercase tracking-wide text-muted-foreground">
+              Grade
+            </Label>
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger id="grade-filter" className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All grades</SelectItem>
+                {GRADE_LEVELS.map((g) => (
+                  <SelectItem key={g} value={String(g)}>
+                    Grade {g}
+                  </SelectItem>
+                ))}
+                <SelectItem value="none">Ungraded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
+          {groups.length === 0 ? (
+            <div className="panel p-8 text-center">
+              <p className="text-sm text-muted-foreground">No classes for this grade.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {groups.map(([label, items]) => (
+                <section key={label}>
+                  <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {label} · {items.length} {items.length === 1 ? "class" : "classes"}
+                  </h2>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {items.map((c) => {
+                      const canEdit = isAdmin || (isStaff && c.teacher_id === user?.id);
+                      return (
+                        <div key={c.id} className="relative">
+                          <Link
+                            to="/classes/$classId"
+                            params={{ classId: c.id }}
+                            className="block panel p-5 transition-shadow hover:shadow-[var(--shadow-float)]"
+                          >
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Period {c.period ?? "—"} · {c.term}
+                              {c.grade_level != null ? ` · Grade ${c.grade_level}` : ""}
+                            </p>
+                            <h3 className="mt-2 pr-10 text-lg font-semibold">{c.name}</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {c.subject ?? "General"} · Room {c.room ?? "—"}
+                            </p>
+                            <p className="mt-1 text-sm font-medium">
+                              Teacher: {c.teacher_name || "Unassigned"}
+                            </p>
+                          </Link>
+                          {canEdit ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Edit ${c.name}`}
+                              className="absolute right-3 top-3"
+                              onClick={() => {
+                                setEditingId(c.id);
+                                setForm({
+                                  name: c.name ?? "",
+                                  subject: c.subject ?? "",
+                                  period: c.period ?? "",
+                                  room: c.room ?? "",
+                                  term: c.term ?? "Fall 2026",
+                                  teacher_name: c.teacher_name ?? "",
+                                  grade_level:
+                                    c.grade_level != null ? String(c.grade_level) : "",
+                                });
+                                setOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </AppShell>
   );
 }
