@@ -387,7 +387,19 @@ export function SchoolCalendar() {
               })}
             </h3>
             {isStaff && (
-              <Button size="sm" variant="outline" onClick={() => setShowForm((v) => !v)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (showForm) {
+                    cancelEdit();
+                  } else {
+                    setEditingId(null);
+                    setForm({ ...emptyForm, event_date: selectedDate });
+                    setShowForm(true);
+                  }
+                }}
+              >
                 <Plus className="size-4" /> Add
               </Button>
             )}
@@ -398,9 +410,21 @@ export function SchoolCalendar() {
               className="mt-3 space-y-3 rounded-md border border-border p-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                create.mutate();
+                save.mutate();
               }}
             >
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {editingId ? "Edit event" : "New event"}
+              </p>
+              <div>
+                <Label htmlFor="cal-date">Date</Label>
+                <Input
+                  id="cal-date"
+                  type="date"
+                  value={form.event_date || selectedDate}
+                  onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                />
+              </div>
               <div>
                 <Label htmlFor="cal-title">Title</Label>
                 <Input
