@@ -165,11 +165,17 @@ export function SchoolCalendar() {
   const create = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
+      if (form.audiences.length === 0) throw new Error("Pick at least one audience");
+      const audiences = form.audiences.includes("everyone")
+        ? (["everyone"] as Audience[])
+        : form.audiences;
       const { error } = await supabase.from("calendar_events").insert({
         title: form.title.trim(),
         description: form.description.trim() || null,
         category: form.category,
-        audience: form.audience as "everyone" | "students" | "parents" | "teachers",
+        audience: audiences[0]!,
+        audiences,
+        color: form.color,
         event_date: selectedDate,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
@@ -184,7 +190,8 @@ export function SchoolCalendar() {
         title: "",
         description: "",
         category: "event",
-        audience: "everyone",
+        audiences: ["everyone"],
+        color: "teal",
         start_time: "",
         end_time: "",
         location: "",
@@ -194,6 +201,18 @@ export function SchoolCalendar() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const toggleAudience = (value: Audience) => {
+    setForm((prev) => {
+      if (value === "everyone") return { ...prev, audiences: ["everyone"] };
+      const without = prev.audiences.filter((a) => a !== "everyone");
+      const next = without.includes(value)
+        ? without.filter((a) => a !== value)
+        : [...without, value];
+      return { ...prev, audiences: next.length ? next : ["everyone"] };
+    });
+  };
+
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
