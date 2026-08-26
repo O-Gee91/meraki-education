@@ -294,15 +294,14 @@ export function SchoolCalendar() {
                     {date.getDate()}
                   </span>
                   <span className="mt-1 flex flex-wrap gap-0.5">
-                    {list.slice(0, 3).map((e) => (
+                    {list.slice(0, 4).map((e) => (
                       <span
                         key={e.id}
-                        className={`size-1.5 rounded-full ${
-                          CATEGORY_TONE[e.category]?.split(" ")[0] ?? "bg-accent/15"
-                        } ring-1 ring-current`}
+                        className={`size-1.5 rounded-full ${colorOption(e.color).dot}`}
                       />
                     ))}
                   </span>
+
                 </button>
               );
             })}
