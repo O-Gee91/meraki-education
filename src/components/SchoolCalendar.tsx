@@ -81,6 +81,44 @@ type EventRow = {
 };
 
 
+const TIME_OPTIONS: string[] = [];
+for (let h = 0; h < 24; h += 1) {
+  for (const m of [0, 30]) {
+    TIME_OPTIONS.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+}
+
+function TimeSelect({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <Select
+      value={value || "none"}
+      onValueChange={(v) => onChange(v === "none" ? "" : v)}
+    >
+      <SelectTrigger id={id}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="max-h-60">
+        <SelectItem value="none">{placeholder}</SelectItem>
+        {TIME_OPTIONS.map((t) => (
+          <SelectItem key={t} value={t}>
+            {formatTime(t)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function toKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
@@ -506,20 +544,20 @@ export function SchoolCalendar() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="cal-start">Starts</Label>
-                  <Input
+                  <TimeSelect
                     id="cal-start"
-                    type="time"
                     value={form.start_time}
-                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+                    onChange={(v) => setForm({ ...form, start_time: v })}
+                    placeholder="No start time"
                   />
                 </div>
                 <div>
                   <Label htmlFor="cal-end">Ends</Label>
-                  <Input
+                  <TimeSelect
                     id="cal-end"
-                    type="time"
                     value={form.end_time}
-                    onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+                    onChange={(v) => setForm({ ...form, end_time: v })}
+                    placeholder="No end time"
                   />
                 </div>
               </div>
