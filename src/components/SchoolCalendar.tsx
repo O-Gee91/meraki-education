@@ -542,9 +542,18 @@ export function SchoolCalendar() {
                   placeholder="What students and families need to know"
                 />
               </div>
-              <Button type="submit" size="sm" disabled={create.isPending}>
-                {create.isPending ? "Posting…" : "Post event"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="submit" size="sm" disabled={save.isPending}>
+                  {save.isPending
+                    ? "Saving…"
+                    : editingId
+                      ? "Save changes"
+                      : "Post event"}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+              </div>
             </form>
           )}
 
