@@ -25,13 +25,43 @@ const CATEGORIES = [
   { value: "holiday", label: "Holiday / no school" },
 ] as const;
 
-const CATEGORY_TONE: Record<string, string> = {
-  event: "bg-accent/15 text-accent",
-  exam: "bg-destructive/15 text-destructive",
-  deadline: "bg-warning/15 text-warning",
-  meeting: "bg-primary/15 text-primary",
-  holiday: "bg-success/15 text-success",
+type Audience = "everyone" | "students" | "parents" | "teachers";
+
+const COLORS = [
+  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent" },
+  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary" },
+  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success" },
+  {
+    value: "amber",
+    label: "Amber",
+    dot: "bg-warning",
+    chip: "bg-warning/20 text-warning-foreground",
+  },
+  {
+    value: "red",
+    label: "Red",
+    dot: "bg-destructive",
+    chip: "bg-destructive/15 text-destructive",
+  },
+  {
+    value: "slate",
+    label: "Slate",
+    dot: "bg-muted-foreground",
+    chip: "bg-muted text-muted-foreground",
+  },
+] as const;
+
+const DEFAULT_COLOR_BY_CATEGORY: Record<string, string> = {
+  event: "teal",
+  exam: "red",
+  deadline: "amber",
+  meeting: "navy",
+  holiday: "green",
 };
+
+function colorOption(value: string) {
+  return COLORS.find((c) => c.value === value) ?? COLORS[0];
+}
 
 type EventRow = {
   id: string;
@@ -43,7 +73,10 @@ type EventRow = {
   location: string | null;
   category: string;
   audience: string;
+  audiences: Audience[] | null;
+  color: string;
 };
+
 
 function toKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
