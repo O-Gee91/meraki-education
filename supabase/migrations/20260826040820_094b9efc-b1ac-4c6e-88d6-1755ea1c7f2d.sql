@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.can_see_audiences(post_audience[]) FROM anon;
