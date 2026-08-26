@@ -3,8 +3,14 @@ import { toast } from "sonner";
 import { Armchair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { studentShortLabel } from "@/lib/student-display";
 
-export type SeatStudent = { id: string; first_name: string; last_name: string };
+export type SeatStudent = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  student_number?: string | null;
+};
 
 const COLS = 5;
 
@@ -12,10 +18,12 @@ export function SeatingPlan({
   classId,
   students,
   isStaff,
+  useIds = false,
 }: {
   classId: string;
   students: SeatStudent[];
   isStaff: boolean;
+  useIds?: boolean;
 }) {
   const queryClient = useQueryClient();
 
@@ -128,7 +136,7 @@ export function SeatingPlan({
                       }
                     >
                       <Armchair className="mx-auto mb-1 size-4 text-accent" />
-                      {student ? `${student.first_name} ${student.last_name}` : "empty"}
+                      {student ? studentShortLabel(student, useIds) : "empty"}
                     </div>
                   );
                 })}
@@ -155,7 +163,7 @@ export function SeatingPlan({
                   })
                 }
               >
-                Seat {s.first_name} {s.last_name}
+                Seat {studentShortLabel(s, useIds)}
               </Button>
             ))}
           </div>
