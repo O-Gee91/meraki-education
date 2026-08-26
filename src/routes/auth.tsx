@@ -54,6 +54,10 @@ function safeNext(next?: string) {
 
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 
+/** School staff email domains that may claim educator access (ssbs, ssbs2, ssbs3). */
+const SCHOOL_STAFF_EMAIL_RE = /@([a-z0-9-]+\.)*ssbs[0-9]?(\.[a-z0-9.-]+)?$/i;
+
+
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
@@ -119,9 +123,17 @@ function AuthPage() {
       toast.error("Enter the email address where you want notifications sent");
       return;
     }
+    const isEducator = role === "educator";
+    if (isEducator && !SCHOOL_STAFF_EMAIL_RE.test(contactEmail)) {
+      toast.error(
+        "Educator accounts require a school email address on an ssbs, ssbs2 or ssbs3 domain.",
+      );
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
-      email: usernameToEmail(normalized),
+      // Educators sign in with their verified school email so staff access can be trusted.
+      email: isEducator ? contactEmail : usernameToEmail(normalized),
       password,
       options: {
         emailRedirectTo: returnTo
@@ -135,6 +147,7 @@ function AuthPage() {
         },
       },
     });
+
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -271,9 +284,10 @@ function AuthPage() {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       {role === "educator"
-                        ? "Educator accounts start with student-level access. A school administrator reviews and grants teaching permissions after signup."
+                        ? "Educator / staff access requires a school email on an ssbs, ssbs2 or ssbs3 domain. Sign in with that email address and confirm it — teacher access is granted automatically once verified."
                         : "Teacher and admin access is granted by a school administrator after your account is created."}
                     </p>
+
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
