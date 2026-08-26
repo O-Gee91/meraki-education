@@ -168,45 +168,72 @@ export function SchoolCalendar() {
     return out;
   }, [cursor]);
 
-  const create = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
       if (form.audiences.length === 0) throw new Error("Pick at least one audience");
       const audiences = form.audiences.includes("everyone")
         ? (["everyone"] as Audience[])
         : form.audiences;
-      const { error } = await supabase.from("calendar_events").insert({
+      const payload = {
         title: form.title.trim(),
         description: form.description.trim() || null,
         category: form.category,
         audience: audiences[0]!,
         audiences,
         color: form.color,
-        event_date: selectedDate,
+        event_date: form.event_date || selectedDate,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         location: form.location.trim() || null,
-        created_by: user?.id ?? null,
-      });
-      if (error) throw error;
+      };
+      if (editingId) {
+        const { error } = await supabase
+          .from("calendar_events")
+          .update(payload)
+          .eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("calendar_events")
+          .insert({ ...payload, created_by: user?.id ?? null });
+        if (error) throw error;
+      }
+      return payload.event_date;
     },
-    onSuccess: () => {
-      toast.success("Posted to the school calendar");
-      setForm({
-        title: "",
-        description: "",
-        category: "event",
-        audiences: ["everyone"],
-        color: "teal",
-        start_time: "",
-        end_time: "",
-        location: "",
-      });
+    onSuccess: (eventDate) => {
+      toast.success(editingId ? "Event updated" : "Posted to the school calendar");
+      setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
+      setSelectedDate(eventDate);
+      setCursor(new Date(`${eventDate}T00:00:00`));
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const startEdit = (e: EventRow) => {
+    setEditingId(e.id);
+    setShowForm(true);
+    setForm({
+      title: e.title,
+      description: e.description ?? "",
+      category: e.category,
+      audiences: (e.audiences?.length ? e.audiences : [e.audience as Audience]) as Audience[],
+      color: e.color,
+      start_time: e.start_time?.slice(0, 5) ?? "",
+      end_time: e.end_time?.slice(0, 5) ?? "",
+      location: e.location ?? "",
+      event_date: e.event_date,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setShowForm(false);
+    setForm(emptyForm);
+  };
 
   const toggleAudience = (value: Audience) => {
     setForm((prev) => {
