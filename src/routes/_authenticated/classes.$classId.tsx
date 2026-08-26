@@ -31,6 +31,7 @@ import { ClassFeed } from "@/components/class/ClassFeed";
 import { FileLibrary } from "@/components/files/FileLibrary";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
+import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
@@ -66,6 +67,7 @@ function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
+  const { useIds, toggle: toggleIds } = useRosterPrivacy();
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -88,7 +90,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("id, student_id, students(id, first_name, last_name, grade_level)")
+        .select("id, student_id, students(id, first_name, last_name, grade_level, student_number)")
         .eq("class_id", classId);
       if (error) throw error;
       return (data ?? [])
@@ -194,9 +196,14 @@ function ClassDetailPage() {
           : undefined
       }
       actions={
-        <Button asChild variant="outline" size="sm">
-          <Link to="/classes">All classes</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={toggleIds}>
+            {useIds ? "Show names" : "Show student IDs"}
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/classes">All classes</Link>
+          </Button>
+        </div>
       }
     >
       <Tabs defaultValue="gradebook">
@@ -243,7 +250,7 @@ function ClassDetailPage() {
                     return (
                       <tr key={r.id}>
                         <td className="sticky left-0 bg-card px-4 py-2 font-medium">
-                          {r.students?.last_name}, {r.students?.first_name}
+                          {studentLabel(r.students, useIds)}
                         </td>
                         {assignments.map((a) => {
                           const shown = cellValue(r.student_id, a.id);
@@ -311,7 +318,7 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="roster">
-          <RosterTab classId={classId} isStaff={isStaff} roster={roster} />
+          <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
         </TabsContent>
 
         <TabsContent value="feed">
@@ -333,7 +340,13 @@ function ClassDetailPage() {
             students={roster
               .map((r) => r.students)
               .filter((s): s is NonNullable<typeof s> => !!s)
-              .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }))}
+              .map((s) => ({
+                id: s.id,
+                first_name: s.first_name,
+                last_name: s.last_name,
+                student_number: s.student_number,
+              }))}
+            useIds={useIds}
           />
         </TabsContent>
 
@@ -674,17 +687,25 @@ function AssignmentStandards({
 type RosterRow = {
   id: string;
   student_id: string;
-  students: { id: string; first_name: string; last_name: string; grade_level: number } | null;
+  students: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    grade_level: number;
+    student_number: string | null;
+  } | null;
 };
 
 function RosterTab({
   classId,
   isStaff,
   roster,
+  useIds,
 }: {
   classId: string;
   isStaff: boolean;
   roster: RosterRow[];
+  useIds: boolean;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
@@ -695,7 +716,7 @@ function RosterTab({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, first_name, last_name, grade_level")
+        .select("id, first_name, last_name, grade_level, student_number")
         .order("last_name");
       if (error) throw error;
       return data;
@@ -751,7 +772,7 @@ function RosterTab({
                 ) : (
                   available.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.last_name}, {s.first_name} (Gr {s.grade_level})
+                      {studentLabel(s, useIds)} (Gr {s.grade_level})
                     </SelectItem>
                   ))
                 )}
@@ -771,7 +792,7 @@ function RosterTab({
           roster.map((r) => (
             <div key={r.id} className="flex items-center justify-between p-4 text-sm">
               <span className="font-medium">
-                {r.students?.last_name}, {r.students?.first_name}
+                {studentLabel(r.students, useIds)}
               </span>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>
