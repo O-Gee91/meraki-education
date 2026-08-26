@@ -590,14 +590,24 @@ export function SchoolCalendar() {
                     </div>
 
                     {isStaff && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Remove ${e.title}`}
-                        onClick={() => remove.mutate(e.id)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Edit ${e.title}`}
+                          onClick={() => startEdit(e)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remove ${e.title}`}
+                          onClick={() => remove.mutate(e.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   {(e.start_time || e.location) && (
