@@ -104,21 +104,25 @@ export function SchoolCalendar() {
     title: "",
     description: "",
     category: "event",
-    audience: "everyone",
+    audiences: ["everyone"] as Audience[],
+    color: "teal",
     start_time: "",
     end_time: "",
     location: "",
   });
+  const [colorFilter, setColorFilter] = useState<string[]>([]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
 
-  const { data: events = [] } = useQuery({
+  const { data: allEvents = [] } = useQuery({
     queryKey: ["calendar-events", monthStart],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calendar_events")
-        .select("id, title, description, event_date, start_time, end_time, location, category, audience")
+        .select(
+          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color",
+        )
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
         .order("event_date")
@@ -127,6 +131,15 @@ export function SchoolCalendar() {
       return data as EventRow[];
     },
   });
+
+  const events = useMemo(
+    () =>
+      colorFilter.length === 0
+        ? allEvents
+        : allEvents.filter((e) => colorFilter.includes(e.color)),
+    [allEvents, colorFilter],
+  );
+
 
   const byDate = useMemo(() => {
     const map = new Map<string, EventRow[]>();
