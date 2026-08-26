@@ -54,6 +54,10 @@ function safeNext(next?: string) {
 
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 
+/** School staff email domains that may claim educator access (ssbs, ssbs2, ssbs3). */
+const SCHOOL_STAFF_EMAIL_RE = /@([a-z0-9-]+\.)*ssbs[0-9]?(\.[a-z0-9.-]+)?$/i;
+
+
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
