@@ -29,17 +29,20 @@ export const Route = createFileRoute("/_authenticated/classes/")({
   component: ClassesPage,
 });
 
+const emptyForm = {
+  name: "",
+  subject: "",
+  period: "",
+  room: "",
+  term: "Fall 2026",
+};
+
 function ClassesPage() {
-  const { isStaff, user } = useAuth();
+  const { isStaff, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    subject: "",
-    period: "",
-    room: "",
-    term: "Fall 2026",
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
@@ -53,27 +56,36 @@ function ClassesPage() {
     },
   });
 
-  const createClass = useMutation({
+  const saveClass = useMutation({
     mutationFn: async () => {
       if (form.name.trim().length < 2) throw new Error("Class name is required");
-      const { error } = await supabase.from("classes").insert({
+      const payload = {
         name: form.name.trim().slice(0, 120),
         subject: form.subject.trim().slice(0, 60) || null,
         period: form.period.trim().slice(0, 12) || null,
         room: form.room.trim().slice(0, 20) || null,
         term: form.term.trim().slice(0, 40) || "Fall 2026",
-        teacher_id: user?.id ?? null,
-      });
-      if (error) throw error;
+      };
+      if (editingId) {
+        const { error } = await supabase.from("classes").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("classes")
+          .insert({ ...payload, teacher_id: user?.id ?? null });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Class created");
+      toast.success(editingId ? "Class updated" : "Class created");
       setOpen(false);
-      setForm({ name: "", subject: "", period: "", room: "", term: "Fall 2026" });
+      setEditingId(null);
+      setForm(emptyForm);
       queryClient.invalidateQueries({ queryKey: ["classes"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <AppShell
