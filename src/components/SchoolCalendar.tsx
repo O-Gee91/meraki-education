@@ -103,7 +103,8 @@ export function SchoolCalendar() {
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(toKey(today));
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyForm = {
     title: "",
     description: "",
     category: "event",
@@ -112,7 +113,9 @@ export function SchoolCalendar() {
     start_time: "",
     end_time: "",
     location: "",
-  });
+    event_date: "",
+  };
+  const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
