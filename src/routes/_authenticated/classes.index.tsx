@@ -93,13 +93,29 @@ function ClassesPage() {
       description="Each section links to its gradebook, assignments and roster."
       actions={
         isStaff ? (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(v) => {
+              setOpen(v);
+              if (!v) {
+                setEditingId(null);
+                setForm(emptyForm);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>New class</Button>
+              <Button
+                onClick={() => {
+                  setEditingId(null);
+                  setForm(emptyForm);
+                }}
+              >
+                New class
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create a class</DialogTitle>
+                <DialogTitle>{editingId ? "Edit class" : "Create a class"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
                 {(
@@ -124,8 +140,12 @@ function ClassesPage() {
                 ))}
               </div>
               <DialogFooter>
-                <Button onClick={() => createClass.mutate()} disabled={createClass.isPending}>
-                  {createClass.isPending ? "Creating…" : "Create class"}
+                <Button onClick={() => saveClass.mutate()} disabled={saveClass.isPending}>
+                  {saveClass.isPending
+                    ? "Saving…"
+                    : editingId
+                      ? "Save changes"
+                      : "Create class"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -145,24 +165,51 @@ function ClassesPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {classes.map((c) => (
-            <Link
-              key={c.id}
-              to="/classes/$classId"
-              params={{ classId: c.id }}
-              className="panel p-5 transition-shadow hover:shadow-[var(--shadow-float)]"
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Period {c.period ?? "—"} · {c.term}
-              </p>
-              <h2 className="mt-2 text-lg font-semibold">{c.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {c.subject ?? "General"} · Room {c.room ?? "—"}
-              </p>
-            </Link>
-          ))}
+          {classes.map((c) => {
+            const canEdit = isAdmin || (isStaff && c.teacher_id === user?.id);
+            return (
+              <div key={c.id} className="relative">
+                <Link
+                  to="/classes/$classId"
+                  params={{ classId: c.id }}
+                  className="block panel p-5 transition-shadow hover:shadow-[var(--shadow-float)]"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Period {c.period ?? "—"} · {c.term}
+                  </p>
+                  <h2 className="mt-2 pr-10 text-lg font-semibold">{c.name}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {c.subject ?? "General"} · Room {c.room ?? "—"}
+                  </p>
+                </Link>
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${c.name}`}
+                    className="absolute right-3 top-3"
+                    onClick={() => {
+                      setEditingId(c.id);
+                      setForm({
+                        name: c.name ?? "",
+                        subject: c.subject ?? "",
+                        period: c.period ?? "",
+                        room: c.room ?? "",
+                        term: c.term ?? "Fall 2026",
+                      });
+                      setOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       )}
+
     </AppShell>
   );
 }
