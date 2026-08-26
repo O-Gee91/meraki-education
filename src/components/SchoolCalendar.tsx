@@ -544,20 +544,20 @@ export function SchoolCalendar() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="cal-start">Starts</Label>
-                  <Input
+                  <TimeSelect
                     id="cal-start"
-                    type="time"
                     value={form.start_time}
-                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+                    onChange={(v) => setForm({ ...form, start_time: v })}
+                    placeholder="No start time"
                   />
                 </div>
                 <div>
                   <Label htmlFor="cal-end">Ends</Label>
-                  <Input
+                  <TimeSelect
                     id="cal-end"
-                    type="time"
                     value={form.end_time}
-                    onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+                    onChange={(v) => setForm({ ...form, end_time: v })}
+                    placeholder="No end time"
                   />
                 </div>
               </div>
