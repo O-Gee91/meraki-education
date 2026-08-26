@@ -284,9 +284,10 @@ function AuthPage() {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       {role === "educator"
-                        ? "Educator accounts start with student-level access. A school administrator reviews and grants teaching permissions after signup."
+                        ? "Educator / staff access requires a school email on an ssbs, ssbs2 or ssbs3 domain. Sign in with that email address and confirm it — teacher access is granted automatically once verified."
                         : "Teacher and admin access is granted by a school administrator after your account is created."}
                     </p>
+
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
