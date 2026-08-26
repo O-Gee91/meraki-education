@@ -264,6 +264,42 @@ export function SchoolCalendar() {
         </div>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          Filter by colour
+        </span>
+        {COLORS.map((c) => {
+          const active = colorFilter.includes(c.value);
+          return (
+            <button
+              key={c.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() =>
+                setColorFilter((prev) =>
+                  prev.includes(c.value) ? prev.filter((v) => v !== c.value) : [...prev, c.value],
+                )
+              }
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
+                active
+                  ? "border-accent bg-accent/10 font-medium"
+                  : "border-border text-muted-foreground hover:border-accent/50"
+              }`}
+            >
+              <span className={`size-2.5 rounded-full ${c.dot}`} />
+              {c.label}
+            </button>
+          );
+        })}
+        {colorFilter.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setColorFilter([])}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+
+
       <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div>
           <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wide text-muted-foreground">
