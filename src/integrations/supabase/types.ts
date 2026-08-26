@@ -546,8 +546,10 @@ export type Database = {
       calendar_events: {
         Row: {
           audience: Database["public"]["Enums"]["post_audience"]
+          audiences: Database["public"]["Enums"]["post_audience"][]
           category: string
           class_id: string | null
+          color: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -561,8 +563,10 @@ export type Database = {
         }
         Insert: {
           audience?: Database["public"]["Enums"]["post_audience"]
+          audiences?: Database["public"]["Enums"]["post_audience"][]
           category?: string
           class_id?: string | null
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -576,8 +580,10 @@ export type Database = {
         }
         Update: {
           audience?: Database["public"]["Enums"]["post_audience"]
+          audiences?: Database["public"]["Enums"]["post_audience"][]
           category?: string
           class_id?: string | null
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1553,6 +1559,10 @@ export type Database = {
       admin_exists: { Args: never; Returns: boolean }
       can_see_audience: {
         Args: { _audience: Database["public"]["Enums"]["post_audience"] }
+        Returns: boolean
+      }
+      can_see_audiences: {
+        Args: { _audiences: Database["public"]["Enums"]["post_audience"][] }
         Returns: boolean
       }
       can_view_class: { Args: { _class_id: string }; Returns: boolean }

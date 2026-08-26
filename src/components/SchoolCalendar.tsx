@@ -25,13 +25,43 @@ const CATEGORIES = [
   { value: "holiday", label: "Holiday / no school" },
 ] as const;
 
-const CATEGORY_TONE: Record<string, string> = {
-  event: "bg-accent/15 text-accent",
-  exam: "bg-destructive/15 text-destructive",
-  deadline: "bg-warning/15 text-warning",
-  meeting: "bg-primary/15 text-primary",
-  holiday: "bg-success/15 text-success",
+type Audience = "everyone" | "students" | "parents" | "teachers";
+
+const COLORS = [
+  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent" },
+  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary" },
+  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success" },
+  {
+    value: "amber",
+    label: "Amber",
+    dot: "bg-warning",
+    chip: "bg-warning/20 text-warning-foreground",
+  },
+  {
+    value: "red",
+    label: "Red",
+    dot: "bg-destructive",
+    chip: "bg-destructive/15 text-destructive",
+  },
+  {
+    value: "slate",
+    label: "Slate",
+    dot: "bg-muted-foreground",
+    chip: "bg-muted text-muted-foreground",
+  },
+] as const;
+
+const DEFAULT_COLOR_BY_CATEGORY: Record<string, string> = {
+  event: "teal",
+  exam: "red",
+  deadline: "amber",
+  meeting: "navy",
+  holiday: "green",
 };
+
+function colorOption(value: string) {
+  return COLORS.find((c) => c.value === value) ?? COLORS[0];
+}
 
 type EventRow = {
   id: string;
@@ -43,7 +73,10 @@ type EventRow = {
   location: string | null;
   category: string;
   audience: string;
+  audiences: Audience[] | null;
+  color: string;
 };
+
 
 function toKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -71,21 +104,25 @@ export function SchoolCalendar() {
     title: "",
     description: "",
     category: "event",
-    audience: "everyone",
+    audiences: ["everyone"] as Audience[],
+    color: "teal",
     start_time: "",
     end_time: "",
     location: "",
   });
+  const [colorFilter, setColorFilter] = useState<string[]>([]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
 
-  const { data: events = [] } = useQuery({
+  const { data: allEvents = [] } = useQuery({
     queryKey: ["calendar-events", monthStart],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calendar_events")
-        .select("id, title, description, event_date, start_time, end_time, location, category, audience")
+        .select(
+          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color",
+        )
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
         .order("event_date")
@@ -94,6 +131,15 @@ export function SchoolCalendar() {
       return data as EventRow[];
     },
   });
+
+  const events = useMemo(
+    () =>
+      colorFilter.length === 0
+        ? allEvents
+        : allEvents.filter((e) => colorFilter.includes(e.color)),
+    [allEvents, colorFilter],
+  );
+
 
   const byDate = useMemo(() => {
     const map = new Map<string, EventRow[]>();
@@ -119,11 +165,17 @@ export function SchoolCalendar() {
   const create = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
+      if (form.audiences.length === 0) throw new Error("Pick at least one audience");
+      const audiences = form.audiences.includes("everyone")
+        ? (["everyone"] as Audience[])
+        : form.audiences;
       const { error } = await supabase.from("calendar_events").insert({
         title: form.title.trim(),
         description: form.description.trim() || null,
         category: form.category,
-        audience: form.audience as "everyone" | "students" | "parents" | "teachers",
+        audience: audiences[0]!,
+        audiences,
+        color: form.color,
         event_date: selectedDate,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
@@ -138,7 +190,8 @@ export function SchoolCalendar() {
         title: "",
         description: "",
         category: "event",
-        audience: "everyone",
+        audiences: ["everyone"],
+        color: "teal",
         start_time: "",
         end_time: "",
         location: "",
@@ -148,6 +201,18 @@ export function SchoolCalendar() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const toggleAudience = (value: Audience) => {
+    setForm((prev) => {
+      if (value === "everyone") return { ...prev, audiences: ["everyone"] };
+      const without = prev.audiences.filter((a) => a !== "everyone");
+      const next = without.includes(value)
+        ? without.filter((a) => a !== value)
+        : [...without, value];
+      return { ...prev, audiences: next.length ? next : ["everyone"] };
+    });
+  };
+
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
@@ -229,15 +294,14 @@ export function SchoolCalendar() {
                     {date.getDate()}
                   </span>
                   <span className="mt-1 flex flex-wrap gap-0.5">
-                    {list.slice(0, 3).map((e) => (
+                    {list.slice(0, 4).map((e) => (
                       <span
                         key={e.id}
-                        className={`size-1.5 rounded-full ${
-                          CATEGORY_TONE[e.category]?.split(" ")[0] ?? "bg-accent/15"
-                        } ring-1 ring-current`}
+                        className={`size-1.5 rounded-full ${colorOption(e.color).dot}`}
                       />
                     ))}
                   </span>
+
                 </button>
               );
             })}
