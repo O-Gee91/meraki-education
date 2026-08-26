@@ -28,26 +28,29 @@ const CATEGORIES = [
 type Audience = "everyone" | "students" | "parents" | "teachers";
 
 const COLORS = [
-  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent" },
-  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary" },
-  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success" },
+  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent", edge: "border-l-accent" },
+  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary", edge: "border-l-primary" },
+  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success", edge: "border-l-success" },
   {
     value: "amber",
     label: "Amber",
     dot: "bg-warning",
     chip: "bg-warning/20 text-warning-foreground",
+    edge: "border-l-warning",
   },
   {
     value: "red",
     label: "Red",
     dot: "bg-destructive",
     chip: "bg-destructive/15 text-destructive",
+    edge: "border-l-destructive",
   },
   {
     value: "slate",
     label: "Slate",
     dot: "bg-muted-foreground",
     chip: "bg-muted text-muted-foreground",
+    edge: "border-l-muted-foreground",
   },
 ] as const;
 
@@ -462,8 +465,7 @@ export function SchoolCalendar() {
               dayEvents.map((e) => (
                 <article
                   key={e.id}
-                  className="rounded-md border border-border border-l-4 p-3"
-                  style={{ borderLeftColor: "currentColor" }}
+                  className={`rounded-md border border-border border-l-4 p-3 ${colorOption(e.color).edge}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
