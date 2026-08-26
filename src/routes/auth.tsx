@@ -119,9 +119,17 @@ function AuthPage() {
       toast.error("Enter the email address where you want notifications sent");
       return;
     }
+    const isEducator = role === "educator";
+    if (isEducator && !SCHOOL_STAFF_EMAIL_RE.test(contactEmail)) {
+      toast.error(
+        "Educator accounts require a school email address on an ssbs, ssbs2 or ssbs3 domain.",
+      );
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
-      email: usernameToEmail(normalized),
+      // Educators sign in with their verified school email so staff access can be trusted.
+      email: isEducator ? contactEmail : usernameToEmail(normalized),
       password,
       options: {
         emailRedirectTo: returnTo
@@ -135,6 +143,7 @@ function AuthPage() {
         },
       },
     });
+
     setBusy(false);
     if (error) {
       toast.error(error.message);
