@@ -345,7 +345,9 @@ export function SchoolCalendar() {
                 <Label htmlFor="cal-category">Type</Label>
                 <Select
                   value={form.category}
-                  onValueChange={(v) => setForm({ ...form, category: v })}
+                  onValueChange={(v) =>
+                    setForm({ ...form, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? form.color })
+                  }
                 >
                   <SelectTrigger id="cal-category">
                     <SelectValue />
@@ -360,23 +362,54 @@ export function SchoolCalendar() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="cal-audience">Who can see this</Label>
-                <Select
-                  value={form.audience}
-                  onValueChange={(audience) => setForm({ ...form, audience })}
-                >
-                  <SelectTrigger id="cal-audience">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AUDIENCES.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>
-                        {a.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Colour</Label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-label={c.label}
+                      aria-pressed={form.color === c.value}
+                      onClick={() => setForm({ ...form, color: c.value })}
+                      className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
+                        form.color === c.value
+                          ? "border-accent bg-accent/10 font-medium"
+                          : "border-border text-muted-foreground hover:border-accent/50"
+                      }`}
+                    >
+                      <span className={`size-2.5 rounded-full ${c.dot}`} />
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <div>
+                <Label>Notices — who can see this</Label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {AUDIENCES.map((a) => {
+                    const active = form.audiences.includes(a.value as Audience);
+                    return (
+                      <button
+                        key={a.value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleAudience(a.value as Audience)}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                          active
+                            ? "border-accent bg-accent/10 font-medium"
+                            : "border-border text-muted-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pick several groups, or choose everyone.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="cal-start">Starts</Label>
