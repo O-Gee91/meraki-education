@@ -656,34 +656,40 @@ export type Database = {
       classes: {
         Row: {
           created_at: string
+          grade_level: number | null
           id: string
           name: string
           period: string | null
           room: string | null
           subject: string | null
           teacher_id: string | null
+          teacher_name: string
           term: string
           weights: Json
         }
         Insert: {
           created_at?: string
+          grade_level?: number | null
           id?: string
           name: string
           period?: string | null
           room?: string | null
           subject?: string | null
           teacher_id?: string | null
+          teacher_name?: string
           term?: string
           weights?: Json
         }
         Update: {
           created_at?: string
+          grade_level?: number | null
           id?: string
           name?: string
           period?: string | null
           room?: string | null
           subject?: string | null
           teacher_id?: string | null
+          teacher_name?: string
           term?: string
           weights?: Json
         }
