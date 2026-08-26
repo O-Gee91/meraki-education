@@ -89,6 +89,22 @@ function StudentsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveNumber = useMutation({
+    mutationFn: async (input: { id: string; value: string }) => {
+      const value = input.value.trim().slice(0, 20);
+      const { error } = await supabase
+        .from("students")
+        .update({ student_number: value || null })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Student ID saved");
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const filtered = students.filter((s) =>
     `${s.first_name} ${s.last_name} ${s.student_number ?? ""}`
       .toLowerCase()
@@ -204,7 +220,23 @@ function StudentsPage() {
                     {s.last_name}, {s.first_name}
                   </td>
                   <td className="px-4 py-3">{s.grade_level}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.student_number ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {isStaff ? (
+                      <Input
+                        key={s.student_number ?? ""}
+                        className="h-8 w-28"
+                        placeholder="Add ID"
+                        maxLength={20}
+                        defaultValue={s.student_number ?? ""}
+                        onBlur={(e) => {
+                          if (e.target.value.trim() === (s.student_number ?? "")) return;
+                          saveNumber.mutate({ id: s.id, value: e.target.value });
+                        }}
+                      />
+                    ) : (
+                      (s.student_number ?? "—")
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{s.guardian_email ?? "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
