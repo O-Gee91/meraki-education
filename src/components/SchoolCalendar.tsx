@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, MapPin, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,8 @@ export function SchoolCalendar() {
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(toKey(today));
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyForm = {
     title: "",
     description: "",
     category: "event",
@@ -112,7 +113,9 @@ export function SchoolCalendar() {
     start_time: "",
     end_time: "",
     location: "",
-  });
+    event_date: "",
+  };
+  const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
@@ -165,45 +168,72 @@ export function SchoolCalendar() {
     return out;
   }, [cursor]);
 
-  const create = useMutation({
+  const save = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
       if (form.audiences.length === 0) throw new Error("Pick at least one audience");
       const audiences = form.audiences.includes("everyone")
         ? (["everyone"] as Audience[])
         : form.audiences;
-      const { error } = await supabase.from("calendar_events").insert({
+      const payload = {
         title: form.title.trim(),
         description: form.description.trim() || null,
         category: form.category,
         audience: audiences[0]!,
         audiences,
         color: form.color,
-        event_date: selectedDate,
+        event_date: form.event_date || selectedDate,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         location: form.location.trim() || null,
-        created_by: user?.id ?? null,
-      });
-      if (error) throw error;
+      };
+      if (editingId) {
+        const { error } = await supabase
+          .from("calendar_events")
+          .update(payload)
+          .eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("calendar_events")
+          .insert({ ...payload, created_by: user?.id ?? null });
+        if (error) throw error;
+      }
+      return payload.event_date;
     },
-    onSuccess: () => {
-      toast.success("Posted to the school calendar");
-      setForm({
-        title: "",
-        description: "",
-        category: "event",
-        audiences: ["everyone"],
-        color: "teal",
-        start_time: "",
-        end_time: "",
-        location: "",
-      });
+    onSuccess: (eventDate) => {
+      toast.success(editingId ? "Event updated" : "Posted to the school calendar");
+      setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
+      setSelectedDate(eventDate);
+      setCursor(new Date(`${eventDate}T00:00:00`));
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const startEdit = (e: EventRow) => {
+    setEditingId(e.id);
+    setShowForm(true);
+    setForm({
+      title: e.title,
+      description: e.description ?? "",
+      category: e.category,
+      audiences: (e.audiences?.length ? e.audiences : [e.audience as Audience]) as Audience[],
+      color: e.color,
+      start_time: e.start_time?.slice(0, 5) ?? "",
+      end_time: e.end_time?.slice(0, 5) ?? "",
+      location: e.location ?? "",
+      event_date: e.event_date,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setShowForm(false);
+    setForm(emptyForm);
+  };
 
   const toggleAudience = (value: Audience) => {
     setForm((prev) => {
@@ -357,7 +387,19 @@ export function SchoolCalendar() {
               })}
             </h3>
             {isStaff && (
-              <Button size="sm" variant="outline" onClick={() => setShowForm((v) => !v)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (showForm) {
+                    cancelEdit();
+                  } else {
+                    setEditingId(null);
+                    setForm({ ...emptyForm, event_date: selectedDate });
+                    setShowForm(true);
+                  }
+                }}
+              >
                 <Plus className="size-4" /> Add
               </Button>
             )}
@@ -368,9 +410,21 @@ export function SchoolCalendar() {
               className="mt-3 space-y-3 rounded-md border border-border p-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                create.mutate();
+                save.mutate();
               }}
             >
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {editingId ? "Edit event" : "New event"}
+              </p>
+              <div>
+                <Label htmlFor="cal-date">Date</Label>
+                <Input
+                  id="cal-date"
+                  type="date"
+                  value={form.event_date || selectedDate}
+                  onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                />
+              </div>
               <div>
                 <Label htmlFor="cal-title">Title</Label>
                 <Input
@@ -488,9 +542,18 @@ export function SchoolCalendar() {
                   placeholder="What students and families need to know"
                 />
               </div>
-              <Button type="submit" size="sm" disabled={create.isPending}>
-                {create.isPending ? "Posting…" : "Post event"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="submit" size="sm" disabled={save.isPending}>
+                  {save.isPending
+                    ? "Saving…"
+                    : editingId
+                      ? "Save changes"
+                      : "Post event"}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+              </div>
             </form>
           )}
 
@@ -527,14 +590,24 @@ export function SchoolCalendar() {
                     </div>
 
                     {isStaff && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Remove ${e.title}`}
-                        onClick={() => remove.mutate(e.id)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Edit ${e.title}`}
+                          onClick={() => startEdit(e)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remove ${e.title}`}
+                          onClick={() => remove.mutate(e.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   {(e.start_time || e.location) && (
