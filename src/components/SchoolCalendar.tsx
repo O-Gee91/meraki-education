@@ -28,26 +28,29 @@ const CATEGORIES = [
 type Audience = "everyone" | "students" | "parents" | "teachers";
 
 const COLORS = [
-  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent" },
-  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary" },
-  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success" },
+  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent", edge: "border-l-accent" },
+  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary", edge: "border-l-primary" },
+  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success", edge: "border-l-success" },
   {
     value: "amber",
     label: "Amber",
     dot: "bg-warning",
     chip: "bg-warning/20 text-warning-foreground",
+    edge: "border-l-warning",
   },
   {
     value: "red",
     label: "Red",
     dot: "bg-destructive",
     chip: "bg-destructive/15 text-destructive",
+    edge: "border-l-destructive",
   },
   {
     value: "slate",
     label: "Slate",
     dot: "bg-muted-foreground",
     chip: "bg-muted text-muted-foreground",
+    edge: "border-l-muted-foreground",
   },
 ] as const;
 
@@ -261,6 +264,42 @@ export function SchoolCalendar() {
         </div>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          Filter by colour
+        </span>
+        {COLORS.map((c) => {
+          const active = colorFilter.includes(c.value);
+          return (
+            <button
+              key={c.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() =>
+                setColorFilter((prev) =>
+                  prev.includes(c.value) ? prev.filter((v) => v !== c.value) : [...prev, c.value],
+                )
+              }
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
+                active
+                  ? "border-accent bg-accent/10 font-medium"
+                  : "border-border text-muted-foreground hover:border-accent/50"
+              }`}
+            >
+              <span className={`size-2.5 rounded-full ${c.dot}`} />
+              {c.label}
+            </button>
+          );
+        })}
+        {colorFilter.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setColorFilter([])}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+
+
       <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div>
           <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wide text-muted-foreground">
@@ -345,7 +384,9 @@ export function SchoolCalendar() {
                 <Label htmlFor="cal-category">Type</Label>
                 <Select
                   value={form.category}
-                  onValueChange={(v) => setForm({ ...form, category: v })}
+                  onValueChange={(v) =>
+                    setForm({ ...form, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? form.color })
+                  }
                 >
                   <SelectTrigger id="cal-category">
                     <SelectValue />
@@ -360,23 +401,54 @@ export function SchoolCalendar() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="cal-audience">Who can see this</Label>
-                <Select
-                  value={form.audience}
-                  onValueChange={(audience) => setForm({ ...form, audience })}
-                >
-                  <SelectTrigger id="cal-audience">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AUDIENCES.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>
-                        {a.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Colour</Label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-label={c.label}
+                      aria-pressed={form.color === c.value}
+                      onClick={() => setForm({ ...form, color: c.value })}
+                      className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
+                        form.color === c.value
+                          ? "border-accent bg-accent/10 font-medium"
+                          : "border-border text-muted-foreground hover:border-accent/50"
+                      }`}
+                    >
+                      <span className={`size-2.5 rounded-full ${c.dot}`} />
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <div>
+                <Label>Notices — who can see this</Label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {AUDIENCES.map((a) => {
+                    const active = form.audiences.includes(a.value as Audience);
+                    return (
+                      <button
+                        key={a.value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleAudience(a.value as Audience)}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                          active
+                            ? "border-accent bg-accent/10 font-medium"
+                            : "border-border text-muted-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pick several groups, or choose everyone.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="cal-start">Starts</Label>
@@ -427,23 +499,33 @@ export function SchoolCalendar() {
               <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
             ) : (
               dayEvents.map((e) => (
-                <article key={e.id} className="rounded-md border border-border p-3">
+                <article
+                  key={e.id}
+                  className={`rounded-md border border-border border-l-4 p-3 ${colorOption(e.color).edge}`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          CATEGORY_TONE[e.category] ?? "bg-accent/15 text-accent"
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          colorOption(e.color).chip
                         }`}
                       >
+                        <span className={`size-2 rounded-full ${colorOption(e.color).dot}`} />
                         {CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category}
                       </span>
                       <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
-                      {e.audience !== "everyone" && (
-                        <p className="text-xs text-muted-foreground">
-                          Visible to {audienceLabel(e.audience).toLowerCase()}
-                        </p>
-                      )}
+                      {(() => {
+                        const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
+                        if (list.length === 1 && list[0] === "everyone") return null;
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            Visible to{" "}
+                            {list.map((a) => audienceLabel(a).toLowerCase()).join(", ")}
+                          </p>
+                        );
+                      })()}
                     </div>
+
                     {isStaff && (
                       <Button
                         variant="ghost"
