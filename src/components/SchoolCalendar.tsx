@@ -460,23 +460,34 @@ export function SchoolCalendar() {
               <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
             ) : (
               dayEvents.map((e) => (
-                <article key={e.id} className="rounded-md border border-border p-3">
+                <article
+                  key={e.id}
+                  className="rounded-md border border-border border-l-4 p-3"
+                  style={{ borderLeftColor: "currentColor" }}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          CATEGORY_TONE[e.category] ?? "bg-accent/15 text-accent"
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          colorOption(e.color).chip
                         }`}
                       >
+                        <span className={`size-2 rounded-full ${colorOption(e.color).dot}`} />
                         {CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category}
                       </span>
                       <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
-                      {e.audience !== "everyone" && (
-                        <p className="text-xs text-muted-foreground">
-                          Visible to {audienceLabel(e.audience).toLowerCase()}
-                        </p>
-                      )}
+                      {(() => {
+                        const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
+                        if (list.length === 1 && list[0] === "everyone") return null;
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            Visible to{" "}
+                            {list.map((a) => audienceLabel(a).toLowerCase()).join(", ")}
+                          </p>
+                        );
+                      })()}
                     </div>
+
                     {isStaff && (
                       <Button
                         variant="ghost"
