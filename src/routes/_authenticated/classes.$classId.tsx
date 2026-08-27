@@ -305,6 +305,7 @@ function ClassDetailPage() {
             assignments={assignments}
             roster={roster}
             categories={categoryNames.length ? categoryNames : ["Homework"]}
+            gradeLevel={klass?.grade_level ?? null}
           />
         </TabsContent>
 
@@ -314,8 +315,19 @@ function ClassDetailPage() {
 
 
         <TabsContent value="assessments">
-          <AssessmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
+          <AssessmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
+
+        {isStaff && (
+          <TabsContent value="shared">
+            <SharedLibrary classId={classId} />
+          </TabsContent>
+        )}
 
         <TabsContent value="roster">
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
