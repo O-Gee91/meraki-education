@@ -31,10 +31,22 @@ export const Route = createFileRoute("/_authenticated/people")({
 
 const ROLES: Role[] = ["admin", "teacher", "student", "parent"];
 
+type Filter = Role | "all" | "unassigned";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "Everyone" },
+  { value: "admin", label: "Administrators" },
+  { value: "teacher", label: "Teachers" },
+  { value: "student", label: "Students" },
+  { value: "parent", label: "Parents / guardians" },
+  { value: "unassigned", label: "No role yet" },
+];
+
 function PeoplePage() {
   const { isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ["people"],
