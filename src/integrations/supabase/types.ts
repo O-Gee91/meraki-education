@@ -1423,6 +1423,59 @@ export type Database = {
           },
         ]
       }
+      shared_resources: {
+        Row: {
+          created_at: string
+          description: string | null
+          grade_level: number | null
+          id: string
+          kind: string
+          payload: Json
+          shared_by: string | null
+          shared_by_name: string
+          source_class_id: string | null
+          subject: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          grade_level?: number | null
+          id?: string
+          kind: string
+          payload?: Json
+          shared_by?: string | null
+          shared_by_name?: string
+          source_class_id?: string | null
+          subject?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          grade_level?: number | null
+          id?: string
+          kind?: string
+          payload?: Json
+          shared_by?: string | null
+          shared_by_name?: string
+          source_class_id?: string | null
+          subject?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_resources_source_class_id_fkey"
+            columns: ["source_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       standards: {
         Row: {
           code: string
@@ -1587,6 +1640,7 @@ export type Database = {
       is_school_staff_email: { Args: { _email: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       teaches_class: { Args: { _class_id: string }; Returns: boolean }
+      teaches_grade: { Args: { _grade: number }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "parent"
