@@ -375,12 +375,14 @@ function AssignmentsTab({
   assignments,
   roster,
   categories,
+  gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
   roster: RosterRow[];
   categories: string[];
+  gradeLevel?: number | null;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
