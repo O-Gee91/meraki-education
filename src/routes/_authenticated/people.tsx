@@ -137,6 +137,23 @@ function PeoplePage() {
           className="max-w-sm"
         />
 
+        <div className="mt-4 flex flex-wrap gap-2">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.value}
+              size="sm"
+              variant={filter === f.value ? "default" : "outline"}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              <Badge variant="secondary" className="ml-2">
+                {counts[f.value] ?? 0}
+              </Badge>
+            </Button>
+          ))}
+        </div>
+
+
         <div className="mt-5 divide-y divide-border">
           {isLoading ? (
             <p className="py-6 text-sm text-muted-foreground">Loading accounts…</p>
