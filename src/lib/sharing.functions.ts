@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import type { Json } from "@/integrations/supabase/types";
 import type {
   SharedAssessmentPayload,
   SharedAssignmentPayload,
@@ -114,7 +115,7 @@ export const shareResource = createServerFn({ method: "POST" })
         subject: klass?.subject ?? null,
         title: title.slice(0, 140),
         description: (data.note?.trim() || description || "")?.slice(0, 1000) || null,
-        payload,
+        payload: payload as unknown as Json,
         source_class_id: classId,
         shared_by: context.userId,
         shared_by_name: (profile?.full_name || "A teacher").slice(0, 120),
@@ -200,8 +201,8 @@ export const copySharedResource = createServerFn({ method: "POST" })
           position: q.position ?? i + 1,
           kind: q.kind,
           prompt: q.prompt,
-          options: q.options ?? [],
-          answer_key: q.answer_key ?? {},
+          options: (q.options ?? []) as unknown as Json,
+          answer_key: (q.answer_key ?? {}) as unknown as Json,
           points: Number(q.points) || 1,
           rubric: q.rubric ?? null,
         })),
