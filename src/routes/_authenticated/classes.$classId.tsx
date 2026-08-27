@@ -35,6 +35,8 @@ import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
+import { SharedLibrary } from "@/components/class/SharedLibrary";
+import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { formatDate, gradeTone } from "@/lib/school";
 import {
   computeAverage,
@@ -74,7 +76,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, weights")
+        .select("id, name, subject, period, room, term, weights, grade_level")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
