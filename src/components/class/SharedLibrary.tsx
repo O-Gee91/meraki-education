@@ -158,7 +158,8 @@ export function SharedLibrary({ classId }: { classId: string }) {
                   {(isAdmin || r.shared_by === user?.id) && (
                     <ConfirmDeleteButton
                       label="Unshare"
-                      description="This removes the shared copy. Copies other teachers already made stay untouched."
+                      title={`Unshare “${r.title}”?`}
+                      description="This removes it from the shared library. Copies other teachers already made stay untouched."
                       onConfirm={() => unshare.mutate(r.id)}
                     />
                   )}
