@@ -105,7 +105,16 @@ function PeoplePage() {
     );
   }
 
+  const matchesFilter = (p: (typeof people)[number], f: Filter) =>
+    f === "all" ? true : f === "unassigned" ? p.roles.length === 0 : p.roles.includes(f);
+
+  const counts = FILTERS.reduce<Record<string, number>>((acc, f) => {
+    acc[f.value] = people.filter((p) => matchesFilter(p, f.value)).length;
+    return acc;
+  }, {});
+
   const filtered = people.filter((p) => {
+    if (!matchesFilter(p, filter)) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
