@@ -31,10 +31,22 @@ export const Route = createFileRoute("/_authenticated/people")({
 
 const ROLES: Role[] = ["admin", "teacher", "student", "parent"];
 
+type Filter = Role | "all" | "unassigned";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "Everyone" },
+  { value: "admin", label: "Administrators" },
+  { value: "teacher", label: "Teachers" },
+  { value: "student", label: "Students" },
+  { value: "parent", label: "Parents / guardians" },
+  { value: "unassigned", label: "No role yet" },
+];
+
 function PeoplePage() {
   const { isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ["people"],
@@ -93,7 +105,16 @@ function PeoplePage() {
     );
   }
 
+  const matchesFilter = (p: (typeof people)[number], f: Filter) =>
+    f === "all" ? true : f === "unassigned" ? p.roles.length === 0 : p.roles.includes(f);
+
+  const counts = FILTERS.reduce<Record<string, number>>((acc, f) => {
+    acc[f.value] = people.filter((p) => matchesFilter(p, f.value)).length;
+    return acc;
+  }, {});
+
   const filtered = people.filter((p) => {
+    if (!matchesFilter(p, filter)) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -115,6 +136,23 @@ function PeoplePage() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.value}
+              size="sm"
+              variant={filter === f.value ? "default" : "outline"}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              <Badge variant="secondary" className="ml-2">
+                {counts[f.value] ?? 0}
+              </Badge>
+            </Button>
+          ))}
+        </div>
+
 
         <div className="mt-5 divide-y divide-border">
           {isLoading ? (
