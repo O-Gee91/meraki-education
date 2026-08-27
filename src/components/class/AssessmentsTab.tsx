@@ -37,6 +37,7 @@ import {
 import { formatDate } from "@/lib/school";
 import { AssessmentGrading } from "@/components/class/AssessmentGrading";
 import { TakeAssessment } from "@/components/class/TakeAssessment";
+import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 
 type AssessmentRow = {
   id: string;
@@ -54,10 +55,12 @@ export function AssessmentsTab({
   classId,
   isStaff,
   assignments,
+  gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: { id: string; title: string; points_possible: number }[];
+  gradeLevel?: number | null;
 }) {
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -156,6 +159,12 @@ export function AssessmentsTab({
                         classId={classId}
                         assessment={a}
                         assignments={assignments}
+                      />
+                      <ShareResourceButton
+                        kind="assessment"
+                        id={a.id}
+                        title={a.title}
+                        defaultGrade={gradeLevel ?? null}
                       />
                       <ConfirmDeleteButton
                         title={`Delete "${a.title}"?`}

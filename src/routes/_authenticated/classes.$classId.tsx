@@ -35,6 +35,8 @@ import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
+import { SharedLibrary } from "@/components/class/SharedLibrary";
+import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { formatDate, gradeTone } from "@/lib/school";
 import {
   computeAverage,
@@ -74,7 +76,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, weights")
+        .select("id, name, subject, period, room, term, weights, grade_level")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
@@ -211,6 +213,7 @@ function ClassDetailPage() {
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="feed">Class feed</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
@@ -305,6 +308,7 @@ function ClassDetailPage() {
             assignments={assignments}
             roster={roster}
             categories={categoryNames.length ? categoryNames : ["Homework"]}
+            gradeLevel={klass?.grade_level ?? null}
           />
         </TabsContent>
 
@@ -314,8 +318,19 @@ function ClassDetailPage() {
 
 
         <TabsContent value="assessments">
-          <AssessmentsTab classId={classId} isStaff={isStaff} assignments={assignments} />
+          <AssessmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
+
+        {isStaff && (
+          <TabsContent value="shared">
+            <SharedLibrary classId={classId} />
+          </TabsContent>
+        )}
 
         <TabsContent value="roster">
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
@@ -375,12 +390,14 @@ function AssignmentsTab({
   assignments,
   roster,
   categories,
+  gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
   roster: RosterRow[];
   categories: string[];
+  gradeLevel?: number | null;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -562,12 +579,20 @@ function AssignmentsTab({
                 <span>{a.points_possible} pts</span>
                 <span>Due {formatDate(a.due_date)}</span>
                 {isStaff && (
-                  <ConfirmDeleteButton
-                    title={`Delete "${a.title}"?`}
-                    description="This removes the assignment along with its scores, submissions and linked standards."
-                    onConfirm={() => removeAssignment.mutate(a.id)}
-                    disabled={removeAssignment.isPending}
-                  />
+                  <>
+                    <ShareResourceButton
+                      kind="assignment"
+                      id={a.id}
+                      title={a.title}
+                      defaultGrade={gradeLevel ?? null}
+                    />
+                    <ConfirmDeleteButton
+                      title={`Delete "${a.title}"?`}
+                      description="This removes the assignment along with its scores, submissions and linked standards."
+                      onConfirm={() => removeAssignment.mutate(a.id)}
+                      disabled={removeAssignment.isPending}
+                    />
+                  </>
                 )}
               </div>
 
