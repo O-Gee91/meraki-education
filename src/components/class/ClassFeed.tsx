@@ -125,6 +125,7 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
               placeholder="Optional link (document, video, site)"
               className="max-w-sm"
             />
+            <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={dirty} />
             <Button
               size="sm"
               onClick={() => createPost.mutate()}
@@ -135,6 +136,7 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
             </Button>
           </div>
         </div>
+
       )}
 
       {posts.length === 0 ? (
