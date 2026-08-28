@@ -70,7 +70,13 @@ export function ProofreadEditor({
   );
   const [markId, setMarkId] = useState<string>("");
   const [comment, setComment] = useState("");
-  const [note, setNote] = useState(teacherNote ?? "");
+  const noteKey = `teacher-note:${submissionId}`;
+  const [note, setNote] = useState(
+    () => readDraft<string>(`teacher-note:${submissionId}`) ?? teacherNote ?? "",
+  );
+  const noteDraft = useAutosaveDraft(noteKey, note, {
+    dirty: note.trim() !== (teacherNote ?? "").trim(),
+  });
 
   const captureSelection = () => {
     const sel = window.getSelection();
