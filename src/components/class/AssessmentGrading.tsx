@@ -305,6 +305,9 @@ function EssayReview({
             {runProof.isPending ? "Proofing…" : "Grammar proof with AI"}
           </Button>
         )}
+        <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={gradeDirty} />
+
+        )}
       </div>
 
       <div className="space-y-1.5">
