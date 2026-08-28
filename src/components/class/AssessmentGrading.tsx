@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { proofreadEssay, scoreEssayAnswer } from "@/lib/assessments.functions";
 import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type AnswerRow = {
   id: string;
