@@ -318,6 +318,14 @@ function ClassDetailPage() {
         </TabsContent>
 
 
+        <TabsContent value="discussions">
+          <DiscussionBoard
+            classId={classId}
+            isStaff={isStaff}
+            categories={categoryNames.length ? categoryNames : ["Homework"]}
+          />
+        </TabsContent>
+
         <TabsContent value="assessments">
           <AssessmentsTab
             classId={classId}
