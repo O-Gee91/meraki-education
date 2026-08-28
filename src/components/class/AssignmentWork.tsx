@@ -202,6 +202,7 @@ function StudentWorkPanel({
     },
     onSuccess: () => {
       toast.success("Work turned in");
+      draft.clear();
       setOpen(false);
       if (inputRef.current) inputRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
