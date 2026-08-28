@@ -71,7 +71,10 @@ const DEFAULT_COLOR_BY_CATEGORY: Record<string, string> = {
 };
 
 function colorOption(value: string) {
-  return COLORS.find((c) => c.value === value) ?? COLORS[0];
+  return (
+    COLORS.find((c) => c.value === value) ??
+    COLORS.find((c) => c.value === "green")!
+  );
 }
 
 type EventRow = {
@@ -155,7 +158,7 @@ export function SchoolCalendar() {
     description: "",
     category: "event",
     audiences: ["everyone"] as Audience[],
-    color: "teal",
+    color: "amber",
     start_time: "",
     end_time: "",
     location: "",
