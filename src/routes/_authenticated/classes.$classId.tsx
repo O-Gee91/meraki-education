@@ -214,6 +214,7 @@ function ClassDetailPage() {
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          <TabsTrigger value="discussions">Discussion board</TabsTrigger>
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
