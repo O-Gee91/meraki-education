@@ -138,6 +138,44 @@ function MessagesPage() {
 
   const nameFor = (id: string) => people.find((p) => p.id === id)?.full_name ?? "You";
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ title: "", body: "", audience: "everyone" });
+
+  const saveAnnouncement = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      if (editDraft.title.trim().length < 3) throw new Error("Add a title");
+      if (editDraft.body.trim().length < 3) throw new Error("Add announcement text");
+      const { error } = await supabase
+        .from("announcements")
+        .update({
+          title: editDraft.title.trim().slice(0, 140),
+          body: editDraft.body.trim().slice(0, 4000),
+          audience: editDraft.audience as "everyone" | "students" | "parents" | "teachers",
+        })
+        .eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Announcement updated");
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteAnnouncement = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Announcement deleted");
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <AppShell title="Communications" description="Messages and school-wide announcements.">
       <Tabs defaultValue="inbox">
