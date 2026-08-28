@@ -28,38 +28,46 @@ const CATEGORIES = [
 type Audience = "everyone" | "students" | "parents" | "teachers";
 
 const COLORS = [
-  { value: "teal", label: "Teal", dot: "bg-accent", chip: "bg-accent/15 text-accent", edge: "border-l-accent" },
-  { value: "navy", label: "Navy", dot: "bg-primary", chip: "bg-primary/15 text-primary", edge: "border-l-primary" },
-  { value: "green", label: "Green", dot: "bg-success", chip: "bg-success/15 text-success", edge: "border-l-success" },
-  {
-    value: "amber",
-    label: "Amber",
-    dot: "bg-warning",
-    chip: "bg-warning/20 text-warning-foreground",
-    edge: "border-l-warning",
-  },
   {
     value: "red",
-    label: "Red",
+    label: "Red — High alert",
+    description: "Exams, assignment due dates, report cards",
     dot: "bg-destructive",
     chip: "bg-destructive/15 text-destructive",
     edge: "border-l-destructive",
   },
   {
-    value: "slate",
-    label: "Slate",
-    dot: "bg-muted-foreground",
-    chip: "bg-muted text-muted-foreground",
-    edge: "border-l-muted-foreground",
+    value: "amber",
+    label: "Orange — Events",
+    description: "Field trips, assemblies, dances, sports",
+    dot: "bg-warning",
+    chip: "bg-warning/20 text-warning-foreground",
+    edge: "border-l-warning",
+  },
+  {
+    value: "green",
+    label: "Green — Normal day",
+    description: "Regular instructional days, business as usual",
+    dot: "bg-success",
+    chip: "bg-success/15 text-success",
+    edge: "border-l-success",
+  },
+  {
+    value: "navy",
+    label: "Blue — Admin / staff",
+    description: "Staff meetings, PD days, holidays (closed)",
+    dot: "bg-primary",
+    chip: "bg-primary/15 text-primary",
+    edge: "border-l-primary",
   },
 ] as const;
 
 const DEFAULT_COLOR_BY_CATEGORY: Record<string, string> = {
-  event: "teal",
+  event: "amber",
   exam: "red",
-  deadline: "amber",
+  deadline: "red",
   meeting: "navy",
-  holiday: "green",
+  holiday: "navy",
 };
 
 function colorOption(value: string) {
