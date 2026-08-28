@@ -442,16 +442,11 @@ function AssignmentsTab({
     onSuccess: () => {
       toast.success("Assignment added");
       setOpen(false);
-      setForm({
-        title: "",
-        category: "Homework",
-        points: "100",
-        due: "",
-        description: "",
-        mode: "collected",
-      });
+      setForm(blank);
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
