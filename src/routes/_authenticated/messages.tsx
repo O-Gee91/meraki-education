@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate } from "@/lib/school";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { notifyMessageRecipient } from "@/lib/messaging.functions";
 
@@ -77,7 +78,7 @@ function MessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
-        .select("id, title, body, created_at, audience")
+        .select("id, title, body, created_at, audience, author_id")
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
@@ -137,6 +138,44 @@ function MessagesPage() {
   });
 
   const nameFor = (id: string) => people.find((p) => p.id === id)?.full_name ?? "You";
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ title: "", body: "", audience: "everyone" });
+
+  const saveAnnouncement = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      if (editDraft.title.trim().length < 3) throw new Error("Add a title");
+      if (editDraft.body.trim().length < 3) throw new Error("Add announcement text");
+      const { error } = await supabase
+        .from("announcements")
+        .update({
+          title: editDraft.title.trim().slice(0, 140),
+          body: editDraft.body.trim().slice(0, 4000),
+          audience: editDraft.audience as "everyone" | "students" | "parents" | "teachers",
+        })
+        .eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Announcement updated");
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteAnnouncement = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Announcement deleted");
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <AppShell title="Communications" description="Messages and school-wide announcements.">
@@ -280,16 +319,83 @@ function MessagesPage() {
               ) : (
                 announcements.map((a) => (
                   <article key={a.id} className="p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-semibold">{a.title}</h3>
-                      <Badge variant={a.audience === "everyone" ? "secondary" : "outline"}>
-                        {audienceLabel(a.audience)}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-                      {a.body}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
+                    {editingId === a.id ? (
+                      <div className="space-y-3">
+                        <Input
+                          value={editDraft.title}
+                          maxLength={140}
+                          onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
+                        />
+                        <Select
+                          value={editDraft.audience}
+                          onValueChange={(audience) => setEditDraft({ ...editDraft, audience })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AUDIENCES.map((aud) => (
+                              <SelectItem key={aud.value} value={aud.value}>
+                                {aud.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Textarea
+                          rows={4}
+                          value={editDraft.body}
+                          maxLength={4000}
+                          onChange={(e) => setEditDraft({ ...editDraft, body: e.target.value })}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => saveAnnouncement.mutate()}
+                            disabled={saveAnnouncement.isPending}
+                          >
+                            {saveAnnouncement.isPending ? "Saving…" : "Save changes"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-semibold">{a.title}</h3>
+                          <Badge variant={a.audience === "everyone" ? "secondary" : "outline"}>
+                            {audienceLabel(a.audience)}
+                          </Badge>
+                          {isStaff && (
+                            <span className="ml-auto flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingId(a.id);
+                                  setEditDraft({ title: a.title, body: a.body, audience: a.audience });
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <ConfirmDeleteButton
+                                title="Delete announcement?"
+                                description={`"${a.title}" will be permanently removed.`}
+                                onConfirm={() => deleteAnnouncement.mutate(a.id)}
+                                disabled={deleteAnnouncement.isPending}
+                              />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+                          {a.body}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatDate(a.created_at)}
+                        </p>
+                      </>
+                    )}
                   </article>
                 ))
               )}
