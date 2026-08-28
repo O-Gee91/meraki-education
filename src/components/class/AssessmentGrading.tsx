@@ -266,9 +266,11 @@ function EssayReview({
     },
     onSuccess: () => {
       toast.success("Score saved and synced to the gradebook");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessment-answers", submissionId] });
       queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessmentId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
