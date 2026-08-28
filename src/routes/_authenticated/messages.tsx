@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate } from "@/lib/school";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { notifyMessageRecipient } from "@/lib/messaging.functions";
 
