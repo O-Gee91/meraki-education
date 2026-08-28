@@ -306,9 +306,8 @@ function EssayReview({
           </Button>
         )}
         <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={gradeDirty} />
-
-        )}
       </div>
+
 
       <div className="space-y-1.5">
         <Label htmlFor={`fb-${answer.id}`}>Feedback to student</Label>
