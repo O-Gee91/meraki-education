@@ -78,13 +78,28 @@ function WellbeingPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checkins")
-        .select("id, student_id, mood, note, staff_note, date, created_at")
+        .select("id, student_id, mood, note, date, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return data;
     },
   });
+
+  const { data: staffNotes = [] } = useQuery({
+    queryKey: ["checkin-staff-notes"],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("checkin_staff_notes")
+        .select("checkin_id, note");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const staffNoteFor = (checkinId: string) =>
+    staffNotes.find((n) => n.checkin_id === checkinId)?.note ?? "";
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
 
@@ -108,15 +123,23 @@ function WellbeingPage() {
 
   const addStaffNote = useMutation({
     mutationFn: async (input: { id: string; value: string }) => {
+      const value = input.value.trim();
+      if (!value) {
+        const { error } = await supabase
+          .from("checkin_staff_notes")
+          .delete()
+          .eq("checkin_id", input.id);
+        if (error) throw error;
+        return;
+      }
       const { error } = await supabase
-        .from("checkins")
-        .update({ staff_note: input.value })
-        .eq("id", input.id);
+        .from("checkin_staff_notes")
+        .upsert({ checkin_id: input.id, note: value }, { onConflict: "checkin_id" });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Follow-up saved");
-      queryClient.invalidateQueries({ queryKey: ["checkins"] });
+      queryClient.invalidateQueries({ queryKey: ["checkin-staff-notes"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -215,26 +238,28 @@ function WellbeingPage() {
                     </div>
                     {c.note ? <p className="mt-1 text-sm text-muted-foreground">{c.note}</p> : null}
                     {isStaff ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Suggested: {STRATEGIES[Number(c.mood)]}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            const value = window.prompt("Follow-up note", c.staff_note ?? "");
-                            if (value != null) addStaffNote.mutate({ id: c.id, value });
-                          }}
-                        >
-                          {c.staff_note ? "Edit follow-up" : "Add follow-up"}
-                        </Button>
-                      </div>
-                    ) : null}
-                    {c.staff_note ? (
-                      <p className="mt-1 rounded-md bg-secondary/60 p-2 text-xs">
-                        Follow-up: {c.staff_note}
-                      </p>
+                      <>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            Suggested: {STRATEGIES[Number(c.mood)]}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const value = window.prompt("Follow-up note", staffNoteFor(c.id));
+                              if (value != null) addStaffNote.mutate({ id: c.id, value });
+                            }}
+                          >
+                            {staffNoteFor(c.id) ? "Edit follow-up" : "Add follow-up"}
+                          </Button>
+                        </div>
+                        {staffNoteFor(c.id) ? (
+                          <p className="mt-1 rounded-md bg-secondary/60 p-2 text-xs">
+                            Staff-only follow-up: {staffNoteFor(c.id)}
+                          </p>
+                        ) : null}
+                      </>
                     ) : null}
                   </li>
                 );

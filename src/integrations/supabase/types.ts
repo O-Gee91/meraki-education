@@ -605,6 +605,41 @@ export type Database = {
           },
         ]
       }
+      checkin_staff_notes: {
+        Row: {
+          checkin_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          checkin_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note: string
+          updated_at?: string
+        }
+        Update: {
+          checkin_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_staff_notes_checkin_id_fkey"
+            columns: ["checkin_id"]
+            isOneToOne: true
+            referencedRelation: "checkins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkins: {
         Row: {
           class_id: string | null
@@ -613,7 +648,6 @@ export type Database = {
           id: string
           mood: number
           note: string | null
-          staff_note: string | null
           student_id: string
         }
         Insert: {
@@ -623,7 +657,6 @@ export type Database = {
           id?: string
           mood?: number
           note?: string | null
-          staff_note?: string | null
           student_id: string
         }
         Update: {
@@ -633,7 +666,6 @@ export type Database = {
           id?: string
           mood?: number
           note?: string | null
-          staff_note?: string | null
           student_id?: string
         }
         Relationships: [
@@ -1747,6 +1779,13 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_school_staff_email: { Args: { _email: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      poll_results: {
+        Args: { _poll_id: string }
+        Returns: {
+          option_index: number
+          votes: number
+        }[]
+      }
       teaches_class: { Args: { _class_id: string }; Returns: boolean }
       teaches_grade: { Args: { _grade: number }; Returns: boolean }
     }
