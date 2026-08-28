@@ -35,6 +35,7 @@ import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
+import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -214,6 +215,7 @@ function ClassDetailPage() {
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          <TabsTrigger value="discussions">Discussion board</TabsTrigger>
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -316,6 +318,14 @@ function ClassDetailPage() {
           <GradingSetupTab classId={classId} isStaff={isStaff} setup={setup} />
         </TabsContent>
 
+
+        <TabsContent value="discussions">
+          <DiscussionBoard
+            classId={classId}
+            isStaff={isStaff}
+            categories={categoryNames.length ? categoryNames : ["Homework"]}
+          />
+        </TabsContent>
 
         <TabsContent value="assessments">
           <AssessmentsTab
