@@ -35,6 +35,7 @@ import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
+import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
