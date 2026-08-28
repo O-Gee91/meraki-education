@@ -10,6 +10,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
 
+const EVENT_DOT_COLORS: Record<string, string> = {
+  destructive: "bg-destructive",
+  warning: "bg-warning",
+  success: "bg-success",
+  primary: "bg-primary",
+};
+
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
