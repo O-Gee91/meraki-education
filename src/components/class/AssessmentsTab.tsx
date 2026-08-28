@@ -250,17 +250,11 @@ function NewAssessment({
     onSuccess: () => {
       toast.success("Assessment created — add questions next");
       setOpen(false);
-      setForm({
-        title: "",
-        kind: "quiz",
-        instructions: "",
-        due: "",
-        limit: "",
-        assignmentId: "none",
-        grammar: true,
-      });
+      setForm(blank);
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
