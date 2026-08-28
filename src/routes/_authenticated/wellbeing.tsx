@@ -123,15 +123,23 @@ function WellbeingPage() {
 
   const addStaffNote = useMutation({
     mutationFn: async (input: { id: string; value: string }) => {
+      const value = input.value.trim();
+      if (!value) {
+        const { error } = await supabase
+          .from("checkin_staff_notes")
+          .delete()
+          .eq("checkin_id", input.id);
+        if (error) throw error;
+        return;
+      }
       const { error } = await supabase
-        .from("checkins")
-        .update({ staff_note: input.value })
-        .eq("id", input.id);
+        .from("checkin_staff_notes")
+        .upsert({ checkin_id: input.id, note: value }, { onConflict: "checkin_id" });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Follow-up saved");
-      queryClient.invalidateQueries({ queryKey: ["checkins"] });
+      queryClient.invalidateQueries({ queryKey: ["checkin-staff-notes"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
