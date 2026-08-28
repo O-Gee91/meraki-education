@@ -31,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { isStaff, primaryRole, profile } = useAuth();
+  const today = new Date().toISOString().slice(0, 10);
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
