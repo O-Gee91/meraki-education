@@ -37,6 +37,8 @@ import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
+import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
+
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
@@ -595,6 +597,13 @@ function AssignmentsTab({
                       title={a.title}
                       defaultGrade={gradeLevel ?? null}
                     />
+                    <CopyToClassesButton
+                      kind="assignment"
+                      id={a.id}
+                      title={a.title}
+                      classId={classId}
+                    />
+
                     <ConfirmDeleteButton
                       title={`Delete "${a.title}"?`}
                       description="This removes the assignment along with its scores, submissions and linked standards."

@@ -38,6 +38,8 @@ import { formatDate } from "@/lib/school";
 import { AssessmentGrading } from "@/components/class/AssessmentGrading";
 import { TakeAssessment } from "@/components/class/TakeAssessment";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
+import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
+
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 
@@ -168,6 +170,13 @@ export function AssessmentsTab({
                         title={a.title}
                         defaultGrade={gradeLevel ?? null}
                       />
+                      <CopyToClassesButton
+                        kind="assessment"
+                        id={a.id}
+                        title={a.title}
+                        classId={classId}
+                      />
+
                       <ConfirmDeleteButton
                         title={`Delete "${a.title}"?`}
                         description="This removes the assessment along with its questions, student submissions and grades."
