@@ -112,6 +112,8 @@ function StudentWorkPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
+  const draftKey = `assignment:${assignment.id}`;
+  const draft = useAutosaveDraft(draftKey, body, { enabled: open, dirty: open && body.trim().length > 0 });
 
   const { data: me } = useQuery({
     queryKey: ["my-student-record", user?.id],
