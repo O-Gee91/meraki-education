@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -13,12 +13,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getAssessmentPaper, submitAssessment } from "@/lib/assessments.functions";
 import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
   const loadPaper = useServerFn(getAssessmentPaper);
   const send = useServerFn(submitAssessment);
-  const [responses, setResponses] = useState<Record<string, AnswerResponse>>({});
+  const draftKey = `assessment:${assessmentId}`;
+  const [responses, setResponses] = useState<Record<string, AnswerResponse>>(
+    () => readDraft<Record<string, AnswerResponse>>(`assessment:${assessmentId}`) ?? {},
+  );
+  const answered = Object.keys(responses).length > 0;
+  const draft = useAutosaveDraft(draftKey, responses, { dirty: answered });
+
+  useEffect(() => {
+    if (answered) toast.info("Restored your autosaved answers — submit when you're finished.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["assessment-paper", assessmentId],
@@ -52,6 +63,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
           ? `Submitted — ${result.autoScore}/${result.totalPoints} auto-graded, written answers await review`
           : `Submitted — you scored ${result.autoScore}/${result.totalPoints}`,
       );
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["my-submission", assessmentId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -172,9 +184,17 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
         </ol>
       )}
       {data.questions.length > 0 && (
-        <Button onClick={() => submit.mutate()} disabled={submit.isPending}>
-          {submit.isPending ? "Submitting…" : "Submit assessment"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => submit.mutate()} disabled={submit.isPending}>
+            {submit.isPending ? "Submitting…" : "Submit assessment"}
+          </Button>
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={answered} />
+          {answered ? (
+            <span className="text-xs text-muted-foreground">
+              Your answers save automatically, but only count once you submit.
+            </span>
+          ) : null}
+        </div>
       )}
     </div>
   );

@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -112,6 +113,8 @@ function StudentWorkPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
+  const draftKey = `assignment:${assignment.id}`;
+  const draft = useAutosaveDraft(draftKey, body, { enabled: open, dirty: open && body.trim().length > 0 });
 
   const { data: me } = useQuery({
     queryKey: ["my-student-record", user?.id],
@@ -199,6 +202,7 @@ function StudentWorkPanel({
     },
     onSuccess: () => {
       toast.success("Work turned in");
+      draft.clear();
       setOpen(false);
       if (inputRef.current) inputRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
@@ -243,7 +247,16 @@ function StudentWorkPanel({
         open={open}
         onOpenChange={(v) => {
           setOpen(v);
-          if (v) setBody(mine?.body ?? "");
+          if (v) {
+            const saved = readDraft<string>(`assignment:${assignment.id}`);
+            const server = mine?.body ?? "";
+            if (saved && saved !== server) {
+              setBody(saved);
+              toast.info("Restored your autosaved draft — remember to turn it in.");
+            } else {
+              setBody(server);
+            }
+          }
         }}
       >
         <DialogTrigger asChild>
@@ -268,6 +281,11 @@ function StudentWorkPanel({
                 value={body}
                 disabled={mine?.status === "returned"}
                 onChange={(e) => setBody(e.target.value)}
+              />
+              <DraftStatus
+                state={draft.state}
+                savedAt={draft.savedAt}
+                dirty={body.trim().length > 0}
               />
             </div>
             <div className="space-y-1.5">

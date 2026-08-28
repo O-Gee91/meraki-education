@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ManageMarksDialog, useProofreadMarks } from "@/components/class/ProofreadMarks";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export type Annotation = {
   id: string;
@@ -69,7 +70,13 @@ export function ProofreadEditor({
   );
   const [markId, setMarkId] = useState<string>("");
   const [comment, setComment] = useState("");
-  const [note, setNote] = useState(teacherNote ?? "");
+  const noteKey = `teacher-note:${submissionId}`;
+  const [note, setNote] = useState(
+    () => readDraft<string>(`teacher-note:${submissionId}`) ?? teacherNote ?? "",
+  );
+  const noteDraft = useAutosaveDraft(noteKey, note, {
+    dirty: note.trim() !== (teacherNote ?? "").trim(),
+  });
 
   const captureSelection = () => {
     const sel = window.getSelection();
@@ -133,6 +140,7 @@ export function ProofreadEditor({
     },
     onSuccess: () => {
       toast.success("Comment saved for the student");
+      noteDraft.clear();
       onNoteSaved?.();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -247,9 +255,16 @@ export function ProofreadEditor({
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
-        <Button size="sm" variant="outline" onClick={() => saveNote.mutate()} disabled={saveNote.isPending}>
-          Save comment
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="sm" variant="outline" onClick={() => saveNote.mutate()} disabled={saveNote.isPending}>
+            Save comment
+          </Button>
+          <DraftStatus
+            state={noteDraft.state}
+            savedAt={noteDraft.savedAt}
+            dirty={note.trim() !== (teacherNote ?? "").trim()}
+          />
+        </div>
       </div>
     </div>
   );
