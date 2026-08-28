@@ -247,7 +247,16 @@ function StudentWorkPanel({
         open={open}
         onOpenChange={(v) => {
           setOpen(v);
-          if (v) setBody(mine?.body ?? "");
+          if (v) {
+            const saved = readDraft<string>(`assignment:${assignment.id}`);
+            const server = mine?.body ?? "";
+            if (saved && saved !== server) {
+              setBody(saved);
+              toast.info("Restored your autosaved draft — remember to turn it in.");
+            } else {
+              setBody(server);
+            }
+          }
         }}
       >
         <DialogTrigger asChild>
