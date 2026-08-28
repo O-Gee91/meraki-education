@@ -184,9 +184,17 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
         </ol>
       )}
       {data.questions.length > 0 && (
-        <Button onClick={() => submit.mutate()} disabled={submit.isPending}>
-          {submit.isPending ? "Submitting…" : "Submit assessment"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => submit.mutate()} disabled={submit.isPending}>
+            {submit.isPending ? "Submitting…" : "Submit assessment"}
+          </Button>
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={answered} />
+          {answered ? (
+            <span className="text-xs text-muted-foreground">
+              Your answers save automatically, but only count once you submit.
+            </span>
+          ) : null}
+        </div>
       )}
     </div>
   );
