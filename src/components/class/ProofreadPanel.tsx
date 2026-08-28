@@ -254,9 +254,16 @@ export function ProofreadEditor({
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
-        <Button size="sm" variant="outline" onClick={() => saveNote.mutate()} disabled={saveNote.isPending}>
-          Save comment
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="sm" variant="outline" onClick={() => saveNote.mutate()} disabled={saveNote.isPending}>
+            Save comment
+          </Button>
+          <DraftStatus
+            state={noteDraft.state}
+            savedAt={noteDraft.savedAt}
+            dirty={note.trim() !== (teacherNote ?? "").trim()}
+          />
+        </div>
       </div>
     </div>
   );
