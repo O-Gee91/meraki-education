@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { proofreadEssay, scoreEssayAnswer } from "@/lib/assessments.functions";
 import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type AnswerRow = {
   id: string;
@@ -221,8 +223,13 @@ function EssayReview({
   const queryClient = useQueryClient();
   const proof = useServerFn(proofreadEssay);
   const score = useServerFn(scoreEssayAnswer);
-  const [points, setPoints] = useState(String(answer.points_awarded ?? ""));
-  const [feedback, setFeedback] = useState(answer.feedback ?? "");
+  const draftKey = `grade-answer:${answer.id}`;
+  const saved = readDraft<{ points: string; feedback: string }>(draftKey);
+  const [points, setPoints] = useState(saved?.points ?? String(answer.points_awarded ?? ""));
+  const [feedback, setFeedback] = useState(saved?.feedback ?? answer.feedback ?? "");
+  const gradeDirty = points.trim().length > 0 || feedback.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, { points, feedback }, { dirty: gradeDirty });
+
 
   const { data: reviews = [] } = useQuery({
     queryKey: ["essay-reviews", answer.id],
@@ -261,9 +268,11 @@ function EssayReview({
     },
     onSuccess: () => {
       toast.success("Score saved and synced to the gradebook");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessment-answers", submissionId] });
       queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessmentId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -296,7 +305,9 @@ function EssayReview({
             {runProof.isPending ? "Proofing…" : "Grammar proof with AI"}
           </Button>
         )}
+        <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={gradeDirty} />
       </div>
+
 
       <div className="space-y-1.5">
         <Label htmlFor={`fb-${answer.id}`}>Feedback to student</Label>

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type Scope = { classId: string } | { groupId: string };
 
@@ -18,8 +20,13 @@ function scopeKey(scope: Scope) {
 export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: boolean }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
-  const [body, setBody] = useState("");
-  const [link, setLink] = useState("");
+  const draftKey = `feed:${scopeKey(scope).join(":")}`;
+  const saved = readDraft<{ body: string; link: string }>(draftKey);
+  const [body, setBody] = useState(saved?.body ?? "");
+  const [link, setLink] = useState(saved?.link ?? "");
+  const dirty = body.trim().length > 0 || link.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, { body, link }, { dirty });
+
 
   const { data: posts = [] } = useQuery({
     queryKey: scopeKey(scope),
@@ -73,8 +80,10 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
     onSuccess: () => {
       setBody("");
       setLink("");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: scopeKey(scope) });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -116,6 +125,7 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
               placeholder="Optional link (document, video, site)"
               className="max-w-sm"
             />
+            <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={dirty} />
             <Button
               size="sm"
               onClick={() => createPost.mutate()}
@@ -126,6 +136,7 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
             </Button>
           </div>
         </div>
+
       )}
 
       {posts.length === 0 ? (
@@ -192,7 +203,10 @@ function Comments({
 }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
-  const [body, setBody] = useState("");
+  const draftKey = `comment:${postId}`;
+  const [body, setBody] = useState(() => readDraft<string>(draftKey) ?? "");
+  const draft = useAutosaveDraft(draftKey, body, { dirty: body.trim().length > 0 });
+
 
   const { data: comments = [] } = useQuery({
     queryKey: ["post-comments", postId],
@@ -218,8 +232,10 @@ function Comments({
     },
     onSuccess: () => {
       setBody("");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["post-comments", postId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 

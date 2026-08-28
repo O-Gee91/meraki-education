@@ -38,6 +38,8 @@ import { formatDate } from "@/lib/school";
 import { AssessmentGrading } from "@/components/class/AssessmentGrading";
 import { TakeAssessment } from "@/components/class/TakeAssessment";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type AssessmentRow = {
   id: string;
@@ -217,7 +219,8 @@ function NewAssessment({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const draftKey = `new-assessment:${classId}`;
+  const blank = {
     title: "",
     kind: "quiz" as AssessmentKind,
     instructions: "",
@@ -225,7 +228,11 @@ function NewAssessment({
     limit: "",
     assignmentId: "none",
     grammar: true,
-  });
+  };
+  const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
+  const formDirty = form.title.trim().length > 0 || form.instructions.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
+
 
   const create = useMutation({
     mutationFn: async () => {
@@ -245,17 +252,11 @@ function NewAssessment({
     onSuccess: () => {
       toast.success("Assessment created — add questions next");
       setOpen(false);
-      setForm({
-        title: "",
-        kind: "quiz",
-        instructions: "",
-        due: "",
-        limit: "",
-        assignmentId: "none",
-        grammar: true,
-      });
+      setForm(blank);
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -354,11 +355,13 @@ function NewAssessment({
             Enable AI grammar proofing for written responses
           </label>
         </div>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
             Create
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
@@ -545,17 +548,37 @@ type QuestionRow = {
   rubric: string | null;
 };
 
+type QuestionDraft = {
+  kind: QuestionKind;
+  prompt: string;
+  points: string;
+  rubric: string;
+  options: string[];
+  correct: number[];
+  accepted: string;
+  numeric: { value: string; tolerance: string };
+};
+
 function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
+  const draftKey = `assessment-question:${assessmentId}`;
+  const saved = readDraft<QuestionDraft>(draftKey);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [kind, setKind] = useState<QuestionKind>("multiple_choice");
-  const [prompt, setPrompt] = useState("");
-  const [points, setPoints] = useState("1");
-  const [rubric, setRubric] = useState("");
-  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
-  const [correct, setCorrect] = useState<number[]>([]);
-  const [accepted, setAccepted] = useState("");
-  const [numeric, setNumeric] = useState({ value: "", tolerance: "0" });
+  const [kind, setKind] = useState<QuestionKind>(saved?.kind ?? "multiple_choice");
+  const [prompt, setPrompt] = useState(saved?.prompt ?? "");
+  const [points, setPoints] = useState(saved?.points ?? "1");
+  const [rubric, setRubric] = useState(saved?.rubric ?? "");
+  const [options, setOptions] = useState<string[]>(saved?.options ?? ["", "", "", ""]);
+  const [correct, setCorrect] = useState<number[]>(saved?.correct ?? []);
+  const [accepted, setAccepted] = useState(saved?.accepted ?? "");
+  const [numeric, setNumeric] = useState(saved?.numeric ?? { value: "", tolerance: "0" });
+  const questionDirty = prompt.trim().length > 0;
+  const draft = useAutosaveDraft<QuestionDraft>(
+    draftKey,
+    { kind, prompt, points, rubric, options, correct, accepted, numeric },
+    { dirty: questionDirty },
+  );
+
 
   const { data: questions = [] } = useQuery({
     queryKey: ["assessment-questions", assessmentId],
@@ -580,7 +603,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setCorrect([]);
     setAccepted("");
     setNumeric({ value: "", tolerance: "0" });
+    draft.clear();
   }
+
 
   function startEdit(q: QuestionRow) {
     const key = (q.answer_key ?? {}) as AnswerKey;
@@ -866,7 +891,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {editingId ? "Save changes" : "Add question"}
           </Button>
@@ -875,7 +900,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
               Cancel edit
             </Button>
           )}
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={questionDirty} />
         </div>
+
 
       </div>
     </div>

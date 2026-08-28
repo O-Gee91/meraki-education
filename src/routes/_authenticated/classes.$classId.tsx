@@ -38,6 +38,8 @@ import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { formatDate, gradeTone } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 import {
   computeAverage,
   findMark,
@@ -401,14 +403,19 @@ function AssignmentsTab({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const draftKey = `new-assignment:${classId}`;
+  const blank = {
     title: "",
     category: categories[0] ?? "Homework",
     points: "100",
     due: "",
     description: "",
     mode: "collected",
-  });
+  };
+  const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
+  const formDirty = form.title.trim().length > 0 || form.description.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
+
 
   const students = roster
     .map((r) => r.students)
@@ -435,16 +442,11 @@ function AssignmentsTab({
     onSuccess: () => {
       toast.success("Assignment added");
       setOpen(false);
-      setForm({
-        title: "",
-        category: "Homework",
-        points: "100",
-        due: "",
-        description: "",
-        mode: "collected",
-      });
+      setForm(blank);
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -546,11 +548,13 @@ function AssignmentsTab({
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sm:justify-between">
+              <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
               <Button onClick={() => create.mutate()} disabled={create.isPending}>
                 {create.isPending ? "Saving…" : "Add assignment"}
               </Button>
             </DialogFooter>
+
           </DialogContent>
         </Dialog>
       )}
