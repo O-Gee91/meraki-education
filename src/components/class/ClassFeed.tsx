@@ -203,7 +203,10 @@ function Comments({
 }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
-  const [body, setBody] = useState("");
+  const draftKey = `comment:${postId}`;
+  const [body, setBody] = useState(() => readDraft<string>(draftKey) ?? "");
+  const draft = useAutosaveDraft(draftKey, body, { dirty: body.trim().length > 0 });
+
 
   const { data: comments = [] } = useQuery({
     queryKey: ["post-comments", postId],
