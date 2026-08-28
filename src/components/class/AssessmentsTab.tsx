@@ -548,17 +548,37 @@ type QuestionRow = {
   rubric: string | null;
 };
 
+type QuestionDraft = {
+  kind: QuestionKind;
+  prompt: string;
+  points: string;
+  rubric: string;
+  options: string[];
+  correct: number[];
+  accepted: string;
+  numeric: { value: string; tolerance: string };
+};
+
 function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
+  const draftKey = `assessment-question:${assessmentId}`;
+  const saved = readDraft<QuestionDraft>(draftKey);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [kind, setKind] = useState<QuestionKind>("multiple_choice");
-  const [prompt, setPrompt] = useState("");
-  const [points, setPoints] = useState("1");
-  const [rubric, setRubric] = useState("");
-  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
-  const [correct, setCorrect] = useState<number[]>([]);
-  const [accepted, setAccepted] = useState("");
-  const [numeric, setNumeric] = useState({ value: "", tolerance: "0" });
+  const [kind, setKind] = useState<QuestionKind>(saved?.kind ?? "multiple_choice");
+  const [prompt, setPrompt] = useState(saved?.prompt ?? "");
+  const [points, setPoints] = useState(saved?.points ?? "1");
+  const [rubric, setRubric] = useState(saved?.rubric ?? "");
+  const [options, setOptions] = useState<string[]>(saved?.options ?? ["", "", "", ""]);
+  const [correct, setCorrect] = useState<number[]>(saved?.correct ?? []);
+  const [accepted, setAccepted] = useState(saved?.accepted ?? "");
+  const [numeric, setNumeric] = useState(saved?.numeric ?? { value: "", tolerance: "0" });
+  const questionDirty = prompt.trim().length > 0;
+  const draft = useAutosaveDraft<QuestionDraft>(
+    draftKey,
+    { kind, prompt, points, rubric, options, correct, accepted, numeric },
+    { dirty: questionDirty },
+  );
+
 
   const { data: questions = [] } = useQuery({
     queryKey: ["assessment-questions", assessmentId],
