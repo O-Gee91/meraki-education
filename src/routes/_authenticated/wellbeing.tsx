@@ -78,13 +78,28 @@ function WellbeingPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checkins")
-        .select("id, student_id, mood, note, staff_note, date, created_at")
+        .select("id, student_id, mood, note, date, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return data;
     },
   });
+
+  const { data: staffNotes = [] } = useQuery({
+    queryKey: ["checkin-staff-notes"],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("checkin_staff_notes")
+        .select("checkin_id, note");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const staffNoteFor = (checkinId: string) =>
+    staffNotes.find((n) => n.checkin_id === checkinId)?.note ?? "";
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
 
