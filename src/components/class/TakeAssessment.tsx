@@ -13,12 +13,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getAssessmentPaper, submitAssessment } from "@/lib/assessments.functions";
 import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
   const loadPaper = useServerFn(getAssessmentPaper);
   const send = useServerFn(submitAssessment);
-  const [responses, setResponses] = useState<Record<string, AnswerResponse>>({});
+  const draftKey = `assessment:${assessmentId}`;
+  const [responses, setResponses] = useState<Record<string, AnswerResponse>>(
+    () => readDraft<Record<string, AnswerResponse>>(`assessment:${assessmentId}`) ?? {},
+  );
+  const answered = Object.keys(responses).length > 0;
+  const draft = useAutosaveDraft(draftKey, responses, { dirty: answered });
+
+  useEffect(() => {
+    if (answered) toast.info("Restored your autosaved answers — submit when you're finished.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["assessment-paper", assessmentId],
