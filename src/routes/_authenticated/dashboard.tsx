@@ -114,8 +114,6 @@ function DashboardPage() {
     },
   });
 
-  const today = new Date().toISOString().slice(0, 10);
-
   const { data: upcomingAssignments = [] } = useQuery({
     queryKey: ["upcoming-assignments", today],
     queryFn: async () => {
