@@ -27,10 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClassFeed } from "@/components/class/ClassFeed";
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
-import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
 import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
@@ -219,10 +217,8 @@ function ClassDetailPage() {
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="feed">Class feed</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
-          <TabsTrigger value="polls">Polls</TabsTrigger>
           <TabsTrigger value="grading">Setup grading</TabsTrigger>
         </TabsList>
 
@@ -344,10 +340,6 @@ function ClassDetailPage() {
           <AttendanceTab classId={classId} />
         </TabsContent>
 
-        <TabsContent value="feed">
-          <ClassFeed scope={{ classId }} />
-        </TabsContent>
-
         <TabsContent value="files" className="mt-4">
           <FileLibrary
             classId={classId}
@@ -373,9 +365,6 @@ function ClassDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="polls">
-          <ClassPolls classId={classId} isStaff={isStaff} />
-        </TabsContent>
       </Tabs>
 
     </AppShell>
