@@ -749,6 +749,114 @@ export type Database = {
           },
         ]
       }
+      discussion_posts: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          discussion_id: string
+          id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          discussion_id: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          discussion_id?: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_posts_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_posts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussions: {
+        Row: {
+          assignment_id: string | null
+          class_id: string
+          closed: boolean
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          graded: boolean
+          id: string
+          points_possible: number
+          prompt: string
+          required_replies: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          class_id: string
+          closed?: boolean
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          graded?: boolean
+          id?: string
+          points_possible?: number
+          prompt: string
+          required_replies?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          class_id?: string
+          closed?: boolean
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          graded?: boolean
+          id?: string
+          points_possible?: number
+          prompt?: string
+          required_replies?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           class_id: string
