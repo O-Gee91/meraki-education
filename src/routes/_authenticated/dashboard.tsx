@@ -11,10 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
 
 const EVENT_DOT_COLORS: Record<string, string> = {
-  destructive: "bg-destructive",
-  warning: "bg-warning",
-  success: "bg-success",
-  primary: "bg-primary",
+  red: "bg-destructive",
+  amber: "bg-warning",
+  green: "bg-success",
+  navy: "bg-primary",
 };
 
 
