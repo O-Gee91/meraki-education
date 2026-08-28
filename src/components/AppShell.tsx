@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
   BookOpen,
-  CalendarCheck,
   FolderOpen,
   ClipboardCheck,
   GraduationCap,
