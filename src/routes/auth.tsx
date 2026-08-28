@@ -231,7 +231,11 @@ function AuthPage() {
                       onChange={(e) => setIdentifier(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Forgot your password? Ask your teacher or a school administrator to reset it.
+                      Forgot your password?{" "}
+                      <Link to="/forgot-password" className="text-primary underline-offset-4 hover:underline">
+                        Reset it by email
+                      </Link>{" "}
+                      or ask your teacher or a school administrator.
                     </p>
                   </div>
                   <div className="space-y-2">
