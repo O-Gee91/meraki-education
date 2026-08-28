@@ -340,6 +340,10 @@ function ClassDetailPage() {
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
         </TabsContent>
 
+        <TabsContent value="attendance">
+          <AttendanceTab classId={classId} />
+        </TabsContent>
+
         <TabsContent value="feed">
           <ClassFeed scope={{ classId }} />
         </TabsContent>
