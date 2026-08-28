@@ -63,6 +63,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
           ? `Submitted — ${result.autoScore}/${result.totalPoints} auto-graded, written answers await review`
           : `Submitted — you scored ${result.autoScore}/${result.totalPoints}`,
       );
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["my-submission", assessmentId] });
     },
     onError: (e: Error) => toast.error(e.message),
