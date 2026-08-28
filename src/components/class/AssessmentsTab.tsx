@@ -603,7 +603,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setCorrect([]);
     setAccepted("");
     setNumeric({ value: "", tolerance: "0" });
+    draft.clear();
   }
+
 
   function startEdit(q: QuestionRow) {
     const key = (q.answer_key ?? {}) as AnswerKey;
