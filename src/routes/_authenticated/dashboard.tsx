@@ -276,6 +276,37 @@ function DashboardPage() {
               ))
             )}
           </div>
+          {isStaff && (
+            <div className="mt-6 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Upcoming calendar events
+              </h3>
+              {upcomingEvents.length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No events posted yet — new calendar items will appear here.
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {upcomingEvents.map((e) => (
+                    <li key={e.id} className="flex items-start gap-3">
+                      <span
+                        className={`mt-1.5 size-2.5 shrink-0 rounded-full ${EVENT_DOT_COLORS[e.color ?? ""] ?? "bg-success"}`}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{e.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(e.event_date)}
+                          {e.start_time ? ` · ${e.start_time.slice(0, 5)}` : ""}
+                          {e.end_time ? `–${e.end_time.slice(0, 5)}` : ""}
+                          {e.location ? ` · ${e.location}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
       </div>
 
