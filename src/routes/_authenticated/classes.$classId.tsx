@@ -403,14 +403,19 @@ function AssignmentsTab({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const draftKey = `new-assignment:${classId}`;
+  const blank = {
     title: "",
     category: categories[0] ?? "Homework",
     points: "100",
     due: "",
     description: "",
     mode: "collected",
-  });
+  };
+  const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
+  const formDirty = form.title.trim().length > 0 || form.description.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
+
 
   const students = roster
     .map((r) => r.students)
