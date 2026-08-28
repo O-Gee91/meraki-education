@@ -18,8 +18,13 @@ function scopeKey(scope: Scope) {
 export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: boolean }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
-  const [body, setBody] = useState("");
-  const [link, setLink] = useState("");
+  const draftKey = `feed:${scopeKey(scope).join(":")}`;
+  const saved = readDraft<{ body: string; link: string }>(draftKey);
+  const [body, setBody] = useState(saved?.body ?? "");
+  const [link, setLink] = useState(saved?.link ?? "");
+  const dirty = body.trim().length > 0 || link.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, { body, link }, { dirty });
+
 
   const { data: posts = [] } = useQuery({
     queryKey: scopeKey(scope),
