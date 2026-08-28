@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type Scope = { classId: string } | { groupId: string };
 
