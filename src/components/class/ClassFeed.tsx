@@ -232,8 +232,10 @@ function Comments({
     },
     onSuccess: () => {
       setBody("");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: ["post-comments", postId] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
