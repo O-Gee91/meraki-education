@@ -891,7 +891,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {editingId ? "Save changes" : "Add question"}
           </Button>
@@ -900,7 +900,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
               Cancel edit
             </Button>
           )}
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={questionDirty} />
         </div>
+
 
       </div>
     </div>
