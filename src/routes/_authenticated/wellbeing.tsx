@@ -238,26 +238,28 @@ function WellbeingPage() {
                     </div>
                     {c.note ? <p className="mt-1 text-sm text-muted-foreground">{c.note}</p> : null}
                     {isStaff ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Suggested: {STRATEGIES[Number(c.mood)]}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            const value = window.prompt("Follow-up note", c.staff_note ?? "");
-                            if (value != null) addStaffNote.mutate({ id: c.id, value });
-                          }}
-                        >
-                          {c.staff_note ? "Edit follow-up" : "Add follow-up"}
-                        </Button>
-                      </div>
-                    ) : null}
-                    {c.staff_note ? (
-                      <p className="mt-1 rounded-md bg-secondary/60 p-2 text-xs">
-                        Follow-up: {c.staff_note}
-                      </p>
+                      <>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            Suggested: {STRATEGIES[Number(c.mood)]}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const value = window.prompt("Follow-up note", staffNoteFor(c.id));
+                              if (value != null) addStaffNote.mutate({ id: c.id, value });
+                            }}
+                          >
+                            {staffNoteFor(c.id) ? "Edit follow-up" : "Add follow-up"}
+                          </Button>
+                        </div>
+                        {staffNoteFor(c.id) ? (
+                          <p className="mt-1 rounded-md bg-secondary/60 p-2 text-xs">
+                            Staff-only follow-up: {staffNoteFor(c.id)}
+                          </p>
+                        ) : null}
+                      </>
                     ) : null}
                   </li>
                 );
