@@ -97,6 +97,22 @@ function DashboardPage() {
     },
   });
 
+  const { data: upcomingEvents = [] } = useQuery({
+    queryKey: ["staff-upcoming-events", today],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("id, title, description, event_date, start_time, end_time, location, category, color")
+        .gte("event_date", today)
+        .order("event_date")
+        .order("start_time")
+        .limit(8);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: upcomingAssignments = [] } = useQuery({
