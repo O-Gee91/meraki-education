@@ -282,6 +282,11 @@ function StudentWorkPanel({
                 disabled={mine?.status === "returned"}
                 onChange={(e) => setBody(e.target.value)}
               />
+              <DraftStatus
+                state={draft.state}
+                savedAt={draft.savedAt}
+                dirty={body.trim().length > 0}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={`file-${assignment.id}`}>Attach a file (optional)</Label>
