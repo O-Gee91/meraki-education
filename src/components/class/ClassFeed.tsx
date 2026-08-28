@@ -80,8 +80,10 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
     onSuccess: () => {
       setBody("");
       setLink("");
+      draft.clear();
       queryClient.invalidateQueries({ queryKey: scopeKey(scope) });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
