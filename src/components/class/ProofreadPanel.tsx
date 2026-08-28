@@ -140,6 +140,7 @@ export function ProofreadEditor({
     },
     onSuccess: () => {
       toast.success("Comment saved for the student");
+      noteDraft.clear();
       onNoteSaved?.();
     },
     onError: (e: Error) => toast.error(e.message),
