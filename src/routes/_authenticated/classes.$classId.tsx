@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClassFeed } from "@/components/class/ClassFeed";
+import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 import { ClassPolls } from "@/components/class/ClassPolls";
 import { SeatingPlan } from "@/components/class/SeatingPlan";
@@ -217,6 +218,7 @@ function ClassDetailPage() {
           <TabsTrigger value="assessments">Assessments</TabsTrigger>
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="feed">Class feed</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="seating">Seating plan</TabsTrigger>
@@ -336,6 +338,10 @@ function ClassDetailPage() {
 
         <TabsContent value="roster">
           <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <AttendanceTab classId={classId} />
         </TabsContent>
 
         <TabsContent value="feed">

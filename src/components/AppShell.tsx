@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
   BookOpen,
-  CalendarCheck,
   FolderOpen,
   ClipboardCheck,
   GraduationCap,
@@ -56,12 +55,6 @@ const NAV: NavItem[] = [
   },
   { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
 
-  {
-    to: "/attendance",
-    label: "Attendance",
-    icon: CalendarCheck,
-    roles: ["admin", "teacher", "student", "parent"],
-  },
   {
     to: "/behavior",
     label: "Behavior",
