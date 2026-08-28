@@ -548,11 +548,13 @@ function AssignmentsTab({
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sm:justify-between">
+              <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
               <Button onClick={() => create.mutate()} disabled={create.isPending}>
                 {create.isPending ? "Saving…" : "Add assignment"}
               </Button>
             </DialogFooter>
+
           </DialogContent>
         </Dialog>
       )}
