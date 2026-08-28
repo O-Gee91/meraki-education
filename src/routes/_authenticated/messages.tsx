@@ -77,7 +77,7 @@ function MessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
-        .select("id, title, body, created_at, audience")
+        .select("id, title, body, created_at, audience, author_id")
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
