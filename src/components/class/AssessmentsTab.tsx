@@ -217,7 +217,8 @@ function NewAssessment({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const draftKey = `new-assessment:${classId}`;
+  const blank = {
     title: "",
     kind: "quiz" as AssessmentKind,
     instructions: "",
@@ -225,7 +226,11 @@ function NewAssessment({
     limit: "",
     assignmentId: "none",
     grammar: true,
-  });
+  };
+  const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
+  const formDirty = form.title.trim().length > 0 || form.instructions.trim().length > 0;
+  const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
+
 
   const create = useMutation({
     mutationFn: async () => {
