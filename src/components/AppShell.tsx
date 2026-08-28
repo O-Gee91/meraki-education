@@ -57,12 +57,6 @@ const NAV: NavItem[] = [
   { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
 
   {
-    to: "/attendance",
-    label: "Attendance",
-    icon: CalendarCheck,
-    roles: ["admin", "teacher", "student", "parent"],
-  },
-  {
     to: "/behavior",
     label: "Behavior",
     icon: ShieldCheck,
