@@ -212,3 +212,122 @@ export const copySharedResource = createServerFn({ method: "POST" })
 
     return { kind: "assessment" as const, id: created.id };
   });
+
+/** Copy an existing assignment or assessment into other classes I manage. */
+export const copyResourceToClasses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        kind: z.enum(["assignment", "assessment"]),
+        id: z.string().uuid(),
+        classIds: z.array(z.string().uuid()).min(1).max(30),
+        keepDueDate: z.boolean().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verify every target class is mine (or I'm an admin).
+    for (const classId of data.classIds) {
+      const { data: canManage } = await context.supabase.rpc("can_manage_class", {
+        _class_id: classId,
+      });
+      if (!canManage) throw new Error("You can only copy into classes you teach");
+    }
+
+    if (data.kind === "assignment") {
+      const { data: row, error } = await context.supabase
+        .from("assignments")
+        .select("id, class_id, title, category, points_possible, due_date, description, submission_mode")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!row) throw new Error("Assignment not found");
+
+      const { data: sourceOk } = await context.supabase.rpc("can_manage_class", {
+        _class_id: row.class_id,
+      });
+      if (!sourceOk) throw new Error("You can only copy assignments from your own classes");
+
+      const targets = data.classIds.filter((c) => c !== row.class_id);
+      if (targets.length === 0) return { copied: 0 };
+
+      const { error: insErr } = await supabaseAdmin.from("assignments").insert(
+        targets.map((classId) => ({
+          class_id: classId,
+          title: row.title,
+          category: row.category,
+          points_possible: Number(row.points_possible),
+          due_date: data.keepDueDate ? row.due_date : null,
+          description: row.description,
+          submission_mode: row.submission_mode,
+        })),
+      );
+      if (insErr) throw insErr;
+      return { copied: targets.length };
+    }
+
+    const { data: row, error } = await context.supabase
+      .from("assessments")
+      .select("id, class_id, title, instructions, kind, time_limit_minutes, grammar_check_enabled, due_at, available_from")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!row) throw new Error("Assessment not found");
+
+    const { data: sourceOk } = await context.supabase.rpc("can_manage_class", {
+      _class_id: row.class_id,
+    });
+    if (!sourceOk) throw new Error("You can only copy assessments from your own classes");
+
+    const { data: questions, error: qErr } = await supabaseAdmin
+      .from("assessment_questions")
+      .select("position, kind, prompt, options, answer_key, points, rubric")
+      .eq("assessment_id", row.id)
+      .order("position", { ascending: true });
+    if (qErr) throw qErr;
+
+    const targets = data.classIds.filter((c) => c !== row.class_id);
+    let copied = 0;
+
+    for (const classId of targets) {
+      const { data: created, error: cErr } = await supabaseAdmin
+        .from("assessments")
+        .insert({
+          class_id: classId,
+          title: row.title,
+          instructions: row.instructions,
+          kind: row.kind,
+          time_limit_minutes: row.time_limit_minutes,
+          grammar_check_enabled: row.grammar_check_enabled,
+          due_at: data.keepDueDate ? row.due_at : null,
+          available_from: data.keepDueDate ? row.available_from : null,
+          published: false,
+          created_by: context.userId,
+        })
+        .select("id")
+        .single();
+      if (cErr) throw cErr;
+
+      if ((questions ?? []).length > 0) {
+        const { error: qiErr } = await supabaseAdmin.from("assessment_questions").insert(
+          (questions ?? []).map((q, i) => ({
+            assessment_id: created.id,
+            position: q.position ?? i + 1,
+            kind: q.kind,
+            prompt: q.prompt,
+            options: q.options as unknown as Json,
+            answer_key: q.answer_key as unknown as Json,
+            points: Number(q.points) || 1,
+            rubric: q.rubric ?? null,
+          })),
+        );
+        if (qiErr) throw qiErr;
+      }
+      copied += 1;
+    }
+
+    return { copied };
+  });
