@@ -168,6 +168,13 @@ export function AssessmentsTab({
                         title={a.title}
                         defaultGrade={gradeLevel ?? null}
                       />
+                      <CopyToClassesButton
+                        kind="assessment"
+                        id={a.id}
+                        title={a.title}
+                        classId={classId}
+                      />
+
                       <ConfirmDeleteButton
                         title={`Delete "${a.title}"?`}
                         description="This removes the assessment along with its questions, student submissions and grades."
