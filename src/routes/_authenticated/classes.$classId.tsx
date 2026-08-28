@@ -595,6 +595,13 @@ function AssignmentsTab({
                       title={a.title}
                       defaultGrade={gradeLevel ?? null}
                     />
+                    <CopyToClassesButton
+                      kind="assignment"
+                      id={a.id}
+                      title={a.title}
+                      classId={classId}
+                    />
+
                     <ConfirmDeleteButton
                       title={`Delete "${a.title}"?`}
                       description="This removes the assignment along with its scores, submissions and linked standards."
