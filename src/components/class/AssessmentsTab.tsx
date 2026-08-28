@@ -355,11 +355,13 @@ function NewAssessment({
             Enable AI grammar proofing for written responses
           </label>
         </div>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
             Create
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
