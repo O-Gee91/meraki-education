@@ -38,6 +38,8 @@ import { formatDate } from "@/lib/school";
 import { AssessmentGrading } from "@/components/class/AssessmentGrading";
 import { TakeAssessment } from "@/components/class/TakeAssessment";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
 
 type AssessmentRow = {
   id: string;
