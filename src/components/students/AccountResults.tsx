@@ -18,6 +18,17 @@ export type ProvisionedAccount = {
   detail?: string;
 };
 
+export const MERAKI_INTRO = `<div class="box" style="background:#f2f8fa; border-color:#9fc6cf;">
+  <h2 style="margin-top:0;">Welcome to Meraki Education</h2>
+  <p><em>Meraki</em> is a Greek word — doing something with soul, creativity and love. That is how we
+  approach school, and this platform is where it all comes together.</p>
+  <p>With your account you can check grades and feedback, see upcoming assignments and due dates,
+  follow the school calendar, submit work online, join class discussions, and message teachers.
+  Parents and guardians use their own account to follow along.</p>
+  <p class="muted" style="margin-bottom:0;">Your sign-in details are below. Keep them private and change the
+  temporary password the first time you sign in.</p>
+</div>`;
+
 function buildSlips(accounts: ProvisionedAccount[]) {
   const usable = accounts.filter((a) => a.status !== "failed");
   const slips = usable
