@@ -69,7 +69,9 @@ export async function resetAccountAccess(
       throw new Error("Another account already uses that email address");
     email = requestedEmail;
   }
-  if (!email) throw new Error("This account needs an email address for notifications");
+  if (!email && !username)
+    throw new Error("This account needs a username or an email address");
+
 
   const password = tempPassword();
   const signInEmail = username ? usernameToEmail(username) : email;
