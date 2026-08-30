@@ -1,4 +1,12 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  buildDocument,
+  docHeader,
+  downloadHtml,
+  escapeHtml,
+  printHtml,
+} from "@/lib/print-doc";
 
 export type ProvisionedAccount = {
   student: string;
