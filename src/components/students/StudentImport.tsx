@@ -155,13 +155,7 @@ export function StudentImport() {
   const importRows = useMutation({
     mutationFn: async () => {
       if (rows.length === 0) throw new Error("Nothing to import");
-      if (createLogins) {
-        const missing = rows.filter((r) => !r.student_email && !r.guardian_email);
-        if (missing.length > 0)
-          throw new Error(
-            `${missing.length} row${missing.length === 1 ? "" : "s"} have no email address — every account needs one for notifications`,
-          );
-      }
+
       const { data, error } = await supabase
         .from("students")
         .insert(

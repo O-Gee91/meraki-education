@@ -96,8 +96,8 @@ export function CreateLogins({ student }: Props) {
         <DialogHeader>
           <DialogTitle>Logins for {name}</DialogTitle>
           <DialogDescription>
-            Accounts sign in with a username and password. An email address is required for each
-            person so messages and notifications also reach their inbox.
+            Accounts sign in with a username and password. Emails are optional here — anyone
+            without one is asked to register their own email the first time they sign in.
           </DialogDescription>
         </DialogHeader>
 
@@ -124,28 +124,29 @@ export function CreateLogins({ student }: Props) {
           </div>
           <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
           <div className="space-y-1.5">
-            <Label htmlFor="student-login-email">Student email</Label>
+            <Label htmlFor="student-login-email">Student email (optional)</Label>
             <Input
               id="student-login-email"
               type="email"
               value={studentEmail}
               maxLength={255}
-              placeholder="student@school.org"
+              placeholder="leave blank — student adds it at first sign-in"
               onChange={(e) => setStudentEmail(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="guardian-login-email">Guardian email</Label>
+            <Label htmlFor="guardian-login-email">Guardian email (optional)</Label>
             <Input
               id="guardian-login-email"
               type="email"
               value={guardianEmail}
               maxLength={255}
-              placeholder="guardian@example.com"
+              placeholder="leave blank — guardian adds it at first sign-in"
               onChange={(e) => setGuardianEmail(e.target.value)}
             />
           </div>
         </div>
+
 
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 
