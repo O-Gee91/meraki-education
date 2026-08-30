@@ -50,7 +50,7 @@ function buildSlips(accounts: ProvisionedAccount[]) {
       new Date().toLocaleDateString("en-US"),
       `${usable.length} account${usable.length === 1 ? "" : "s"}`,
       "Confidential — hand directly to the recipient",
-    ])}${slips || '<p class="muted">No accounts to print.</p>'}`,
+    ])}${MERAKI_INTRO}${slips || '<p class="muted">No accounts to print.</p>'}`,
   );
 }
 
