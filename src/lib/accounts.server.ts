@@ -89,9 +89,10 @@ export async function resetAccountAccess(
 
   const { error: updateError } = await admin
     .from("profiles")
-    .update({ username, email })
+    .update({ username, email: email || null })
     .eq("id", input.user_id);
   if (updateError) throw new Error(updateError.message);
 
   return { username, email, password };
+
 }
