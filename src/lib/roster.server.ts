@@ -54,7 +54,7 @@ type Target = {
   username: string | null;
   /** The address used to sign in (synthetic when a username is used). */
   email: string;
-  /** The person's real inbox — required so notifications can reach them. */
+  /** The person's real inbox, when known. Empty means they register it at first sign-in. */
   contactEmail: string;
 };
 
@@ -105,10 +105,17 @@ export async function provisionRosterAccounts(
         fail("invalid username");
         continue;
       }
-      if (!EMAIL_RE.test(target.contactEmail) || target.contactEmail.length > 255) {
-        fail("an email address is required");
+      // An email is only required when there is no username to sign in with —
+      // username accounts register their own email at first sign-in.
+      if (!target.username && !EMAIL_RE.test(target.contactEmail)) {
+        fail("a username or email address is required");
         continue;
       }
+      if (target.contactEmail && (!EMAIL_RE.test(target.contactEmail) || target.contactEmail.length > 255)) {
+        fail("invalid email address");
+        continue;
+      }
+
 
       let userId = target.username
         ? await findUserIdByUsername(admin, target.username)
