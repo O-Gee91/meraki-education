@@ -101,5 +101,6 @@ export function AccountResults({ accounts }: { accounts: ProvisionedAccount[] })
         </tbody>
       </table>
     </div>
+    </div>
   );
 }
