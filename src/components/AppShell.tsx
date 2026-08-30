@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
 
 type NavItem = { to: string; label: string; icon: typeof BookOpen; roles: Role[] };
 
@@ -108,8 +109,11 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   }
 
+  const mustRegisterEmail = !!profile && needsEmailRegistration(profile.email);
+
   return (
     <div className="flex min-h-screen bg-background">
+      {mustRegisterEmail ? <RegisterEmailGate /> : null}
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/" className="mb-8 flex items-center gap-2 px-2">
           <GraduationCap className="size-6 text-sidebar-primary" />

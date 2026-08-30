@@ -69,7 +69,9 @@ export async function resetAccountAccess(
       throw new Error("Another account already uses that email address");
     email = requestedEmail;
   }
-  if (!email) throw new Error("This account needs an email address for notifications");
+  if (!email && !username)
+    throw new Error("This account needs a username or an email address");
+
 
   const password = tempPassword();
   const signInEmail = username ? usernameToEmail(username) : email;
@@ -77,15 +79,20 @@ export async function resetAccountAccess(
     password,
     email: signInEmail,
     email_confirm: true,
-    user_metadata: { ...(username ? { username } : {}), contact_email: email },
+    user_metadata: {
+      ...(username ? { username } : {}),
+      ...(email ? { contact_email: email } : {}),
+    },
+
   });
   if (authError) throw new Error(authError.message);
 
   const { error: updateError } = await admin
     .from("profiles")
-    .update({ username, email })
+    .update({ username, email: email || null })
     .eq("id", input.user_id);
   if (updateError) throw new Error(updateError.message);
 
   return { username, email, password };
+
 }
