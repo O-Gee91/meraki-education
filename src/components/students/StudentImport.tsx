@@ -180,10 +180,10 @@ export function StudentImport() {
             last_name: inserted.last_name,
             student_email: rows[i]?.student_email ?? null,
             guardian_email: inserted.guardian_email,
-            student_username: rows[i]?.student_email
-              ? (rows[i]?.student_username ??
-                suggestUsername(inserted.first_name, inserted.last_name))
-              : null,
+            student_username:
+              rows[i]?.student_username ??
+              suggestUsername(inserted.first_name, inserted.last_name),
+
             guardian_username: rows[i]?.guardian_username ?? null,
           }))
           .filter(
