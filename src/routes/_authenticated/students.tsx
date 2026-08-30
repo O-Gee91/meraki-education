@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ClassLogins } from "@/components/students/ClassLogins";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
@@ -117,6 +118,7 @@ function StudentsPage() {
       description="The school directory used across gradebook, attendance and reporting."
       actions={
         <div className="flex flex-wrap gap-2">
+          {isStaff ? <ClassLogins /> : null}
           <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
