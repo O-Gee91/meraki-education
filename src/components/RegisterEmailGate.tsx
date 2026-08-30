@@ -38,7 +38,7 @@ export function RegisterEmailGate() {
 
   return (
     <Dialog open>
-      <DialogContent className="max-w-md" showCloseButton={false}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Register your email address</DialogTitle>
           <DialogDescription>
