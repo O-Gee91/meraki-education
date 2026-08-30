@@ -120,7 +120,8 @@ export async function provisionRosterAccounts(
       let userId = target.username
         ? await findUserIdByUsername(admin, target.username)
         : null;
-      if (!userId) userId = await findUserIdByEmail(admin, target.contactEmail);
+      if (!userId && target.contactEmail)
+        userId = await findUserIdByEmail(admin, target.contactEmail);
 
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
@@ -134,7 +135,7 @@ export async function provisionRosterAccounts(
           user_metadata: {
             full_name: target.role === "student" ? name : `${entry.last_name} guardian`,
             role: target.role,
-            contact_email: target.contactEmail,
+            ...(target.contactEmail ? { contact_email: target.contactEmail } : {}),
             ...(target.username ? { username: target.username } : {}),
           },
         });
@@ -144,7 +145,12 @@ export async function provisionRosterAccounts(
         }
         userId = data.user.id;
         status = "created";
-      } else {
+        if (!target.contactEmail) {
+          // No inbox yet — clear the synthetic address so the person is asked
+          // to register a real email the first time they sign in.
+          await admin.from("profiles").update({ email: null }).eq("id", userId);
+        }
+      } else if (target.contactEmail) {
         // Keep the contact address current so notifications reach them.
         await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
       }
@@ -152,7 +158,11 @@ export async function provisionRosterAccounts(
       const update =
         target.role === "student"
           ? { user_id: userId }
-          : { guardian_user_id: userId, guardian_email: target.contactEmail };
+          : {
+              guardian_user_id: userId,
+              ...(target.contactEmail ? { guardian_email: target.contactEmail } : {}),
+            };
+
       const { error: linkError } = await admin
         .from("students")
         .update(update)
