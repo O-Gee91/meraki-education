@@ -48,10 +48,7 @@ export function CreateLogins({ student }: Props) {
     mutationFn: async () => {
       if (!studentUsername.trim() && !guardianUsername.trim())
         throw new Error("Enter a student or guardian username");
-      if (studentUsername.trim() && !studentEmail.trim())
-        throw new Error("Every account needs an email address for notifications");
-      if (guardianUsername.trim() && !guardianEmail.trim())
-        throw new Error("Every account needs an email address for notifications");
+
       const result = await provision({
         data: {
           entries: [
