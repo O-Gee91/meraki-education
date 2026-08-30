@@ -79,7 +79,11 @@ export async function resetAccountAccess(
     password,
     email: signInEmail,
     email_confirm: true,
-    user_metadata: { ...(username ? { username } : {}), contact_email: email },
+    user_metadata: {
+      ...(username ? { username } : {}),
+      ...(email ? { contact_email: email } : {}),
+    },
+
   });
   if (authError) throw new Error(authError.message);
 
