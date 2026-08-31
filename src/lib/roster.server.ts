@@ -53,6 +53,8 @@ async function findUserIdByUsername(
 
 type Target = {
   role: "student" | "parent";
+  /** Known account id, when the roster already links one. */
+  existingUserId?: string | null;
   username: string | null;
   /** The address used to sign in (synthetic when a username is used). */
   email: string;
