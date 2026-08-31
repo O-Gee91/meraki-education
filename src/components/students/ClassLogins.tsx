@@ -87,7 +87,8 @@ export function ClassLogins({
           guardian_username: s.guardian_user_id
             ? null
             : uniqueUsername(`${base}.parent`.slice(0, 27), used),
-          guardian_email: s.guardian_user_id ? null : s.guardian_email,
+          // Email stays blank — each person registers their own at first sign-in.
+          guardian_email: null,
         };
       });
 
