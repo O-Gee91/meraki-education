@@ -870,6 +870,48 @@ function RosterTab({
   const enrolledIds = new Set(roster.map((r) => r.student_id));
   const available = students.filter((s) => !enrolledIds.has(s.id));
 
+  const [groupBy, setGroupBy] = useState<"none" | "grade" | "homeroom">("none");
+
+  const { data: homerooms = {} } = useQuery({
+    queryKey: ["roster-homerooms", classId],
+    enabled: roster.length > 0,
+    queryFn: async () => {
+      const ids = roster.map((r) => r.student_id);
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("student_id, classes(name, subject, period)")
+        .in("student_id", ids);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const row of data ?? []) {
+        const c = row.classes as { name: string; subject: string | null; period: string | null } | null;
+        if (!c) continue;
+        const hay = `${c.name} ${c.subject ?? ""}`.toLowerCase();
+        if (hay.includes("homeroom") || hay.includes("home room")) {
+          map[row.student_id] = c.name;
+        }
+      }
+      return map;
+    },
+  });
+
+  const groups = (() => {
+    if (groupBy === "none") return [{ key: "all", label: "", rows: roster }];
+    const buckets = new Map<string, RosterRow[]>();
+    for (const r of roster) {
+      const key =
+        groupBy === "grade"
+          ? `Grade ${r.students?.grade_level ?? "—"}`
+          : (homerooms[r.student_id] ?? "No homeroom");
+      const list = buckets.get(key) ?? [];
+      list.push(r);
+      buckets.set(key, list);
+    }
+    return [...buckets.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+      .map(([label, rows]) => ({ key: label, label, rows }));
+  })();
+
   return (
     <div className="mt-4">
       {isStaff && (
