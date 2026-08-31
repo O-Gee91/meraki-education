@@ -1,4 +1,4 @@
-export type SharedKind = "assignment" | "assessment";
+export type SharedKind = "assignment" | "assessment" | "grading";
 
 export type SharedAssignmentPayload = {
   category: string;

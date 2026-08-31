@@ -1,0 +1,2 @@
+ALTER TABLE public.shared_resources DROP CONSTRAINT IF EXISTS shared_resources_kind_check;
+ALTER TABLE public.shared_resources ADD CONSTRAINT shared_resources_kind_check CHECK (kind IN ('assignment','assessment','grading'));
