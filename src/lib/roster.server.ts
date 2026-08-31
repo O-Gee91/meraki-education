@@ -77,17 +77,19 @@ export async function provisionRosterAccounts(
     const studentEmail = (entry.student_email ?? "").trim().toLowerCase();
     const guardianEmail = (entry.guardian_email ?? "").trim().toLowerCase();
 
-    if (studentUsername || studentEmail)
+    if (studentUsername || studentEmail || (entry.reset_existing && entry.student_user_id))
       targets.push({
         role: "student",
+        existingUserId: entry.student_user_id ?? null,
         username: studentUsername || null,
         email: studentUsername ? usernameToEmail(studentUsername) : studentEmail,
         contactEmail: studentEmail,
       });
 
-    if (guardianUsername || guardianEmail)
+    if (guardianUsername || guardianEmail || (entry.reset_existing && entry.guardian_user_id))
       targets.push({
         role: "parent",
+        existingUserId: entry.guardian_user_id ?? null,
         username: guardianUsername || null,
         email: guardianUsername ? usernameToEmail(guardianUsername) : guardianEmail,
         contactEmail: guardianEmail,
