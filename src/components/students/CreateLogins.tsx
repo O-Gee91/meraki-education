@@ -58,10 +58,17 @@ export function CreateLogins({ student }: Props) {
               student_id: student.id,
               first_name: student.first_name,
               last_name: student.last_name,
-              student_username: studentUsername.trim() || null,
+              // Existing accounts are matched by id so a new username never
+              // creates a second account for the same person.
+              student_username: student.user_id ? null : studentUsername.trim() || null,
               student_email: studentEmail.trim() || null,
-              guardian_username: guardianUsername.trim() || null,
+              guardian_username: student.guardian_user_id
+                ? null
+                : guardianUsername.trim() || null,
               guardian_email: guardianEmail.trim() || null,
+              student_user_id: student.user_id ?? null,
+              guardian_user_id: student.guardian_user_id ?? null,
+              reset_existing: resetExisting,
             },
           ],
         },
