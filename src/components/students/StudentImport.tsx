@@ -161,7 +161,7 @@ export function StudentImport({
       const good: ParsedRow[] = [];
       const bad: string[] = [];
       raw.forEach((r, i) => {
-        const { row, error } = normalizeRow(r);
+        const { row, error } = normalizeRow(r, gradeLevel);
         if (row) good.push(row);
         else bad.push(`Row ${i + 2}: ${error}`);
       });
