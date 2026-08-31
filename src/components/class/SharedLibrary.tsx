@@ -35,6 +35,7 @@ export function SharedLibrary({ classId }: { classId: string }) {
         .select(
           "id, kind, grade_level, subject, title, description, payload, shared_by, shared_by_name, created_at",
         )
+        .in("kind", ["assignment", "assessment"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as SharedResource[];
