@@ -957,21 +957,60 @@ function RosterTab({
         </div>
       )}
 
+      {isStaff && roster.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={pickedIds.size === roster.length && roster.length > 0}
+              onCheckedChange={(on) =>
+                setPickedIds(on ? new Set(roster.map((r) => r.id)) : new Set())
+              }
+            />
+            Select all ({pickedIds.size} selected)
+          </label>
+          <ConfirmDeleteButton
+            label="Remove selected"
+            title={`Remove ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
+            description="They will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            disabled={pickedIds.size === 0 || removeMany.isPending}
+            onConfirm={() => removeMany.mutate([...pickedIds])}
+          />
+          <ConfirmDeleteButton
+            label="Remove all students"
+            title={`Remove all ${roster.length} students from this class?`}
+            description="Every student will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            disabled={removeMany.isPending}
+            onConfirm={() => removeMany.mutate(roster.map((r) => r.id))}
+          />
+        </div>
+      )}
+
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No students enrolled yet.</p>
         ) : (
           roster.map((r) => (
             <div key={r.id} className="flex items-center justify-between p-4 text-sm">
-              <span className="font-medium">
+              <span className="flex items-center gap-3 font-medium">
+                {isStaff && (
+                  <Checkbox
+                    checked={pickedIds.has(r.id)}
+                    onCheckedChange={(on) => togglePick(r.id, on === true)}
+                    aria-label={`Select ${r.students?.first_name ?? "student"}`}
+                  />
+                )}
                 {studentLabel(r.students, useIds)}
               </span>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>
                 {isStaff && (
-                  <Button variant="ghost" size="sm" onClick={() => remove.mutate(r.id)}>
-                    Remove
-                  </Button>
+                  <ConfirmDeleteButton
+                    label="Remove"
+                    title="Remove this student from the class?"
+                    description="They will be unenrolled from this class. Their account and grades are not affected."
+                    disabled={removeMany.isPending}
+                    onConfirm={() => removeMany.mutate([r.id])}
+                  />
                 )}
               </div>
             </div>
