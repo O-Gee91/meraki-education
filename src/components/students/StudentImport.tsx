@@ -196,33 +196,48 @@ export function StudentImport({
     mutationFn: async () => {
       if (rows.length === 0) throw new Error("Nothing to import");
 
-      const { data, error } = await supabase
-        .from("students")
-        .insert(
-          rows.map(
-            ({
+      // Ids are generated here so enrollment never depends on rows coming back
+      // from the insert (visibility rules can hide brand-new students).
+      const ids = rows.map(() => crypto.randomUUID());
+
+      const { error } = await supabase.from("students").insert(
+        rows.map(
+          (
+            {
               student_email: _email,
               student_username: _su,
               guardian_username: _gu,
               class_name: _cn,
               ...rest
-            }) => rest,
-          ),
-        )
-        .select("id, first_name, last_name, guardian_email");
+            },
+            i,
+          ) => ({ id: ids[i]!, ...rest }),
+        ),
+      );
       if (error) throw error;
 
-      if (classId && data && data.length > 0) {
+      const data = rows.map((r, i) => ({
+        id: ids[i]!,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        guardian_email: r.guardian_email,
+      }));
+
+      if (classId) {
         const { error: enrollError } = await supabase
           .from("enrollments")
-          .insert(data.map((s) => ({ class_id: classId, student_id: s.id })));
-        if (enrollError) throw enrollError;
+          .upsert(
+            ids.map((student_id) => ({ class_id: classId, student_id })),
+            { onConflict: "class_id,student_id", ignoreDuplicates: true },
+          );
+        if (enrollError)
+          throw new Error(`Students were added but could not be enrolled: ${enrollError.message}`);
       }
 
       // Enroll students into classes named in the "Class" column (matched by
       // name, case-insensitive, against classes the user can see).
       const classNames = [...new Set(rows.map((r) => r.class_name).filter((n): n is string => !!n))];
-      if (data && classNames.length > 0) {
+      if (classNames.length > 0) {
         const { data: classes, error: classError } = await supabase
           .from("classes")
           .select("id, name");
@@ -234,7 +249,7 @@ export function StudentImport({
         const unmatched = new Set<string>();
         rows.forEach((row, i) => {
           if (!row.class_name) return;
-          const studentId = data[i]?.id;
+          const studentId = ids[i];
           const target = byName.get(row.class_name.trim().toLowerCase());
           if (!studentId) return;
           if (!target) {
@@ -256,6 +271,7 @@ export function StudentImport({
           );
         }
       }
+
 
 
 
