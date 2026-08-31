@@ -1045,11 +1045,63 @@ function RosterTab({
       )}
 
 
+      {roster.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Group by</span>
+          {(["none", "grade", "homeroom"] as const).map((g) => (
+            <Button
+              key={g}
+              size="sm"
+              variant={groupBy === g ? "default" : "outline"}
+              onClick={() => setGroupBy(g)}
+            >
+              {g === "none" ? "All students" : g === "grade" ? "Grade" : "Homeroom"}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No students enrolled yet.</p>
         ) : (
-          roster.map((r) => (
+          groups.map((g) => (
+            <div key={g.key}>
+              {g.label ? (
+                <div className="flex flex-wrap items-center gap-3 bg-secondary/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span>
+                    {g.label} · {g.rows.length}
+                  </span>
+                  {isStaff && (
+                    <>
+                      <label className="flex items-center gap-2 text-xs font-normal normal-case">
+                        <Checkbox
+                          checked={g.rows.every((r) => pickedIds.has(r.id))}
+                          onCheckedChange={(on) =>
+                            setPickedIds((prev) => {
+                              const next = new Set(prev);
+                              for (const r of g.rows) {
+                                if (on) next.add(r.id);
+                                else next.delete(r.id);
+                              }
+                              return next;
+                            })
+                          }
+                        />
+                        Select group
+                      </label>
+                      <MoveStudentsButton
+                        classId={classId}
+                        enrollmentIds={g.rows.map((r) => r.id)}
+                        studentIds={g.rows.map((r) => r.student_id)}
+                        triggerLabel="Move group"
+                      />
+                    </>
+                  )}
+                </div>
+              ) : null}
+              <div className="divide-y divide-border">
+                {g.rows.map((r) => (
             <div key={r.id} className="flex items-center justify-between p-4 text-sm">
               <span className="flex items-center gap-3 font-medium">
                 {isStaff && (
