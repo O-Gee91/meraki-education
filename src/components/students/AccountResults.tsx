@@ -29,28 +29,41 @@ export const MERAKI_INTRO = `<div class="box" style="background:#f2f8fa; border-
   temporary password the first time you sign in.</p>
 </div>`;
 
+function realEmail(email: string) {
+  return email && !email.endsWith("@meraki.local") ? email : null;
+}
+
 function buildSlips(accounts: ProvisionedAccount[]) {
   const usable = accounts.filter((a) => a.status !== "failed");
   const slips = usable
     .map(
-      (a) => `<div class="box" style="page-break-inside: avoid; margin-bottom:16px;">
+      (a, i) => `<section style="page-break-inside: avoid; ${
+        i < usable.length - 1 ? "page-break-after: always;" : ""
+      }">
+  ${docHeader(
+    a.role === "student" ? "Student sign-in details" : "Parent / guardian sign-in details",
+    [
+      new Date().toLocaleDateString("en-US"),
+      escapeHtml(a.student),
+      "Confidential — hand directly to the recipient",
+    ],
+  )}
+  ${MERAKI_INTRO}
+  <div class="box" style="margin-bottom:16px;">
   <h2 style="margin:0 0 6px;">${escapeHtml(a.student)} — ${a.role === "student" ? "Student account" : "Parent / guardian account"}</h2>
   <table>
     <tr><th style="width:38%">Sign in with</th><td>${escapeHtml(a.username ?? a.email)}</td></tr>
     <tr><th>Temporary password</th><td>${escapeHtml(a.password ?? "unchanged — use existing password")}</td></tr>
-    <tr><th>Email on file</th><td>${escapeHtml(a.email)}</td></tr>
+    <tr><th>Email on file</th><td>${escapeHtml(realEmail(a.email) ?? "—  add your own email at first sign-in to receive notifications")}</td></tr>
   </table>
-  <p class="muted" style="margin:6px 0 0;">Sign in at the Meraki Education site, then change this password right away. Keep this slip private.</p>
-</div>`,
+  <p class="muted" style="margin:6px 0 0;">Sign in at the Meraki Education site, change this password right away, and register your email address so notifications reach you. Keep this slip private.</p>
+  </div>
+</section>`,
     )
     .join("");
   return buildDocument(
     "Account details",
-    `${docHeader("Student & guardian sign-in details", [
-      new Date().toLocaleDateString("en-US"),
-      `${usable.length} account${usable.length === 1 ? "" : "s"}`,
-      "Confidential — hand directly to the recipient",
-    ])}${MERAKI_INTRO}${slips || '<p class="muted">No accounts to print.</p>'}`,
+    slips || '<p class="muted">No accounts to print.</p>',
   );
 }
 
