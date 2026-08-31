@@ -57,6 +57,11 @@ function ClassesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [gradeFilter, setGradeFilter] = useState<string>("all");
+  const [rosterTarget, setRosterTarget] = useState<{
+    id: string;
+    name: string;
+    grade: number | null;
+  } | null>(null);
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
@@ -87,22 +92,28 @@ function ClassesPage() {
       if (editingId) {
         const { error } = await supabase.from("classes").update(payload).eq("id", editingId);
         if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("classes")
-          .insert({ ...payload, teacher_id: user?.id ?? null });
-        if (error) throw error;
+        return null;
       }
+      const { data, error } = await supabase
+        .from("classes")
+        .insert({ ...payload, teacher_id: user?.id ?? null })
+        .select("id, name, grade_level")
+        .single();
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success(editingId ? "Class updated" : "Class created");
       setOpen(false);
       setEditingId(null);
       setForm(emptyForm);
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+      if (created)
+        setRosterTarget({ id: created.id, name: created.name, grade: created.grade_level });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const visible = useMemo(
     () =>
