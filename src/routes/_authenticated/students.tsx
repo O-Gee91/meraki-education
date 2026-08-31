@@ -44,6 +44,8 @@ function StudentsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+
   const [form, setForm] = useState({
     first: "",
     last: "",
@@ -109,11 +111,41 @@ function StudentsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const removeStudents = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) throw new Error("Select at least one student");
+      const { error } = await supabase.from("students").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      toast.success(ids.length === 1 ? "Student removed" : `${ids.length} students removed`);
+      setSelected([]);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const confirmRemove = (ids: string[]) => {
+    const label =
+      ids.length === 1
+        ? "Remove this student from the school directory? Their records will be deleted."
+        : `Remove ${ids.length} students from the school directory? Their records will be deleted.`;
+    if (window.confirm(label)) removeStudents.mutate(ids);
+  };
+
   const filtered = students.filter((s) =>
     `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+
+  const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.id));
+  const toggleAll = () =>
+    setSelected(allSelected ? [] : filtered.map((s) => s.id));
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
 
   return (
     <AppShell
@@ -193,29 +225,58 @@ function StudentsPage() {
         </div>
       }
     >
-      <Input
-        placeholder="Search by name or student ID"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Search by name or student ID"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="max-w-sm"
+        />
+        {isStaff && selected.length > 0 ? (
+          <>
+            <span className="text-sm text-muted-foreground">{selected.length} selected</span>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={removeStudents.isPending}
+              onClick={() => confirmRemove(selected)}
+            >
+              Remove selected
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+              Clear
+            </Button>
+          </>
+        ) : null}
+      </div>
       {isStaff ? <UnlinkedAccounts students={students} /> : null}
       <div className="panel mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
+              {isStaff ? (
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all students"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                  />
+                </th>
+              ) : null}
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Grade</th>
               <th className="px-4 py-3">Graduating class</th>
               <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Guardian email</th>
               <th className="px-4 py-3">Accounts</th>
+              {isStaff ? <th className="px-4 py-3" /> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={isStaff ? 8 : 6} className="px-4 py-6 text-muted-foreground">
                   No students found.
                 </td>
               </tr>
@@ -226,6 +287,16 @@ function StudentsPage() {
                   className="cursor-pointer hover:bg-secondary/40"
                   onClick={() => setProfileStudent(s)}
                 >
+                  {isStaff ? (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.first_name} ${s.last_name}`}
+                        checked={selected.includes(s.id)}
+                        onChange={() => toggleOne(s.id)}
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3 font-medium">
                     {s.last_name}, {s.first_name}
                     {s.chinese_name ? (
@@ -265,6 +336,19 @@ function StudentsPage() {
                       {isStaff ? <CreateLogins student={s} /> : null}
                     </div>
                   </td>
+                  {isStaff ? (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        disabled={removeStudents.isPending}
+                        onClick={() => confirmRemove([s.id])}
+                      >
+                        Remove
+                      </Button>
+                    </td>
+                  ) : null}
                 </tr>
               ))
             )}
