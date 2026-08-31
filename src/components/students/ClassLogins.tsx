@@ -29,12 +29,19 @@ function uniqueUsername(base: string, used: Set<string>): string {
   return candidate;
 }
 
-export function ClassLogins() {
+export function ClassLogins({
+  fixedClassId,
+  triggerLabel = "Print class logins",
+}: {
+  fixedClassId?: string;
+  triggerLabel?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const provision = useServerFn(provisionStudentAccounts);
   const [open, setOpen] = useState(false);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(fixedClassId ?? "");
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes", "login-slips"],
