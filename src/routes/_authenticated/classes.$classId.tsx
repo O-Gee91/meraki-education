@@ -657,7 +657,165 @@ function AssignmentsTab({
   );
 }
 
+function EditAssignment({
+  assignment,
+  classId,
+  categories,
+}: {
+  assignment: AssignmentRow;
+  classId: string;
+  categories: string[];
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    title: assignment.title,
+    category: assignment.category,
+    points: String(assignment.points_possible),
+    due: assignment.due_date ?? "",
+    description: assignment.description ?? "",
+    mode: assignment.submission_mode,
+  });
+
+  function openChange(next: boolean) {
+    if (next) {
+      setForm({
+        title: assignment.title,
+        category: assignment.category,
+        points: String(assignment.points_possible),
+        due: assignment.due_date ?? "",
+        description: assignment.description ?? "",
+        mode: assignment.submission_mode,
+      });
+    }
+    setOpen(next);
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (form.title.trim().length < 2) throw new Error("Assignment title is required");
+      const points = Number(form.points);
+      if (Number.isNaN(points) || points <= 0 || points > 10000)
+        throw new Error("Points possible must be between 1 and 10000");
+      const { error } = await supabase
+        .from("assignments")
+        .update({
+          title: form.title.trim().slice(0, 140),
+          category: form.category,
+          points_possible: points,
+          due_date: form.due || null,
+          description: form.description.trim().slice(0, 1000) || null,
+          submission_mode: form.mode,
+        })
+        .eq("id", assignment.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assignment updated");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const categoryOptions = categories.includes(form.category)
+    ? categories
+    : [form.category, ...categories];
+
+  return (
+    <Dialog open={open} onOpenChange={openChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit assignment</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-title-${assignment.id}`}>Title</Label>
+            <Input
+              id={`e-title-${assignment.id}`}
+              value={form.title}
+              maxLength={140}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-cat-${assignment.id}`}>Category</Label>
+              <Select
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
+              >
+                <SelectTrigger id={`e-cat-${assignment.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`e-pts-${assignment.id}`}>Points possible</Label>
+              <Input
+                id={`e-pts-${assignment.id}`}
+                inputMode="numeric"
+                value={form.points}
+                onChange={(e) => setForm({ ...form, points: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-due-${assignment.id}`}>Due date</Label>
+            <Input
+              id={`e-due-${assignment.id}`}
+              type="date"
+              value={form.due}
+              onChange={(e) => setForm({ ...form, due: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-mode-${assignment.id}`}>How is this handed in?</Label>
+            <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
+              <SelectTrigger id={`e-mode-${assignment.id}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="online">Completed online in the site</SelectItem>
+                <SelectItem value="collected">Collected in class (e.g. notebooks)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-desc-${assignment.id}`}>Instructions</Label>
+            <Textarea
+              id={`e-desc-${assignment.id}`}
+              value={form.description}
+              maxLength={1000}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AssignmentStandards({
+
   assignmentId,
   isStaff,
 }: {
