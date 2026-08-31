@@ -206,6 +206,7 @@ function StudentsPage() {
             <tr>
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Grade</th>
+              <th className="px-4 py-3">Graduating class</th>
               <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Guardian email</th>
               <th className="px-4 py-3">Accounts</th>
@@ -214,17 +215,25 @@ function StudentsPage() {
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={6} className="px-4 py-6 text-muted-foreground">
                   No students found.
                 </td>
               </tr>
             ) : (
               filtered.map((s) => (
-                <tr key={s.id}>
+                <tr
+                  key={s.id}
+                  className="cursor-pointer hover:bg-secondary/40"
+                  onClick={() => setProfileStudent(s)}
+                >
                   <td className="px-4 py-3 font-medium">
                     {s.last_name}, {s.first_name}
+                    {s.chinese_name ? (
+                      <span className="ml-2 text-muted-foreground">{s.chinese_name}</span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">{s.grade_level}</td>
+                  <td className="px-4 py-3">{graduatingClassLabel(s.grade_level)}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {isStaff ? (
                       <Input
