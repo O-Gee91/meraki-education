@@ -235,6 +235,10 @@ export function StudentImport({
     onSuccess: ({ count, accounts: created }) => {
       toast.success(`Imported ${count} student${count === 1 ? "" : "s"}`);
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      if (classId) {
+        queryClient.invalidateQueries({ queryKey: ["roster", classId] });
+        queryClient.invalidateQueries({ queryKey: ["enrollments", classId] });
+      }
       if (created.length > 0) {
         setAccounts(created);
         setRows([]);
@@ -254,16 +258,21 @@ export function StudentImport({
         if (!next) reset();
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="outline">Import from Excel</Button>
-      </DialogTrigger>
+      {showTrigger ? (
+        <DialogTrigger asChild>
+          <Button variant="outline">{triggerLabel}</Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import students from a spreadsheet</DialogTitle>
+          <DialogTitle>
+            {className ? `Add students to ${className}` : "Import students from a spreadsheet"}
+          </DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
             First name, Last name, Grade, Student ID, Student email, Student username, Guardian
             username and Guardian email. An email address is required for anyone who gets a login.
+
           </DialogDescription>
         </DialogHeader>
 
