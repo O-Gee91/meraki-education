@@ -38,6 +38,7 @@ import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
+import { StudentImport } from "@/components/students/StudentImport";
 
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -345,7 +346,14 @@ function ClassDetailPage() {
         )}
 
         <TabsContent value="roster">
-          <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
+          <RosterTab
+            classId={classId}
+            isStaff={isStaff}
+            roster={roster}
+            useIds={useIds}
+            className={klass?.name}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
 
         <TabsContent value="attendance">
