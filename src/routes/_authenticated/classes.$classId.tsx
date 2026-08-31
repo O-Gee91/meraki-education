@@ -622,7 +622,9 @@ function AssignmentsTab({
                 <span>Due {formatDate(a.due_date)}</span>
                 {isStaff && (
                   <>
+                    <EditAssignment assignment={a} classId={classId} categories={categories} />
                     <ShareResourceButton
+
                       kind="assignment"
                       id={a.id}
                       title={a.title}
