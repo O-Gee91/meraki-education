@@ -261,22 +261,37 @@ export function StudentImport({
 
       let created: ProvisionedAccount[] = [];
       if (createLogins && data) {
+        const used = new Set<string>();
+        const unique = (base: string) => {
+          let candidate = base.slice(0, 30);
+          let n = 2;
+          while (used.has(candidate)) {
+            candidate = `${base}${n}`.slice(0, 30);
+            n += 1;
+          }
+          used.add(candidate);
+          return candidate;
+        };
         const entries = data
-          .map((inserted, i) => ({
-            student_id: inserted.id,
-            first_name: inserted.first_name,
-            last_name: inserted.last_name,
-            student_email: rows[i]?.student_email ?? null,
-            guardian_email: inserted.guardian_email,
-            student_username:
-              rows[i]?.student_username ??
-              suggestUsername(inserted.first_name, inserted.last_name),
-
-            guardian_username: rows[i]?.guardian_username ?? null,
-          }))
+          .map((inserted, i) => {
+            const base = suggestUsername(inserted.first_name, inserted.last_name);
+            return {
+              student_id: inserted.id,
+              first_name: inserted.first_name,
+              last_name: inserted.last_name,
+              student_email: rows[i]?.student_email ?? null,
+              // Left blank on purpose — each person registers their own email at first sign-in.
+              guardian_email: null,
+              student_username: unique(rows[i]?.student_username || base),
+              guardian_username: unique(
+                rows[i]?.guardian_username || `${base}.parent`.slice(0, 30),
+              ),
+            };
+          })
           .filter(
             (e) => e.student_username || e.guardian_username || e.student_email || e.guardian_email,
           );
+
         if (entries.length > 0) {
           const result = await provision({ data: { entries } });
           created = result.accounts as ProvisionedAccount[];
