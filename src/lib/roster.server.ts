@@ -15,6 +15,8 @@ export type ProvisionEntry = {
   guardian_email?: string | null;
   student_username?: string | null;
   guardian_username?: string | null;
+  /** Issue a fresh temporary password for accounts that already exist. */
+  reset_existing?: boolean;
 };
 
 export type ProvisionedAccount = {
