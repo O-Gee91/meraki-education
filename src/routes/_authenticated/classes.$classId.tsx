@@ -797,17 +797,33 @@ function RosterTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("enrollments").delete().eq("id", id);
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+
+  const removeMany = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) throw new Error("Select at least one student");
+      const { error } = await supabase.from("enrollments").delete().in("id", ids);
       if (error) throw error;
+      return ids.length;
     },
-    onSuccess: () => {
-      toast.success("Removed from class");
+    onSuccess: (count) => {
+      toast.success(
+        count === 1 ? "Removed from class" : `Removed ${count} students from class`
+      );
+      setPickedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["roster", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const togglePick = (id: string, on: boolean) => {
+    setPickedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   const createAndEnroll = useMutation({
     mutationFn: async () => {
