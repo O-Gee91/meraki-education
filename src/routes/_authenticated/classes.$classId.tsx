@@ -752,14 +752,21 @@ function RosterTab({
   isStaff,
   roster,
   useIds,
+  className,
+  gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
   roster: RosterRow[];
   useIds: boolean;
+  className?: string;
+  gradeLevel?: number | null;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
+  const blankNew = { first: "", last: "", grade: gradeLevel ? String(gradeLevel) : "", number: "" };
+  const [newForm, setNewForm] = useState(blankNew);
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
