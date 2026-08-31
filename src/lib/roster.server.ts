@@ -113,7 +113,7 @@ export async function provisionRosterAccounts(
       }
       // An email is only required when there is no username to sign in with —
       // username accounts register their own email at first sign-in.
-      if (!target.username && !EMAIL_RE.test(target.contactEmail)) {
+      if (!target.username && !target.existingUserId && !EMAIL_RE.test(target.contactEmail)) {
         fail("a username or email address is required");
         continue;
       }
@@ -123,11 +123,22 @@ export async function provisionRosterAccounts(
       }
 
 
-      let userId = target.username
-        ? await findUserIdByUsername(admin, target.username)
-        : null;
+      let userId = target.existingUserId ?? null;
+      if (!userId && target.username)
+        userId = await findUserIdByUsername(admin, target.username);
       if (!userId && target.contactEmail)
         userId = await findUserIdByEmail(admin, target.contactEmail);
+
+      if (userId && !target.username) {
+        // Re-printing slips for an existing account — show its real sign-in details.
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("username, email")
+          .eq("id", userId)
+          .maybeSingle();
+        if (prof?.username) target.username = prof.username;
+        if (!target.email) target.email = prof?.email ?? "";
+      }
 
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
