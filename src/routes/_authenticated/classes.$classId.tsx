@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { MoveStudentsButton } from "@/components/class/MoveStudentsButton";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -974,22 +976,30 @@ function RosterTab({
             />
             Select all ({pickedIds.size} selected)
           </label>
+          <MoveStudentsButton
+            classId={classId}
+            enrollmentIds={[...pickedIds]}
+            studentIds={roster.filter((r) => pickedIds.has(r.id)).map((r) => r.student_id)}
+            triggerLabel="Add / move to other classes"
+            disabled={pickedIds.size === 0}
+          />
           <ConfirmDeleteButton
-            label="Remove selected"
-            title={`Remove ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
-            description="They will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            label="Drop selected"
+            title={`Drop ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
+            description="They are removed from this roster only. Their grades, submissions and attendance for this class are kept, along with their accounts and other classes."
             disabled={pickedIds.size === 0 || removeMany.isPending}
             onConfirm={() => removeMany.mutate([...pickedIds])}
           />
           <ConfirmDeleteButton
-            label="Remove all students"
-            title={`Remove all ${roster.length} students from this class?`}
-            description="Every student will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            label="Drop all students"
+            title={`Drop all ${roster.length} students from this class?`}
+            description="Every student is removed from this roster only. Their grades, submissions and attendance for this class are kept, along with their accounts and other classes."
             disabled={removeMany.isPending}
             onConfirm={() => removeMany.mutate(roster.map((r) => r.id))}
           />
         </div>
       )}
+
 
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
@@ -1010,14 +1020,23 @@ function RosterTab({
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>
                 {isStaff && (
-                  <ConfirmDeleteButton
-                    label="Remove"
-                    title="Remove this student from the class?"
-                    description="They will be unenrolled from this class. Their account and grades are not affected."
-                    disabled={removeMany.isPending}
-                    onConfirm={() => removeMany.mutate([r.id])}
-                  />
+                  <>
+                    <MoveStudentsButton
+                      classId={classId}
+                      enrollmentIds={[r.id]}
+                      studentIds={[r.student_id]}
+                      triggerLabel="Add / move"
+                    />
+                    <ConfirmDeleteButton
+                      label="Drop"
+                      title="Drop this student from the class?"
+                      description="They are removed from this roster only. Their grades, submissions and attendance for this class are kept."
+                      disabled={removeMany.isPending}
+                      onConfirm={() => removeMany.mutate([r.id])}
+                    />
+                  </>
                 )}
+
               </div>
             </div>
           ))
