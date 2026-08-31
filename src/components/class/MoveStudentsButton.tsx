@@ -54,7 +54,20 @@ export function MoveStudentsButton({
     },
   });
 
-  const options = classes.filter((c) => c.id !== classId);
+  const [filter, setFilter] = useState<string>("all");
+
+  const others = classes.filter((c) => c.id !== classId);
+  const grades = [...new Set(others.map((c) => c.grade_level).filter((g): g is number => !!g))].sort(
+    (a, b) => a - b,
+  );
+  const isHomeroom = (c: ClassRow) =>
+    `${c.name} ${c.subject ?? ""}`.toLowerCase().includes("homeroom");
+  const options =
+    filter === "all"
+      ? others
+      : filter === "homeroom"
+        ? others.filter(isHomeroom)
+        : others.filter((c) => String(c.grade_level) === filter);
 
   const move = useMutation({
     mutationFn: async () => {
@@ -121,6 +134,23 @@ export function MoveStudentsButton({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Filter</span>
+            {[
+              { key: "all", label: "All classes" },
+              { key: "homeroom", label: "Homerooms" },
+              ...grades.map((g) => ({ key: String(g), label: `Grade ${g}` })),
+            ].map((f) => (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={filter === f.key ? "default" : "outline"}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading your classes…</p>
           ) : options.length === 0 ? (
