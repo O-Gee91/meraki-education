@@ -19,6 +19,8 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
+import { StudentProfile, type StudentRow } from "@/components/students/StudentProfile";
+import { graduatingClassLabel } from "@/lib/academic";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/students")({
@@ -41,6 +43,7 @@ function StudentsPage() {
   const { isStaff } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
   const [form, setForm] = useState({
     first: "",
     last: "",
@@ -55,7 +58,7 @@ function StudentsPage() {
       const { data, error } = await supabase
         .from("students")
         .select(
-          "id, first_name, last_name, grade_level, guardian_email, student_number, user_id, guardian_user_id",
+          "id, first_name, last_name, grade_level, guardian_email, student_number, chinese_name, user_id, guardian_user_id",
         )
         .order("last_name");
       if (error) throw error;
@@ -107,7 +110,7 @@ function StudentsPage() {
   });
 
   const filtered = students.filter((s) =>
-    `${s.first_name} ${s.last_name} ${s.student_number ?? ""}`
+    `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
@@ -203,6 +206,7 @@ function StudentsPage() {
             <tr>
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Grade</th>
+              <th className="px-4 py-3">Graduating class</th>
               <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Guardian email</th>
               <th className="px-4 py-3">Accounts</th>
@@ -211,18 +215,29 @@ function StudentsPage() {
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={6} className="px-4 py-6 text-muted-foreground">
                   No students found.
                 </td>
               </tr>
             ) : (
               filtered.map((s) => (
-                <tr key={s.id}>
+                <tr
+                  key={s.id}
+                  className="cursor-pointer hover:bg-secondary/40"
+                  onClick={() => setProfileStudent(s)}
+                >
                   <td className="px-4 py-3 font-medium">
                     {s.last_name}, {s.first_name}
+                    {s.chinese_name ? (
+                      <span className="ml-2 text-muted-foreground">{s.chinese_name}</span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">{s.grade_level}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-4 py-3">{graduatingClassLabel(s.grade_level)}</td>
+                  <td
+                    className="px-4 py-3 text-muted-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {isStaff ? (
                       <Input
                         key={s.student_number ?? ""}
@@ -240,7 +255,7 @@ function StudentsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{s.guardian_email ?? "—"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-muted-foreground">
                         {s.user_id ? "Student ✓" : "No student login"}
@@ -256,6 +271,13 @@ function StudentsPage() {
           </tbody>
         </table>
       </div>
+      <StudentProfile
+        student={profileStudent}
+        open={!!profileStudent}
+        onOpenChange={(o) => {
+          if (!o) setProfileStudent(null);
+        }}
+      />
     </AppShell>
   );
 }
