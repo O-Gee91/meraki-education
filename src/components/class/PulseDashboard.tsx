@@ -186,7 +186,9 @@ export function PulseDashboard({
     const buckets = Array.from({ length: 24 }, () => 0);
     for (const s of submissions) {
       if (!s.submitted_at) continue;
-      buckets[new Date(s.submitted_at).getHours()] += 1;
+      const h = new Date(s.submitted_at).getHours();
+      buckets[h] = (buckets[h] ?? 0) + 1;
+
     }
     return buckets;
   }, [submissions]);
