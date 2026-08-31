@@ -60,7 +60,7 @@ function buildSlips(accounts: ProvisionedAccount[]) {
     <tr><th>Temporary password</th><td>${escapeHtml(a.password ?? "unchanged — use existing password")}</td></tr>
     <tr><th>Email on file</th><td>${escapeHtml(realEmail(a.email) ?? "—  add your own email at first sign-in to receive notifications")}</td></tr>
   </table>
-  <p class="muted" style="margin:6px 0 0;">Sign in at the Meraki Education site, change this password right away, and register your email address so notifications reach you. Keep this slip private.</p>
+  <p class="muted" style="margin:6px 0 0;">Go to <strong>${escapeHtml(SITE_URL)}</strong> to sign in, change this password right away, and register your email address so notifications reach you. Keep this slip private.</p>
   </div>
 </section>`,
     )
