@@ -18,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionStudentAccounts } from "@/lib/roster.functions";
 import { isValidUsername, normalizeUsername, suggestUsername } from "@/lib/usernames";
+import { graduatingClassLabel } from "@/lib/academic";
 import { AccountResults, type ProvisionedAccount } from "./AccountResults";
 
 type ParsedRow = {
@@ -362,6 +363,7 @@ export function StudentImport({
                     <th className="p-2">Student</th>
                     <th className="p-2">Chinese name</th>
                     <th className="p-2">Grade</th>
+                    <th className="p-2">Graduating class</th>
                     <th className="p-2">Class</th>
                     <th className="p-2">Student ID</th>
                     <th className="p-2">Guardian email</th>
@@ -375,6 +377,9 @@ export function StudentImport({
                       </td>
                       <td className="p-2 text-muted-foreground">{r.chinese_name ?? "—"}</td>
                       <td className="p-2">{r.grade_level}</td>
+                      <td className="p-2 text-muted-foreground">
+                        {graduatingClassLabel(r.grade_level)}
+                      </td>
                       <td className="p-2 text-muted-foreground">{r.class_name ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.student_number ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.guardian_email ?? "—"}</td>
