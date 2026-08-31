@@ -272,6 +272,10 @@ export function StudentImport({
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
             First name, Last name, Grade, Student ID, Student email, Student username, Guardian
             username and Guardian email. An email address is required for anyone who gets a login.
+            {classId
+              ? " Imported students are enrolled in this class automatically, and rows without a grade use the class grade level."
+              : ""}
+
 
           </DialogDescription>
         </DialogHeader>
