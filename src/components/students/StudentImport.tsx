@@ -321,8 +321,10 @@ export function StudentImport({
           </DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
-            First name, Last name, Grade, Student ID, Student email, Student username, Guardian
-            username and Guardian email. An email address is required for anyone who gets a login.
+            First name, Last name, Grade, Class, Chinese name, Student ID, Student email, Student
+            username, Guardian username and Guardian email. An email address is required for anyone
+            who gets a login. A Class column enrolls each student into the class with that exact
+            name.
             {classId
               ? " Imported students are enrolled in this class automatically, and rows without a grade use the class grade level."
               : ""}
@@ -358,7 +360,9 @@ export function StudentImport({
                 <thead className="bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="p-2">Student</th>
+                    <th className="p-2">Chinese name</th>
                     <th className="p-2">Grade</th>
+                    <th className="p-2">Class</th>
                     <th className="p-2">Student ID</th>
                     <th className="p-2">Guardian email</th>
                   </tr>
@@ -369,7 +373,9 @@ export function StudentImport({
                       <td className="p-2 font-medium">
                         {r.last_name}, {r.first_name}
                       </td>
+                      <td className="p-2 text-muted-foreground">{r.chinese_name ?? "—"}</td>
                       <td className="p-2">{r.grade_level}</td>
+                      <td className="p-2 text-muted-foreground">{r.class_name ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.student_number ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.guardian_email ?? "—"}</td>
                     </tr>
