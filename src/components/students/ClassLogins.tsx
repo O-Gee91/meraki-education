@@ -159,6 +159,22 @@ export function ClassLogins({
         )}
 
 
+        <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={resetExisting}
+            onChange={(e) => setResetExisting(e.target.checked)}
+          />
+          <span>
+            Re-issue passwords for accounts that already exist
+            <span className="block text-xs text-muted-foreground">
+              Use this when slips were printed with a mistake — everyone in the class gets a fresh
+              temporary password and their old one stops working.
+            </span>
+          </span>
+        </label>
+
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 
         <DialogFooter>
