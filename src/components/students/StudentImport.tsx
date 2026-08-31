@@ -198,6 +198,15 @@ export function StudentImport({
         .select("id, first_name, last_name, guardian_email");
       if (error) throw error;
 
+      if (classId && data && data.length > 0) {
+        const { error: enrollError } = await supabase
+          .from("enrollments")
+          .insert(data.map((s) => ({ class_id: classId, student_id: s.id })));
+        if (enrollError) throw enrollError;
+      }
+
+
+
       let created: ProvisionedAccount[] = [];
       if (createLogins && data) {
         const entries = data
