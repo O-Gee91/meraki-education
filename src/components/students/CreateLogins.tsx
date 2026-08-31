@@ -157,6 +157,23 @@ export function CreateLogins({ student }: Props) {
         </div>
 
 
+        {student.user_id || student.guardian_user_id ? (
+          <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={resetExisting}
+              onChange={(e) => setResetExisting(e.target.checked)}
+            />
+            <span>
+              Re-issue a temporary password for the existing account(s)
+              <span className="block text-xs text-muted-foreground">
+                Prints a new slip and replaces the old password.
+              </span>
+            </span>
+          </label>
+        ) : null}
+
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 
         {student.user_id || student.guardian_user_id ? (
