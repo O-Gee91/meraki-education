@@ -108,6 +108,8 @@ function normalizeRow(
       last_name: last,
       grade_level: grade,
       student_number: (mapped["student_number"] ?? "").slice(0, 20) || null,
+      chinese_name: (mapped["chinese_name"] ?? "").slice(0, 120) || null,
+      class_name: (mapped["class_name"] ?? "").slice(0, 120) || null,
       guardian_email: email.slice(0, 255) || null,
       student_email: studentEmail.slice(0, 255) || null,
       student_username: studentUsername || null,
