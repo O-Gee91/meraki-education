@@ -44,6 +44,8 @@ function StudentsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+
   const [form, setForm] = useState({
     first: "",
     last: "",
