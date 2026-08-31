@@ -64,7 +64,10 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   "parent username": "guardian_username",
 };
 
-function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: string } {
+function normalizeRow(
+  raw: Record<string, unknown>,
+  fallbackGrade?: number | null,
+): { row?: ParsedRow; error?: string } {
   const mapped: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     const field = HEADER_MAP[String(key).trim().toLowerCase()];
@@ -73,8 +76,10 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   const first = (mapped["first_name"] ?? "").slice(0, 60);
   const last = (mapped["last_name"] ?? "").slice(0, 60);
   if (first.length < 2 || last.length < 2) return { error: "missing first or last name" };
-  const grade = Number(String(mapped["grade_level"] ?? "").replace(/[^\d]/g, ""));
+  const grade =
+    Number(String(mapped["grade_level"] ?? "").replace(/[^\d]/g, "")) || fallbackGrade || 0;
   if (!grade || grade < 1 || grade > 12) return { error: `invalid grade for ${first} ${last}` };
+
   const email = (mapped["guardian_email"] ?? "").toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: `invalid guardian email for ${first} ${last}` };
@@ -101,10 +106,31 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   };
 }
 
-export function StudentImport() {
+export function StudentImport({
+  classId,
+  className,
+  gradeLevel,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
+  triggerLabel = "Import from Excel",
+}: {
+  classId?: string;
+  className?: string;
+  gradeLevel?: number | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+  triggerLabel?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
@@ -121,6 +147,7 @@ export function StudentImport() {
     if (inputRef.current) inputRef.current.value = "";
   };
 
+
   const handleFile = async (file: File) => {
     setParsing(true);
     try {
@@ -134,7 +161,7 @@ export function StudentImport() {
       const good: ParsedRow[] = [];
       const bad: string[] = [];
       raw.forEach((r, i) => {
-        const { row, error } = normalizeRow(r);
+        const { row, error } = normalizeRow(r, gradeLevel);
         if (row) good.push(row);
         else bad.push(`Row ${i + 2}: ${error}`);
       });
@@ -171,6 +198,15 @@ export function StudentImport() {
         .select("id, first_name, last_name, guardian_email");
       if (error) throw error;
 
+      if (classId && data && data.length > 0) {
+        const { error: enrollError } = await supabase
+          .from("enrollments")
+          .insert(data.map((s) => ({ class_id: classId, student_id: s.id })));
+        if (enrollError) throw enrollError;
+      }
+
+
+
       let created: ProvisionedAccount[] = [];
       if (createLogins && data) {
         const entries = data
@@ -199,6 +235,10 @@ export function StudentImport() {
     onSuccess: ({ count, accounts: created }) => {
       toast.success(`Imported ${count} student${count === 1 ? "" : "s"}`);
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      if (classId) {
+        queryClient.invalidateQueries({ queryKey: ["roster", classId] });
+        queryClient.invalidateQueries({ queryKey: ["enrollments", classId] });
+      }
       if (created.length > 0) {
         setAccounts(created);
         setRows([]);
@@ -218,16 +258,25 @@ export function StudentImport() {
         if (!next) reset();
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="outline">Import from Excel</Button>
-      </DialogTrigger>
+      {showTrigger ? (
+        <DialogTrigger asChild>
+          <Button variant="outline">{triggerLabel}</Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import students from a spreadsheet</DialogTitle>
+          <DialogTitle>
+            {className ? `Add students to ${className}` : "Import students from a spreadsheet"}
+          </DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
             First name, Last name, Grade, Student ID, Student email, Student username, Guardian
             username and Guardian email. An email address is required for anyone who gets a login.
+            {classId
+              ? " Imported students are enrolled in this class automatically, and rows without a grade use the class grade level."
+              : ""}
+
+
           </DialogDescription>
         </DialogHeader>
 
