@@ -873,6 +873,71 @@ function RosterTab({
           <Button onClick={() => enroll.mutate()} disabled={enroll.isPending}>
             Add to class
           </Button>
+          <Dialog open={newOpen} onOpenChange={setNewOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">New student</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add a new student{className ? ` to ${className}` : ""}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-first">First name</Label>
+                    <Input
+                      id="ns-first"
+                      value={newForm.first}
+                      maxLength={60}
+                      onChange={(e) => setNewForm({ ...newForm, first: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-last">Last name</Label>
+                    <Input
+                      id="ns-last"
+                      value={newForm.last}
+                      maxLength={60}
+                      onChange={(e) => setNewForm({ ...newForm, last: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-grade">Grade level</Label>
+                    <Input
+                      id="ns-grade"
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={newForm.grade}
+                      onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-number">Student ID (optional)</Label>
+                    <Input
+                      id="ns-number"
+                      value={newForm.number}
+                      maxLength={40}
+                      onChange={(e) => setNewForm({ ...newForm, number: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => createAndEnroll.mutate()} disabled={createAndEnroll.isPending}>
+                  Create and enroll
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <StudentImport
+            classId={classId}
+            className={className}
+            gradeLevel={gradeLevel}
+            triggerLabel="Import from Excel"
+          />
         </div>
       )}
 
