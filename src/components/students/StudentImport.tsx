@@ -203,6 +203,7 @@ export function StudentImport({
               student_email: _email,
               student_username: _su,
               guardian_username: _gu,
+              class_name: _cn,
               ...rest
             }) => rest,
           ),
@@ -215,6 +216,44 @@ export function StudentImport({
           .from("enrollments")
           .insert(data.map((s) => ({ class_id: classId, student_id: s.id })));
         if (enrollError) throw enrollError;
+      }
+
+      // Enroll students into classes named in the "Class" column (matched by
+      // name, case-insensitive, against classes the user can see).
+      const classNames = [...new Set(rows.map((r) => r.class_name).filter((n): n is string => !!n))];
+      if (data && classNames.length > 0) {
+        const { data: classes, error: classError } = await supabase
+          .from("classes")
+          .select("id, name");
+        if (classError) throw classError;
+        const byName = new Map(
+          (classes ?? []).map((c) => [c.name.trim().toLowerCase(), c.id] as const),
+        );
+        const enrollments: { class_id: string; student_id: string }[] = [];
+        const unmatched = new Set<string>();
+        rows.forEach((row, i) => {
+          if (!row.class_name) return;
+          const studentId = data[i]?.id;
+          const target = byName.get(row.class_name.trim().toLowerCase());
+          if (!studentId) return;
+          if (!target) {
+            unmatched.add(row.class_name);
+            return;
+          }
+          if (classId && target === classId) return; // already enrolled above
+          enrollments.push({ class_id: target, student_id: studentId });
+        });
+        if (enrollments.length > 0) {
+          const { error: enrollError } = await supabase
+            .from("enrollments")
+            .upsert(enrollments, { onConflict: "class_id,student_id", ignoreDuplicates: true });
+          if (enrollError) throw enrollError;
+        }
+        if (unmatched.size > 0) {
+          toast.warning(
+            `No class matched: ${[...unmatched].slice(0, 5).join(", ")}${unmatched.size > 5 ? "…" : ""}. Those students were imported without a class enrollment.`,
+          );
+        }
       }
 
 
