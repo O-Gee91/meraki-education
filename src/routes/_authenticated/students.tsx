@@ -234,7 +234,10 @@ function StudentsPage() {
                   </td>
                   <td className="px-4 py-3">{s.grade_level}</td>
                   <td className="px-4 py-3">{graduatingClassLabel(s.grade_level)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td
+                    className="px-4 py-3 text-muted-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {isStaff ? (
                       <Input
                         key={s.student_number ?? ""}
@@ -252,7 +255,7 @@ function StudentsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{s.guardian_email ?? "—"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-muted-foreground">
                         {s.user_id ? "Student ✓" : "No student login"}
@@ -268,6 +271,13 @@ function StudentsPage() {
           </tbody>
         </table>
       </div>
+      <StudentProfile
+        student={profileStudent}
+        open={!!profileStudent}
+        onOpenChange={(o) => {
+          if (!o) setProfileStudent(null);
+        }}
+      />
     </AppShell>
   );
 }
