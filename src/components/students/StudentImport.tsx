@@ -25,6 +25,8 @@ type ParsedRow = {
   last_name: string;
   grade_level: number;
   student_number: string | null;
+  chinese_name: string | null;
+  class_name: string | null;
   guardian_email: string | null;
   student_email: string | null;
   student_username: string | null;
@@ -50,6 +52,14 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   "student id": "student_number",
   studentid: "student_number",
   "student number": "student_number",
+  chinese: "chinese_name",
+  "chinese name": "chinese_name",
+  "中文名": "chinese_name",
+  "中文姓名": "chinese_name",
+  class: "class_name",
+  "class name": "class_name",
+  classname: "class_name",
+  homeroom: "class_name",
   guardian: "guardian_email",
   "student email": "student_email",
   studentemail: "student_email",
