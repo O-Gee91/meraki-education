@@ -55,7 +55,8 @@ function buildSlips(accounts: ProvisionedAccount[]) {
   <div class="box" style="margin-bottom:16px;">
   <h2 style="margin:0 0 6px;">${escapeHtml(a.student)} — ${a.role === "student" ? "Student account" : "Parent / guardian account"}</h2>
   <table>
-    <tr><th style="width:38%">Sign in with</th><td>${escapeHtml(a.username ?? a.email)}</td></tr>
+    <tr><th style="width:38%">Website</th><td><strong>${escapeHtml(SITE_URL)}</strong></td></tr>
+    <tr><th>Sign in with</th><td>${escapeHtml(a.username ?? a.email)}</td></tr>
     <tr><th>Temporary password</th><td>${escapeHtml(a.password ?? "unchanged — use existing password")}</td></tr>
     <tr><th>Email on file</th><td>${escapeHtml(realEmail(a.email) ?? "—  add your own email at first sign-in to receive notifications")}</td></tr>
   </table>
