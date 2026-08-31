@@ -101,10 +101,31 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   };
 }
 
-export function StudentImport() {
+export function StudentImport({
+  classId,
+  className,
+  gradeLevel,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
+  triggerLabel = "Import from Excel",
+}: {
+  classId?: string;
+  className?: string;
+  gradeLevel?: number | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+  triggerLabel?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
@@ -120,6 +141,7 @@ export function StudentImport() {
     setAccounts([]);
     if (inputRef.current) inputRef.current.value = "";
   };
+
 
   const handleFile = async (file: File) => {
     setParsing(true);
