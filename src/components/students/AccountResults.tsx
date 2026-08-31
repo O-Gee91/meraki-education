@@ -33,6 +33,9 @@ function realEmail(email: string) {
   return email && !email.endsWith("@meraki.local") ? email : null;
 }
 
+/** Address printed on every slip so families know where to sign in. */
+export const SITE_URL = "https://meraki-education.lovable.app";
+
 function buildSlips(accounts: ProvisionedAccount[]) {
   const usable = accounts.filter((a) => a.status !== "failed");
   const slips = usable
