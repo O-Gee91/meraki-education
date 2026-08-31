@@ -134,6 +134,23 @@ export function MoveStudentsButton({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">Filter</span>
+            {[
+              { key: "all", label: "All classes" },
+              { key: "homeroom", label: "Homerooms" },
+              ...grades.map((g) => ({ key: String(g), label: `Grade ${g}` })),
+            ].map((f) => (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={filter === f.key ? "default" : "outline"}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading your classes…</p>
           ) : options.length === 0 ? (
