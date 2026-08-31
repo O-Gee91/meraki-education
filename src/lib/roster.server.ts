@@ -152,9 +152,21 @@ export async function provisionRosterAccounts(
           // to register a real email the first time they sign in.
           await admin.from("profiles").update({ email: null }).eq("id", userId);
         }
-      } else if (target.contactEmail) {
-        // Keep the contact address current so notifications reach them.
-        await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
+      } else {
+        if (target.contactEmail) {
+          // Keep the contact address current so notifications reach them.
+          await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
+        }
+        if (entry.reset_existing) {
+          // Re-issuing slips for a group: give the existing account a fresh
+          // temporary password so the printed slip is valid again.
+          password = tempPassword();
+          const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password });
+          if (pwError) {
+            fail(pwError.message);
+            continue;
+          }
+        }
       }
 
       const update =
