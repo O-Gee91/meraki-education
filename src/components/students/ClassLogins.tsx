@@ -40,6 +40,7 @@ export function ClassLogins({
   const provision = useServerFn(provisionStudentAccounts);
   const [open, setOpen] = useState(false);
   const [classId, setClassId] = useState(fixedClassId ?? "");
+  const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
 
 
