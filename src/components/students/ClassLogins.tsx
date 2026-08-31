@@ -90,6 +90,9 @@ export function ClassLogins({
             : uniqueUsername(`${base}.parent`.slice(0, 27), used),
           // Email stays blank — each person registers their own at first sign-in.
           guardian_email: null,
+          student_user_id: s.user_id,
+          guardian_user_id: s.guardian_user_id,
+          reset_existing: resetExisting,
         };
       });
 
