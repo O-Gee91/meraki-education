@@ -58,7 +58,7 @@ function StudentsPage() {
       const { data, error } = await supabase
         .from("students")
         .select(
-          "id, first_name, last_name, grade_level, guardian_email, student_number, user_id, guardian_user_id",
+          "id, first_name, last_name, grade_level, guardian_email, student_number, chinese_name, user_id, guardian_user_id",
         )
         .order("last_name");
       if (error) throw error;
@@ -110,7 +110,7 @@ function StudentsPage() {
   });
 
   const filtered = students.filter((s) =>
-    `${s.first_name} ${s.last_name} ${s.student_number ?? ""}`
+    `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
