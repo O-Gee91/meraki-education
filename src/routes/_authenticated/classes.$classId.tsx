@@ -319,7 +319,12 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="grading">
-          <GradingSetupTab classId={classId} isStaff={isStaff} setup={setup} />
+          <GradingSetupTab
+            classId={classId}
+            isStaff={isStaff}
+            setup={setup}
+            className={klass?.name ?? "This class"}
+          />
         </TabsContent>
 
 

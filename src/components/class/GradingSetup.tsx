@@ -21,15 +21,18 @@ import {
   type SpecialMark,
   totalWeight,
 } from "@/lib/grading";
+import { GradingLibrary } from "@/components/class/GradingLibrary";
 
 export function GradingSetupTab({
   classId,
   isStaff,
   setup,
+  className = "This class",
 }: {
   classId: string;
   isStaff: boolean;
   setup: GradingSetup;
+  className?: string;
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<GradingSetup>(setup);
@@ -367,6 +370,8 @@ export function GradingSetupTab({
           Discard changes
         </Button>
       </div>
+
+      <GradingLibrary classId={classId} className={className} />
     </div>
   );
 
