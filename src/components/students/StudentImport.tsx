@@ -116,8 +116,8 @@ export function StudentImport({
   triggerLabel = "Import from Excel",
 }: {
   classId?: string;
-  className?: string;
-  gradeLevel?: number | null;
+  className?: string | undefined;
+  gradeLevel?: number | null | undefined;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTrigger?: boolean;
