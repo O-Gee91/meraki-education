@@ -1134,6 +1134,9 @@ function RosterTab({
                 )}
 
               </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}
