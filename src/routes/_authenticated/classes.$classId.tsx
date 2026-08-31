@@ -1018,14 +1018,23 @@ function RosterTab({
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>
                 {isStaff && (
-                  <ConfirmDeleteButton
-                    label="Remove"
-                    title="Remove this student from the class?"
-                    description="They will be unenrolled from this class. Their account and grades are not affected."
-                    disabled={removeMany.isPending}
-                    onConfirm={() => removeMany.mutate([r.id])}
-                  />
+                  <>
+                    <MoveStudentsButton
+                      classId={classId}
+                      enrollmentIds={[r.id]}
+                      studentIds={[r.student_id]}
+                      triggerLabel="Add / move"
+                    />
+                    <ConfirmDeleteButton
+                      label="Drop"
+                      title="Drop this student from the class?"
+                      description="They are removed from this roster only. Their grades, submissions and attendance for this class are kept."
+                      disabled={removeMany.isPending}
+                      onConfirm={() => removeMany.mutate([r.id])}
+                    />
+                  </>
                 )}
+
               </div>
             </div>
           ))
