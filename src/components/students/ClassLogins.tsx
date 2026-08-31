@@ -45,6 +45,7 @@ export function ClassLogins({
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes", "login-slips"],
+    enabled: !fixedClassId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
