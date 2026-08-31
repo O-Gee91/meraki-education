@@ -1791,6 +1791,7 @@ export type Database = {
       }
       teaches_class: { Args: { _class_id: string }; Returns: boolean }
       teaches_grade: { Args: { _grade: number }; Returns: boolean }
+      teaches_student_grade: { Args: { _student_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "parent"

@@ -54,7 +54,7 @@ function BehaviorPage() {
   return (
     <AppShell
       title="Behavior & strikes"
-      description="Recognition, concerns and a three-strike system that schedules detention automatically."
+      description="Shared with every teacher of the grade — recognition, concerns and a three-strike system that schedules detention automatically."
     >
       <Tabs defaultValue="log">
         <TabsList>
@@ -82,7 +82,9 @@ function useNotes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("behavior_notes")
-        .select("id, kind, notes, date, student_id, students(first_name, last_name)")
+        .select(
+          "id, kind, notes, date, student_id, students(first_name, last_name, grade_level)",
+        )
         .order("date", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -95,6 +97,22 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
   const { data: notes = [] } = useNotes();
+  const [gradeFilter, setGradeFilter] = useState("all");
+
+  const grades = useMemo(
+    () =>
+      [...new Set(notes.map((n) => n.students?.grade_level).filter((g): g is number => !!g))].sort(
+        (a, b) => a - b,
+      ),
+    [notes],
+  );
+  const visibleNotes = useMemo(
+    () =>
+      gradeFilter === "all"
+        ? notes
+        : notes.filter((n) => String(n.students?.grade_level ?? "") === gradeFilter),
+    [notes, gradeFilter],
+  );
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -102,7 +120,7 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, grade_level")
         .order("last_name");
       if (error) throw error;
       return data;
@@ -155,6 +173,7 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
                   {students.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.last_name}, {s.first_name}
+                      {s.grade_level ? ` · Grade ${s.grade_level}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -209,10 +228,26 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       <section
         className={`panel divide-y divide-border ${isStaff ? "lg:col-span-2" : "lg:col-span-3"}`}
       >
-        {notes.length === 0 ? (
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <p className="text-sm font-semibold">Grade-wide behavior log</p>
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="ml-auto w-40" aria-label="Filter by grade">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All my grades</SelectItem>
+              {grades.map((g) => (
+                <SelectItem key={g} value={String(g)}>
+                  Grade {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {visibleNotes.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No behavior notes recorded.</p>
         ) : (
-          notes.map((n) => <NoteRow key={n.id} note={n} isStaff={isStaff} />)
+          visibleNotes.map((n) => <NoteRow key={n.id} note={n} isStaff={isStaff} />)
         )}
       </section>
     </div>
@@ -225,7 +260,7 @@ type NoteRecord = {
   notes: string | null;
   date: string;
   student_id: string;
-  students: { first_name: string; last_name: string } | null;
+  students: { first_name: string; last_name: string; grade_level?: number | null } | null;
 };
 
 function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
@@ -322,7 +357,10 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
         <span className="text-sm font-medium">
           {note.students?.last_name}, {note.students?.first_name}
         </span>
-        <span className="text-xs text-muted-foreground">{formatDate(note.date)}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDate(note.date)}
+          {note.students?.grade_level ? ` · Grade ${note.students.grade_level}` : ""}
+        </span>
         {isStaff && (
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
