@@ -318,10 +318,9 @@ export function StudentImport({
     onSuccess: ({ count, accounts: created }) => {
       toast.success(`Imported ${count} student${count === 1 ? "" : "s"}`);
       queryClient.invalidateQueries({ queryKey: ["students"] });
-      if (classId) {
-        queryClient.invalidateQueries({ queryKey: ["roster", classId] });
-        queryClient.invalidateQueries({ queryKey: ["enrollments", classId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+
       if (created.length > 0) {
         setAccounts(created);
         setRows([]);
