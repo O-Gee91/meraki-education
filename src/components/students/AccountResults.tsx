@@ -33,6 +33,9 @@ function realEmail(email: string) {
   return email && !email.endsWith("@meraki.local") ? email : null;
 }
 
+/** Address printed on every slip so families know where to sign in. */
+export const SITE_URL = "https://meraki-education.lovable.app";
+
 function buildSlips(accounts: ProvisionedAccount[]) {
   const usable = accounts.filter((a) => a.status !== "failed");
   const slips = usable
@@ -52,11 +55,12 @@ function buildSlips(accounts: ProvisionedAccount[]) {
   <div class="box" style="margin-bottom:16px;">
   <h2 style="margin:0 0 6px;">${escapeHtml(a.student)} — ${a.role === "student" ? "Student account" : "Parent / guardian account"}</h2>
   <table>
-    <tr><th style="width:38%">Sign in with</th><td>${escapeHtml(a.username ?? a.email)}</td></tr>
+    <tr><th style="width:38%">Website</th><td><strong>${escapeHtml(SITE_URL)}</strong></td></tr>
+    <tr><th>Sign in with</th><td>${escapeHtml(a.username ?? a.email)}</td></tr>
     <tr><th>Temporary password</th><td>${escapeHtml(a.password ?? "unchanged — use existing password")}</td></tr>
     <tr><th>Email on file</th><td>${escapeHtml(realEmail(a.email) ?? "—  add your own email at first sign-in to receive notifications")}</td></tr>
   </table>
-  <p class="muted" style="margin:6px 0 0;">Sign in at the Meraki Education site, change this password right away, and register your email address so notifications reach you. Keep this slip private.</p>
+  <p class="muted" style="margin:6px 0 0;">Go to <strong>${escapeHtml(SITE_URL)}</strong> to sign in, change this password right away, and register your email address so notifications reach you. Keep this slip private.</p>
   </div>
 </section>`,
     )
@@ -73,7 +77,8 @@ export function AccountResults({ accounts }: { accounts: ProvisionedAccount[] })
     <div className="space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs text-muted-foreground">
-        Print the slips below and hand them out — temporary passwords are only shown once.
+        Print the slips below and hand them out — temporary passwords are only shown once. Each slip
+        lists the sign-in address <span className="font-mono">{SITE_URL}</span>.
       </p>
       <div className="flex gap-2">
         <Button
