@@ -25,6 +25,8 @@ type ParsedRow = {
   last_name: string;
   grade_level: number;
   student_number: string | null;
+  chinese_name: string | null;
+  class_name: string | null;
   guardian_email: string | null;
   student_email: string | null;
   student_username: string | null;
@@ -50,6 +52,14 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   "student id": "student_number",
   studentid: "student_number",
   "student number": "student_number",
+  chinese: "chinese_name",
+  "chinese name": "chinese_name",
+  "中文名": "chinese_name",
+  "中文姓名": "chinese_name",
+  class: "class_name",
+  "class name": "class_name",
+  classname: "class_name",
+  homeroom: "class_name",
   guardian: "guardian_email",
   "student email": "student_email",
   studentemail: "student_email",
@@ -98,6 +108,8 @@ function normalizeRow(
       last_name: last,
       grade_level: grade,
       student_number: (mapped["student_number"] ?? "").slice(0, 20) || null,
+      chinese_name: (mapped["chinese_name"] ?? "").slice(0, 120) || null,
+      class_name: (mapped["class_name"] ?? "").slice(0, 120) || null,
       guardian_email: email.slice(0, 255) || null,
       student_email: studentEmail.slice(0, 255) || null,
       student_username: studentUsername || null,
@@ -191,6 +203,7 @@ export function StudentImport({
               student_email: _email,
               student_username: _su,
               guardian_username: _gu,
+              class_name: _cn,
               ...rest
             }) => rest,
           ),
@@ -203,6 +216,44 @@ export function StudentImport({
           .from("enrollments")
           .insert(data.map((s) => ({ class_id: classId, student_id: s.id })));
         if (enrollError) throw enrollError;
+      }
+
+      // Enroll students into classes named in the "Class" column (matched by
+      // name, case-insensitive, against classes the user can see).
+      const classNames = [...new Set(rows.map((r) => r.class_name).filter((n): n is string => !!n))];
+      if (data && classNames.length > 0) {
+        const { data: classes, error: classError } = await supabase
+          .from("classes")
+          .select("id, name");
+        if (classError) throw classError;
+        const byName = new Map(
+          (classes ?? []).map((c) => [c.name.trim().toLowerCase(), c.id] as const),
+        );
+        const enrollments: { class_id: string; student_id: string }[] = [];
+        const unmatched = new Set<string>();
+        rows.forEach((row, i) => {
+          if (!row.class_name) return;
+          const studentId = data[i]?.id;
+          const target = byName.get(row.class_name.trim().toLowerCase());
+          if (!studentId) return;
+          if (!target) {
+            unmatched.add(row.class_name);
+            return;
+          }
+          if (classId && target === classId) return; // already enrolled above
+          enrollments.push({ class_id: target, student_id: studentId });
+        });
+        if (enrollments.length > 0) {
+          const { error: enrollError } = await supabase
+            .from("enrollments")
+            .upsert(enrollments, { onConflict: "class_id,student_id", ignoreDuplicates: true });
+          if (enrollError) throw enrollError;
+        }
+        if (unmatched.size > 0) {
+          toast.warning(
+            `No class matched: ${[...unmatched].slice(0, 5).join(", ")}${unmatched.size > 5 ? "…" : ""}. Those students were imported without a class enrollment.`,
+          );
+        }
       }
 
 
@@ -270,8 +321,10 @@ export function StudentImport({
           </DialogTitle>
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
-            First name, Last name, Grade, Student ID, Student email, Student username, Guardian
-            username and Guardian email. An email address is required for anyone who gets a login.
+            First name, Last name, Grade, Class, Chinese name, Student ID, Student email, Student
+            username, Guardian username and Guardian email. An email address is required for anyone
+            who gets a login. A Class column enrolls each student into the class with that exact
+            name.
             {classId
               ? " Imported students are enrolled in this class automatically, and rows without a grade use the class grade level."
               : ""}
@@ -307,7 +360,9 @@ export function StudentImport({
                 <thead className="bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="p-2">Student</th>
+                    <th className="p-2">Chinese name</th>
                     <th className="p-2">Grade</th>
+                    <th className="p-2">Class</th>
                     <th className="p-2">Student ID</th>
                     <th className="p-2">Guardian email</th>
                   </tr>
@@ -318,7 +373,9 @@ export function StudentImport({
                       <td className="p-2 font-medium">
                         {r.last_name}, {r.first_name}
                       </td>
+                      <td className="p-2 text-muted-foreground">{r.chinese_name ?? "—"}</td>
                       <td className="p-2">{r.grade_level}</td>
+                      <td className="p-2 text-muted-foreground">{r.class_name ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.student_number ?? "—"}</td>
                       <td className="p-2 text-muted-foreground">{r.guardian_email ?? "—"}</td>
                     </tr>

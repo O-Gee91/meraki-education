@@ -1645,6 +1645,7 @@ export type Database = {
       }
       students: {
         Row: {
+          chinese_name: string | null
           created_at: string
           first_name: string
           grade_level: number
@@ -1656,6 +1657,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          chinese_name?: string | null
           created_at?: string
           first_name: string
           grade_level?: number
@@ -1667,6 +1669,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          chinese_name?: string | null
           created_at?: string
           first_name?: string
           grade_level?: number
