@@ -54,7 +54,20 @@ export function MoveStudentsButton({
     },
   });
 
-  const options = classes.filter((c) => c.id !== classId);
+  const [filter, setFilter] = useState<string>("all");
+
+  const others = classes.filter((c) => c.id !== classId);
+  const grades = [...new Set(others.map((c) => c.grade_level).filter((g): g is number => !!g))].sort(
+    (a, b) => a - b,
+  );
+  const isHomeroom = (c: ClassRow) =>
+    `${c.name} ${c.subject ?? ""}`.toLowerCase().includes("homeroom");
+  const options =
+    filter === "all"
+      ? others
+      : filter === "homeroom"
+        ? others.filter(isHomeroom)
+        : others.filter((c) => String(c.grade_level) === filter);
 
   const move = useMutation({
     mutationFn: async () => {
