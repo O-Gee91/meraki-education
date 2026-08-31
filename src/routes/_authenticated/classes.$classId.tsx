@@ -809,6 +809,39 @@ function RosterTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createAndEnroll = useMutation({
+    mutationFn: async () => {
+      const first = newForm.first.trim();
+      const last = newForm.last.trim();
+      if (first.length < 2 || last.length < 2) throw new Error("First and last name are required");
+      const grade = Number(newForm.grade);
+      if (!grade || grade < 1 || grade > 12) throw new Error("Enter a grade level (1–12)");
+      const { data, error } = await supabase
+        .from("students")
+        .insert({
+          first_name: first.slice(0, 60),
+          last_name: last.slice(0, 60),
+          grade_level: grade,
+          student_number: newForm.number.trim().slice(0, 40) || null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      const { error: enrError } = await supabase
+        .from("enrollments")
+        .insert({ class_id: classId, student_id: data.id });
+      if (enrError) throw enrError;
+    },
+    onSuccess: () => {
+      toast.success("Student created and added to class");
+      setNewOpen(false);
+      setNewForm(blankNew);
+      queryClient.invalidateQueries({ queryKey: ["roster", classId] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const enrolledIds = new Set(roster.map((r) => r.student_id));
   const available = students.filter((s) => !enrolledIds.has(s.id));
 
@@ -817,7 +850,7 @@ function RosterTab({
       {isStaff && (
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-64 space-y-1.5">
-            <Label htmlFor="student">Add student</Label>
+            <Label htmlFor="student">Add existing student</Label>
             <Select value={selected} onValueChange={setSelected}>
               <SelectTrigger id="student">
                 <SelectValue placeholder="Choose a student" />
