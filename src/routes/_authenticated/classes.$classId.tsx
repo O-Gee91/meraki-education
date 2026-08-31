@@ -974,22 +974,30 @@ function RosterTab({
             />
             Select all ({pickedIds.size} selected)
           </label>
+          <MoveStudentsButton
+            classId={classId}
+            enrollmentIds={[...pickedIds]}
+            studentIds={roster.filter((r) => pickedIds.has(r.id)).map((r) => r.student_id)}
+            triggerLabel="Add / move to other classes"
+            disabled={pickedIds.size === 0}
+          />
           <ConfirmDeleteButton
-            label="Remove selected"
-            title={`Remove ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
-            description="They will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            label="Drop selected"
+            title={`Drop ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
+            description="They are removed from this roster only. Their grades, submissions and attendance for this class are kept, along with their accounts and other classes."
             disabled={pickedIds.size === 0 || removeMany.isPending}
             onConfirm={() => removeMany.mutate([...pickedIds])}
           />
           <ConfirmDeleteButton
-            label="Remove all students"
-            title={`Remove all ${roster.length} students from this class?`}
-            description="Every student will be unenrolled from this class. Their accounts, grades, and other classes are not affected."
+            label="Drop all students"
+            title={`Drop all ${roster.length} students from this class?`}
+            description="Every student is removed from this roster only. Their grades, submissions and attendance for this class are kept, along with their accounts and other classes."
             disabled={removeMany.isPending}
             onConfirm={() => removeMany.mutate(roster.map((r) => r.id))}
           />
         </div>
       )}
+
 
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
