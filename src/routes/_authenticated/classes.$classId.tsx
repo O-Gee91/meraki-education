@@ -39,6 +39,8 @@ import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
+import { PulseDashboard } from "@/components/class/PulseDashboard";
+
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 import { StudentImport } from "@/components/students/StudentImport";
@@ -233,7 +235,19 @@ function ClassDetailPage() {
 
 
         <TabsContent value="gradebook">
+          <PulseDashboard
+            classId={classId}
+            className={klass?.name ?? "this class"}
+            roster={roster}
+            assignments={assignments}
+            grades={grades}
+            setup={setup}
+            isStaff={isStaff}
+            useIds={useIds}
+            studentAverage={studentAverage}
+          />
           <div className="panel mt-4 overflow-x-auto p-0">
+
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
                 Add students to the roster and create assignments to see the gradebook.
