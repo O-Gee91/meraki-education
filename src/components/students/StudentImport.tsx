@@ -64,7 +64,10 @@ const HEADER_MAP: Record<string, keyof ParsedRow> = {
   "parent username": "guardian_username",
 };
 
-function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: string } {
+function normalizeRow(
+  raw: Record<string, unknown>,
+  fallbackGrade?: number | null,
+): { row?: ParsedRow; error?: string } {
   const mapped: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     const field = HEADER_MAP[String(key).trim().toLowerCase()];
@@ -73,8 +76,10 @@ function normalizeRow(raw: Record<string, unknown>): { row?: ParsedRow; error?: 
   const first = (mapped["first_name"] ?? "").slice(0, 60);
   const last = (mapped["last_name"] ?? "").slice(0, 60);
   if (first.length < 2 || last.length < 2) return { error: "missing first or last name" };
-  const grade = Number(String(mapped["grade_level"] ?? "").replace(/[^\d]/g, ""));
+  const grade =
+    Number(String(mapped["grade_level"] ?? "").replace(/[^\d]/g, "")) || fallbackGrade || 0;
   if (!grade || grade < 1 || grade > 12) return { error: `invalid grade for ${first} ${last}` };
+
   const email = (mapped["guardian_email"] ?? "").toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: `invalid guardian email for ${first} ${last}` };
