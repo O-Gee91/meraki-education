@@ -759,8 +759,8 @@ function RosterTab({
   isStaff: boolean;
   roster: RosterRow[];
   useIds: boolean;
-  className?: string;
-  gradeLevel?: number | null;
+  className?: string | undefined;
+  gradeLevel?: number | null | undefined;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
