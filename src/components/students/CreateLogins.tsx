@@ -43,6 +43,7 @@ export function CreateLogins({ student }: Props) {
   const [studentEmail, setStudentEmail] = useState("");
   // Left blank on purpose — students/parents register their own email at first sign-in.
   const [guardianEmail, setGuardianEmail] = useState("");
+  const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
 
   const run = useMutation({
@@ -57,10 +58,17 @@ export function CreateLogins({ student }: Props) {
               student_id: student.id,
               first_name: student.first_name,
               last_name: student.last_name,
-              student_username: studentUsername.trim() || null,
+              // Existing accounts are matched by id so a new username never
+              // creates a second account for the same person.
+              student_username: student.user_id ? null : studentUsername.trim() || null,
               student_email: studentEmail.trim() || null,
-              guardian_username: guardianUsername.trim() || null,
+              guardian_username: student.guardian_user_id
+                ? null
+                : guardianUsername.trim() || null,
               guardian_email: guardianEmail.trim() || null,
+              student_user_id: student.user_id ?? null,
+              guardian_user_id: student.guardian_user_id ?? null,
+              reset_existing: resetExisting,
             },
           ],
         },
@@ -148,6 +156,23 @@ export function CreateLogins({ student }: Props) {
           </div>
         </div>
 
+
+        {student.user_id || student.guardian_user_id ? (
+          <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={resetExisting}
+              onChange={(e) => setResetExisting(e.target.checked)}
+            />
+            <span>
+              Re-issue a temporary password for the existing account(s)
+              <span className="block text-xs text-muted-foreground">
+                Prints a new slip and replaces the old password.
+              </span>
+            </span>
+          </label>
+        ) : null}
 
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 

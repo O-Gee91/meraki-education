@@ -40,6 +40,7 @@ export function ClassLogins({
   const provision = useServerFn(provisionStudentAccounts);
   const [open, setOpen] = useState(false);
   const [classId, setClassId] = useState(fixedClassId ?? "");
+  const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
 
 
@@ -89,6 +90,9 @@ export function ClassLogins({
             : uniqueUsername(`${base}.parent`.slice(0, 27), used),
           // Email stays blank — each person registers their own at first sign-in.
           guardian_email: null,
+          student_user_id: s.user_id,
+          guardian_user_id: s.guardian_user_id,
+          reset_existing: resetExisting,
         };
       });
 
@@ -154,6 +158,22 @@ export function ClassLogins({
           </div>
         )}
 
+
+        <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={resetExisting}
+            onChange={(e) => setResetExisting(e.target.checked)}
+          />
+          <span>
+            Re-issue passwords for accounts that already exist
+            <span className="block text-xs text-muted-foreground">
+              Use this when slips were printed with a mistake — everyone in the class gets a fresh
+              temporary password and their old one stops working.
+            </span>
+          </span>
+        </label>
 
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 

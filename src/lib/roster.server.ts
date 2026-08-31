@@ -15,6 +15,10 @@ export type ProvisionEntry = {
   guardian_email?: string | null;
   student_username?: string | null;
   guardian_username?: string | null;
+  student_user_id?: string | null;
+  guardian_user_id?: string | null;
+  /** Issue a fresh temporary password for accounts that already exist. */
+  reset_existing?: boolean;
 };
 
 export type ProvisionedAccount = {
@@ -51,6 +55,8 @@ async function findUserIdByUsername(
 
 type Target = {
   role: "student" | "parent";
+  /** Known account id, when the roster already links one. */
+  existingUserId?: string | null;
   username: string | null;
   /** The address used to sign in (synthetic when a username is used). */
   email: string;
@@ -73,17 +79,19 @@ export async function provisionRosterAccounts(
     const studentEmail = (entry.student_email ?? "").trim().toLowerCase();
     const guardianEmail = (entry.guardian_email ?? "").trim().toLowerCase();
 
-    if (studentUsername || studentEmail)
+    if (studentUsername || studentEmail || (entry.reset_existing && entry.student_user_id))
       targets.push({
         role: "student",
+        existingUserId: entry.student_user_id ?? null,
         username: studentUsername || null,
         email: studentUsername ? usernameToEmail(studentUsername) : studentEmail,
         contactEmail: studentEmail,
       });
 
-    if (guardianUsername || guardianEmail)
+    if (guardianUsername || guardianEmail || (entry.reset_existing && entry.guardian_user_id))
       targets.push({
         role: "parent",
+        existingUserId: entry.guardian_user_id ?? null,
         username: guardianUsername || null,
         email: guardianUsername ? usernameToEmail(guardianUsername) : guardianEmail,
         contactEmail: guardianEmail,
@@ -107,7 +115,7 @@ export async function provisionRosterAccounts(
       }
       // An email is only required when there is no username to sign in with —
       // username accounts register their own email at first sign-in.
-      if (!target.username && !EMAIL_RE.test(target.contactEmail)) {
+      if (!target.username && !target.existingUserId && !EMAIL_RE.test(target.contactEmail)) {
         fail("a username or email address is required");
         continue;
       }
@@ -117,11 +125,22 @@ export async function provisionRosterAccounts(
       }
 
 
-      let userId = target.username
-        ? await findUserIdByUsername(admin, target.username)
-        : null;
+      let userId = target.existingUserId ?? null;
+      if (!userId && target.username)
+        userId = await findUserIdByUsername(admin, target.username);
       if (!userId && target.contactEmail)
         userId = await findUserIdByEmail(admin, target.contactEmail);
+
+      if (userId && !target.username) {
+        // Re-printing slips for an existing account — show its real sign-in details.
+        const { data: prof } = await admin
+          .from("profiles")
+          .select("username, email")
+          .eq("id", userId)
+          .maybeSingle();
+        if (prof?.username) target.username = prof.username;
+        if (!target.email) target.email = prof?.email ?? "";
+      }
 
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
@@ -150,9 +169,21 @@ export async function provisionRosterAccounts(
           // to register a real email the first time they sign in.
           await admin.from("profiles").update({ email: null }).eq("id", userId);
         }
-      } else if (target.contactEmail) {
-        // Keep the contact address current so notifications reach them.
-        await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
+      } else {
+        if (target.contactEmail) {
+          // Keep the contact address current so notifications reach them.
+          await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
+        }
+        if (entry.reset_existing) {
+          // Re-issuing slips for a group: give the existing account a fresh
+          // temporary password so the printed slip is valid again.
+          password = tempPassword();
+          const { error: pwError } = await admin.auth.admin.updateUserById(userId, { password });
+          if (pwError) {
+            fail(pwError.message);
+            continue;
+          }
+        }
       }
 
       const update =
