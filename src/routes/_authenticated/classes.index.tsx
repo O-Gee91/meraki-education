@@ -326,6 +326,21 @@ function ClassesPage() {
           )}
         </>
       )}
+
+      {rosterTarget ? (
+        <StudentImport
+          key={rosterTarget.id}
+          classId={rosterTarget.id}
+          className={rosterTarget.name}
+          gradeLevel={rosterTarget.grade}
+          open
+          showTrigger={false}
+          onOpenChange={(next) => {
+            if (!next) setRosterTarget(null);
+          }}
+        />
+      ) : null}
     </AppShell>
+
   );
 }
