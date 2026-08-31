@@ -19,6 +19,8 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
+import { StudentProfile, type StudentRow } from "@/components/students/StudentProfile";
+import { graduatingClassLabel } from "@/lib/academic";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/students")({
@@ -41,6 +43,7 @@ function StudentsPage() {
   const { isStaff } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
   const [form, setForm] = useState({
     first: "",
     last: "",
