@@ -77,7 +77,8 @@ export function AccountResults({ accounts }: { accounts: ProvisionedAccount[] })
     <div className="space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs text-muted-foreground">
-        Print the slips below and hand them out — temporary passwords are only shown once.
+        Print the slips below and hand them out — temporary passwords are only shown once. Each slip
+        lists the sign-in address <span className="font-mono">{SITE_URL}</span>.
       </p>
       <div className="flex gap-2">
         <Button
