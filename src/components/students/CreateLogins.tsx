@@ -43,6 +43,7 @@ export function CreateLogins({ student }: Props) {
   const [studentEmail, setStudentEmail] = useState("");
   // Left blank on purpose — students/parents register their own email at first sign-in.
   const [guardianEmail, setGuardianEmail] = useState("");
+  const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
 
   const run = useMutation({
