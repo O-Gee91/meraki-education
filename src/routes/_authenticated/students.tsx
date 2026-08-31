@@ -109,11 +109,41 @@ function StudentsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const removeStudents = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) throw new Error("Select at least one student");
+      const { error } = await supabase.from("students").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      toast.success(ids.length === 1 ? "Student removed" : `${ids.length} students removed`);
+      setSelected([]);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const confirmRemove = (ids: string[]) => {
+    const label =
+      ids.length === 1
+        ? "Remove this student from the school directory? Their records will be deleted."
+        : `Remove ${ids.length} students from the school directory? Their records will be deleted.`;
+    if (window.confirm(label)) removeStudents.mutate(ids);
+  };
+
   const filtered = students.filter((s) =>
     `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+
+  const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.id));
+  const toggleAll = () =>
+    setSelected(allSelected ? [] : filtered.map((s) => s.id));
+  const toggleOne = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
 
   return (
     <AppShell
