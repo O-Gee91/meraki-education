@@ -38,6 +38,7 @@ import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
+import { StudentImport } from "@/components/students/StudentImport";
 
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -345,7 +346,14 @@ function ClassDetailPage() {
         )}
 
         <TabsContent value="roster">
-          <RosterTab classId={classId} isStaff={isStaff} roster={roster} useIds={useIds} />
+          <RosterTab
+            classId={classId}
+            isStaff={isStaff}
+            roster={roster}
+            useIds={useIds}
+            className={klass?.name}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
 
         <TabsContent value="attendance">
@@ -744,14 +752,21 @@ function RosterTab({
   isStaff,
   roster,
   useIds,
+  className,
+  gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
   roster: RosterRow[];
   useIds: boolean;
+  className?: string | undefined;
+  gradeLevel?: number | null | undefined;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
+  const blankNew = { first: "", last: "", grade: gradeLevel ? String(gradeLevel) : "", number: "" };
+  const [newForm, setNewForm] = useState(blankNew);
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -794,6 +809,39 @@ function RosterTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createAndEnroll = useMutation({
+    mutationFn: async () => {
+      const first = newForm.first.trim();
+      const last = newForm.last.trim();
+      if (first.length < 2 || last.length < 2) throw new Error("First and last name are required");
+      const grade = Number(newForm.grade);
+      if (!grade || grade < 1 || grade > 12) throw new Error("Enter a grade level (1–12)");
+      const { data, error } = await supabase
+        .from("students")
+        .insert({
+          first_name: first.slice(0, 60),
+          last_name: last.slice(0, 60),
+          grade_level: grade,
+          student_number: newForm.number.trim().slice(0, 40) || null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      const { error: enrError } = await supabase
+        .from("enrollments")
+        .insert({ class_id: classId, student_id: data.id });
+      if (enrError) throw enrError;
+    },
+    onSuccess: () => {
+      toast.success("Student created and added to class");
+      setNewOpen(false);
+      setNewForm(blankNew);
+      queryClient.invalidateQueries({ queryKey: ["roster", classId] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const enrolledIds = new Set(roster.map((r) => r.student_id));
   const available = students.filter((s) => !enrolledIds.has(s.id));
 
@@ -802,7 +850,7 @@ function RosterTab({
       {isStaff && (
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-64 space-y-1.5">
-            <Label htmlFor="student">Add student</Label>
+            <Label htmlFor="student">Add existing student</Label>
             <Select value={selected} onValueChange={setSelected}>
               <SelectTrigger id="student">
                 <SelectValue placeholder="Choose a student" />
@@ -825,6 +873,71 @@ function RosterTab({
           <Button onClick={() => enroll.mutate()} disabled={enroll.isPending}>
             Add to class
           </Button>
+          <Dialog open={newOpen} onOpenChange={setNewOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">New student</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add a new student{className ? ` to ${className}` : ""}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-first">First name</Label>
+                    <Input
+                      id="ns-first"
+                      value={newForm.first}
+                      maxLength={60}
+                      onChange={(e) => setNewForm({ ...newForm, first: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-last">Last name</Label>
+                    <Input
+                      id="ns-last"
+                      value={newForm.last}
+                      maxLength={60}
+                      onChange={(e) => setNewForm({ ...newForm, last: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-grade">Grade level</Label>
+                    <Input
+                      id="ns-grade"
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={newForm.grade}
+                      onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-number">Student ID (optional)</Label>
+                    <Input
+                      id="ns-number"
+                      value={newForm.number}
+                      maxLength={40}
+                      onChange={(e) => setNewForm({ ...newForm, number: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => createAndEnroll.mutate()} disabled={createAndEnroll.isPending}>
+                  Create and enroll
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <StudentImport
+            classId={classId}
+            className={className}
+            gradeLevel={gradeLevel}
+            triggerLabel="Import from Excel"
+          />
         </div>
       )}
 
