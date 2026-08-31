@@ -42,6 +42,7 @@ import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 import { StudentImport } from "@/components/students/StudentImport";
+import { ClassLogins } from "@/components/students/ClassLogins";
 
 import { formatDate, gradeTone } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -962,6 +963,7 @@ function RosterTab({
             gradeLevel={gradeLevel}
             triggerLabel="Import from Excel"
           />
+          <ClassLogins fixedClassId={classId} />
         </div>
       )}
 

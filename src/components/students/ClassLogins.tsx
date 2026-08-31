@@ -29,15 +29,23 @@ function uniqueUsername(base: string, used: Set<string>): string {
   return candidate;
 }
 
-export function ClassLogins() {
+export function ClassLogins({
+  fixedClassId,
+  triggerLabel = "Print class logins",
+}: {
+  fixedClassId?: string;
+  triggerLabel?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const provision = useServerFn(provisionStudentAccounts);
   const [open, setOpen] = useState(false);
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(fixedClassId ?? "");
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes", "login-slips"],
+    enabled: !fixedClassId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
@@ -107,40 +115,44 @@ export function ClassLogins() {
         setOpen(next);
         if (!next) {
           setAccounts([]);
-          setClassId("");
+          setClassId(fixedClassId ?? "");
         }
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">Print class logins</Button>
+        <Button variant="outline">{triggerLabel}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Class login slips</DialogTitle>
           <DialogDescription>
-            Pick a class to create sign-in details for every student (and guardian) who doesn't
-            have an account yet, then print the slips to hand out.
+            {fixedClassId
+              ? "Create sign-in details for every student (and guardian) in this class who doesn't have an account yet, then print the slips to hand out."
+              : "Pick a class to create sign-in details for every student (and guardian) who doesn't have an account yet, then print the slips to hand out."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="class-logins-class">Class</Label>
-          <select
-            id="class-logins-class"
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={classId}
-            onChange={(e) => setClassId(e.target.value)}
-          >
-            <option value="">Choose a class…</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.grade_level ? ` — Grade ${c.grade_level}` : ""}
-                {c.teacher_name ? ` (${c.teacher_name})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!fixedClassId && (
+          <div className="space-y-1.5">
+            <Label htmlFor="class-logins-class">Class</Label>
+            <select
+              id="class-logins-class"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+            >
+              <option value="">Choose a class…</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.grade_level ? ` — Grade ${c.grade_level}` : ""}
+                  {c.teacher_name ? ` (${c.teacher_name})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
 
         {accounts.length > 0 ? <AccountResults accounts={accounts} /> : null}
 
