@@ -149,6 +149,8 @@ export function StudentImport({
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
   const [createLogins, setCreateLogins] = useState(true);
+  const [loginMode, setLoginMode] = useState<"both" | "student" | "parent">("both");
+
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
   const provision = useServerFn(provisionStudentAccounts);
 
