@@ -79,6 +79,21 @@ export function GradingLibrary({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const unshare = useMutation({
+    mutationFn: async (resourceId: string) => {
+      const { error } = await supabase
+        .from("shared_resources")
+        .delete()
+        .eq("id", resourceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shared grading setup removed");
+      queryClient.invalidateQueries({ queryKey: ["shared-grading-setups"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const useSetup = useMutation({
     mutationFn: async (resourceId: string) =>
       apply({ data: { resourceId, classIds: [classId] } }),
