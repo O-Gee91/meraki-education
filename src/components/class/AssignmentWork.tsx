@@ -449,6 +449,13 @@ function StaffCollectPanel({
           <DialogHeader>
             <DialogTitle>{assignment.title}</DialogTitle>
           </DialogHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Quick scores below each student apply instantly — tweak the list to fit this
+              assignment.
+            </p>
+            <QuickScoreEditButton classId={classId} />
+          </div>
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {roster.length === 0 ? (
               <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
@@ -482,6 +489,7 @@ function StaffCollectPanel({
                           <Badge variant="outline">Not due yet</Badge>
                         )}
                         <Input
+                          key={String(g?.points_earned ?? "")}
                           className="h-8 w-24"
                           inputMode="decimal"
                           placeholder={`/${assignment.points_possible}`}
@@ -493,6 +501,15 @@ function StaffCollectPanel({
                         />
                       </div>
                     </div>
+                    <div className="mt-2">
+                      <QuickScoreBar
+                        classId={classId}
+                        pointsPossible={Number(assignment.points_possible)}
+                        editable={false}
+                        onPick={(value) => score.mutate({ studentId: s.id, value })}
+                      />
+                    </div>
+
                     {sub ? (
                       <ProofreadEditor
                         submissionId={sub.id}
