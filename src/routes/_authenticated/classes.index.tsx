@@ -140,8 +140,12 @@ function ClassesPage() {
 
   return (
     <AppShell
-      title="Classes"
-      description="Each section links to its gradebook, assignments and roster."
+      title={isStaff ? "Classes" : "My classes"}
+      description={
+        isStaff
+          ? "Each section links to its gradebook, assignments and roster."
+          : "Open a class to see your coursework, grades, discussions and attendance."
+      }
       actions={
         isStaff ? (
           <Dialog

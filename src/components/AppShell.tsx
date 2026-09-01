@@ -22,7 +22,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
 
-type NavItem = { to: string; label: string; icon: typeof BookOpen; roles: Role[] };
+type NavItem = {
+  to: string;
+  label: string;
+  studentLabel?: string;
+  icon: typeof BookOpen;
+  roles: Role[];
+};
 
 const NAV: NavItem[] = [
   {
@@ -34,6 +40,7 @@ const NAV: NavItem[] = [
   {
     to: "/classes",
     label: "Classes",
+    studentLabel: "My classes",
     icon: BookOpen,
     roles: ["admin", "teacher", "student", "parent"],
   },
@@ -46,12 +53,14 @@ const NAV: NavItem[] = [
   {
     to: "/reports",
     label: "Assessment",
+    studentLabel: "My grades",
     icon: ClipboardCheck,
     roles: ["admin", "teacher", "student", "parent"],
   },
   {
     to: "/wellbeing",
     label: "Well-being",
+    studentLabel: "How I'm doing",
     icon: HeartPulse,
     roles: ["admin", "teacher", "student", "parent"],
   },
@@ -60,12 +69,14 @@ const NAV: NavItem[] = [
   {
     to: "/behavior",
     label: "Behavior",
+    studentLabel: "My behavior",
     icon: ShieldCheck,
     roles: ["admin", "teacher", "student", "parent"],
   },
   {
     to: "/messages",
     label: "Messages",
+    studentLabel: "My messages",
     icon: MessageSquare,
     roles: ["admin", "teacher", "student", "parent"],
   },
@@ -101,7 +112,10 @@ export function AppShell({
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const items = NAV.filter((item) => item.roles.includes(primaryRole));
+  const items = NAV.filter((item) => item.roles.includes(primaryRole)).map((item) => ({
+    ...item,
+    label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
+  }));
 
   async function signOut() {
     await queryClient.cancelQueries();
