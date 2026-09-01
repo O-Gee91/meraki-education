@@ -144,6 +144,32 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
 
   return (
     <div className="space-y-4">
+      {limitMinutes && started && remaining != null && (
+        <div
+          className={`sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 shadow-float ${
+            urgent
+              ? "animate-pulse border-destructive bg-destructive text-destructive-foreground"
+              : warning
+                ? "border-warning bg-warning text-warning-foreground"
+                : "border-primary bg-primary text-primary-foreground"
+          }`}
+          role="timer"
+          aria-live={urgent ? "assertive" : "polite"}
+          aria-label={`Time remaining: ${formatTime(remaining)}`}
+        >
+          <div className="flex items-center gap-2 font-display font-semibold">
+            <Clock className="size-5" />
+            <span>Time remaining: {formatTime(remaining)}</span>
+          </div>
+          <div className="text-sm font-medium">
+            {urgent
+              ? "Time is almost up — submit now!"
+              : warning
+                ? "Less than 5 minutes left"
+                : `${limitMinutes} minute limit`}
+          </div>
+        </div>
+      )}
       {data.assessment.instructions && (
         <p className="text-sm text-muted-foreground">{data.assessment.instructions}</p>
       )}
