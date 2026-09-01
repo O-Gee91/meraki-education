@@ -4,8 +4,7 @@ import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
-import { StudentQuest } from "@/components/StudentQuest";
-import { StudentHero } from "@/components/StudentHero";
+import { HeroProfilePanel } from "@/components/HeroProfilePanel";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -208,9 +207,7 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {!isStaff && <StudentHero />}
-
-      {!isStaff && <StudentQuest />}
+      {!isStaff && <HeroProfilePanel />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
