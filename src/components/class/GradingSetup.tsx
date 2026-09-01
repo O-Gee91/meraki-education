@@ -16,7 +16,10 @@ import {
 } from "@/components/ui/select";
 import {
   DEFAULT_MARKS,
+  DEFAULT_QUICK_SCORES,
   DEFAULT_SCALE,
+  quickScoreCellValue,
+  type QuickScore,
   type GradingSetup,
   type SpecialMark,
   totalWeight,
@@ -362,6 +365,106 @@ export function GradingSetupTab({
         </div>
       </div>
 
+      <div className="panel p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Custom quick scores</h3>
+            <p className="text-sm text-muted-foreground">
+              One-click buttons in the gradebook so you can grade a whole column fast.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDraft({ ...draft, quickScores: DEFAULT_QUICK_SCORES })}
+          >
+            Reset defaults
+          </Button>
+        </div>
+        <div className="mt-4 space-y-2">
+          {draft.quickScores.map((q, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <Input
+                className="min-w-40 flex-1"
+                value={q.label}
+                placeholder="Button label"
+                onChange={(e) => updateQuick(i, { ...q, label: e.target.value })}
+              />
+              <div className="w-44">
+                <Select
+                  value={q.kind}
+                  onValueChange={(v) =>
+                    updateQuick(i, {
+                      ...q,
+                      kind: v as QuickScore["kind"],
+                      value: v === "mark" ? String(q.value || "") : Number(q.value) || 0,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">% of points</SelectItem>
+                    <SelectItem value="points">Raw points</SelectItem>
+                    <SelectItem value="mark">Special mark</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                className="w-28"
+                value={String(q.value ?? "")}
+                placeholder={q.kind === "mark" ? "Code" : "Value"}
+                onChange={(e) =>
+                  updateQuick(i, {
+                    ...q,
+                    value:
+                      q.kind === "mark"
+                        ? e.target.value.toUpperCase()
+                        : Number(e.target.value) || 0,
+                  })
+                }
+              />
+              <span className="text-xs text-muted-foreground">
+                {q.kind === "mark"
+                  ? "mark"
+                  : q.kind === "points"
+                    ? "pts"
+                    : `= ${quickScoreCellValue(q, 100)} pts on a 100 pt task`}
+              </span>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`Remove ${q.label || "quick score"}`}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    quickScores: draft.quickScores.filter((_, idx) => idx !== i),
+                  })
+                }
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setDraft({
+                ...draft,
+                quickScores: [
+                  ...draft.quickScores,
+                  { label: "", kind: "percent", value: 100 },
+                ],
+              })
+            }
+          >
+            <Plus className="mr-1 size-4" /> Add quick score
+          </Button>
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <Button onClick={() => save.mutate(draft)} disabled={save.isPending}>
           {save.isPending ? "Saving…" : "Save grading setup"}
@@ -374,6 +477,12 @@ export function GradingSetupTab({
       <GradingLibrary classId={classId} className={className} />
     </div>
   );
+
+  function updateQuick(index: number, next: QuickScore) {
+    const quickScores = [...draft.quickScores];
+    quickScores[index] = next;
+    setDraft({ ...draft, quickScores });
+  }
 
   function updateMark(index: number, next: SpecialMark) {
     const marks = [...draft.marks];
