@@ -493,7 +493,22 @@ export function StudentHero() {
 
   const HeroIcon = hero.icon;
 
+  if (heroProfileLoading) return null;
+
+  if (!chosenKey || picking) {
+    return (
+      <ClassChooser
+        suggested={suggestedKey}
+        current={chosenKey}
+        saving={chooseClass.isPending}
+        onChoose={(key) => chooseClass.mutate(key)}
+        {...(chosenKey ? { onCancel: () => setPicking(false) } : {})}
+      />
+    );
+  }
+
   return (
+
     <TooltipProvider delayDuration={120}>
       <section className="mt-6 space-y-6">
         {/* Hero profile */}
