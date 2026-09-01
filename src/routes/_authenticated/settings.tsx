@@ -34,6 +34,22 @@ function SettingsPage() {
   const { user, profile, isStaff } = useAuth();
   const navigate = Route.useNavigate();
 
+  const { data: logins = [] } = useQuery({
+    queryKey: ["my-login-events", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("login_events")
+        .select("id, signed_in_at")
+        .eq("user_id", user!.id)
+        .order("signed_in_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
