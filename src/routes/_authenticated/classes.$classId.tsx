@@ -957,6 +957,7 @@ function RosterTab({
     guardianEmail: "",
   };
   const [newForm, setNewForm] = useState(blankNew);
+  const [sortBy, setSortBy] = useState<"last" | "first">("last");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -1055,6 +1056,18 @@ function RosterTab({
 
   const [groupBy, setGroupBy] = useState<"none" | "grade" | "homeroom">("none");
 
+  const sortedRoster = [...roster].sort((a, b) => {
+    const aStudent = a.students;
+    const bStudent = b.students;
+    const aKey = sortBy === "last" ? aStudent?.last_name : aStudent?.first_name;
+    const bKey = sortBy === "last" ? bStudent?.last_name : bStudent?.first_name;
+    const cmp = (aKey ?? "").localeCompare(bKey ?? "", undefined, { sensitivity: "base" });
+    if (cmp !== 0) return cmp;
+    const aSub = sortBy === "last" ? aStudent?.first_name : aStudent?.last_name;
+    const bSub = sortBy === "last" ? bStudent?.first_name : bStudent?.last_name;
+    return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
+  });
+
   const { data: homerooms = {} } = useQuery({
     queryKey: ["roster-homerooms", classId],
     enabled: roster.length > 0,
@@ -1079,9 +1092,9 @@ function RosterTab({
   });
 
   const groups = (() => {
-    if (groupBy === "none") return [{ key: "all", label: "", rows: roster }];
+    if (groupBy === "none") return [{ key: "all", label: "", rows: sortedRoster }];
     const buckets = new Map<string, RosterRow[]>();
-    for (const r of roster) {
+    for (const r of sortedRoster) {
       const key =
         groupBy === "grade"
           ? `Grade ${r.students?.grade_level ?? "—"}`
@@ -1251,7 +1264,18 @@ function RosterTab({
 
       {roster.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Group by</span>
+          <span className="text-sm text-muted-foreground">Sort by</span>
+          {(["last", "first"] as const).map((k) => (
+            <Button
+              key={k}
+              size="sm"
+              variant={sortBy === k ? "default" : "outline"}
+              onClick={() => setSortBy(k)}
+            >
+              {k === "last" ? "Last name" : "First name"}
+            </Button>
+          ))}
+          <span className="ml-2 text-sm text-muted-foreground">Group by</span>
           {(["none", "grade", "homeroom"] as const).map((g) => (
             <Button
               key={g}
