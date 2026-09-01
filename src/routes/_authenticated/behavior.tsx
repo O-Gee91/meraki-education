@@ -49,18 +49,23 @@ function kindTone(kind: string) {
 }
 
 function BehaviorPage() {
-  const { isStaff } = useAuth();
+  const { isStaff, primaryRole } = useAuth();
+  const isStudent = primaryRole === "student";
 
   return (
     <AppShell
-      title="Behavior & strikes"
-      description="Shared with every teacher of the grade — recognition, concerns and a three-strike system that schedules detention automatically."
+      title={isStudent ? "My behavior" : "Behavior & strikes"}
+      description={
+        isStudent
+          ? "Shout-outs you have earned, notes your teachers have logged, and any strikes or detention scheduled for you."
+          : "Shared with every teacher of the grade — recognition, concerns and a three-strike system that schedules detention automatically."
+      }
     >
       <Tabs defaultValue="log">
         <TabsList>
-          <TabsTrigger value="log">Behavior log</TabsTrigger>
-          <TabsTrigger value="strikes">Strike tracker</TabsTrigger>
-          <TabsTrigger value="detentions">Detentions</TabsTrigger>
+          <TabsTrigger value="log">{isStudent ? "My log" : "Behavior log"}</TabsTrigger>
+          <TabsTrigger value="strikes">{isStudent ? "My strikes" : "Strike tracker"}</TabsTrigger>
+          <TabsTrigger value="detentions">{isStudent ? "My detentions" : "Detentions"}</TabsTrigger>
         </TabsList>
         <TabsContent value="log">
           <BehaviorLog isStaff={isStaff} />
