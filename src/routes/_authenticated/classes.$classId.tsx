@@ -228,9 +228,12 @@ function ClassDetailPage() {
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
-          
-          <TabsTrigger value="grading">Setup grading</TabsTrigger>
+          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <TabsTrigger value="grading" className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
+            Grading setup
+          </TabsTrigger>
         </TabsList>
+
 
 
         <TabsContent value="gradebook">
