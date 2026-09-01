@@ -1264,7 +1264,18 @@ function RosterTab({
 
       {roster.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Group by</span>
+          <span className="text-sm text-muted-foreground">Sort by</span>
+          {(["last", "first"] as const).map((k) => (
+            <Button
+              key={k}
+              size="sm"
+              variant={sortBy === k ? "default" : "outline"}
+              onClick={() => setSortBy(k)}
+            >
+              {k === "last" ? "Last name" : "First name"}
+            </Button>
+          ))}
+          <span className="ml-2 text-sm text-muted-foreground">Group by</span>
           {(["none", "grade", "homeroom"] as const).map((g) => (
             <Button
               key={g}
