@@ -12,6 +12,7 @@ import { proofreadEssay, scoreEssayAnswer } from "@/lib/assessments.functions";
 import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { QuickScoreBar } from "@/components/class/QuickScoreBar";
 
 
 type AnswerRow = {
@@ -42,9 +43,11 @@ type SubmissionRow = {
 
 export function AssessmentGrading({
   assessmentId,
+  classId,
   grammarEnabled,
 }: {
   assessmentId: string;
+  classId: string;
   grammarEnabled: boolean;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -112,6 +115,7 @@ export function AssessmentGrading({
                   <SubmissionAnswers
                     submissionId={s.id}
                     assessmentId={assessmentId}
+                    classId={classId}
                     gradeLevel={s.students?.grade_level}
                     grammarEnabled={grammarEnabled}
                   />
@@ -128,11 +132,13 @@ export function AssessmentGrading({
 function SubmissionAnswers({
   submissionId,
   assessmentId,
+  classId,
   gradeLevel,
   grammarEnabled,
 }: {
   submissionId: string;
   assessmentId: string;
+  classId: string;
   gradeLevel?: number | undefined;
   grammarEnabled: boolean;
 }) {
@@ -182,6 +188,7 @@ function SubmissionAnswers({
               <EssayReview
                 answer={a}
                 assessmentId={assessmentId}
+                classId={classId}
                 submissionId={submissionId}
                 gradeLevel={gradeLevel}
                 grammarEnabled={grammarEnabled}
@@ -208,6 +215,7 @@ function SubmissionAnswers({
 function EssayReview({
   answer,
   assessmentId,
+  classId,
   submissionId,
   gradeLevel,
   grammarEnabled,
@@ -215,6 +223,7 @@ function EssayReview({
 }: {
   answer: AnswerRow;
   assessmentId: string;
+  classId: string;
   submissionId: string;
   gradeLevel?: number | undefined;
   grammarEnabled: boolean;
@@ -307,6 +316,12 @@ function EssayReview({
         )}
         <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={gradeDirty} />
       </div>
+
+      <QuickScoreBar
+        classId={classId}
+        pointsPossible={maxPoints}
+        onPick={(value) => setPoints(value)}
+      />
 
 
       <div className="space-y-1.5">

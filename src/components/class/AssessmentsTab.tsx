@@ -209,6 +209,7 @@ export function AssessmentsTab({
                     <QuestionBuilder assessmentId={a.id} />
                     <AssessmentGrading
                       assessmentId={a.id}
+                      classId={classId}
                       grammarEnabled={a.grammar_check_enabled}
                     />
                   </div>
