@@ -8,13 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Folder as FolderIcon } from "lucide-react";
 import { copySharedResource } from "@/lib/sharing.functions";
 import { questionCount, type SharedResource } from "@/lib/sharing";
 import { formatDate } from "@/lib/school";
@@ -24,7 +18,7 @@ export function SharedLibrary({ classId }: { classId: string }) {
   const { user, isAdmin } = useAuth();
   const copy = useServerFn(copySharedResource);
   const [search, setSearch] = useState("");
-  const [kindFilter, setKindFilter] = useState<"all" | "assignment" | "assessment">("all");
+  const [folder, setFolder] = useState<"assignment" | "assessment">("assignment");
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   const { data: resources = [], isLoading } = useQuery({
