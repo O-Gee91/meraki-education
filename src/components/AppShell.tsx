@@ -112,7 +112,10 @@ export function AppShell({
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const items = NAV.filter((item) => item.roles.includes(primaryRole));
+  const items = NAV.filter((item) => item.roles.includes(primaryRole)).map((item) => ({
+    ...item,
+    label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
+  }));
 
   async function signOut() {
     await queryClient.cancelQueries();
