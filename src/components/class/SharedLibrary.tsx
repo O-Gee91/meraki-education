@@ -138,58 +138,60 @@ export function SharedLibrary({ classId }: { classId: string }) {
                 {visible
                   .filter((r) => (r.grade_level ?? 0) === g)
                   .map((r) => (
-
-            <li key={r.id} className="panel p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold">{r.title}</h3>
-                    <Badge variant="secondary">
-                      {r.kind === "assignment" ? "Assignment" : "Assessment"}
-                    </Badge>
-                    <Badge variant="outline">
-                      {r.grade_level ? `Grade ${r.grade_level}` : "All grades"}
-                    </Badge>
-                    {r.kind === "assessment" && (
-                      <Badge variant="outline">{questionCount(r)} questions</Badge>
-                    )}
-                  </div>
-                  {r.description ? (
-                    <p className="mt-1 max-w-xl text-sm text-muted-foreground">{r.description}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Shared by {r.shared_by_name || "a teacher"} · {formatDate(r.created_at.slice(0, 10))}
-                    {r.subject ? ` · ${r.subject}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    className="h-9 w-52"
-                    placeholder="Rename your copy (optional)"
-                    value={titles[r.id] ?? ""}
-                    onChange={(e) => setTitles({ ...titles, [r.id]: e.target.value })}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => copyIn.mutate(r)}
-                    disabled={copyIn.isPending}
-                  >
-                    Copy into this class
-                  </Button>
-                  {(isAdmin || r.shared_by === user?.id) && (
-                    <ConfirmDeleteButton
-                      label="Unshare"
-                      title={`Unshare “${r.title}”?`}
-                      description="This removes it from the shared library. Copies other teachers already made stay untouched."
-                      onConfirm={() => unshare.mutate(r.id)}
-                    />
-                  )}
-                </div>
-              </div>
-            </li>
+                    <li key={r.id} className="panel p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-semibold">{r.title}</h4>
+                            <Badge variant="secondary">
+                              {r.kind === "assignment" ? "Assignment" : "Assessment"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {r.grade_level ? `Grade ${r.grade_level}` : "Unassigned grade"}
+                            </Badge>
+                            {r.kind === "assessment" && (
+                              <Badge variant="outline">{questionCount(r)} questions</Badge>
+                            )}
+                          </div>
+                          {r.description ? (
+                            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                              {r.description}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Shared by {r.shared_by_name || "a teacher"} ·{" "}
+                            {formatDate(r.created_at.slice(0, 10))}
+                            {r.subject ? ` · ${r.subject}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Input
+                            className="h-9 w-52"
+                            placeholder="Rename your copy (optional)"
+                            value={titles[r.id] ?? ""}
+                            onChange={(e) => setTitles({ ...titles, [r.id]: e.target.value })}
+                          />
+                          <Button size="sm" onClick={() => copyIn.mutate(r)} disabled={copyIn.isPending}>
+                            Copy into this class
+                          </Button>
+                          {(isAdmin || r.shared_by === user?.id) && (
+                            <ConfirmDeleteButton
+                              label="Unshare"
+                              title={`Unshare “${r.title}”?`}
+                              description="This removes it from the shared library. Copies other teachers already made stay untouched."
+                              onConfirm={() => unshare.mutate(r.id)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 }
+
