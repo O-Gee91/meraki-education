@@ -1,15 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-import { GraduationCap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { GraduationCap, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { graduatingClassLabel } from "@/lib/academic";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 
 export type StudentRow = {
   id: string;
@@ -32,6 +39,63 @@ export function StudentProfile({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
+  const { isStaff } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    first: "",
+    last: "",
+    chinese: "",
+    grade: "",
+    number: "",
+    guardianEmail: "",
+  });
+
+  useEffect(() => {
+    setEditing(false);
+    if (!student) return;
+    setForm({
+      first: student.first_name ?? "",
+      last: student.last_name ?? "",
+      chinese: student.chinese_name ?? "",
+      grade: String(student.grade_level ?? ""),
+      number: student.student_number ?? "",
+      guardianEmail: student.guardian_email ?? "",
+    });
+  }, [student]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (form.first.trim().length < 1 || form.last.trim().length < 1)
+        throw new Error("First and last name are required");
+      const grade = Number(form.grade);
+      if (Number.isNaN(grade) || grade < 1 || grade > 12) throw new Error("Grade must be 1–12");
+      const email = form.guardianEmail.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        throw new Error("Guardian email looks invalid");
+      const { error } = await supabase
+        .from("students")
+        .update({
+          first_name: form.first.trim().slice(0, 60),
+          last_name: form.last.trim().slice(0, 60),
+          chinese_name: form.chinese.trim().slice(0, 60) || null,
+          grade_level: grade,
+          student_number: form.number.trim().slice(0, 20) || null,
+          guardian_email: email.slice(0, 255) || null,
+        })
+        .eq("id", student!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Student information updated");
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      queryClient.invalidateQueries({ queryKey: ["class-roster"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const { data: enrollments = [] } = useQuery({
     queryKey: ["student-profile-classes", student?.id],
     enabled: open && !!student,
@@ -66,13 +130,97 @@ export function StudentProfile({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {student.first_name} {student.last_name}
-          </DialogTitle>
-          <DialogDescription>
-            Student profile — created automatically when the student was added or imported.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle>
+                {student.first_name} {student.last_name}
+              </DialogTitle>
+              <DialogDescription>
+                {editing
+                  ? "Update the student's details — changes apply everywhere in the school."
+                  : "Student profile — created automatically when the student was added or imported."}
+              </DialogDescription>
+            </div>
+            {isStaff && !editing ? (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            ) : null}
+          </div>
         </DialogHeader>
+
+        {editing ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-first">First name</Label>
+                <Input
+                  id="edit-first"
+                  value={form.first}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, first: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-last">Last name</Label>
+                <Input
+                  id="edit-last"
+                  value={form.last}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, last: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-chinese">Chinese name</Label>
+                <Input
+                  id="edit-chinese"
+                  value={form.chinese}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, chinese: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-grade">Grade level</Label>
+                <Input
+                  id="edit-grade"
+                  inputMode="numeric"
+                  value={form.grade}
+                  onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-number">Student ID</Label>
+                <Input
+                  id="edit-number"
+                  value={form.number}
+                  maxLength={20}
+                  onChange={(e) => setForm({ ...form, number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-guardian">Guardian email</Label>
+                <Input
+                  id="edit-guardian"
+                  type="email"
+                  value={form.guardianEmail}
+                  maxLength={255}
+                  onChange={(e) => setForm({ ...form, guardianEmail: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditing(false)} disabled={save.isPending}>
+                Cancel
+              </Button>
+              <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+
 
         <div className="flex items-center gap-3 rounded-md border border-border bg-secondary/40 p-3">
           <GraduationCap className="h-6 w-6 text-primary" />
@@ -156,6 +304,9 @@ export function StudentProfile({
             </ul>
           )}
         </div>
+          </>
+        )}
+
       </DialogContent>
     </Dialog>
   );
