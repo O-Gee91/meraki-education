@@ -154,6 +154,7 @@ function StudentsPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           {isStaff ? <ClassLogins /> : null}
+          {isStaff ? <CreateAccount /> : null}
           <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
