@@ -41,7 +41,7 @@ const NAV: NavItem[] = [
     to: "/community",
     label: "Community",
     icon: Users2,
-    roles: ["admin", "teacher", "student", "parent"],
+    roles: ["admin", "teacher", "parent"],
   },
   {
     to: "/reports",
@@ -73,7 +73,7 @@ const NAV: NavItem[] = [
     to: "/files",
     label: "Files",
     icon: FolderOpen,
-    roles: ["admin", "teacher", "student", "parent"],
+    roles: ["admin", "teacher", "parent"],
   },
   { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },
 ];
