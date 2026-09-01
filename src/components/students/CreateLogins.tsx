@@ -52,6 +52,10 @@ export function CreateLogins({ student }: Props) {
 
   const run = useMutation({
     mutationFn: async () => {
+      if (wantsStudent && !wantsGuardian && !studentUsername.trim())
+        throw new Error("Enter a student username");
+      if (wantsGuardian && !wantsStudent && !guardianUsername.trim())
+        throw new Error("Enter a parent / guardian username");
       if (!studentUsername.trim() && !guardianUsername.trim())
         throw new Error("Enter a student or guardian username");
 
@@ -64,16 +68,19 @@ export function CreateLogins({ student }: Props) {
               last_name: student.last_name,
               // Existing accounts are matched by id so a new username never
               // creates a second account for the same person.
-              student_username: student.user_id ? null : studentUsername.trim() || null,
-              student_email: studentEmail.trim() || null,
-              guardian_username: student.guardian_user_id
-                ? null
-                : guardianUsername.trim() || null,
-              guardian_email: guardianEmail.trim() || null,
-              student_user_id: student.user_id ?? null,
-              guardian_user_id: student.guardian_user_id ?? null,
+              student_username:
+                !wantsStudent || student.user_id ? null : studentUsername.trim() || null,
+              student_email: wantsStudent ? studentEmail.trim() || null : null,
+              guardian_username:
+                !wantsGuardian || student.guardian_user_id
+                  ? null
+                  : guardianUsername.trim() || null,
+              guardian_email: wantsGuardian ? guardianEmail.trim() || null : null,
+              student_user_id: wantsStudent ? student.user_id ?? null : null,
+              guardian_user_id: wantsGuardian ? student.guardian_user_id ?? null : null,
               reset_existing: resetExisting,
             },
+
           ],
         },
       });
