@@ -16,6 +16,44 @@ import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
+function formatTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function useAssessmentTimer(
+  limitMinutes: number | null | undefined,
+  assessmentId: string,
+  onExpire: () => void,
+) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (!limitMinutes) return;
+    const key = `assessment-start:${assessmentId}`;
+    let start = Number(localStorage.getItem(key));
+    if (!start || Number.isNaN(start)) {
+      start = Date.now();
+      localStorage.setItem(key, String(start));
+    }
+    setStarted(true);
+    const limitMs = limitMinutes * 60 * 1000;
+    const tick = () => {
+      const left = start + limitMs - Date.now();
+      setRemaining(Math.max(0, left));
+      if (left <= 0) onExpire();
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [limitMinutes, assessmentId, onExpire]);
+
+  return { remaining, started };
+}
+
 export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
   const loadPaper = useServerFn(getAssessmentPaper);
