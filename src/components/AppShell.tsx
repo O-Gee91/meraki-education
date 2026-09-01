@@ -40,6 +40,7 @@ const NAV: NavItem[] = [
   {
     to: "/classes",
     label: "Classes",
+    studentLabel: "My classes",
     icon: BookOpen,
     roles: ["admin", "teacher", "student", "parent"],
   },
