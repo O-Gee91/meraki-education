@@ -15,7 +15,7 @@ export const shareResource = createServerFn({ method: "POST" })
       .object({
         kind: z.enum(["assignment", "assessment"]),
         id: z.string().uuid(),
-        gradeLevel: z.number().int().min(1).max(12).nullable().optional(),
+        gradeLevel: z.number().int().min(1).max(12),
         note: z.string().max(1000).optional(),
       })
       .parse(input),
@@ -110,8 +110,7 @@ export const shareResource = createServerFn({ method: "POST" })
       .from("shared_resources")
       .insert({
         kind: data.kind,
-        grade_level:
-          data.gradeLevel === undefined ? (klass?.grade_level ?? null) : data.gradeLevel,
+        grade_level: data.gradeLevel,
         subject: klass?.subject ?? null,
         title: title.slice(0, 140),
         description: (data.note?.trim() || description || "")?.slice(0, 1000) || null,

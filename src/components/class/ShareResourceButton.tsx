@@ -43,15 +43,17 @@ export function ShareResourceButton({
   const [note, setNote] = useState("");
 
   const mutation = useMutation({
-    mutationFn: async () =>
-      share({
+    mutationFn: async () => {
+      if (!grade) throw new Error("Pick the grade this is shared with");
+      return share({
         data: {
           kind,
           id,
-          gradeLevel: grade ? Number(grade) : null,
+          gradeLevel: Number(grade),
           ...(note.trim() ? { note: note.trim() } : {}),
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Shared with teachers in that grade");
       setOpen(false);
@@ -75,12 +77,11 @@ export function ShareResourceButton({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="share-grade">Share with teachers of</Label>
-            <Select value={grade || "any"} onValueChange={(v) => setGrade(v === "any" ? "" : v)}>
+            <Select value={grade} onValueChange={setGrade}>
               <SelectTrigger id="share-grade">
-                <SelectValue />
+                <SelectValue placeholder="Choose a grade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">All grades</SelectItem>
                 {GRADES.map((g) => (
                   <SelectItem key={g} value={String(g)}>
                     Grade {g}
@@ -88,6 +89,10 @@ export function ShareResourceButton({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Only teachers of that grade will see it, in the{" "}
+              {kind === "assignment" ? "Assignments" : "Assessments"} folder.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="share-note">Note for colleagues (optional)</Label>
@@ -99,12 +104,13 @@ export function ShareResourceButton({
               placeholder="What this covers, how long it takes, anything to watch for…"
             />
           </div>
+
           <p className="text-xs text-muted-foreground">
             Colleagues get their own editable copy — changes they make never touch your original.
           </p>
         </div>
         <DialogFooter>
-          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !grade}>
             {mutation.isPending ? "Sharing…" : "Share to library"}
           </Button>
         </DialogFooter>

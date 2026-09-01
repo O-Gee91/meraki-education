@@ -8,13 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Folder as FolderIcon } from "lucide-react";
 import { copySharedResource } from "@/lib/sharing.functions";
 import { questionCount, type SharedResource } from "@/lib/sharing";
 import { formatDate } from "@/lib/school";
@@ -24,7 +18,7 @@ export function SharedLibrary({ classId }: { classId: string }) {
   const { user, isAdmin } = useAuth();
   const copy = useServerFn(copySharedResource);
   const [search, setSearch] = useState("");
-  const [kindFilter, setKindFilter] = useState<"all" | "assignment" | "assessment">("all");
+  const [folder, setFolder] = useState<"assignment" | "assessment">("assignment");
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   const { data: resources = [], isLoading } = useQuery({
@@ -78,98 +72,120 @@ export function SharedLibrary({ classId }: { classId: string }) {
   });
 
   const term = search.trim().toLowerCase();
+  const counts = {
+    assignment: resources.filter((r) => r.kind === "assignment").length,
+    assessment: resources.filter((r) => r.kind === "assessment").length,
+  };
   const visible = resources.filter(
     (r) =>
-      (kindFilter === "all" || r.kind === kindFilter) &&
+      r.kind === folder &&
       (term === "" ||
         r.title.toLowerCase().includes(term) ||
         (r.description ?? "").toLowerCase().includes(term) ||
         r.shared_by_name.toLowerCase().includes(term)),
   );
 
+  const grades = [...new Set(visible.map((r) => r.grade_level ?? 0))].sort((a, b) => a - b);
+
   return (
     <div className="mt-4 space-y-4">
+      <div className="panel flex flex-wrap items-center gap-2 p-2">
+        {(["assignment", "assessment"] as const).map((k) => (
+          <Button
+            key={k}
+            variant={folder === k ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setFolder(k)}
+          >
+            <FolderIcon className="mr-2 h-4 w-4" />
+            {k === "assignment" ? "Assignments" : "Assessments"}
+            <span className="ml-2 text-xs opacity-70">{counts[k]}</span>
+          </Button>
+        ))}
+      </div>
+
       <div className="panel flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-56 flex-1">
           <Input
             value={search}
-            placeholder="Search shared assignments and assessments…"
+            placeholder={`Search shared ${folder === "assignment" ? "assignments" : "assessments"}…`}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as typeof kindFilter)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Everything</SelectItem>
-            <SelectItem value="assignment">Assignments</SelectItem>
-            <SelectItem value="assessment">Assessments</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {isLoading ? (
         <p className="panel p-6 text-sm text-muted-foreground">Loading shared resources…</p>
       ) : visible.length === 0 ? (
         <p className="panel p-6 text-sm text-muted-foreground">
-          Nothing shared for your grade yet. Use the Share button on any assignment or assessment to
-          add the first one.
+          Nothing shared with your grade in this folder yet. Use the Share button on any{" "}
+          {folder === "assignment" ? "assignment" : "assessment"} to add the first one.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {visible.map((r) => (
-            <li key={r.id} className="panel p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold">{r.title}</h3>
-                    <Badge variant="secondary">
-                      {r.kind === "assignment" ? "Assignment" : "Assessment"}
-                    </Badge>
-                    <Badge variant="outline">
-                      {r.grade_level ? `Grade ${r.grade_level}` : "All grades"}
-                    </Badge>
-                    {r.kind === "assessment" && (
-                      <Badge variant="outline">{questionCount(r)} questions</Badge>
-                    )}
-                  </div>
-                  {r.description ? (
-                    <p className="mt-1 max-w-xl text-sm text-muted-foreground">{r.description}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Shared by {r.shared_by_name || "a teacher"} · {formatDate(r.created_at.slice(0, 10))}
-                    {r.subject ? ` · ${r.subject}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    className="h-9 w-52"
-                    placeholder="Rename your copy (optional)"
-                    value={titles[r.id] ?? ""}
-                    onChange={(e) => setTitles({ ...titles, [r.id]: e.target.value })}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => copyIn.mutate(r)}
-                    disabled={copyIn.isPending}
-                  >
-                    Copy into this class
-                  </Button>
-                  {(isAdmin || r.shared_by === user?.id) && (
-                    <ConfirmDeleteButton
-                      label="Unshare"
-                      title={`Unshare “${r.title}”?`}
-                      description="This removes it from the shared library. Copies other teachers already made stay untouched."
-                      onConfirm={() => unshare.mutate(r.id)}
-                    />
-                  )}
-                </div>
-              </div>
-            </li>
+        <div className="space-y-6">
+          {grades.map((g) => (
+            <section key={g} className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                {g ? `Grade ${g}` : "Unassigned grade"}
+              </h3>
+              <ul className="space-y-3">
+                {visible
+                  .filter((r) => (r.grade_level ?? 0) === g)
+                  .map((r) => (
+                    <li key={r.id} className="panel p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-semibold">{r.title}</h4>
+                            <Badge variant="secondary">
+                              {r.kind === "assignment" ? "Assignment" : "Assessment"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {r.grade_level ? `Grade ${r.grade_level}` : "Unassigned grade"}
+                            </Badge>
+                            {r.kind === "assessment" && (
+                              <Badge variant="outline">{questionCount(r)} questions</Badge>
+                            )}
+                          </div>
+                          {r.description ? (
+                            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                              {r.description}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Shared by {r.shared_by_name || "a teacher"} ·{" "}
+                            {formatDate(r.created_at.slice(0, 10))}
+                            {r.subject ? ` · ${r.subject}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Input
+                            className="h-9 w-52"
+                            placeholder="Rename your copy (optional)"
+                            value={titles[r.id] ?? ""}
+                            onChange={(e) => setTitles({ ...titles, [r.id]: e.target.value })}
+                          />
+                          <Button size="sm" onClick={() => copyIn.mutate(r)} disabled={copyIn.isPending}>
+                            Copy into this class
+                          </Button>
+                          {(isAdmin || r.shared_by === user?.id) && (
+                            <ConfirmDeleteButton
+                              label="Unshare"
+                              title={`Unshare “${r.title}”?`}
+                              description="This removes it from the shared library. Copies other teachers already made stay untouched."
+                              onConfirm={() => unshare.mutate(r.id)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 }
+
