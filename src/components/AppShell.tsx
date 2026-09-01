@@ -22,7 +22,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
 
-type NavItem = { to: string; label: string; icon: typeof BookOpen; roles: Role[] };
+type NavItem = {
+  to: string;
+  label: string;
+  studentLabel?: string;
+  icon: typeof BookOpen;
+  roles: Role[];
+};
 
 const NAV: NavItem[] = [
   {
