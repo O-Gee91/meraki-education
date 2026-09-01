@@ -121,7 +121,7 @@ export function PulseDashboard({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignment_submissions")
-        .select("id, submitted_at, assignment_id")
+        .select("id, submitted_at, assignment_id, student_id")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data ?? [];
@@ -129,25 +129,30 @@ export function PulseDashboard({
   });
 
   const cards = useMemo(() => {
-    const dueSoFar = assignments.filter((a) => !a.due_date || a.due_date <= todayKey);
+    // Only work whose due date has already passed can count as missing.
+    const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
     return roster.map((r) => {
       const avg = studentAverage(r.student_id);
-      const missing = dueSoFar.filter((a) => {
+      const missing = pastDue.filter((a) => {
         const g = grades.find(
           (x) => x.student_id === r.student_id && x.assignment_id === a.id,
         );
-        return g?.points_earned == null;
+        if (g?.points_earned != null) return false;
+        // Turned in / collected but not graded yet is not "missing".
+        return !submissions.some(
+          (s) => s.assignment_id === a.id && s.student_id === r.student_id,
+        );
       }).length;
 
       let status: Status = "none";
-      if (avg != null || dueSoFar.length > 0) {
+      if (avg != null || pastDue.length > 0) {
         const risky = (avg != null && avg < 70) || missing >= 3;
         const slipping = (avg != null && avg < 80) || missing >= 1;
         status = risky ? "red" : slipping ? "yellow" : "green";
       }
       return { row: r, avg, missing, status };
     });
-  }, [assignments, grades, roster, studentAverage, todayKey]);
+  }, [assignments, grades, roster, studentAverage, submissions, todayKey]);
 
   const counts = cards.reduce<Record<Status, number>>(
     (acc, c) => ({ ...acc, [c.status]: acc[c.status] + 1 }),

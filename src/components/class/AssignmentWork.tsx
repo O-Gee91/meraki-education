@@ -334,6 +334,7 @@ function StaffCollectPanel({
     title: string;
     points_possible: number;
     submission_mode: string;
+    due_date?: string | null;
   };
   roster: Student[];
 }) {
@@ -472,8 +473,11 @@ function StaffCollectPanel({
                           </label>
                         ) : sub ? (
                           <Badge variant="secondary">Turned in</Badge>
-                        ) : (
+                        ) : assignment.due_date &&
+                          assignment.due_date < new Date().toISOString().slice(0, 10) ? (
                           <Badge variant="outline">Missing</Badge>
+                        ) : (
+                          <Badge variant="outline">Not due yet</Badge>
                         )}
                         <Input
                           className="h-8 w-24"
