@@ -46,6 +46,7 @@ function StudentsPage() {
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"last" | "first">("last");
 
   const [form, setForm] = useState({
     first: "",
