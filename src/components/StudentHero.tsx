@@ -170,6 +170,40 @@ function dayKey(value: string) {
 
 export function StudentHero() {
   const today = new Date().toISOString().slice(0, 10);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [picking, setPicking] = useState(false);
+
+  const { data: heroProfile, isLoading: heroProfileLoading } = useQuery({
+    queryKey: ["hero-profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hero_profiles")
+        .select("hero_class, quest_started_at")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const chooseClass = useMutation({
+    mutationFn: async (key: HeroClassKey) => {
+      const { error } = await supabase
+        .from("hero_profiles")
+        .upsert({ user_id: user!.id, hero_class: key }, { onConflict: "user_id" });
+      if (error) throw error;
+      return key;
+    },
+    onSuccess: (key) => {
+      setPicking(false);
+      toast.success(`Your quest begins as a ${HERO_CLASSES[key].name}!`);
+      queryClient.invalidateQueries({ queryKey: ["hero-profile"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
 
   const { data: classes = [] } = useQuery({
     queryKey: ["hero-classes"],
