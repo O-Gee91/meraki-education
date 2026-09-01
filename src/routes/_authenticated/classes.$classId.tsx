@@ -1056,6 +1056,18 @@ function RosterTab({
 
   const [groupBy, setGroupBy] = useState<"none" | "grade" | "homeroom">("none");
 
+  const sortedRoster = [...roster].sort((a, b) => {
+    const aStudent = a.students;
+    const bStudent = b.students;
+    const aKey = sortBy === "last" ? aStudent?.last_name : aStudent?.first_name;
+    const bKey = sortBy === "last" ? bStudent?.last_name : bStudent?.first_name;
+    const cmp = (aKey ?? "").localeCompare(bKey ?? "", undefined, { sensitivity: "base" });
+    if (cmp !== 0) return cmp;
+    const aSub = sortBy === "last" ? aStudent?.first_name : aStudent?.last_name;
+    const bSub = sortBy === "last" ? bStudent?.first_name : bStudent?.last_name;
+    return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
+  });
+
   const { data: homerooms = {} } = useQuery({
     queryKey: ["roster-homerooms", classId],
     enabled: roster.length > 0,
