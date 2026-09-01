@@ -149,6 +149,8 @@ export function StudentImport({
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
   const [createLogins, setCreateLogins] = useState(true);
+  const [loginMode, setLoginMode] = useState<"both" | "student" | "parent">("both");
+
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
   const provision = useServerFn(provisionStudentAccounts);
 
@@ -295,18 +297,21 @@ export function StudentImport({
               student_id: inserted.id,
               first_name: inserted.first_name,
               last_name: inserted.last_name,
-              student_email: rows[i]?.student_email ?? null,
+              student_email: loginMode === "parent" ? null : rows[i]?.student_email ?? null,
               // Left blank on purpose — each person registers their own email at first sign-in.
               guardian_email: null,
-              student_username: unique(rows[i]?.student_username || base),
-              guardian_username: unique(
-                rows[i]?.guardian_username || `${base}.parent`.slice(0, 30),
-              ),
+              student_username:
+                loginMode === "parent" ? null : unique(rows[i]?.student_username || base),
+              guardian_username:
+                loginMode === "student"
+                  ? null
+                  : unique(rows[i]?.guardian_username || `${base}.parent`.slice(0, 30)),
             };
           })
           .filter(
             (e) => e.student_username || e.guardian_username || e.student_email || e.guardian_email,
           );
+
 
         if (entries.length > 0) {
           const result = await provision({ data: { entries } });
@@ -446,15 +451,37 @@ export function StudentImport({
             checked={createLogins}
             onCheckedChange={(v) => setCreateLogins(v === true)}
           />
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="create-logins" className="cursor-pointer">
               Create username logins automatically
             </Label>
             <p className="text-xs text-muted-foreground">
-              Student and guardian accounts are created with a temporary password wherever an email
-              is provided, then linked to the student profile.
+              Each account gets a temporary password and is linked to the student profile. Emails
+              stay blank until the person registers one at first sign-in.
             </p>
+            {createLogins ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {(
+                  [
+                    ["both", "Student + parent"],
+                    ["student", "Student only"],
+                    ["parent", "Parent only"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={loginMode === value ? "default" : "outline"}
+                    onClick={() => setLoginMode(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
+
         </div>
 
         <DialogFooter>

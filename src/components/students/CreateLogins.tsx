@@ -43,11 +43,19 @@ export function CreateLogins({ student }: Props) {
   const [studentEmail, setStudentEmail] = useState("");
   // Left blank on purpose — students/parents register their own email at first sign-in.
   const [guardianEmail, setGuardianEmail] = useState("");
+  const [mode, setMode] = useState<"both" | "student" | "parent">("both");
   const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+  const wantsStudent = mode !== "parent";
+  const wantsGuardian = mode !== "student";
+
 
   const run = useMutation({
     mutationFn: async () => {
+      if (wantsStudent && !wantsGuardian && !studentUsername.trim())
+        throw new Error("Enter a student username");
+      if (wantsGuardian && !wantsStudent && !guardianUsername.trim())
+        throw new Error("Enter a parent / guardian username");
       if (!studentUsername.trim() && !guardianUsername.trim())
         throw new Error("Enter a student or guardian username");
 
@@ -60,16 +68,19 @@ export function CreateLogins({ student }: Props) {
               last_name: student.last_name,
               // Existing accounts are matched by id so a new username never
               // creates a second account for the same person.
-              student_username: student.user_id ? null : studentUsername.trim() || null,
-              student_email: studentEmail.trim() || null,
-              guardian_username: student.guardian_user_id
-                ? null
-                : guardianUsername.trim() || null,
-              guardian_email: guardianEmail.trim() || null,
-              student_user_id: student.user_id ?? null,
-              guardian_user_id: student.guardian_user_id ?? null,
+              student_username:
+                !wantsStudent || student.user_id ? null : studentUsername.trim() || null,
+              student_email: wantsStudent ? studentEmail.trim() || null : null,
+              guardian_username:
+                !wantsGuardian || student.guardian_user_id
+                  ? null
+                  : guardianUsername.trim() || null,
+              guardian_email: wantsGuardian ? guardianEmail.trim() || null : null,
+              student_user_id: wantsStudent ? student.user_id ?? null : null,
+              guardian_user_id: wantsGuardian ? student.guardian_user_id ?? null : null,
               reset_existing: resetExisting,
             },
+
           ],
         },
       });
@@ -112,49 +123,80 @@ export function CreateLogins({ student }: Props) {
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="student-username">Student username</Label>
-            <Input
-              id="student-username"
-              value={studentUsername}
-              maxLength={30}
-              placeholder="ava.chen"
-              onChange={(e) => setStudentUsername(e.target.value)}
-            />
+            <Label>Generate logins for</Label>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["both", "Student + parent"],
+                  ["student", "Student only"],
+                  ["parent", "Parent only"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={mode === value ? "default" : "outline"}
+                  onClick={() => setMode(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="guardian-username">Guardian username</Label>
-            <Input
-              id="guardian-username"
-              value={guardianUsername}
-              maxLength={30}
-              placeholder="ava.chen.parent"
-              onChange={(e) => setGuardianUsername(e.target.value)}
-            />
-          </div>
+          {wantsStudent ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="student-username">Student username</Label>
+              <Input
+                id="student-username"
+                value={studentUsername}
+                maxLength={30}
+                placeholder="ava.chen"
+                onChange={(e) => setStudentUsername(e.target.value)}
+              />
+            </div>
+          ) : null}
+          {wantsGuardian ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="guardian-username">Parent / guardian username</Label>
+              <Input
+                id="guardian-username"
+                value={guardianUsername}
+                maxLength={30}
+                placeholder="ava.chen.parent"
+                onChange={(e) => setGuardianUsername(e.target.value)}
+              />
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
-          <div className="space-y-1.5">
-            <Label htmlFor="student-login-email">Student email (optional)</Label>
-            <Input
-              id="student-login-email"
-              type="email"
-              value={studentEmail}
-              maxLength={255}
-              placeholder="leave blank — student adds it at first sign-in"
-              onChange={(e) => setStudentEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="guardian-login-email">Guardian email (optional)</Label>
-            <Input
-              id="guardian-login-email"
-              type="email"
-              value={guardianEmail}
-              maxLength={255}
-              placeholder="leave blank — guardian adds it at first sign-in"
-              onChange={(e) => setGuardianEmail(e.target.value)}
-            />
-          </div>
+          {wantsStudent ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="student-login-email">Student email (optional)</Label>
+              <Input
+                id="student-login-email"
+                type="email"
+                value={studentEmail}
+                maxLength={255}
+                placeholder="leave blank — student adds it at first sign-in"
+                onChange={(e) => setStudentEmail(e.target.value)}
+              />
+            </div>
+          ) : null}
+          {wantsGuardian ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="guardian-login-email">Parent / guardian email (optional)</Label>
+              <Input
+                id="guardian-login-email"
+                type="email"
+                value={guardianEmail}
+                maxLength={255}
+                placeholder="leave blank — guardian adds it at first sign-in"
+                onChange={(e) => setGuardianEmail(e.target.value)}
+              />
+            </div>
+          ) : null}
         </div>
+
 
 
         {student.user_id || student.guardian_user_id ? (
