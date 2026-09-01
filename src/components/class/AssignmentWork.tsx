@@ -87,7 +87,7 @@ export function AssignmentWork({
   roster: Student[];
 }) {
   if (isStaff) {
-    return <StaffCollectPanel assignment={assignment} roster={roster} />;
+    return <StaffCollectPanel assignment={assignment} roster={roster} classId={classId} />;
   }
   return <StudentWorkPanel assignment={assignment} classId={classId} />;
 }
