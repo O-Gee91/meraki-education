@@ -203,7 +203,7 @@ function DashboardPage() {
       description={
         isStaff
           ? "Your classes, roster and school announcements."
-          : "Grades, attendance and announcements for the current term."
+          : "Your grades, upcoming work and news from your teachers."
       }
     >
       <SetupCard />
