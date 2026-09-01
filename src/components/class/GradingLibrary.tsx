@@ -31,6 +31,7 @@ type SharedGradingRow = {
   grade_level: number | null;
   subject: string | null;
   payload: unknown;
+  shared_by: string | null;
   shared_by_name: string;
   created_at: string;
 };
