@@ -18,6 +18,7 @@ import {
 import { ClassLogins } from "@/components/students/ClassLogins";
 import { StudentImport } from "@/components/students/StudentImport";
 import { CreateLogins } from "@/components/students/CreateLogins";
+import { CreateAccount } from "@/components/students/CreateAccount";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 import { StudentProfile, type StudentRow } from "@/components/students/StudentProfile";
 import { graduatingClassLabel } from "@/lib/academic";
@@ -154,6 +155,7 @@ function StudentsPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           {isStaff ? <ClassLogins /> : null}
+          {isStaff ? <CreateAccount /> : null}
           <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
