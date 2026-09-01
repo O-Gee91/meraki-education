@@ -78,6 +78,23 @@ export function AttendanceTab({ classId }: { classId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const markAll = useMutation({
+    mutationFn: async (status: string) => {
+      const rows = roster.map((r) => ({
+        class_id: classId,
+        student_id: r.student_id,
+        date,
+        status,
+      }));
+      const { error } = await supabase.from("attendance").upsert(rows, {
+        onConflict: "class_id,student_id,date",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance", classId, date] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (!isStaff) {
     return (
       <div className="panel mt-4 divide-y divide-border">
