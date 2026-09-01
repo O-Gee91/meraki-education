@@ -43,18 +43,23 @@ export const Route = createFileRoute("/_authenticated/reports")({
 });
 
 function ReportsPage() {
-  const { isStaff } = useAuth();
+  const { isStaff, primaryRole } = useAuth();
+  const isStudent = primaryRole === "student";
 
   return (
     <AppShell
-      title="Assessment & reporting"
-      description="Report cards, standards coverage and student portfolios."
+      title={isStudent ? "My grades & progress" : "Assessment & reporting"}
+      description={
+        isStudent
+          ? "Your report card, the standards you have mastered and the work in your portfolio."
+          : "Report cards, standards coverage and student portfolios."
+      }
     >
       <Tabs defaultValue="reportcards">
         <TabsList>
-          <TabsTrigger value="reportcards">Report cards</TabsTrigger>
-          <TabsTrigger value="standards">Standards</TabsTrigger>
-          <TabsTrigger value="portfolios">Portfolios</TabsTrigger>
+          <TabsTrigger value="reportcards">{isStudent ? "My report card" : "Report cards"}</TabsTrigger>
+          <TabsTrigger value="standards">{isStudent ? "My standards" : "Standards"}</TabsTrigger>
+          <TabsTrigger value="portfolios">{isStudent ? "My portfolio" : "Portfolios"}</TabsTrigger>
           {isStaff && <TabsTrigger value="templates">Print templates</TabsTrigger>}
         </TabsList>
         <TabsContent value="reportcards">
