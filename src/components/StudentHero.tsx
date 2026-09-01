@@ -385,8 +385,11 @@ export function StudentHero() {
     };
   }, [assignments, submissionByAssignment, streak, assessmentSubs, grades, today]);
 
-  const heroKey = pickHeroClass(stats);
+  const suggestedKey = pickHeroClass(stats);
+  const chosenKey = (heroProfile?.hero_class ?? null) as HeroClassKey | null;
+  const heroKey = chosenKey ?? suggestedKey;
   const hero = HERO_CLASSES[heroKey];
+
 
   /* ---------- XP + level ---------- */
   const xp = useMemo(() => {
