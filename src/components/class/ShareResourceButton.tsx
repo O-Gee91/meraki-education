@@ -110,7 +110,7 @@ export function ShareResourceButton({
           </p>
         </div>
         <DialogFooter>
-          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !grade}>
             {mutation.isPending ? "Sharing…" : "Share to library"}
           </Button>
         </DialogFooter>
