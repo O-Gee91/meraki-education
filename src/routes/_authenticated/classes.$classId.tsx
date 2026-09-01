@@ -368,15 +368,6 @@ function ClassDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="assessments">
-          <AssessmentsTab
-            classId={classId}
-            isStaff={isStaff}
-            assignments={assignments}
-            gradeLevel={klass?.grade_level ?? null}
-          />
-        </TabsContent>
-
         {isStaff && (
           <TabsContent value="shared">
             <SharedLibrary classId={classId} />
