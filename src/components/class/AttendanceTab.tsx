@@ -126,6 +126,37 @@ export function AttendanceTab({ classId }: { classId: string }) {
         />
       </div>
 
+      {roster.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Mark all:</span>
+          {STATUSES.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant="outline"
+              onClick={() => markAll.mutate(s)}
+              disabled={markAll.isPending}
+            >
+              {s}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={async () => {
+              const ids = records.map((r) => r.id).filter(Boolean);
+              if (!ids.length) return;
+              const { error } = await supabase.from("attendance").delete().in("id", ids);
+              if (error) toast.error(error.message);
+              else queryClient.invalidateQueries({ queryKey: ["attendance", classId, date] });
+            }}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
+
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">
