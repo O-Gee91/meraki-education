@@ -23,6 +23,8 @@ import {
   shareGradingSetup,
 } from "@/lib/grading-sharing.functions";
 import { parseGradingSetup } from "@/lib/grading";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { useAuth } from "@/hooks/useAuth";
 
 type SharedGradingRow = {
   id: string;
@@ -44,6 +46,7 @@ export function GradingLibrary({
   className: string;
 }) {
   const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
   const share = useServerFn(shareGradingSetup);
   const apply = useServerFn(applySharedGradingSetup);
   const [open, setOpen] = useState(false);
@@ -198,6 +201,17 @@ export function GradingLibrary({
                 >
                   <Download className="mr-1 size-4" /> Use in this class
                 </Button>
+                {(isAdmin || (!!user && row.shared_by === user.id)) && (
+                  <ConfirmDeleteButton
+                    label="Unshare"
+                    disabled={unshare.isPending}
+                    warningTitle="Remove this shared grading setup?"
+                    warningDescription="Other teachers will no longer be able to apply it. Classes that already used it keep their own copy."
+                    title={`Delete "${row.title}" from the shared library?`}
+                    description="This cannot be undone."
+                    onConfirm={() => unshare.mutate(row.id)}
+                  />
+                )}
               </li>
             );
           })}
