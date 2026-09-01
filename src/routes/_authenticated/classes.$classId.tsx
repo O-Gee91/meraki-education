@@ -1092,9 +1092,9 @@ function RosterTab({
   });
 
   const groups = (() => {
-    if (groupBy === "none") return [{ key: "all", label: "", rows: roster }];
+    if (groupBy === "none") return [{ key: "all", label: "", rows: sortedRoster }];
     const buckets = new Map<string, RosterRow[]>();
-    for (const r of roster) {
+    for (const r of sortedRoster) {
       const key =
         groupBy === "grade"
           ? `Grade ${r.students?.grade_level ?? "—"}`
