@@ -1138,6 +1138,33 @@ export type Database = {
           },
         ]
       }
+      hero_profiles: {
+        Row: {
+          created_at: string
+          hero_class: string
+          id: string
+          quest_started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hero_class: string
+          id?: string
+          quest_started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hero_class?: string
+          id?: string
+          quest_started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount_cents: number

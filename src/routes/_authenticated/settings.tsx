@@ -30,7 +30,9 @@ export const Route = createFileRoute("/_authenticated/settings")({
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 
 function SettingsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, isStaff } = useAuth();
+  const navigate = Route.useNavigate();
+
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -70,9 +72,15 @@ function SettingsPage() {
       return;
     }
     toast.success("Password updated");
+    if (!isStaff) {
+      toast("Next: choose your character class on your Overview page to begin your quest.", {
+        action: { label: "Choose class", onClick: () => navigate({ to: "/dashboard" }) },
+      });
+    }
     setCurrent("");
     setNext("");
     setConfirm("");
+
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Flame,
   Heart,
@@ -11,9 +11,13 @@ import {
   Skull,
   ScrollText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { percent } from "@/lib/school";
+import { formatDate, percent } from "@/lib/school";
+
 
 /* ------------------------------ data types ------------------------------ */
 
@@ -166,6 +170,40 @@ function dayKey(value: string) {
 
 export function StudentHero() {
   const today = new Date().toISOString().slice(0, 10);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [picking, setPicking] = useState(false);
+
+  const { data: heroProfile, isLoading: heroProfileLoading } = useQuery({
+    queryKey: ["hero-profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hero_profiles")
+        .select("hero_class, quest_started_at")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const chooseClass = useMutation({
+    mutationFn: async (key: HeroClassKey) => {
+      const { error } = await supabase
+        .from("hero_profiles")
+        .upsert({ user_id: user!.id, hero_class: key }, { onConflict: "user_id" });
+      if (error) throw error;
+      return key;
+    },
+    onSuccess: (key) => {
+      setPicking(false);
+      toast.success(`Your quest begins as a ${HERO_CLASSES[key].name}!`);
+      queryClient.invalidateQueries({ queryKey: ["hero-profile"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
 
   const { data: classes = [] } = useQuery({
     queryKey: ["hero-classes"],
@@ -347,8 +385,11 @@ export function StudentHero() {
     };
   }, [assignments, submissionByAssignment, streak, assessmentSubs, grades, today]);
 
-  const heroKey = pickHeroClass(stats);
+  const suggestedKey = pickHeroClass(stats);
+  const chosenKey = (heroProfile?.hero_class ?? null) as HeroClassKey | null;
+  const heroKey = chosenKey ?? suggestedKey;
   const hero = HERO_CLASSES[heroKey];
+
 
   /* ---------- XP + level ---------- */
   const xp = useMemo(() => {
@@ -452,7 +493,22 @@ export function StudentHero() {
 
   const HeroIcon = hero.icon;
 
+  if (heroProfileLoading) return null;
+
+  if (!chosenKey || picking) {
+    return (
+      <ClassChooser
+        suggested={suggestedKey}
+        current={chosenKey}
+        saving={chooseClass.isPending}
+        onChoose={(key) => chooseClass.mutate(key)}
+        {...(chosenKey ? { onCancel: () => setPicking(false) } : {})}
+      />
+    );
+  }
+
   return (
+
     <TooltipProvider delayDuration={120}>
       <section className="mt-6 space-y-6">
         {/* Hero profile */}
@@ -485,7 +541,20 @@ export function StudentHero() {
                 <Sparkles className="mr-1 inline size-4" />
                 {hero.buff}
               </p>
+              <div className="mt-3 flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Quest began {formatDate(heroProfile?.quest_started_at)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPicking(true)}
+                  className="text-xs font-medium text-accent hover:underline"
+                >
+                  Change class
+                </button>
+              </div>
             </div>
+
 
             <div className="w-full md:w-64">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -660,5 +729,104 @@ function StatOrb({ value, stat, delay }: { value: number; stat: StatKey; delay: 
         {Math.round(value)}
       </text>
     </svg>
+  );
+}
+
+/* ------------------------------ class chooser ------------------------------ */
+
+function ClassChooser({
+  suggested,
+  current,
+  saving,
+  onChoose,
+  onCancel,
+}: {
+  suggested: HeroClassKey;
+  current: HeroClassKey | null;
+  saving: boolean;
+  onChoose: (key: HeroClassKey) => void;
+  onCancel?: () => void;
+}) {
+  const [selected, setSelected] = useState<HeroClassKey>(current ?? suggested);
+  const keys = Object.keys(HERO_CLASSES) as HeroClassKey[];
+
+  return (
+    <section className="panel mt-6 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Character creation
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold">
+            {current ? "Change your character class" : "Choose your character class"}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Your class shapes how your quest for the school year plays out — its passive buff, your
+            title and the way your attributes level up. Based on your work so far we would suggest
+            the <span className="font-medium text-foreground">{HERO_CLASSES[suggested].name}</span>,
+            but the choice is yours.
+          </p>
+        </div>
+        {onCancel && (
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {keys.map((key) => {
+          const hero = HERO_CLASSES[key];
+          const Icon = hero.icon;
+          const active = selected === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSelected(key)}
+              aria-pressed={active}
+              className={`rounded-xl border p-4 text-left transition-all duration-200 hover:scale-[1.02] ${
+                active ? `${hero.ring} ring-2 ring-accent` : "border-border bg-muted/20"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={`grid size-11 place-items-center rounded-lg border border-current/30 bg-background/70 ${hero.accent}`}
+                >
+                  <Icon className="size-6" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{hero.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">“{hero.title}”</p>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{hero.blurb}</p>
+              <p className={`mt-2 text-xs font-medium ${hero.accent}`}>
+                <Sparkles className="mr-1 inline size-3" />
+                {hero.buff}
+              </p>
+              {key === suggested && (
+                <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  Suggested for you
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button onClick={() => onChoose(selected)} disabled={saving}>
+          {saving
+            ? "Starting your quest…"
+            : current
+              ? `Become a ${HERO_CLASSES[selected].name}`
+              : `Begin the year as a ${HERO_CLASSES[selected].name}`}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          You can change your class later from your hero profile.
+        </p>
+      </div>
+    </section>
   );
 }
