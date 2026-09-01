@@ -143,11 +143,10 @@ function StudentsPage() {
         .includes(query.toLowerCase()),
     )
     .sort((a, b) => {
-      const dir = sortBy === "last" ? 1 : -1;
       const aKey = sortBy === "last" ? a.last_name : a.first_name;
       const bKey = sortBy === "last" ? b.last_name : b.first_name;
       const cmp = (aKey ?? "").localeCompare(bKey ?? "", undefined, { sensitivity: "base" });
-      if (cmp !== 0) return cmp * dir;
+      if (cmp !== 0) return cmp;
       const aSub = sortBy === "last" ? a.first_name : a.last_name;
       const bSub = sortBy === "last" ? b.first_name : b.last_name;
       return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
