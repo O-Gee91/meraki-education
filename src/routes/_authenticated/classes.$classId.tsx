@@ -948,7 +948,14 @@ function RosterTab({
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
   const [newOpen, setNewOpen] = useState(false);
-  const blankNew = { first: "", last: "", grade: gradeLevel ? String(gradeLevel) : "", number: "" };
+  const blankNew = {
+    first: "",
+    last: "",
+    chinese: "",
+    grade: gradeLevel ? String(gradeLevel) : "",
+    number: "",
+    guardianEmail: "",
+  };
   const [newForm, setNewForm] = useState(blankNew);
 
   const { data: students = [] } = useQuery({
@@ -1020,8 +1027,10 @@ function RosterTab({
         .insert({
           first_name: first.slice(0, 60),
           last_name: last.slice(0, 60),
+          chinese_name: newForm.chinese.trim().slice(0, 60) || null,
           grade_level: grade,
           student_number: newForm.number.trim().slice(0, 40) || null,
+          guardian_email: newForm.guardianEmail.trim().toLowerCase().slice(0, 255) || null,
         })
         .select("id")
         .single();
@@ -1140,6 +1149,27 @@ function RosterTab({
                       value={newForm.last}
                       maxLength={60}
                       onChange={(e) => setNewForm({ ...newForm, last: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-chinese">Chinese name (optional)</Label>
+                    <Input
+                      id="ns-chinese"
+                      value={newForm.chinese}
+                      maxLength={60}
+                      onChange={(e) => setNewForm({ ...newForm, chinese: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ns-guardian">Guardian email (optional)</Label>
+                    <Input
+                      id="ns-guardian"
+                      type="email"
+                      value={newForm.guardianEmail}
+                      maxLength={255}
+                      onChange={(e) => setNewForm({ ...newForm, guardianEmail: e.target.value })}
                     />
                   </div>
                 </div>
