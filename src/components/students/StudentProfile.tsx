@@ -45,6 +45,21 @@ export function StudentProfile({
     },
   });
 
+  const { data: logins } = useQuery({
+    queryKey: ["student-profile-logins", student?.user_id],
+    enabled: open && !!student?.user_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("login_events")
+        .select("id, signed_in_at")
+        .eq("user_id", student!.user_id!)
+        .order("signed_in_at", { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   if (!student) return null;
 
   return (
@@ -96,6 +111,28 @@ export function StudentProfile({
             </dd>
           </div>
         </dl>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Login activity</h3>
+          {!student.user_id ? (
+            <p className="text-sm text-muted-foreground">No student account linked yet.</p>
+          ) : !logins || logins.length === 0 ? (
+            <p className="text-sm text-muted-foreground">This student has not signed in yet.</p>
+          ) : (
+            <>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Last sign-in: {new Date(logins[0]!.signed_in_at).toLocaleString()}
+              </p>
+              <ul className="divide-y divide-border rounded-md border border-border text-sm">
+                {logins.map((l) => (
+                  <li key={l.id} className="px-3 py-1.5">
+                    {new Date(l.signed_in_at).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
 
         <div>
           <h3 className="mb-2 text-sm font-semibold">Enrolled classes</h3>

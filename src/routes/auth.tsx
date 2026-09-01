@@ -13,6 +13,7 @@ import {
   usernameToEmail,
   USERNAME_RULES,
 } from "@/lib/usernames";
+import { recordLogin } from "@/lib/login-tracking";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +100,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
+    await recordLogin();
     goToApp();
   }
 
