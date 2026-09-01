@@ -121,7 +121,7 @@ export function PulseDashboard({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignment_submissions")
-        .select("id, submitted_at, assignment_id")
+        .select("id, submitted_at, assignment_id, student_id")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data ?? [];
