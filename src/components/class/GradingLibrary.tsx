@@ -23,6 +23,8 @@ import {
   shareGradingSetup,
 } from "@/lib/grading-sharing.functions";
 import { parseGradingSetup } from "@/lib/grading";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { useAuth } from "@/hooks/useAuth";
 
 type SharedGradingRow = {
   id: string;
@@ -31,6 +33,7 @@ type SharedGradingRow = {
   grade_level: number | null;
   subject: string | null;
   payload: unknown;
+  shared_by: string | null;
   shared_by_name: string;
   created_at: string;
 };
@@ -43,6 +46,7 @@ export function GradingLibrary({
   className: string;
 }) {
   const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
   const share = useServerFn(shareGradingSetup);
   const apply = useServerFn(applySharedGradingSetup);
   const [open, setOpen] = useState(false);
@@ -55,7 +59,7 @@ export function GradingLibrary({
       const { data, error } = await supabase
         .from("shared_resources")
         .select(
-          "id, title, description, grade_level, subject, payload, shared_by_name, created_at",
+          "id, title, description, grade_level, subject, payload, shared_by, shared_by_name, created_at",
         )
         .eq("kind", "grading")
         .order("created_at", { ascending: false });
@@ -73,6 +77,21 @@ export function GradingLibrary({
       toast.success("Grading setup shared with other teachers");
       setOpen(false);
       setNote("");
+      queryClient.invalidateQueries({ queryKey: ["shared-grading-setups"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const unshare = useMutation({
+    mutationFn: async (resourceId: string) => {
+      const { error } = await supabase
+        .from("shared_resources")
+        .delete()
+        .eq("id", resourceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Shared grading setup removed");
       queryClient.invalidateQueries({ queryKey: ["shared-grading-setups"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -182,6 +201,17 @@ export function GradingLibrary({
                 >
                   <Download className="mr-1 size-4" /> Use in this class
                 </Button>
+                {(isAdmin || (!!user && row.shared_by === user.id)) && (
+                  <ConfirmDeleteButton
+                    label="Unshare"
+                    disabled={unshare.isPending}
+                    warningTitle="Remove this shared grading setup?"
+                    warningDescription="Other teachers will no longer be able to apply it. Classes that already used it keep their own copy."
+                    title={`Delete "${row.title}" from the shared library?`}
+                    description="This cannot be undone."
+                    onConfirm={() => unshare.mutate(row.id)}
+                  />
+                )}
               </li>
             );
           })}
