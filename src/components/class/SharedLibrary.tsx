@@ -78,47 +78,67 @@ export function SharedLibrary({ classId }: { classId: string }) {
   });
 
   const term = search.trim().toLowerCase();
+  const counts = {
+    assignment: resources.filter((r) => r.kind === "assignment").length,
+    assessment: resources.filter((r) => r.kind === "assessment").length,
+  };
   const visible = resources.filter(
     (r) =>
-      (kindFilter === "all" || r.kind === kindFilter) &&
+      r.kind === folder &&
       (term === "" ||
         r.title.toLowerCase().includes(term) ||
         (r.description ?? "").toLowerCase().includes(term) ||
         r.shared_by_name.toLowerCase().includes(term)),
   );
 
+  const grades = [...new Set(visible.map((r) => r.grade_level ?? 0))].sort((a, b) => a - b);
+
   return (
     <div className="mt-4 space-y-4">
+      <div className="panel flex flex-wrap items-center gap-2 p-2">
+        {(["assignment", "assessment"] as const).map((k) => (
+          <Button
+            key={k}
+            variant={folder === k ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setFolder(k)}
+          >
+            <FolderIcon className="mr-2 h-4 w-4" />
+            {k === "assignment" ? "Assignments" : "Assessments"}
+            <span className="ml-2 text-xs opacity-70">{counts[k]}</span>
+          </Button>
+        ))}
+      </div>
+
       <div className="panel flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-56 flex-1">
           <Input
             value={search}
-            placeholder="Search shared assignments and assessments…"
+            placeholder={`Search shared ${folder === "assignment" ? "assignments" : "assessments"}…`}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as typeof kindFilter)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Everything</SelectItem>
-            <SelectItem value="assignment">Assignments</SelectItem>
-            <SelectItem value="assessment">Assessments</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {isLoading ? (
         <p className="panel p-6 text-sm text-muted-foreground">Loading shared resources…</p>
       ) : visible.length === 0 ? (
         <p className="panel p-6 text-sm text-muted-foreground">
-          Nothing shared for your grade yet. Use the Share button on any assignment or assessment to
-          add the first one.
+          Nothing shared with your grade in this folder yet. Use the Share button on any{" "}
+          {folder === "assignment" ? "assignment" : "assessment"} to add the first one.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {visible.map((r) => (
+        <div className="space-y-6">
+          {grades.map((g) => (
+            <section key={g} className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                {g ? `Grade ${g}` : "Unassigned grade"}
+              </h3>
+              <ul className="space-y-3">
+                {visible
+                  .filter((r) => (r.grade_level ?? 0) === g)
+                  .map((r) => (
+
             <li key={r.id} className="panel p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
