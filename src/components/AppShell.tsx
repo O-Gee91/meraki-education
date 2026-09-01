@@ -53,12 +53,14 @@ const NAV: NavItem[] = [
   {
     to: "/reports",
     label: "Assessment",
+    studentLabel: "My grades",
     icon: ClipboardCheck,
     roles: ["admin", "teacher", "student", "parent"],
   },
   {
     to: "/wellbeing",
     label: "Well-being",
+    studentLabel: "How I'm doing",
     icon: HeartPulse,
     roles: ["admin", "teacher", "student", "parent"],
   },
@@ -67,12 +69,14 @@ const NAV: NavItem[] = [
   {
     to: "/behavior",
     label: "Behavior",
+    studentLabel: "My behavior",
     icon: ShieldCheck,
     roles: ["admin", "teacher", "student", "parent"],
   },
   {
     to: "/messages",
     label: "Messages",
+    studentLabel: "My messages",
     icon: MessageSquare,
     roles: ["admin", "teacher", "student", "parent"],
   },
