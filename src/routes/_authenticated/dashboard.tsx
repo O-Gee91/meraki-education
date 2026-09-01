@@ -208,9 +208,7 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {!isStaff && <StudentHero />}
-
-      {!isStaff && <StudentQuest />}
+      {!isStaff && <HeroProfilePanel />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
