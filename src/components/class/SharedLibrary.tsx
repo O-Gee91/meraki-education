@@ -171,6 +171,8 @@ export function SharedLibrary({ classId }: { classId: string }) {
                           {(isAdmin || r.shared_by === user?.id) && (
                             <ConfirmDeleteButton
                               label="Unshare"
+                              warningTitle={`Remove shared ${r.kind === "assignment" ? "assignment" : "assessment"}?`}
+                              warningDescription={`You are about to permanently delete “${r.title}” from the shared teacher library. Any teacher who already copied it will keep their own copy, but this original shared file will be gone.`}
                               title={`Unshare “${r.title}”?`}
                               description="This removes it from the shared library. Copies other teachers already made stay untouched."
                               onConfirm={() => unshare.mutate(r.id)}
