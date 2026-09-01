@@ -145,12 +145,20 @@ export function AppShell({
             {profile?.full_name || user?.email || "Signed in"}
           </p>
           <p className="text-xs text-sidebar-foreground/70">{ROLE_LABEL[primaryRole]}</p>
-          <button
-            onClick={signOut}
-            className="mt-3 flex items-center gap-2 text-xs font-medium text-sidebar-foreground/80 hover:text-sidebar-primary"
-          >
-            <LogOut className="size-3.5" /> Sign out
-          </button>
+          <div className="mt-3 flex items-center gap-4">
+            <Link
+              to="/settings"
+              className="flex items-center gap-2 text-xs font-medium text-sidebar-foreground/80 hover:text-sidebar-primary"
+            >
+              <KeyRound className="size-3.5" /> Change password
+            </Link>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 text-xs font-medium text-sidebar-foreground/80 hover:text-sidebar-primary"
+            >
+              <LogOut className="size-3.5" /> Sign out
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -164,6 +172,9 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             {actions}
+            <Button asChild variant="ghost" size="sm" className="lg:hidden">
+              <Link to="/settings">Password</Link>
+            </Button>
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={signOut}>
               Sign out
             </Button>
