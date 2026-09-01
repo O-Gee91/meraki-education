@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,31 +18,70 @@ export function ConfirmDeleteButton({
   description,
   onConfirm,
   disabled,
+  warningTitle,
+  warningDescription,
 }: {
   label?: string;
   title: string;
   description?: string;
   onConfirm: () => void;
   disabled?: boolean;
+  /** When provided, a warning dialog is shown first before the final confirmation. */
+  warningTitle?: string;
+  warningDescription?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [showWarning, setShowWarning] = useState(!!warningTitle);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setShowWarning(!!warningTitle);
+  };
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="sm" disabled={disabled} className="text-destructive">
           {label}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {description ?? "This cannot be undone."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Delete</AlertDialogAction>
-        </AlertDialogFooter>
+        {showWarning ? (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{warningTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {warningDescription ?? "Please review before proceeding."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => setShowWarning(false)}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        ) : (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {description ?? "This cannot be undone."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  onConfirm();
+                  setOpen(false);
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
       </AlertDialogContent>
     </AlertDialog>
   );
