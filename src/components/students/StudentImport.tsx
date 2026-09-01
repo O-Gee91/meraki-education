@@ -451,15 +451,37 @@ export function StudentImport({
             checked={createLogins}
             onCheckedChange={(v) => setCreateLogins(v === true)}
           />
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="create-logins" className="cursor-pointer">
               Create username logins automatically
             </Label>
             <p className="text-xs text-muted-foreground">
-              Student and guardian accounts are created with a temporary password wherever an email
-              is provided, then linked to the student profile.
+              Each account gets a temporary password and is linked to the student profile. Emails
+              stay blank until the person registers one at first sign-in.
             </p>
+            {createLogins ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {(
+                  [
+                    ["both", "Student + parent"],
+                    ["student", "Student only"],
+                    ["parent", "Parent only"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={loginMode === value ? "default" : "outline"}
+                    onClick={() => setLoginMode(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
+
         </div>
 
         <DialogFooter>
