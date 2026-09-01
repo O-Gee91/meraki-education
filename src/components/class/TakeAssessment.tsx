@@ -97,6 +97,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
       return send({ data: { assessmentId, answers } });
     },
     onSuccess: (result) => {
+      localStorage.removeItem(`assessment-start:${assessmentId}`);
       toast.success(
         result.needsReview
           ? `Submitted — ${result.autoScore}/${result.totalPoints} auto-graded, written answers await review`
@@ -107,6 +108,16 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const limitMinutes = data?.assessment.time_limit_minutes;
+  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, () => {
+    if (!submit.isPending && !mySubmission) {
+      toast.warning("Time is up — your assessment is being submitted automatically.");
+      submit.mutate();
+    }
+  });
+  const urgent = remaining != null && remaining <= 60_000;
+  const warning = remaining != null && remaining <= 5 * 60_000 && !urgent;
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-destructive">{(error as Error).message}</p>;
