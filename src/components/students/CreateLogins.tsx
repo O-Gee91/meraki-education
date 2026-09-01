@@ -123,49 +123,80 @@ export function CreateLogins({ student }: Props) {
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="student-username">Student username</Label>
-            <Input
-              id="student-username"
-              value={studentUsername}
-              maxLength={30}
-              placeholder="ava.chen"
-              onChange={(e) => setStudentUsername(e.target.value)}
-            />
+            <Label>Generate logins for</Label>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["both", "Student + parent"],
+                  ["student", "Student only"],
+                  ["parent", "Parent only"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={mode === value ? "default" : "outline"}
+                  onClick={() => setMode(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="guardian-username">Guardian username</Label>
-            <Input
-              id="guardian-username"
-              value={guardianUsername}
-              maxLength={30}
-              placeholder="ava.chen.parent"
-              onChange={(e) => setGuardianUsername(e.target.value)}
-            />
-          </div>
+          {wantsStudent ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="student-username">Student username</Label>
+              <Input
+                id="student-username"
+                value={studentUsername}
+                maxLength={30}
+                placeholder="ava.chen"
+                onChange={(e) => setStudentUsername(e.target.value)}
+              />
+            </div>
+          ) : null}
+          {wantsGuardian ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="guardian-username">Parent / guardian username</Label>
+              <Input
+                id="guardian-username"
+                value={guardianUsername}
+                maxLength={30}
+                placeholder="ava.chen.parent"
+                onChange={(e) => setGuardianUsername(e.target.value)}
+              />
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">{USERNAME_RULES}</p>
-          <div className="space-y-1.5">
-            <Label htmlFor="student-login-email">Student email (optional)</Label>
-            <Input
-              id="student-login-email"
-              type="email"
-              value={studentEmail}
-              maxLength={255}
-              placeholder="leave blank — student adds it at first sign-in"
-              onChange={(e) => setStudentEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="guardian-login-email">Guardian email (optional)</Label>
-            <Input
-              id="guardian-login-email"
-              type="email"
-              value={guardianEmail}
-              maxLength={255}
-              placeholder="leave blank — guardian adds it at first sign-in"
-              onChange={(e) => setGuardianEmail(e.target.value)}
-            />
-          </div>
+          {wantsStudent ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="student-login-email">Student email (optional)</Label>
+              <Input
+                id="student-login-email"
+                type="email"
+                value={studentEmail}
+                maxLength={255}
+                placeholder="leave blank — student adds it at first sign-in"
+                onChange={(e) => setStudentEmail(e.target.value)}
+              />
+            </div>
+          ) : null}
+          {wantsGuardian ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="guardian-login-email">Parent / guardian email (optional)</Label>
+              <Input
+                id="guardian-login-email"
+                type="email"
+                value={guardianEmail}
+                maxLength={255}
+                placeholder="leave blank — guardian adds it at first sign-in"
+                onChange={(e) => setGuardianEmail(e.target.value)}
+              />
+            </div>
+          ) : null}
         </div>
+
 
 
         {student.user_id || student.guardian_user_id ? (
