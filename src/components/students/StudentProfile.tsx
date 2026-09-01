@@ -304,6 +304,9 @@ export function StudentProfile({
             </ul>
           )}
         </div>
+          </>
+        )}
+
       </DialogContent>
     </Dialog>
   );
