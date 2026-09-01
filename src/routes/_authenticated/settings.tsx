@@ -154,6 +154,24 @@ function SettingsPage() {
           {busy ? "Saving…" : "Update password"}
         </Button>
       </form>
+
+      <section className="panel max-w-lg p-6">
+        <h2 className="text-lg font-semibold">Recent sign-ins</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your latest logins to Meraki. If one looks unfamiliar, change your password.
+        </p>
+        {logins.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No sign-ins recorded yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border rounded-md border border-border text-sm">
+            {logins.map((l) => (
+              <li key={l.id} className="px-3 py-2">
+                {new Date(l.signed_in_at).toLocaleString()}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </AppShell>
   );
 }
