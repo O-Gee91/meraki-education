@@ -56,7 +56,7 @@ export function GradingLibrary({
       const { data, error } = await supabase
         .from("shared_resources")
         .select(
-          "id, title, description, grade_level, subject, payload, shared_by_name, created_at",
+          "id, title, description, grade_level, subject, payload, shared_by, shared_by_name, created_at",
         )
         .eq("kind", "grading")
         .order("created_at", { ascending: false });
