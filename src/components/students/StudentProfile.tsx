@@ -130,13 +130,97 @@ export function StudentProfile({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {student.first_name} {student.last_name}
-          </DialogTitle>
-          <DialogDescription>
-            Student profile — created automatically when the student was added or imported.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle>
+                {student.first_name} {student.last_name}
+              </DialogTitle>
+              <DialogDescription>
+                {editing
+                  ? "Update the student's details — changes apply everywhere in the school."
+                  : "Student profile — created automatically when the student was added or imported."}
+              </DialogDescription>
+            </div>
+            {isStaff && !editing ? (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            ) : null}
+          </div>
         </DialogHeader>
+
+        {editing ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-first">First name</Label>
+                <Input
+                  id="edit-first"
+                  value={form.first}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, first: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-last">Last name</Label>
+                <Input
+                  id="edit-last"
+                  value={form.last}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, last: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-chinese">Chinese name</Label>
+                <Input
+                  id="edit-chinese"
+                  value={form.chinese}
+                  maxLength={60}
+                  onChange={(e) => setForm({ ...form, chinese: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-grade">Grade level</Label>
+                <Input
+                  id="edit-grade"
+                  inputMode="numeric"
+                  value={form.grade}
+                  onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-number">Student ID</Label>
+                <Input
+                  id="edit-number"
+                  value={form.number}
+                  maxLength={20}
+                  onChange={(e) => setForm({ ...form, number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-guardian">Guardian email</Label>
+                <Input
+                  id="edit-guardian"
+                  type="email"
+                  value={form.guardianEmail}
+                  maxLength={255}
+                  onChange={(e) => setForm({ ...form, guardianEmail: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditing(false)} disabled={save.isPending}>
+                Cancel
+              </Button>
+              <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+
 
         <div className="flex items-center gap-3 rounded-md border border-border bg-secondary/40 p-3">
           <GraduationCap className="h-6 w-6 text-primary" />
