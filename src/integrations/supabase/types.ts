@@ -1203,6 +1203,24 @@ export type Database = {
           },
         ]
       }
+      login_events: {
+        Row: {
+          id: string
+          signed_in_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          signed_in_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          signed_in_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string
