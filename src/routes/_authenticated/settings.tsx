@@ -30,7 +30,9 @@ export const Route = createFileRoute("/_authenticated/settings")({
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 
 function SettingsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, isStaff } = useAuth();
+  const navigate = Route.useNavigate();
+
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
