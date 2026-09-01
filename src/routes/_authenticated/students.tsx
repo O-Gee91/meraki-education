@@ -136,11 +136,22 @@ function StudentsPage() {
     if (window.confirm(label)) removeStudents.mutate(ids);
   };
 
-  const filtered = students.filter((s) =>
-    `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
-      .toLowerCase()
-      .includes(query.toLowerCase()),
-  );
+  const filtered = students
+    .filter((s) =>
+      `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+    )
+    .sort((a, b) => {
+      const dir = sortBy === "last" ? 1 : -1;
+      const aKey = sortBy === "last" ? a.last_name : a.first_name;
+      const bKey = sortBy === "last" ? b.last_name : b.first_name;
+      const cmp = (aKey ?? "").localeCompare(bKey ?? "", undefined, { sensitivity: "base" });
+      if (cmp !== 0) return cmp * dir;
+      const aSub = sortBy === "last" ? a.first_name : a.last_name;
+      const bSub = sortBy === "last" ? b.first_name : b.last_name;
+      return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
+    });
 
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.id));
   const toggleAll = () =>
