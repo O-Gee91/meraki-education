@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
-import { SeatingPlan } from "@/components/class/SeatingPlan";
+
 import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
@@ -228,7 +228,7 @@ function ClassDetailPage() {
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
-          <TabsTrigger value="seating">Seating plan</TabsTrigger>
+          
           <TabsTrigger value="grading">Setup grading</TabsTrigger>
         </TabsList>
 
@@ -397,22 +397,7 @@ function ClassDetailPage() {
         </TabsContent>
 
 
-        <TabsContent value="seating">
-          <SeatingPlan
-            classId={classId}
-            isStaff={isStaff}
-            students={roster
-              .map((r) => r.students)
-              .filter((s): s is NonNullable<typeof s> => !!s)
-              .map((s) => ({
-                id: s.id,
-                first_name: s.first_name,
-                last_name: s.last_name,
-                student_number: s.student_number,
-              }))}
-            useIds={useIds}
-          />
-        </TabsContent>
+
 
       </Tabs>
 
