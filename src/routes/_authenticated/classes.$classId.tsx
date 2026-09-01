@@ -222,8 +222,7 @@ function ClassDetailPage() {
       <Tabs defaultValue="gradebook">
         <TabsList className="flex-wrap">
           <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          <TabsTrigger value="coursework">Coursework</TabsTrigger>
           <TabsTrigger value="discussions">Discussion board</TabsTrigger>
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
@@ -324,15 +323,31 @@ function ClassDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="assignments">
-          <AssignmentsTab
-            classId={classId}
-            isStaff={isStaff}
-            assignments={assignments}
-            roster={roster}
-            categories={categoryNames.length ? categoryNames : ["Homework"]}
-            gradeLevel={klass?.grade_level ?? null}
-          />
+        <TabsContent value="coursework">
+          <Tabs defaultValue="assignments">
+            <TabsList>
+              <TabsTrigger value="assignments">Assignments</TabsTrigger>
+              <TabsTrigger value="assessments">Assessments</TabsTrigger>
+            </TabsList>
+            <TabsContent value="assignments">
+              <AssignmentsTab
+                classId={classId}
+                isStaff={isStaff}
+                assignments={assignments}
+                roster={roster}
+                categories={categoryNames.length ? categoryNames : ["Homework"]}
+                gradeLevel={klass?.grade_level ?? null}
+              />
+            </TabsContent>
+            <TabsContent value="assessments">
+              <AssessmentsTab
+                classId={classId}
+                isStaff={isStaff}
+                assignments={assignments}
+                gradeLevel={klass?.grade_level ?? null}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="grading">
@@ -350,15 +365,6 @@ function ClassDetailPage() {
             classId={classId}
             isStaff={isStaff}
             categories={categoryNames.length ? categoryNames : ["Homework"]}
-          />
-        </TabsContent>
-
-        <TabsContent value="assessments">
-          <AssessmentsTab
-            classId={classId}
-            isStaff={isStaff}
-            assignments={assignments}
-            gradeLevel={klass?.grade_level ?? null}
           />
         </TabsContent>
 
