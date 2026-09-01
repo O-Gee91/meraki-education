@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,44 @@ import { getAssessmentPaper, submitAssessment } from "@/lib/assessments.function
 import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+
+function formatTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function useAssessmentTimer(
+  limitMinutes: number | null | undefined,
+  assessmentId: string,
+  onExpire: () => void,
+) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (!limitMinutes) return;
+    const key = `assessment-start:${assessmentId}`;
+    let start = Number(localStorage.getItem(key));
+    if (!start || Number.isNaN(start)) {
+      start = Date.now();
+      localStorage.setItem(key, String(start));
+    }
+    setStarted(true);
+    const limitMs = limitMinutes * 60 * 1000;
+    const tick = () => {
+      const left = start + limitMs - Date.now();
+      setRemaining(Math.max(0, left));
+      if (left <= 0) onExpire();
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [limitMinutes, assessmentId, onExpire]);
+
+  return { remaining, started };
+}
 
 export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const queryClient = useQueryClient();
@@ -58,6 +97,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
       return send({ data: { assessmentId, answers } });
     },
     onSuccess: (result) => {
+      localStorage.removeItem(`assessment-start:${assessmentId}`);
       toast.success(
         result.needsReview
           ? `Submitted — ${result.autoScore}/${result.totalPoints} auto-graded, written answers await review`
@@ -68,6 +108,16 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const limitMinutes = data?.assessment.time_limit_minutes;
+  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, () => {
+    if (!submit.isPending && !mySubmission) {
+      toast.warning("Time is up — your assessment is being submitted automatically.");
+      submit.mutate();
+    }
+  });
+  const urgent = remaining != null && remaining <= 60_000;
+  const warning = remaining != null && remaining <= 5 * 60_000 && !urgent;
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-destructive">{(error as Error).message}</p>;
@@ -94,6 +144,32 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
 
   return (
     <div className="space-y-4">
+      {limitMinutes && started && remaining != null && (
+        <div
+          className={`sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 shadow-float ${
+            urgent
+              ? "animate-pulse border-destructive bg-destructive text-destructive-foreground"
+              : warning
+                ? "border-warning bg-warning text-warning-foreground"
+                : "border-primary bg-primary text-primary-foreground"
+          }`}
+          role="timer"
+          aria-live={urgent ? "assertive" : "polite"}
+          aria-label={`Time remaining: ${formatTime(remaining)}`}
+        >
+          <div className="flex items-center gap-2 font-display font-semibold">
+            <Clock className="size-5" />
+            <span>Time remaining: {formatTime(remaining)}</span>
+          </div>
+          <div className="text-sm font-medium">
+            {urgent
+              ? "Time is almost up — submit now!"
+              : warning
+                ? "Less than 5 minutes left"
+                : `${limitMinutes} minute limit`}
+          </div>
+        </div>
+      )}
       {data.assessment.instructions && (
         <p className="text-sm text-muted-foreground">{data.assessment.instructions}</p>
       )}

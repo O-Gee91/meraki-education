@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,11 +141,16 @@ export function AssessmentsTab({
                       <Badge variant="outline">Grammar proof on</Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {a.due_at ? `Due ${formatDate(a.due_at.slice(0, 10))}` : "No due date"}
-                    {a.time_limit_minutes ? ` · ${a.time_limit_minutes} min limit` : ""}
-                    {a.assignment_id ? " · syncs to gradebook" : " · not linked to gradebook"}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{a.due_at ? `Due ${formatDate(a.due_at.slice(0, 10))}` : "No due date"}</span>
+                    {a.time_limit_minutes ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Clock className="size-3" />
+                        {a.time_limit_minutes} min limit
+                      </Badge>
+                    ) : null}
+                    <span>{a.assignment_id ? "syncs to gradebook" : "not linked to gradebook"}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {isStaff && (
