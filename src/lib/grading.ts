@@ -7,12 +7,20 @@ export type SpecialMark = {
   value?: number;
 };
 export type CategoryWeight = { name: string; weight: number };
+/** One-click score a teacher can apply to a gradebook cell. */
+export type QuickScore = {
+  label: string;
+  /** percent = % of the assignment's points, points = raw points, mark = special mark code */
+  kind: "percent" | "points" | "mark";
+  value: number | string;
+};
 
 export type GradingSetup = {
   mode: "unweighted" | "weighted";
   categories: CategoryWeight[];
   scale: GradeScaleBand[];
   marks: SpecialMark[];
+  quickScores: QuickScore[];
 };
 
 export const DEFAULT_SCALE: GradeScaleBand[] = [
@@ -30,6 +38,16 @@ export const DEFAULT_MARKS: SpecialMark[] = [
   { code: "L", label: "Late (half credit)", behavior: "value", value: 50 },
 ];
 
+export const DEFAULT_QUICK_SCORES: QuickScore[] = [
+  { label: "Full credit", kind: "percent", value: 100 },
+  { label: "Great (90%)", kind: "percent", value: 90 },
+  { label: "Proficient (80%)", kind: "percent", value: 80 },
+  { label: "Half credit", kind: "percent", value: 50 },
+  { label: "Zero", kind: "points", value: 0 },
+  { label: "Missing", kind: "mark", value: "M" },
+  { label: "Excused", kind: "mark", value: "EX" },
+];
+
 export const DEFAULT_CATEGORIES: CategoryWeight[] = [
   { name: "Homework", weight: 20 },
   { name: "Quiz", weight: 20 },
@@ -43,6 +61,7 @@ export const DEFAULT_SETUP: GradingSetup = {
   categories: DEFAULT_CATEGORIES,
   scale: DEFAULT_SCALE,
   marks: DEFAULT_MARKS,
+  quickScores: DEFAULT_QUICK_SCORES,
 };
 
 export function parseGradingSetup(raw: unknown): GradingSetup {
@@ -58,12 +77,25 @@ export function parseGradingSetup(raw: unknown): GradingSetup {
       ? [...(rawScale as GradeScaleBand[])].sort((a, b) => Number(b.min) - Number(a.min))
       : DEFAULT_SCALE;
   const marks = Array.isArray(rawMarks) ? (rawMarks as SpecialMark[]) : DEFAULT_MARKS;
+  const rawQuick = obj["quickScores"];
+  const quickScores = Array.isArray(rawQuick)
+    ? (rawQuick as QuickScore[]).filter((q) => q && typeof q.label === "string")
+    : DEFAULT_QUICK_SCORES;
   return {
     mode: obj["mode"] === "weighted" ? "weighted" : "unweighted",
     categories: categories.length ? categories : DEFAULT_CATEGORIES,
     scale,
     marks,
+    quickScores,
   };
+}
+
+/** Turns a quick score into the raw cell text the gradebook understands. */
+export function quickScoreCellValue(q: QuickScore, pointsPossible: number) {
+  if (q.kind === "mark") return String(q.value).toUpperCase();
+  if (q.kind === "points") return String(Number(q.value) || 0);
+  const pts = (Number(q.value) / 100) * Number(pointsPossible || 0);
+  return String(Math.round(pts * 100) / 100);
 }
 
 export function letterFor(pct: number, scale: GradeScaleBand[]) {
