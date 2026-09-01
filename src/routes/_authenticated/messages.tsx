@@ -178,10 +178,17 @@ function MessagesPage() {
   });
 
   return (
-    <AppShell title="Communications" description="Messages and school-wide announcements.">
+    <AppShell
+      title={isStaff ? "Communications" : "My messages"}
+      description={
+        isStaff
+          ? "Messages and school-wide announcements."
+          : "Messages with your teachers and announcements from your school."
+      }
+    >
       <Tabs defaultValue="inbox">
         <TabsList>
-          <TabsTrigger value="inbox">Messages</TabsTrigger>
+          <TabsTrigger value="inbox">{isStaff ? "Messages" : "My inbox"}</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
         </TabsList>
 
