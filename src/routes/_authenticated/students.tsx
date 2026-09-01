@@ -245,6 +245,17 @@ function StudentsPage() {
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-sm"
         />
+        <span className="text-sm text-muted-foreground">Sort by</span>
+        {(["last", "first"] as const).map((k) => (
+          <Button
+            key={k}
+            size="sm"
+            variant={sortBy === k ? "default" : "outline"}
+            onClick={() => setSortBy(k)}
+          >
+            {k === "last" ? "Last name" : "First name"}
+          </Button>
+        ))}
         {isStaff && selected.length > 0 ? (
           <>
             <span className="text-sm text-muted-foreground">{selected.length} selected</span>
