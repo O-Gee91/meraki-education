@@ -957,6 +957,7 @@ function RosterTab({
     guardianEmail: "",
   };
   const [newForm, setNewForm] = useState(blankNew);
+  const [sortBy, setSortBy] = useState<"last" | "first">("last");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
