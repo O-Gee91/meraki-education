@@ -193,31 +193,64 @@ export function AssessmentsTab({
 
                     </>
                   )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setOpenId(openId === a.id ? null : a.id)}
-                  >
-                    {openId === a.id ? "Close" : isStaff ? "Build & grade" : "Open"}
-                  </Button>
+                  {isStaff ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant={openId === `build:${a.id}` ? "default" : "outline"}
+                        onClick={() =>
+                          setOpenId(openId === `build:${a.id}` ? null : `build:${a.id}`)
+                        }
+                      >
+                        {openId === `build:${a.id}` ? "Close build" : "Build questions"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={openId === `grade:${a.id}` ? "default" : "outline"}
+                        className={
+                          openId === `grade:${a.id}`
+                            ? "bg-amber-500 text-white hover:bg-amber-500/90"
+                            : "border-amber-500/40 text-amber-600"
+                        }
+                        onClick={() =>
+                          setOpenId(openId === `grade:${a.id}` ? null : `grade:${a.id}`)
+                        }
+                      >
+                        {openId === `grade:${a.id}` ? "Close grading" : "Grade submissions"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOpenId(openId === a.id ? null : a.id)}
+                    >
+                      {openId === a.id ? "Close" : "Open"}
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              {openId === a.id &&
-                (isStaff ? (
-                  <div className="mt-4 space-y-6 border-t border-border pt-4">
-                    <QuestionBuilder assessmentId={a.id} />
-                    <AssessmentGrading
-                      assessmentId={a.id}
-                      classId={classId}
-                      grammarEnabled={a.grammar_check_enabled}
-                    />
-                  </div>
-                ) : (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <TakeAssessment assessmentId={a.id} />
-                  </div>
-                ))}
+              {isStaff && openId === `build:${a.id}` && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <QuestionBuilder assessmentId={a.id} />
+                </div>
+              )}
+              {isStaff && openId === `grade:${a.id}` && (
+                <div className="mt-4 border-t-2 border-amber-500/40 pt-4">
+                  <AssessmentGrading
+                    assessmentId={a.id}
+                    classId={classId}
+                    grammarEnabled={a.grammar_check_enabled}
+                  />
+                </div>
+              )}
+              {!isStaff && openId === a.id && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <TakeAssessment assessmentId={a.id} />
+                </div>
+              )}
+
             </li>
           ))}
         </ul>
