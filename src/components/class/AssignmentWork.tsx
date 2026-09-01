@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
+import { QuickScoreBar, QuickScoreEditButton } from "@/components/class/QuickScoreBar";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 const BUCKET = "school-files";
@@ -87,7 +88,7 @@ export function AssignmentWork({
   roster: Student[];
 }) {
   if (isStaff) {
-    return <StaffCollectPanel assignment={assignment} roster={roster} />;
+    return <StaffCollectPanel assignment={assignment} roster={roster} classId={classId} />;
   }
   return <StudentWorkPanel assignment={assignment} classId={classId} />;
 }
@@ -328,6 +329,7 @@ function StudentWorkPanel({
 function StaffCollectPanel({
   assignment,
   roster,
+  classId,
 }: {
   assignment: {
     id: string;
@@ -337,6 +339,7 @@ function StaffCollectPanel({
     due_date?: string | null;
   };
   roster: Student[];
+  classId: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -447,6 +450,13 @@ function StaffCollectPanel({
           <DialogHeader>
             <DialogTitle>{assignment.title}</DialogTitle>
           </DialogHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Quick scores below each student apply instantly — tweak the list to fit this
+              assignment.
+            </p>
+            <QuickScoreEditButton classId={classId} />
+          </div>
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {roster.length === 0 ? (
               <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
@@ -480,6 +490,7 @@ function StaffCollectPanel({
                           <Badge variant="outline">Not due yet</Badge>
                         )}
                         <Input
+                          key={String(g?.points_earned ?? "")}
                           className="h-8 w-24"
                           inputMode="decimal"
                           placeholder={`/${assignment.points_possible}`}
@@ -491,6 +502,15 @@ function StaffCollectPanel({
                         />
                       </div>
                     </div>
+                    <div className="mt-2">
+                      <QuickScoreBar
+                        classId={classId}
+                        pointsPossible={Number(assignment.points_possible)}
+                        editable={false}
+                        onPick={(value) => score.mutate({ studentId: s.id, value })}
+                      />
+                    </div>
+
                     {sub ? (
                       <ProofreadEditor
                         submissionId={sub.id}
