@@ -541,7 +541,20 @@ export function StudentHero() {
                 <Sparkles className="mr-1 inline size-4" />
                 {hero.buff}
               </p>
+              <div className="mt-3 flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Quest began {formatDate(heroProfile?.quest_started_at)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPicking(true)}
+                  className="text-xs font-medium text-accent hover:underline"
+                >
+                  Change class
+                </button>
+              </div>
             </div>
+
 
             <div className="w-full md:w-64">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
