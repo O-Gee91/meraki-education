@@ -200,3 +200,10 @@ function EditQuickScores({ classId, setup }: { classId: string; setup: GradingSe
     </Dialog>
   );
 }
+
+/** Standalone "Edit quick scores" trigger for grading toolbars. */
+export function QuickScoreEditButton({ classId }: { classId: string }) {
+  const { data: setup } = useClassGradingSetup(classId);
+  if (!setup) return null;
+  return <EditQuickScores classId={classId} setup={setup} />;
+}
