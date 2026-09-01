@@ -24,6 +24,7 @@ import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
 import { Route as AuthenticatedWellbeingRouteImport } from './routes/_authenticated/wellbeing'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -110,6 +111,11 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
   '/wellbeing': typeof AuthenticatedWellbeingRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
   '/wellbeing': typeof AuthenticatedWellbeingRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
   '/_authenticated/wellbeing': typeof AuthenticatedWellbeingRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/people'
     | '/reports'
+    | '/settings'
     | '/students'
     | '/wellbeing'
     | '/.lovable/oauth/consent'
@@ -279,6 +289,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/people'
     | '/reports'
+    | '/settings'
     | '/students'
     | '/wellbeing'
     | '/.lovable/oauth/consent'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/_authenticated/messages'
     | '/_authenticated/people'
     | '/_authenticated/reports'
+    | '/_authenticated/settings'
     | '/_authenticated/students'
     | '/_authenticated/wellbeing'
     | '/.lovable/oauth/consent'
@@ -439,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/students': {
       id: '/_authenticated/students'
       path: '/students'
@@ -513,6 +532,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
   AuthenticatedWellbeingRoute: typeof AuthenticatedWellbeingRoute
   AuthenticatedClassesClassIdRoute: typeof AuthenticatedClassesClassIdRoute
@@ -527,6 +547,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
   AuthenticatedWellbeingRoute: AuthenticatedWellbeingRoute,
   AuthenticatedClassesClassIdRoute: AuthenticatedClassesClassIdRoute,

@@ -13,6 +13,7 @@ import {
   Users,
   Users2,
   LogOut,
+  KeyRound,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
