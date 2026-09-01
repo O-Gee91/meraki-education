@@ -328,6 +328,7 @@ function StudentWorkPanel({
 function StaffCollectPanel({
   assignment,
   roster,
+  classId,
 }: {
   assignment: {
     id: string;
@@ -337,6 +338,7 @@ function StaffCollectPanel({
     due_date?: string | null;
   };
   roster: Student[];
+  classId: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
