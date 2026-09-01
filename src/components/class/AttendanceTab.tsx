@@ -78,6 +78,23 @@ export function AttendanceTab({ classId }: { classId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const markAll = useMutation({
+    mutationFn: async (status: string) => {
+      const rows = roster.map((r) => ({
+        class_id: classId,
+        student_id: r.student_id,
+        date,
+        status,
+      }));
+      const { error } = await supabase.from("attendance").upsert(rows, {
+        onConflict: "class_id,student_id,date",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance", classId, date] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (!isStaff) {
     return (
       <div className="panel mt-4 divide-y divide-border">
@@ -108,6 +125,37 @@ export function AttendanceTab({ classId }: { classId: string }) {
           onChange={(e) => setDate(e.target.value)}
         />
       </div>
+
+      {roster.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Mark all:</span>
+          {STATUSES.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant="outline"
+              onClick={() => markAll.mutate(s)}
+              disabled={markAll.isPending}
+            >
+              {s}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={async () => {
+              const ids = records.map((r) => r.id).filter(Boolean);
+              if (!ids.length) return;
+              const { error } = await supabase.from("attendance").delete().in("id", ids);
+              if (error) toast.error(error.message);
+              else queryClient.invalidateQueries({ queryKey: ["attendance", classId, date] });
+            }}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
 
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
