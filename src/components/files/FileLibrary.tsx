@@ -240,13 +240,13 @@ export function FileLibrary({
                 <Download className="mr-2 size-4" /> Open
               </Button>
               {(isStaff || f.uploaded_by === user?.id) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <ConfirmDeleteButton
+                  label="Delete"
+                  title={`Delete “${f.title}”?`}
+                  description="The file is permanently removed for everyone it was shared with. This cannot be undone."
+                  disabled={remove.isPending}
+                  onConfirm={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
+                />
               )}
             </li>
           ))}
