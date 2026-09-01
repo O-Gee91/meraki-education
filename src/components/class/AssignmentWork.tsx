@@ -334,6 +334,7 @@ function StaffCollectPanel({
     title: string;
     points_possible: number;
     submission_mode: string;
+    due_date?: string | null;
   };
   roster: Student[];
 }) {
