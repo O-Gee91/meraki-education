@@ -156,8 +156,12 @@ function WellbeingPage() {
 
   return (
     <AppShell
-      title="Well-being"
-      description="Emotional check-ins with research-based follow-up strategies."
+      title={isStaff ? "Well-being" : "How I'm doing"}
+      description={
+        isStaff
+          ? "Emotional check-ins with research-based follow-up strategies."
+          : "Check in on how you're feeling and get strategies that can help."
+      }
     >
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="panel h-fit p-5">
