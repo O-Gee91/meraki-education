@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, FileText, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Upload } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -240,13 +241,13 @@ export function FileLibrary({
                 <Download className="mr-2 size-4" /> Open
               </Button>
               {(isStaff || f.uploaded_by === user?.id) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <ConfirmDeleteButton
+                  label="Delete"
+                  title={`Delete “${f.title}”?`}
+                  description="The file is permanently removed for everyone it was shared with. This cannot be undone."
+                  disabled={remove.isPending}
+                  onConfirm={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
+                />
               )}
             </li>
           ))}
