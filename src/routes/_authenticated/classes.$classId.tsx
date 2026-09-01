@@ -55,6 +55,7 @@ import {
   letterFor,
   markCodeFromComment,
   parseGradingSetup,
+  quickScoreCellValue,
 } from "@/lib/grading";
 
 
@@ -81,6 +82,7 @@ function ClassDetailPage() {
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
+  const [quickIndex, setQuickIndex] = useState<number | null>(null);
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -200,6 +202,29 @@ function ClassDetailPage() {
     );
   }
 
+  const activeQuick = quickIndex == null ? null : (setup.quickScores[quickIndex] ?? null);
+
+  async function fillColumn(
+    assignmentId: string,
+    pointsPossible: number,
+    onlyBlanks: boolean,
+  ) {
+    if (!activeQuick) return;
+    const value = quickScoreCellValue(activeQuick, pointsPossible);
+    const targets = roster.filter((r) => {
+      if (!onlyBlanks) return true;
+      return cellValue(r.student_id, assignmentId) === "";
+    });
+    if (targets.length === 0) {
+      toast.info("Nothing to fill in that column");
+      return;
+    }
+    for (const r of targets) {
+      await saveGrade.mutateAsync({ studentId: r.student_id, assignmentId, value });
+    }
+    toast.success(`${activeQuick.label} applied to ${targets.length} student(s)`);
+  }
+
   return (
     <AppShell
       title={klass?.name ?? "Class"}
@@ -248,6 +273,28 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
+          {isStaff && setup.quickScores.length > 0 && (
+            <div className="panel mt-4 flex flex-wrap items-center gap-2 p-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Quick scores
+              </span>
+              {setup.quickScores.map((q, i) => (
+                <Button
+                  key={`${q.label}-${i}`}
+                  size="sm"
+                  variant={quickIndex === i ? "default" : "outline"}
+                  onClick={() => setQuickIndex(quickIndex === i ? null : i)}
+                >
+                  {q.label || "(unnamed)"}
+                </Button>
+              ))}
+              <span className="ml-auto text-xs text-muted-foreground">
+                {activeQuick
+                  ? "Click a cell's ⚡ to apply, or fill a whole column from its header."
+                  : "Pick one to grade with a single click. Edit them in Grading setup."}
+              </span>
+            </div>
+          )}
           <div className="panel mt-4 overflow-x-auto p-0">
 
             {roster.length === 0 || assignments.length === 0 ? (
@@ -267,6 +314,24 @@ function ClassDetailPage() {
                         <div className="text-[10px] normal-case text-muted-foreground">
                           {a.category} · {a.points_possible} pts
                         </div>
+                        {isStaff && activeQuick && (
+                          <div className="mt-1 flex gap-1">
+                            <button
+                              type="button"
+                              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium normal-case text-primary hover:bg-primary/20"
+                              onClick={() => fillColumn(a.id, Number(a.points_possible), true)}
+                            >
+                              Fill blanks
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium normal-case text-foreground hover:bg-secondary/70"
+                              onClick={() => fillColumn(a.id, Number(a.points_possible), false)}
+                            >
+                              Fill all
+                            </button>
+                          </div>
+                        )}
                       </th>
                     ))}
                     <th className="px-4 py-3">Average</th>
@@ -285,6 +350,27 @@ function ClassDetailPage() {
                           return (
                             <td key={a.id} className="px-3 py-2">
                               {isStaff ? (
+                                <div className="flex items-center gap-1">
+                                {activeQuick && (
+                                  <button
+                                    type="button"
+                                    title={`Apply ${activeQuick.label}`}
+                                    aria-label={`Apply ${activeQuick.label}`}
+                                    className="rounded border border-border px-1 text-xs text-primary hover:bg-primary/10"
+                                    onClick={() =>
+                                      saveGrade.mutate({
+                                        studentId: r.student_id,
+                                        assignmentId: a.id,
+                                        value: quickScoreCellValue(
+                                          activeQuick,
+                                          Number(a.points_possible),
+                                        ),
+                                      })
+                                    }
+                                  >
+                                    ⚡
+                                  </button>
+                                )}
                                 <Input
                                   key={shown}
                                   className="h-8 w-20"
@@ -299,6 +385,7 @@ function ClassDetailPage() {
                                     });
                                   }}
                                 />
+                                </div>
                               ) : (
                                 <span>
                                   {shown === "" ? "—" : shown}
