@@ -894,18 +894,36 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
         )}
 
         {kind === "short_answer" && (
-          <div className="mt-3 space-y-1.5">
-            <Label htmlFor="q-accepted">Accepted answers (one per line)</Label>
-            <Textarea
-              id="q-accepted"
-              rows={3}
-              value={accepted}
-              placeholder={"photosynthesis\nphoto synthesis"}
-              onChange={(e) => setAccepted(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Matching ignores case, spacing and punctuation.
-            </p>
+          <div className="mt-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={manualKey}
+                onChange={(e) => setManualKey(e.target.checked)}
+              />
+              Answers will vary — leave ungraded for me to score
+            </label>
+            {manualKey ? (
+              <p className="text-xs text-muted-foreground">
+                Students' responses arrive in the grading panel marked “Needs review” so you can
+                award points and add feedback yourself.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="q-accepted">Accepted answers (one per line)</Label>
+                <Textarea
+                  id="q-accepted"
+                  rows={3}
+                  value={accepted}
+                  placeholder={"photosynthesis\nphoto synthesis"}
+                  onChange={(e) => setAccepted(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Matching ignores case, spacing and punctuation.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
