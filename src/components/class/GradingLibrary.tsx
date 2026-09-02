@@ -51,6 +51,8 @@ export function GradingLibrary({
   const { user, isAdmin } = useAuth();
   const share = useServerFn(shareGradingSetup);
   const apply = useServerFn(applySharedGradingSetup);
+  const remove = useServerFn(unshareGradingSetup);
+
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(`${className} grading setup`);
   const [note, setNote] = useState("");
