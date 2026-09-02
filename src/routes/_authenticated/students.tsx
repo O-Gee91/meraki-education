@@ -152,6 +152,12 @@ function StudentsPage() {
       return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
     });
 
+  const grades = Array.from(new Set(filtered.map((s) => s.grade_level))).sort((a, b) => a - b);
+  const groups = grades.map((grade) => ({
+    grade,
+    students: filtered.filter((s) => s.grade_level === grade),
+  }));
+
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.id));
   const toggleAll = () =>
     setSelected(allSelected ? [] : filtered.map((s) => s.id));
