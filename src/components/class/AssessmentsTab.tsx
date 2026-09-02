@@ -866,6 +866,8 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       const value = Number(numeric.value);
       if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
       key = { value, tolerance: Number(numeric.tolerance) || 0 };
+    } else if (kind === "essay" && manualKey) {
+      key = { manual: true };
     }
 
     return {
