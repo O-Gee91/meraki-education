@@ -200,9 +200,11 @@ export function ClassLogins({
           <span>
             Re-issue passwords for accounts that already exist
             <span className="block text-xs text-muted-foreground">
-              Use this when slips were printed with a mistake — everyone in the class gets a fresh
+              Use this when slips were printed with a mistake —{" "}
+              {selectedOnly ? "the selected students" : "everyone in the class"} get a fresh
               temporary password and their old one stops working.
             </span>
+
           </span>
         </label>
 
