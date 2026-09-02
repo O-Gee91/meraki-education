@@ -714,7 +714,9 @@ function AssignmentsTab({
                 />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Badge variant="secondary">{a.category}</Badge>
+                <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
+                  {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
+                </Badge>
                 <span>{a.points_possible} pts</span>
                 <span>Due {formatDate(a.due_date)}</span>
                 {isStaff && (
