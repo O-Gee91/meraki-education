@@ -119,7 +119,10 @@ export function AssessmentsTab({
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         Online quizzes, tests &amp; essays
       </h3>
-      {isStaff && <NewAssessment classId={classId} assignments={assignments} />}
+      {isStaff && (
+        <NewAssessment classId={classId} assignments={assignments} categories={categories} />
+      )}
+
 
 
       {visible.length === 0 ? (
