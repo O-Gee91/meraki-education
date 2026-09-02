@@ -568,8 +568,9 @@ export function StudentHero() {
                     No class changes left — this is your hero for the year.
                   </span>
                 )}
-
+              </div>
             </div>
+
 
 
             <div className="w-full md:w-64">
