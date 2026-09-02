@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function StudentsPage() {
   const queryClient = useQueryClient();
-  const { isStaff } = useAuth();
+  const { isStaff, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
@@ -152,6 +152,12 @@ function StudentsPage() {
       return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
     });
 
+  const grades = Array.from(new Set(filtered.map((s) => s.grade_level))).sort((a, b) => a - b);
+  const groups = grades.map((grade) => ({
+    grade,
+    students: filtered.filter((s) => s.grade_level === grade),
+  }));
+
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.id));
   const toggleAll = () =>
     setSelected(allSelected ? [] : filtered.map((s) => s.id));
@@ -165,8 +171,8 @@ function StudentsPage() {
       description="The school directory used across gradebook, attendance and reporting."
       actions={
         <div className="flex flex-wrap gap-2">
-          {isStaff ? <ClassLogins /> : null}
-          {isStaff ? <CreateAccount /> : null}
+          {isAdmin ? <ClassLogins /> : null}
+          {isAdmin ? <CreateAccount /> : null}
           <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -273,7 +279,7 @@ function StudentsPage() {
           </>
         ) : null}
       </div>
-      {isStaff ? <UnlinkedAccounts students={students} /> : null}
+      {isAdmin ? <UnlinkedAccounts students={students} /> : null}
       <div className="panel mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -305,7 +311,17 @@ function StudentsPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((s) => (
+              groups.flatMap((group) => [
+                <tr key={`grade-${group.grade}`} className="bg-secondary/60">
+                  <td
+                    colSpan={isStaff ? 8 : 6}
+                    className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
+                    Grade {group.grade} · {group.students.length}{" "}
+                    {group.students.length === 1 ? "student" : "students"}
+                  </td>
+                </tr>,
+                ...group.students.map((s) => (
                 <tr
                   key={s.id}
                   className="cursor-pointer hover:bg-secondary/40"
@@ -357,7 +373,7 @@ function StudentsPage() {
                         {" · "}
                         {s.guardian_user_id ? "Guardian ✓" : "No guardian login"}
                       </span>
-                      {isStaff ? <CreateLogins student={s} /> : null}
+                      {isAdmin ? <CreateLogins student={s} /> : null}
                     </div>
                   </td>
                   {isStaff ? (
@@ -374,7 +390,8 @@ function StudentsPage() {
                     </td>
                   ) : null}
                 </tr>
-              ))
+                )),
+              ])
             )}
           </tbody>
         </table>
