@@ -609,6 +609,7 @@ type QuestionDraft = {
   options: string[];
   correct: number[];
   accepted: string;
+  manualKey?: boolean;
   numeric: { value: string; tolerance: string };
 };
 
@@ -624,11 +625,12 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   const [options, setOptions] = useState<string[]>(saved?.options ?? ["", "", "", ""]);
   const [correct, setCorrect] = useState<number[]>(saved?.correct ?? []);
   const [accepted, setAccepted] = useState(saved?.accepted ?? "");
+  const [manualKey, setManualKey] = useState(saved?.manualKey ?? false);
   const [numeric, setNumeric] = useState(saved?.numeric ?? { value: "", tolerance: "0" });
   const questionDirty = prompt.trim().length > 0;
   const draft = useAutosaveDraft<QuestionDraft>(
     draftKey,
-    { kind, prompt, points, rubric, options, correct, accepted, numeric },
+    { kind, prompt, points, rubric, options, correct, accepted, manualKey, numeric },
     { dirty: questionDirty },
   );
 
@@ -655,6 +657,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setOptions(["", "", "", ""]);
     setCorrect([]);
     setAccepted("");
+    setManualKey(false);
     setNumeric({ value: "", tolerance: "0" });
     draft.clear();
   }
@@ -671,6 +674,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setOptions(opts.length > 0 ? opts : ["", "", "", ""]);
     setCorrect(key.choices ?? (key.choice != null ? [key.choice] : []));
     setAccepted((key.accepted ?? []).join("\n"));
+    setManualKey(Boolean(key.manual) || (q.kind === "short_answer" && (key.accepted ?? []).length === 0));
     setNumeric({
       value: key.value != null ? String(key.value) : "",
       tolerance: String(key.tolerance ?? 0),
@@ -696,12 +700,17 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       if (correct.length === 0) throw new Error("Choose True or False as the answer");
       key = { choice: correct[0] };
     } else if (kind === "short_answer") {
-      const list = accepted
-        .split(/\n|,/)
-        .map((a) => a.trim())
-        .filter(Boolean);
-      if (list.length === 0) throw new Error("Add at least one accepted answer");
-      key = { accepted: list };
+      if (manualKey) {
+        key = { manual: true };
+      } else {
+        const list = accepted
+          .split(/\n|,/)
+          .map((a) => a.trim())
+          .filter(Boolean);
+        if (list.length === 0)
+          throw new Error("Add at least one accepted answer, or tick “Answers will vary”");
+        key = { accepted: list };
+      }
     } else if (kind === "numeric") {
       const value = Number(numeric.value);
       if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
