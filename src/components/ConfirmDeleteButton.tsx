@@ -56,9 +56,9 @@ export function ConfirmDeleteButton({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setOpen(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => setShowWarning(false)}>
+              <Button onClick={() => setShowWarning(false)}>
                 Continue
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </>
         ) : (
