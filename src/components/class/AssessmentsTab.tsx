@@ -188,7 +188,9 @@ export function AssessmentsTab({
                         classId={classId}
                         assessment={a}
                         assignments={assignments}
+                        categories={categories}
                       />
+
                       <ShareResourceButton
                         kind="assessment"
                         id={a.id}
