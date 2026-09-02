@@ -52,10 +52,12 @@ import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDra
 import {
   computeAverage,
   findMark,
+  isExtraCredit,
   letterFor,
   markCodeFromComment,
   parseGradingSetup,
   quickScoreCellValue,
+  EXTRA_CREDIT_CATEGORY,
 } from "@/lib/grading";
 
 
@@ -99,6 +101,11 @@ function ClassDetailPage() {
 
   const setup = parseGradingSetup(klass?.weights);
   const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
+  // Every class also gets a bonus bucket teachers can use however they like.
+  const assignmentCategories = [
+    ...(categoryNames.length ? categoryNames : ["Homework"]).filter((c) => !isExtraCredit(c)),
+    EXTRA_CREDIT_CATEGORY,
+  ];
 
   const { data: roster = [] } = useQuery({
     queryKey: ["roster", classId],
@@ -426,31 +433,22 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="coursework">
-          <Tabs defaultValue="assignments">
-            <TabsList>
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
-              <TabsTrigger value="assessments">Assessments</TabsTrigger>
-            </TabsList>
-            <TabsContent value="assignments">
-              <AssignmentsTab
-                classId={classId}
-                isStaff={isStaff}
-                assignments={assignments}
-                roster={roster}
-                categories={categoryNames.length ? categoryNames : ["Homework"]}
-                gradeLevel={klass?.grade_level ?? null}
-              />
-            </TabsContent>
-            <TabsContent value="assessments">
-              <AssessmentsTab
-                classId={classId}
-                isStaff={isStaff}
-                assignments={assignments}
-                gradeLevel={klass?.grade_level ?? null}
-              />
-            </TabsContent>
-          </Tabs>
+          <AssignmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            roster={roster}
+            categories={assignmentCategories}
+            gradeLevel={klass?.grade_level ?? null}
+          />
+          <AssessmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
+
 
         <TabsContent value="grading">
           <GradingSetupTab
@@ -633,7 +631,13 @@ function AssignmentsTab({
                       ))}
                     </SelectContent>
                   </Select>
+                  {isExtraCredit(form.category) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Bonus work — points earned lift the average and never count against it.
+                    </p>
+                  ) : null}
                 </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="points">Points possible</Label>
                   <Input
@@ -710,7 +714,9 @@ function AssignmentsTab({
                 />
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Badge variant="secondary">{a.category}</Badge>
+                <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
+                  {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
+                </Badge>
                 <span>{a.points_possible} pts</span>
                 <span>Due {formatDate(a.due_date)}</span>
                 {isStaff && (
