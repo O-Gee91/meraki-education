@@ -137,17 +137,26 @@ export function ClassLogins({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">{triggerLabel}</Button>
+        <Button variant="outline" disabled={disabled}>
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Class login slips</DialogTitle>
+          <DialogTitle>
+            {selectedOnly
+              ? `Login slips for ${studentIds!.length} selected student${studentIds!.length === 1 ? "" : "s"}`
+              : "Class login slips"}
+          </DialogTitle>
           <DialogDescription>
-            {fixedClassId
-              ? "Create sign-in details for every student (and guardian) in this class who doesn't have an account yet, then print the slips to hand out."
-              : "Pick a class to create sign-in details for every student (and guardian) who doesn't have an account yet, then print the slips to hand out."}
+            {selectedOnly
+              ? "Create or re-issue sign-in details for just the students you ticked, then print their slips."
+              : fixedClassId
+                ? "Create sign-in details for every student (and guardian) in this class who doesn't have an account yet, then print the slips to hand out."
+                : "Pick a class to create sign-in details for every student (and guardian) who doesn't have an account yet, then print the slips to hand out."}
           </DialogDescription>
         </DialogHeader>
+
 
         {!fixedClassId && (
           <div className="space-y-1.5">
