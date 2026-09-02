@@ -194,8 +194,12 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
       }
     }
   }
-  if (!usedWeight) return null;
-  return weighted / usedWeight;
+  if (!usedWeight) return bonusEarned && bonusPossible ? 100 : null;
+  // Bonus work lifts the final percentage without ever lowering it.
+  const bonusLift = bonusPossible ? (bonusEarned / bonusPossible) * 100 : 0;
+  const totalPossible = [...buckets.values()].reduce((s, b) => s + b.possible, 0);
+  const bonusShare = totalPossible ? (bonusEarned / totalPossible) * 100 : bonusLift;
+  return weighted / usedWeight + bonusShare;
 }
 
 export function totalWeight(categories: CategoryWeight[]) {
