@@ -953,7 +953,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {QUESTION_KIND_LABELS[q.kind as QuestionKind] ?? q.kind} · {q.points} pts ·{" "}
-                  {q.kind === "essay" ? "teacher / AI reviewed" : "auto-graded"}
+                  {q.kind === "essay" || (q.answer_key as AnswerKey | null)?.manual
+                    ? "answers will vary · teacher scored"
+                    : "auto-graded"}
                   {editingId === q.id ? " · editing" : ""}
                 </p>
               </div>
