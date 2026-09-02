@@ -60,13 +60,16 @@ export function AssessmentsTab({
   classId,
   isStaff,
   assignments,
+  categories,
   gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
   gradeLevel?: number | null;
 }) {
+
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
 
