@@ -459,25 +459,51 @@ function NewAssessment({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="a-assignment">Gradebook column</Label>
+              <Label htmlFor="a-category">Category</Label>
               <Select
-                value={form.assignmentId}
-                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
               >
-                <SelectTrigger id="a-assignment">
+                <SelectTrigger id="a-category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not linked</SelectItem>
-                  {assignments.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.title}
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
+                  <SelectItem value="none">Not graded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="a-assignment">Gradebook column</Label>
+            <Select
+              value={form.assignmentId}
+              onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              disabled={form.category === "none"}
+            >
+              <SelectTrigger id="a-assignment">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Create a new column for this assessment</SelectItem>
+                {assignments.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.title}
+                    {a.category ? ` · ${a.category}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              The category above comes from this class's grading setup and is what the
+              gradebook weights this assessment under.
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="a-instructions">Instructions</Label>
             <Textarea
