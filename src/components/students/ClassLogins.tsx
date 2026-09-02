@@ -46,7 +46,11 @@ export function ClassLogins({
   const [classId, setClassId] = useState(fixedClassId ?? "");
   const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
-  const selectedOnly = (studentIds?.length ?? 0) > 0;
+  // When the caller hands us a selection, this dialog NEVER falls back to the
+  // whole class — even if the ticked rows change while the dialog is open.
+  const selectedOnly = studentIds !== undefined;
+  const [lockedIds, setLockedIds] = useState<string[]>(studentIds ?? []);
+
 
 
 
@@ -69,7 +73,8 @@ export function ClassLogins({
 
       let ids: string[];
       if (selectedOnly) {
-        ids = studentIds!;
+        ids = lockedIds;
+        if (ids.length === 0) throw new Error("Tick at least one student in the roster first");
       } else {
         const { data: enrollments, error: enrErr } = await supabase
           .from("enrollments")
@@ -79,6 +84,7 @@ export function ClassLogins({
         ids = (enrollments ?? []).map((e) => e.student_id);
       }
       if (ids.length === 0) throw new Error("No students are enrolled in this class yet");
+
 
       const { data: students, error: stErr } = await supabase
         .from("students")
@@ -130,7 +136,10 @@ export function ClassLogins({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) {
+        if (next) {
+          // Freeze the ticked students at open time so the run can't widen.
+          setLockedIds(studentIds ?? []);
+        } else {
           setAccounts([]);
           setClassId(fixedClassId ?? "");
         }
@@ -145,9 +154,10 @@ export function ClassLogins({
         <DialogHeader>
           <DialogTitle>
             {selectedOnly
-              ? `Login slips for ${studentIds!.length} selected student${studentIds!.length === 1 ? "" : "s"}`
+              ? `Login slips for ${lockedIds.length} selected student${lockedIds.length === 1 ? "" : "s"}`
               : "Class login slips"}
           </DialogTitle>
+
           <DialogDescription>
             {selectedOnly
               ? "Create or re-issue sign-in details for just the students you ticked, then print their slips."
@@ -190,9 +200,11 @@ export function ClassLogins({
           <span>
             Re-issue passwords for accounts that already exist
             <span className="block text-xs text-muted-foreground">
-              Use this when slips were printed with a mistake — everyone in the class gets a fresh
+              Use this when slips were printed with a mistake —{" "}
+              {selectedOnly ? "the selected students" : "everyone in the class"} get a fresh
               temporary password and their old one stops working.
             </span>
+
           </span>
         </label>
 

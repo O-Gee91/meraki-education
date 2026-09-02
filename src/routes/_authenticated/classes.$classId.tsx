@@ -1315,7 +1315,7 @@ function RosterTab({
             gradeLevel={gradeLevel}
             triggerLabel="Import from Excel"
           />
-          <ClassLogins fixedClassId={classId} />
+          <ClassLogins fixedClassId={classId} triggerLabel="Print logins (whole class)" />
         </div>
       )}
 
