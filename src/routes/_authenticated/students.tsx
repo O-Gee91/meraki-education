@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function StudentsPage() {
   const queryClient = useQueryClient();
-  const { isStaff } = useAuth();
+  const { isStaff, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
@@ -165,8 +165,8 @@ function StudentsPage() {
       description="The school directory used across gradebook, attendance and reporting."
       actions={
         <div className="flex flex-wrap gap-2">
-          {isStaff ? <ClassLogins /> : null}
-          {isStaff ? <CreateAccount /> : null}
+          {isAdmin ? <ClassLogins /> : null}
+          {isAdmin ? <CreateAccount /> : null}
           <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
