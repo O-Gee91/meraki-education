@@ -426,31 +426,22 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="coursework">
-          <Tabs defaultValue="assignments">
-            <TabsList>
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
-              <TabsTrigger value="assessments">Assessments</TabsTrigger>
-            </TabsList>
-            <TabsContent value="assignments">
-              <AssignmentsTab
-                classId={classId}
-                isStaff={isStaff}
-                assignments={assignments}
-                roster={roster}
-                categories={categoryNames.length ? categoryNames : ["Homework"]}
-                gradeLevel={klass?.grade_level ?? null}
-              />
-            </TabsContent>
-            <TabsContent value="assessments">
-              <AssessmentsTab
-                classId={classId}
-                isStaff={isStaff}
-                assignments={assignments}
-                gradeLevel={klass?.grade_level ?? null}
-              />
-            </TabsContent>
-          </Tabs>
+          <AssignmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            roster={roster}
+            categories={assignmentCategories}
+            gradeLevel={klass?.grade_level ?? null}
+          />
+          <AssessmentsTab
+            classId={classId}
+            isStaff={isStaff}
+            assignments={assignments}
+            gradeLevel={klass?.grade_level ?? null}
+          />
         </TabsContent>
+
 
         <TabsContent value="grading">
           <GradingSetupTab
