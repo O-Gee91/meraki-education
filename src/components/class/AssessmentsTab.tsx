@@ -112,8 +112,12 @@ export function AssessmentsTab({
   const visible = isStaff ? assessments : assessments.filter((a) => a.published);
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-6 space-y-4 border-t border-border pt-6">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Online quizzes, tests &amp; essays
+      </h3>
       {isStaff && <NewAssessment classId={classId} assignments={assignments} />}
+
 
       {visible.length === 0 ? (
         <p className="panel p-6 text-sm text-muted-foreground">
