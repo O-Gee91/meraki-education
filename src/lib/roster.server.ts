@@ -53,6 +53,37 @@ async function findUserIdByUsername(
   return data?.id ?? null;
 }
 
+/**
+ * Two different students can share a first and last name (they are told apart by
+ * their Chinese name). The suggested username collides, so the second student
+ * would silently be handed the first student's existing account. Instead, find
+ * the next free variation (jane.li2, jane.li3, …) and create a real new login.
+ */
+async function claimFreeUsername(
+  admin: SupabaseClient<Database>,
+  username: string,
+  role: "student" | "parent",
+  studentId: string,
+): Promise<{ username: string; userId: string | null }> {
+  const suffixBase = username.replace(/(\d+)$/, "");
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const candidate =
+      attempt === 0 ? username : `${suffixBase}${attempt + 1}`.slice(0, 30);
+    const userId = await findUserIdByUsername(admin, candidate);
+    if (!userId) return { username: candidate, userId: null };
+
+    // The account exists — only reuse it when it already belongs to this student.
+    const column = role === "student" ? "user_id" : "guardian_user_id";
+    const { data: owner } = await admin
+      .from("students")
+      .select("id")
+      .eq(column, userId)
+      .maybeSingle();
+    if (!owner || owner.id === studentId) return { username: candidate, userId };
+  }
+  return { username, userId: null };
+}
+
 type Target = {
   role: "student" | "parent";
   /** Known account id, when the roster already links one. */
@@ -126,8 +157,17 @@ export async function provisionRosterAccounts(
 
 
       let userId = target.existingUserId ?? null;
-      if (!userId && target.username)
-        userId = await findUserIdByUsername(admin, target.username);
+      if (!userId && target.username) {
+        const claimed = await claimFreeUsername(
+          admin,
+          target.username,
+          target.role,
+          entry.student_id,
+        );
+        target.username = claimed.username;
+        target.email = usernameToEmail(claimed.username);
+        userId = claimed.userId;
+      }
       if (!userId && target.contactEmail)
         userId = await findUserIdByEmail(admin, target.contactEmail);
 
