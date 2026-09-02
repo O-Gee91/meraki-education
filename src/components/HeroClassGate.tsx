@@ -31,8 +31,7 @@ export function HeroClassGate() {
   return (
     <Dialog open>
       <DialogContent
-        className="max-h-[90vh] max-w-4xl overflow-y-auto"
-        showCloseButton={false}
+        className="max-h-[90vh] max-w-4xl overflow-y-auto [&>button]:hidden"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
