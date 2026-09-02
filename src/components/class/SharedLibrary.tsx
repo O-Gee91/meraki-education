@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Folder as FolderIcon } from "lucide-react";
-import { copySharedResource } from "@/lib/sharing.functions";
+import { copySharedResource, unshareResource } from "@/lib/sharing.functions";
 import { questionCount, type SharedResource } from "@/lib/sharing";
 import { formatDate } from "@/lib/school";
 
@@ -17,6 +17,7 @@ export function SharedLibrary({ classId }: { classId: string }) {
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
   const copy = useServerFn(copySharedResource);
+  const removeShared = useServerFn(unshareResource);
   const [search, setSearch] = useState("");
   const [folder, setFolder] = useState<"assignment" | "assessment">("assignment");
   const [titles, setTitles] = useState<Record<string, string>>({});
@@ -60,13 +61,10 @@ export function SharedLibrary({ classId }: { classId: string }) {
   });
 
   const unshare = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("shared_resources").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+    mutationFn: async (id: string) => removeShared({ data: { resourceId: id } }),
+    onSuccess: async () => {
       toast.success("Removed from the shared library");
-      queryClient.invalidateQueries({ queryKey: ["shared-resources"] });
+      await queryClient.invalidateQueries({ queryKey: ["shared-resources"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
