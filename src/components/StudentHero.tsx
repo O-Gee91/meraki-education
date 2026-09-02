@@ -115,6 +115,10 @@ const HERO_CLASSES = {
 
 type HeroClassKey = keyof typeof HERO_CLASSES;
 
+/** A student may swap their character class at most this many times. */
+export const MAX_CLASS_CHANGES = 3;
+
+
 function pickHeroClass(stats: Record<StatKey, number>): HeroClassKey {
   const values = Object.values(stats);
   const max = Math.max(...values);
