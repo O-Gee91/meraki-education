@@ -891,10 +891,12 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       if (error) throw error;
       return "added" as const;
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       toast.success(result === "updated" ? "Question updated" : "Question added");
       reset();
+      await syncColumnPoints(assessmentId);
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -904,12 +906,15 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       const { error } = await supabase.from("assessment_questions").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: (_d, id) => {
+    onSuccess: async (_d, id) => {
       if (editingId === id) reset();
+      await syncColumnPoints(assessmentId);
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const total = questions.reduce((s, q) => s + Number(q.points), 0);
 
