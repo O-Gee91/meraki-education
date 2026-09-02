@@ -180,13 +180,16 @@ export function StudentHero() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hero_profiles")
-        .select("hero_class, quest_started_at")
+        .select("hero_class, quest_started_at, class_changes")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+
+  const changesUsed = heroProfile?.class_changes ?? 0;
+  const changesLeft = Math.max(0, MAX_CLASS_CHANGES - changesUsed);
 
   const chooseClass = useMutation({
     mutationFn: async (key: HeroClassKey) => {
@@ -203,6 +206,7 @@ export function StudentHero() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
 
   const { data: classes = [] } = useQuery({
