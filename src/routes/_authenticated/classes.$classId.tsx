@@ -631,7 +631,13 @@ function AssignmentsTab({
                       ))}
                     </SelectContent>
                   </Select>
+                  {isExtraCredit(form.category) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Bonus work — points earned lift the average and never count against it.
+                    </p>
+                  ) : null}
                 </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="points">Points possible</Label>
                   <Input
