@@ -159,8 +159,17 @@ export function AssessmentsTab({
                         {a.time_limit_minutes} min limit
                       </Badge>
                     ) : null}
-                    <span>{a.assignment_id ? "syncs to gradebook" : "not linked to gradebook"}</span>
+                    {(() => {
+                      const column = assignments.find((x) => x.id === a.assignment_id);
+                      if (!column) return <span>not linked to gradebook</span>;
+                      return (
+                        <Badge variant="secondary">
+                          {column.category?.trim() || "Uncategorized"}
+                        </Badge>
+                      );
+                    })()}
                   </div>
+
                 </div>
                 <div className="flex items-center gap-2">
                   {isStaff && (
