@@ -17,6 +17,7 @@ export function SharedLibrary({ classId }: { classId: string }) {
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
   const copy = useServerFn(copySharedResource);
+  const removeShared = useServerFn(unshareResource);
   const [search, setSearch] = useState("");
   const [folder, setFolder] = useState<"assignment" | "assessment">("assignment");
   const [titles, setTitles] = useState<Record<string, string>>({});
