@@ -395,7 +395,9 @@ function NewAssessment({
       setForm(blank);
       draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
+
 
     onError: (e: Error) => toast.error(e.message),
   });
