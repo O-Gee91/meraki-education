@@ -445,8 +445,10 @@ function ClassDetailPage() {
             classId={classId}
             isStaff={isStaff}
             assignments={assignments}
+            categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
           />
+
         </TabsContent>
 
 
