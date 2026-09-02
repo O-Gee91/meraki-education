@@ -307,13 +307,17 @@ function ClassDetailPage() {
 
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
-                Add students to the roster and create assignments to see the gradebook.
+                {isStaff
+                  ? "Add students to the roster and create assignments to see the gradebook."
+                  : "Your teacher will add assignments and scores here."}
               </p>
             ) : (
               <table className="w-full min-w-max text-sm">
                 <thead className="border-b border-border bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="sticky left-0 bg-secondary/40 px-4 py-3">Student</th>
+                    <th className="sticky left-0 bg-secondary/40 px-4 py-3">
+                      {isStaff ? "Student" : "Name"}
+                    </th>
                     {assignments.map((a) => (
                       <th key={a.id} className="px-3 py-3 font-medium">
                         <div className="max-w-32 truncate" title={a.title}>
@@ -342,7 +346,7 @@ function ClassDetailPage() {
                         )}
                       </th>
                     ))}
-                    <th className="px-4 py-3">Average</th>
+                    <th className="px-4 py-3">{isStaff ? "Average" : "My average"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
