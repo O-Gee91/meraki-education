@@ -124,11 +124,24 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   }
 
-  const mustRegisterEmail = !!profile && needsEmailRegistration(profile.email);
+  const [emailSkipped, setEmailSkipped] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem("meraki-email-prompt-skipped") === "1",
+  );
+  const suggestEmail = !!profile && needsEmailRegistration(profile.email) && !emailSkipped;
 
   return (
     <div className="flex min-h-screen bg-background">
-      {mustRegisterEmail ? <RegisterEmailGate /> : null}
+      {suggestEmail ? (
+        <RegisterEmailGate
+          onSkip={() => {
+            sessionStorage.setItem("meraki-email-prompt-skipped", "1");
+            setEmailSkipped(true);
+          }}
+        />
+      ) : primaryRole === "student" ? (
+        <HeroClassGate />
+      ) : null}
+
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/" className="mb-8 flex items-center gap-2 px-2">
           <GraduationCap className="size-6 text-sidebar-primary" />
