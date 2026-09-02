@@ -821,7 +821,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setOptions(opts.length > 0 ? opts : ["", "", "", ""]);
     setCorrect(key.choices ?? (key.choice != null ? [key.choice] : []));
     setAccepted((key.accepted ?? []).join("\n"));
-    setManualKey(Boolean(key.manual) || (q.kind === "short_answer" && (key.accepted ?? []).length === 0));
+    setManualKey(
+      Boolean(key.manual) ||
+        (q.kind === "short_answer" && (key.accepted ?? []).length === 0) ||
+        q.kind === "essay",
+    );
     setNumeric({
       value: key.value != null ? String(key.value) : "",
       tolerance: String(key.tolerance ?? 0),
