@@ -539,62 +539,72 @@ function EditAssessment({
   classId,
   assessment,
   assignments,
+  categories,
 }: {
   classId: string;
   assessment: AssessmentRow;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const currentCategory = () => {
+    const column = assignments.find((a) => a.id === assessment.assignment_id);
+    if (!column) return "none";
+    return column.category?.trim() || categories[0] || "none";
+  };
+  const initial = () => ({
     title: assessment.title,
     kind: assessment.kind as AssessmentKind,
     instructions: assessment.instructions ?? "",
     due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
     limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
     assignmentId: assessment.assignment_id ?? "none",
+    category: currentCategory(),
     grammar: assessment.grammar_check_enabled,
   });
+  const [form, setForm] = useState(initial);
 
   function openChange(next: boolean) {
-    if (next) {
-      setForm({
-        title: assessment.title,
-        kind: assessment.kind as AssessmentKind,
-        instructions: assessment.instructions ?? "",
-        due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
-        limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
-        assignmentId: assessment.assignment_id ?? "none",
-        grammar: assessment.grammar_check_enabled,
-      });
-    }
+    if (next) setForm(initial());
     setOpen(next);
   }
 
   const save = useMutation({
     mutationFn: async () => {
       if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const title = form.title.trim().slice(0, 160);
+      const assignmentId = await resolveGradebookColumn({
+        classId,
+        assignmentId: form.assignmentId,
+        category: form.category,
+        title,
+        due: form.due,
+      });
       const { error } = await supabase
         .from("assessments")
         .update({
-          title: form.title.trim().slice(0, 160),
+          title,
           kind: form.kind,
           instructions: form.instructions.trim().slice(0, 2000) || null,
           due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
           time_limit_minutes: form.limit ? Number(form.limit) : null,
-          assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+          assignment_id: assignmentId,
           grammar_check_enabled: form.grammar,
         })
         .eq("id", assessment.id);
       if (error) throw error;
+      await syncColumnPoints(assessment.id);
     },
     onSuccess: () => {
       toast.success("Assessment updated");
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <Dialog open={open} onOpenChange={openChange}>
