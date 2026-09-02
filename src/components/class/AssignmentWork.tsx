@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, Paperclip } from "lucide-react";
+import { CheckCircle2, Circle, Download, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -485,8 +485,7 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const turnedIn = submissions.filter((s) => s.status !== "submitted" || s.body || s.file_upload_id)
-    .length;
+  const turnedIn = submissions.filter((s) => s.status !== "draft").length;
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -542,8 +541,10 @@ function StaffCollectPanel({
                             />
                             {g?.points_earned != null ? "Collected (scored)" : "Collected"}
                           </label>
-                        ) : sub ? (
+                        ) : sub && sub.status !== "draft" ? (
                           <Badge variant="secondary">Turned in</Badge>
+                        ) : sub ? (
+                          <Badge variant="outline">In progress</Badge>
                         ) : assignment.due_date &&
                           assignment.due_date < new Date().toISOString().slice(0, 10) ? (
                           <Badge variant="outline">Missing</Badge>
