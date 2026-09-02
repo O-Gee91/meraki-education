@@ -157,8 +157,17 @@ export async function provisionRosterAccounts(
 
 
       let userId = target.existingUserId ?? null;
-      if (!userId && target.username)
-        userId = await findUserIdByUsername(admin, target.username);
+      if (!userId && target.username) {
+        const claimed = await claimFreeUsername(
+          admin,
+          target.username,
+          target.role,
+          entry.student_id,
+        );
+        target.username = claimed.username;
+        target.email = usernameToEmail(claimed.username);
+        userId = claimed.userId;
+      }
       if (!userId && target.contactEmail)
         userId = await findUserIdByEmail(admin, target.contactEmail);
 
