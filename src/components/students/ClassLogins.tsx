@@ -31,9 +31,13 @@ function uniqueUsername(base: string, used: Set<string>): string {
 
 export function ClassLogins({
   fixedClassId,
+  studentIds,
+  disabled,
   triggerLabel = "Print class logins",
 }: {
   fixedClassId?: string;
+  studentIds?: string[];
+  disabled?: boolean;
   triggerLabel?: string;
 } = {}) {
   const queryClient = useQueryClient();
@@ -42,6 +46,8 @@ export function ClassLogins({
   const [classId, setClassId] = useState(fixedClassId ?? "");
   const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+  const selectedOnly = (studentIds?.length ?? 0) > 0;
+
 
 
   const { data: classes = [] } = useQuery({
