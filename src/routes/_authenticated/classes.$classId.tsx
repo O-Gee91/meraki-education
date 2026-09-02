@@ -1337,6 +1337,13 @@ function RosterTab({
             triggerLabel="Add / move to other classes"
             disabled={pickedIds.size === 0}
           />
+          <ClassLogins
+            fixedClassId={classId}
+            studentIds={roster.filter((r) => pickedIds.has(r.id)).map((r) => r.student_id)}
+            disabled={pickedIds.size === 0}
+            triggerLabel={`Generate / reset logins${pickedIds.size ? ` (${pickedIds.size})` : ""}`}
+          />
+
           <ConfirmDeleteButton
             label="Drop selected"
             title={`Drop ${pickedIds.size} student${pickedIds.size === 1 ? "" : "s"} from this class?`}
