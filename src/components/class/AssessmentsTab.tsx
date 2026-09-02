@@ -357,6 +357,7 @@ function NewAssessment({
     due: "",
     limit: "",
     assignmentId: "none",
+    category: categories[0] ?? "none",
     grammar: true,
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
@@ -367,17 +368,26 @@ function NewAssessment({
   const create = useMutation({
     mutationFn: async () => {
       if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const title = form.title.trim().slice(0, 160);
+      const assignmentId = await resolveGradebookColumn({
+        classId,
+        assignmentId: form.assignmentId,
+        category: form.category,
+        title,
+        due: form.due,
+      });
       const { error } = await supabase.from("assessments").insert({
         class_id: classId,
-        title: form.title.trim().slice(0, 160),
+        title,
         kind: form.kind,
         instructions: form.instructions.trim().slice(0, 2000) || null,
         due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
         time_limit_minutes: form.limit ? Number(form.limit) : null,
-        assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+        assignment_id: assignmentId,
         grammar_check_enabled: form.grammar,
       });
       if (error) throw error;
+
     },
     onSuccess: () => {
       toast.success("Assessment created — add questions next");
