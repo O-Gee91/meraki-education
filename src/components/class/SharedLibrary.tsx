@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { Folder as FolderIcon } from "lucide-react";
-import { copySharedResource } from "@/lib/sharing.functions";
+import { copySharedResource, unshareResource } from "@/lib/sharing.functions";
 import { questionCount, type SharedResource } from "@/lib/sharing";
 import { formatDate } from "@/lib/school";
 
