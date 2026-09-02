@@ -99,6 +99,11 @@ function ClassDetailPage() {
 
   const setup = parseGradingSetup(klass?.weights);
   const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
+  // Every class also gets a bonus bucket teachers can use however they like.
+  const assignmentCategories = [
+    ...(categoryNames.length ? categoryNames : ["Homework"]).filter((c) => !isExtraCredit(c)),
+    EXTRA_CREDIT_CATEGORY,
+  ];
 
   const { data: roster = [] } = useQuery({
     queryKey: ["roster", classId],
