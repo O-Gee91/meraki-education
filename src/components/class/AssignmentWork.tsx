@@ -150,10 +150,11 @@ function StudentWorkPanel({
   });
 
   const submit = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: "draft" | "final") => {
       if (!me) throw new Error("Your account is not linked to a student record yet");
       const file = inputRef.current?.files?.[0];
-      if (!body.trim() && !file) throw new Error("Write a response or attach a file");
+      if (mode === "final" && !body.trim() && !file && !mine?.file_upload_id)
+        throw new Error("Write a response or attach a file before you turn it in");
       if (file && file.size > MAX_BYTES) throw new Error("Files must be 25MB or smaller");
 
       let fileUploadId: string | null = mine?.file_upload_id ?? null;
@@ -180,12 +181,15 @@ function StudentWorkPanel({
         fileUploadId = row.id;
       }
 
+      const status = mode === "final" ? "submitted" : "draft";
+
       if (mine) {
         const { error } = await supabase
           .from("assignment_submissions")
           .update({
             body: body.trim() || null,
             file_upload_id: fileUploadId,
+            status: mine.status === "returned" ? mine.status : status,
             submitted_at: new Date().toISOString(),
           })
           .eq("id", mine.id);
@@ -196,15 +200,20 @@ function StudentWorkPanel({
           student_id: me.id,
           body: body.trim() || null,
           file_upload_id: fileUploadId,
-          status: "submitted",
+          status,
         });
         if (error) throw error;
       }
+      return mode;
     },
-    onSuccess: () => {
-      toast.success("Work turned in");
-      draft.clear();
-      setOpen(false);
+    onSuccess: (mode) => {
+      if (mode === "final") {
+        toast.success("Turned in — your teacher can see it now");
+        draft.clear();
+        setOpen(false);
+      } else {
+        toast.success("Progress saved — not turned in yet");
+      }
       if (inputRef.current) inputRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
     },
@@ -212,13 +221,18 @@ function StudentWorkPanel({
   });
 
   const scored = grade?.points_earned != null;
+  const turnedIn =
+    mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
+  const inProgress = mine != null && mine.status === "draft";
 
   if (assignment.submission_mode !== "online") {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="outline">Collected in class</Badge>
         {mine?.status === "collected" || mine?.status === "returned" ? (
-          <Badge variant="secondary">Checked in by teacher</Badge>
+          <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+            <CheckCircle2 className="h-3 w-3" /> Checked in by teacher
+          </Badge>
         ) : (
           <span className="text-muted-foreground">Hand this in to your teacher.</span>
         )}
@@ -234,11 +248,19 @@ function StudentWorkPanel({
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">Complete online</Badge>
-      {mine ? (
-        <Badge variant="secondary">
-          Turned in {formatDate(mine.submitted_at.slice(0, 10))}
+      {turnedIn ? (
+        <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+          <CheckCircle2 className="h-3 w-3" /> Turned in {formatDate(mine!.submitted_at.slice(0, 10))}
         </Badge>
-      ) : null}
+      ) : inProgress ? (
+        <Badge variant="secondary" className="gap-1">
+          <Circle className="h-3 w-3" /> In progress — not turned in
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="gap-1 text-muted-foreground">
+          <Circle className="h-3 w-3" /> Not started
+        </Badge>
+      )}
       {scored ? (
         <span className="font-medium">
           Score {String(grade?.points_earned)}/{assignment.points_possible}
@@ -262,7 +284,7 @@ function StudentWorkPanel({
       >
         <DialogTrigger asChild>
           <Button size="sm" variant={mine ? "outline" : "default"} className="h-7">
-            {mine ? "View / edit work" : "Start assignment"}
+            {turnedIn ? "View / edit work" : mine ? "Keep working" : "Start assignment"}
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -270,6 +292,18 @@ function StudentWorkPanel({
             <DialogTitle>{assignment.title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                turnedIn
+                  ? "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-border bg-secondary/40 text-muted-foreground"
+              }`}
+            >
+              {turnedIn ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+              {turnedIn
+                ? `Turned in on ${formatDate(mine!.submitted_at.slice(0, 10))}. You can still update it until your teacher grades it.`
+                : "Not turned in yet — press “Turn in assignment” when you're finished."}
+            </div>
             {assignment.description ? (
               <p className="text-sm text-muted-foreground">{assignment.description}</p>
             ) : null}
@@ -310,12 +344,23 @@ function StudentWorkPanel({
             ) : null}
             {mine ? <ProofreadNotes submissionId={mine.id} /> : null}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button
-              onClick={() => submit.mutate()}
+              variant="outline"
+              onClick={() => submit.mutate("draft")}
               disabled={submit.isPending || mine?.status === "returned"}
             >
-              {submit.isPending ? "Turning in…" : mine ? "Update submission" : "Turn in"}
+              Save progress
+            </Button>
+            <Button
+              onClick={() => submit.mutate("final")}
+              disabled={submit.isPending || mine?.status === "returned"}
+            >
+              {submit.isPending
+                ? "Saving…"
+                : turnedIn
+                  ? "Update submission"
+                  : "Turn in assignment"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -323,6 +368,7 @@ function StudentWorkPanel({
     </div>
   );
 }
+
 
 /* ---------------- staff side ---------------- */
 
