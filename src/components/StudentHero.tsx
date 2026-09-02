@@ -555,14 +555,20 @@ export function StudentHero() {
                 <p className="text-xs text-muted-foreground">
                   Quest began {formatDate(heroProfile?.quest_started_at)}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPicking(true)}
-                  className="text-xs font-medium text-accent hover:underline"
-                >
-                  Change class
-                </button>
-              </div>
+                {changesLeft > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPicking(true)}
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    Change class ({changesLeft} left)
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    No class changes left — this is your hero for the year.
+                  </span>
+                )}
+
             </div>
 
 
