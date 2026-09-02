@@ -280,13 +280,73 @@ export function AssessmentsTab({
   );
 }
 
+/**
+ * Assessments score into the gradebook through an assignment column, so the column
+ * carries the grading-setup category the teacher picks here.
+ */
+async function resolveGradebookColumn(opts: {
+  classId: string;
+  assignmentId: string;
+  category: string;
+  title: string;
+  due: string;
+}): Promise<string | null> {
+  if (opts.category === "none") return null;
+  if (opts.assignmentId !== "none") {
+    const { error } = await supabase
+      .from("assignments")
+      .update({ category: opts.category })
+      .eq("id", opts.assignmentId);
+    if (error) throw error;
+    return opts.assignmentId;
+  }
+  const { data, error } = await supabase
+    .from("assignments")
+    .insert({
+      class_id: opts.classId,
+      title: opts.title,
+      category: opts.category,
+      points_possible: 100,
+      due_date: opts.due || null,
+      submission_mode: "online",
+      description: "Online assessment",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+/** Keeps the linked gradebook column's points in step with the question total. */
+async function syncColumnPoints(assessmentId: string) {
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("assignment_id")
+    .eq("id", assessmentId)
+    .maybeSingle();
+  if (!assessment?.assignment_id) return;
+  const { data: qs } = await supabase
+    .from("assessment_questions")
+    .select("points")
+    .eq("assessment_id", assessmentId);
+  const total = (qs ?? []).reduce((s, q) => s + Number(q.points || 0), 0);
+  if (total <= 0) return;
+  await supabase
+    .from("assignments")
+    .update({ points_possible: total })
+    .eq("id", assessment.assignment_id);
+}
+
 function NewAssessment({
   classId,
   assignments,
+  categories,
 }: {
   classId: string;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
 }) {
+
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const draftKey = `new-assessment:${classId}`;
