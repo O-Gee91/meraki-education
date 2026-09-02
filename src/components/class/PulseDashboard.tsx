@@ -247,11 +247,12 @@ export function PulseDashboard({
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Sparkles className="size-4 text-accent" />
-              Pulse
+              {isStaff ? "Pulse" : "My progress"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Traffic-light view of the class. Tap a student for their standing and a one-click
-              check-in.
+              {isStaff
+                ? "Traffic-light view of the class. Tap a student for their standing and a one-click check-in."
+                : "Your current standing and upcoming deadlines at a glance."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -315,7 +316,9 @@ export function PulseDashboard({
                 {selectedCard.avg == null
                   ? "no graded work yet"
                   : `${selectedCard.avg.toFixed(1)}% ${letterFor(selectedCard.avg, setup.scale)}`}
-                {selectedCard.missing > 0 ? ` · ${selectedCard.missing} missing item(s)` : ""}
+                {selectedCard.missing > 0
+                  ? ` · ${selectedCard.missing} missing ${isStaff ? "item(s)" : "assignment(s)"}`
+                  : ""}
               </p>
             </div>
             {isStaff && (
@@ -335,10 +338,12 @@ export function PulseDashboard({
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="panel p-5">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Clock className="size-4" /> Next 7 days
+            <Clock className="size-4" /> {isStaff ? "Next 7 days" : "My upcoming 7 days"}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Circle size = submissions due · color = class average on that work.
+            {isStaff
+              ? "Circle size = submissions due · color = class average on that work."
+              : "Circle size = work due · color = average score."}
           </p>
           <div className="mt-5 grid grid-cols-7 gap-2">
             {week.map((d) => {
@@ -370,14 +375,18 @@ export function PulseDashboard({
 
         <section className="panel p-5">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Moon className="size-4" /> Work-hour pulse
+            <Moon className="size-4" /> {isStaff ? "Work-hour pulse" : "My work hours"}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            When students actually submit. Late-night spikes usually mean stress or procrastination.
+            {isStaff
+              ? "When students actually submit. Late-night spikes usually mean stress or procrastination."
+              : "The hours you tend to submit work. Steady sleep-friendly hours help you do your best."}
           </p>
           {totalSubs === 0 ? (
             <p className="mt-6 text-sm text-muted-foreground">
-              No online submissions yet — this fills in as students turn work in.
+              {isStaff
+                ? "No online submissions yet — this fills in as students turn work in."
+                : "No online submissions yet — this fills in as you turn work in."}
             </p>
           ) : (
             <>
@@ -407,8 +416,17 @@ export function PulseDashboard({
               {lateNight > 0 && (
                 <p className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {lateNight} submission{lateNight === 1 ? "" : "s"} arrived between midnight and
-                  5am — consider adjusting deadlines or checking in on workload.
+                  {isStaff ? (
+                    <>
+                      {lateNight} submission{lateNight === 1 ? "" : "s"} arrived between midnight and
+                      5am — consider adjusting deadlines or checking in on workload.
+                    </>
+                  ) : (
+                    <>
+                      {lateNight} of your submissions arrived between midnight and 5am — try to finish
+                      earlier so you can rest.
+                    </>
+                  )}
                 </p>
               )}
             </>

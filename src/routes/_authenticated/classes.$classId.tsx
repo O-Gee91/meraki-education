@@ -230,14 +230,18 @@ function ClassDetailPage() {
       title={klass?.name ?? "Class"}
       description={
         klass
-          ? `${klass.subject ?? "General"} · Period ${klass.period ?? "—"} · Room ${klass.room ?? "—"} · ${klass.term}`
+          ? isStaff
+            ? `${klass.subject ?? "General"} · Period ${klass.period ?? "—"} · Room ${klass.room ?? "—"} · ${klass.term}`
+            : `${klass.subject ?? "General"} · Period ${klass.period ?? "—"}`
           : undefined
       }
       actions={
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={toggleIds}>
-            {useIds ? "Show names" : "Show student IDs"}
-          </Button>
+          {isStaff && (
+            <Button variant="outline" size="sm" onClick={toggleIds}>
+              {useIds ? "Show names" : "Show student IDs"}
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link to="/classes">All classes</Link>
           </Button>
@@ -246,17 +250,21 @@ function ClassDetailPage() {
     >
       <Tabs defaultValue="gradebook">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="gradebook">Gradebook</TabsTrigger>
+          <TabsTrigger value="gradebook">{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
           <TabsTrigger value="coursework">Coursework</TabsTrigger>
           <TabsTrigger value="discussions">Discussion board</TabsTrigger>
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
-          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          <TabsTrigger value="grading" className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
-            Grading setup
-          </TabsTrigger>
+          {isStaff && (
+            <>
+              <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
+              <TabsTrigger value="grading" className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
+                Grading setup
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
 
@@ -299,13 +307,17 @@ function ClassDetailPage() {
 
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
-                Add students to the roster and create assignments to see the gradebook.
+                {isStaff
+                  ? "Add students to the roster and create assignments to see the gradebook."
+                  : "Your teacher will add assignments and scores here."}
               </p>
             ) : (
               <table className="w-full min-w-max text-sm">
                 <thead className="border-b border-border bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="sticky left-0 bg-secondary/40 px-4 py-3">Student</th>
+                    <th className="sticky left-0 bg-secondary/40 px-4 py-3">
+                      {isStaff ? "Student" : "Name"}
+                    </th>
                     {assignments.map((a) => (
                       <th key={a.id} className="px-3 py-3 font-medium">
                         <div className="max-w-32 truncate" title={a.title}>
@@ -334,7 +346,7 @@ function ClassDetailPage() {
                         )}
                       </th>
                     ))}
-                    <th className="px-4 py-3">Average</th>
+                    <th className="px-4 py-3">{isStaff ? "Average" : "My average"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
