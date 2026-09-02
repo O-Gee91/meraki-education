@@ -43,9 +43,11 @@ type SharedGradingRow = {
 export function GradingLibrary({
   classId,
   className,
+  onApplied,
 }: {
   classId: string;
   className: string;
+  onApplied: (setup: ReturnType<typeof parseGradingSetup>) => void;
 }) {
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
@@ -98,10 +100,15 @@ export function GradingLibrary({
   const useSetup = useMutation({
     mutationFn: async (resourceId: string) =>
       apply({ data: { resourceId, classIds: [classId] } }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      const appliedSetup = parseGradingSetup(result.setup);
+      onApplied(appliedSetup);
+      queryClient.setQueryData(["class", classId], (current: unknown) => {
+        if (!current || typeof current !== "object") return current;
+        return { ...current, weights: appliedSetup };
+      });
       toast.success("Grading setup applied to this class");
       await queryClient.invalidateQueries({ queryKey: ["class", classId] });
-      await queryClient.refetchQueries({ queryKey: ["class", classId] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       queryClient.invalidateQueries({ queryKey: ["grades", classId] });
     },
