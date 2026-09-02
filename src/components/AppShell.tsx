@@ -21,6 +21,7 @@ import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
+import { HeroClassGate } from "@/components/HeroClassGate";
 
 type NavItem = {
   to: string;
