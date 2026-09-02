@@ -1140,6 +1140,7 @@ export type Database = {
       }
       hero_profiles: {
         Row: {
+          class_changes: number
           created_at: string
           hero_class: string
           id: string
@@ -1148,6 +1149,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          class_changes?: number
           created_at?: string
           hero_class: string
           id?: string
@@ -1156,6 +1158,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          class_changes?: number
           created_at?: string
           hero_class?: string
           id?: string
