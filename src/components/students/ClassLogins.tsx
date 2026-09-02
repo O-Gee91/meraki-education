@@ -46,7 +46,11 @@ export function ClassLogins({
   const [classId, setClassId] = useState(fixedClassId ?? "");
   const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
-  const selectedOnly = (studentIds?.length ?? 0) > 0;
+  // When the caller hands us a selection, this dialog NEVER falls back to the
+  // whole class — even if the ticked rows change while the dialog is open.
+  const selectedOnly = studentIds !== undefined;
+  const [lockedIds, setLockedIds] = useState<string[]>(studentIds ?? []);
+
 
 
 
