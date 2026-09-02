@@ -412,12 +412,22 @@ function StaffCollectPanel({
       );
       if (error) throw error;
 
+      // A score means the work was handed in — keep the collected state in sync
+      // so teachers never have to tick the box separately.
       const existing = submissions.find((s) => s.student_id === input.studentId);
-      if (existing && points != null) {
-        await supabase
-          .from("assignment_submissions")
-          .update({ status: "returned" })
-          .eq("id", existing.id);
+      if (points != null) {
+        if (existing) {
+          await supabase
+            .from("assignment_submissions")
+            .update({ status: "returned" })
+            .eq("id", existing.id);
+        } else {
+          await supabase.from("assignment_submissions").insert({
+            assignment_id: assignment.id,
+            student_id: input.studentId,
+            status: "returned",
+          });
+        }
       }
     },
     onSuccess: () => {

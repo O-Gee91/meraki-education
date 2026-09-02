@@ -144,10 +144,11 @@ export function PulseDashboard({
         );
       }).length;
 
+      // Stay gray until the teacher has actually entered scores for this student.
       let status: Status = "none";
-      if (avg != null || pastDue.length > 0) {
-        const risky = (avg != null && avg < 70) || missing >= 3;
-        const slipping = (avg != null && avg < 80) || missing >= 1;
+      if (avg != null) {
+        const risky = avg < 70 || missing >= 3;
+        const slipping = avg < 80 || missing >= 1;
         status = risky ? "red" : slipping ? "yellow" : "green";
       }
       return { row: r, avg, missing, status };
