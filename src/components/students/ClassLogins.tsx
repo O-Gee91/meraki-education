@@ -67,12 +67,17 @@ export function ClassLogins({
     mutationFn: async () => {
       if (!classId) throw new Error("Choose a class first");
 
-      const { data: enrollments, error: enrErr } = await supabase
-        .from("enrollments")
-        .select("student_id")
-        .eq("class_id", classId);
-      if (enrErr) throw enrErr;
-      const ids = (enrollments ?? []).map((e) => e.student_id);
+      let ids: string[];
+      if (selectedOnly) {
+        ids = studentIds!;
+      } else {
+        const { data: enrollments, error: enrErr } = await supabase
+          .from("enrollments")
+          .select("student_id")
+          .eq("class_id", classId);
+        if (enrErr) throw enrErr;
+        ids = (enrollments ?? []).map((e) => e.student_id);
+      }
       if (ids.length === 0) throw new Error("No students are enrolled in this class yet");
 
       const { data: students, error: stErr } = await supabase
@@ -81,6 +86,7 @@ export function ClassLogins({
         .in("id", ids)
         .order("last_name");
       if (stErr) throw stErr;
+
 
       const used = new Set<string>();
       const entries = (students ?? []).map((s) => {
