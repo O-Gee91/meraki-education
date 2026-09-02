@@ -124,9 +124,18 @@ type ScoreInput = {
   markCode: string | null;
 };
 
+/** Category name reserved for bonus work: points earned add on top, nothing counts against. */
+export const EXTRA_CREDIT_CATEGORY = "Extra credit";
+
+export function isExtraCredit(category?: string | null) {
+  return (category ?? "").trim().toLowerCase() === EXTRA_CREDIT_CATEGORY.toLowerCase();
+}
+
 /** Returns the class percentage for one student, honoring weights and special marks. */
 export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number | null {
   const buckets = new Map<string, { earned: number; possible: number }>();
+  let bonusEarned = 0;
+  let bonusPossible = 0;
 
   for (const row of rows) {
     const mark = findMark(row.markCode, setup.marks);
@@ -141,6 +150,12 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
     }
     if (earned == null) continue;
 
+    if (isExtraCredit(row.category)) {
+      bonusEarned += Number(earned);
+      bonusPossible += Number(row.pointsPossible);
+      continue;
+    }
+
     const key = setup.mode === "weighted" ? row.category : "__all__";
     const bucket = buckets.get(key) ?? { earned: 0, possible: 0 };
     bucket.earned += Number(earned);
@@ -150,9 +165,10 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
 
   if (setup.mode !== "weighted") {
     const all = buckets.get("__all__");
-    if (!all || !all.possible) return null;
-    return (all.earned / all.possible) * 100;
+    if (!all || !all.possible) return bonusEarned && bonusPossible ? 100 : null;
+    return ((all.earned + bonusEarned) / all.possible) * 100;
   }
+
 
   let weighted = 0;
   let usedWeight = 0;
