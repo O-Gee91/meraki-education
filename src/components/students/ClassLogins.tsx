@@ -73,7 +73,8 @@ export function ClassLogins({
 
       let ids: string[];
       if (selectedOnly) {
-        ids = studentIds!;
+        ids = lockedIds;
+        if (ids.length === 0) throw new Error("Tick at least one student in the roster first");
       } else {
         const { data: enrollments, error: enrErr } = await supabase
           .from("enrollments")
@@ -83,6 +84,7 @@ export function ClassLogins({
         ids = (enrollments ?? []).map((e) => e.student_id);
       }
       if (ids.length === 0) throw new Error("No students are enrolled in this class yet");
+
 
       const { data: students, error: stErr } = await supabase
         .from("students")
