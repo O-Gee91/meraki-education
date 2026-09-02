@@ -330,3 +330,37 @@ export const copyResourceToClasses = createServerFn({ method: "POST" })
 
     return { copied };
   });
+
+/** Remove a shared assignment/assessment from the library (owner or admin only). */
+export const unshareResource = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ resourceId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: resource, error } = await supabaseAdmin
+      .from("shared_resources")
+      .select("id, shared_by")
+      .eq("id", data.resourceId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!resource) return { removed: 0 };
+
+    const { data: isAdmin } = await context.supabase.rpc("is_admin");
+    if (!isAdmin && resource.shared_by !== context.userId) {
+      throw new Error("Only the teacher who shared this (or an admin) can remove it");
+    }
+
+    const { data: deleted, error: delErr } = await supabaseAdmin
+      .from("shared_resources")
+      .delete()
+      .eq("id", data.resourceId)
+      .select("id");
+    if (delErr) throw delErr;
+    if (!deleted || deleted.length === 0) {
+      throw new Error("The shared item could not be removed — please try again");
+    }
+    return { removed: deleted.length };
+  });
