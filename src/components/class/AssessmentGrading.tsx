@@ -27,6 +27,7 @@ type AnswerRow = {
     kind: string;
     points: number;
     rubric: string | null;
+    answer_key: unknown;
   } | null;
 };
 
@@ -148,7 +149,7 @@ function SubmissionAnswers({
       const { data, error } = await supabase
         .from("assessment_answers")
         .select(
-          "id, question_id, response, is_correct, points_awarded, feedback, assessment_questions(prompt, kind, points, rubric)",
+          "id, question_id, response, is_correct, points_awarded, feedback, assessment_questions(prompt, kind, points, rubric, answer_key)",
         )
         .eq("submission_id", submissionId);
       if (error) throw error;
@@ -161,6 +162,10 @@ function SubmissionAnswers({
       {answers.map((a) => {
         const question = a.assessment_questions;
         const kind = (question?.kind ?? "essay") as QuestionKind;
+        const key = (question?.answer_key ?? {}) as { manual?: boolean; accepted?: string[] };
+        // "Answers will vary" short answers are teacher-scored, like essays.
+        const manualShort =
+          kind === "short_answer" && (Boolean(key.manual) || (key.accepted ?? []).length === 0);
         const response = (a.response ?? {}) as {
           text?: string;
           choice?: number;
@@ -184,14 +189,14 @@ function SubmissionAnswers({
                         .map((c) => `Choice ${c + 1}`)
                         .join(", ") || "—"}
             </div>
-            {kind === "essay" ? (
+            {kind === "essay" || manualShort ? (
               <EssayReview
                 answer={a}
                 assessmentId={assessmentId}
                 classId={classId}
                 submissionId={submissionId}
                 gradeLevel={gradeLevel}
-                grammarEnabled={grammarEnabled}
+                grammarEnabled={grammarEnabled && kind === "essay"}
                 maxPoints={Number(question?.points ?? 0)}
               />
             ) : (

@@ -203,16 +203,25 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
 
     const { data: answers } = await supabaseAdmin
       .from("assessment_answers")
-      .select("points_awarded, question_id, assessment_questions(kind)")
+      .select("points_awarded, question_id, assessment_questions(kind, answer_key)")
       .eq("submission_id", answer.submission_id);
 
+    // Essays and "answers will vary" short answers are the teacher-scored ones.
+    const isManualQuestion = (row: unknown) => {
+      const q = (row as { assessment_questions: { kind: string; answer_key: unknown } | null })
+        .assessment_questions;
+      if (!q) return false;
+      if (q.kind === "essay") return true;
+      if (q.kind !== "short_answer") return false;
+      const key = (q.answer_key ?? {}) as { manual?: boolean; accepted?: string[] };
+      return Boolean(key.manual) || (key.accepted ?? []).length === 0;
+    };
+
     const manual = (answers ?? [])
-      .filter((a) => (a.assessment_questions as { kind: string } | null)?.kind === "essay")
+      .filter(isManualQuestion)
       .reduce((sum, a) => sum + Number(a.points_awarded ?? 0), 0);
     const pendingEssay = (answers ?? []).some(
-      (a) =>
-        (a.assessment_questions as { kind: string } | null)?.kind === "essay" &&
-        a.points_awarded == null,
+      (a) => isManualQuestion(a) && a.points_awarded == null,
     );
 
     const { data: submission } = await supabaseAdmin
