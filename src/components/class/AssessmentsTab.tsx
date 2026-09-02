@@ -60,13 +60,16 @@ export function AssessmentsTab({
   classId,
   isStaff,
   assignments,
+  categories,
   gradeLevel,
 }: {
   classId: string;
   isStaff: boolean;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
   gradeLevel?: number | null;
 }) {
+
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -116,7 +119,10 @@ export function AssessmentsTab({
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         Online quizzes, tests &amp; essays
       </h3>
-      {isStaff && <NewAssessment classId={classId} assignments={assignments} />}
+      {isStaff && (
+        <NewAssessment classId={classId} assignments={assignments} categories={categories} />
+      )}
+
 
 
       {visible.length === 0 ? (
@@ -153,8 +159,17 @@ export function AssessmentsTab({
                         {a.time_limit_minutes} min limit
                       </Badge>
                     ) : null}
-                    <span>{a.assignment_id ? "syncs to gradebook" : "not linked to gradebook"}</span>
+                    {(() => {
+                      const column = assignments.find((x) => x.id === a.assignment_id);
+                      if (!column) return <span>not linked to gradebook</span>;
+                      return (
+                        <Badge variant="secondary">
+                          {column.category?.trim() || "Uncategorized"}
+                        </Badge>
+                      );
+                    })()}
                   </div>
+
                 </div>
                 <div className="flex items-center gap-2">
                   {isStaff && (
@@ -173,7 +188,9 @@ export function AssessmentsTab({
                         classId={classId}
                         assessment={a}
                         assignments={assignments}
+                        categories={categories}
                       />
+
                       <ShareResourceButton
                         kind="assessment"
                         id={a.id}
@@ -263,13 +280,73 @@ export function AssessmentsTab({
   );
 }
 
+/**
+ * Assessments score into the gradebook through an assignment column, so the column
+ * carries the grading-setup category the teacher picks here.
+ */
+async function resolveGradebookColumn(opts: {
+  classId: string;
+  assignmentId: string;
+  category: string;
+  title: string;
+  due: string;
+}): Promise<string | null> {
+  if (opts.category === "none") return null;
+  if (opts.assignmentId !== "none") {
+    const { error } = await supabase
+      .from("assignments")
+      .update({ category: opts.category })
+      .eq("id", opts.assignmentId);
+    if (error) throw error;
+    return opts.assignmentId;
+  }
+  const { data, error } = await supabase
+    .from("assignments")
+    .insert({
+      class_id: opts.classId,
+      title: opts.title,
+      category: opts.category,
+      points_possible: 100,
+      due_date: opts.due || null,
+      submission_mode: "online",
+      description: "Online assessment",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+/** Keeps the linked gradebook column's points in step with the question total. */
+async function syncColumnPoints(assessmentId: string) {
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("assignment_id")
+    .eq("id", assessmentId)
+    .maybeSingle();
+  if (!assessment?.assignment_id) return;
+  const { data: qs } = await supabase
+    .from("assessment_questions")
+    .select("points")
+    .eq("assessment_id", assessmentId);
+  const total = (qs ?? []).reduce((s, q) => s + Number(q.points || 0), 0);
+  if (total <= 0) return;
+  await supabase
+    .from("assignments")
+    .update({ points_possible: total })
+    .eq("id", assessment.assignment_id);
+}
+
 function NewAssessment({
   classId,
   assignments,
+  categories,
 }: {
   classId: string;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
 }) {
+
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const draftKey = `new-assessment:${classId}`;
@@ -280,6 +357,7 @@ function NewAssessment({
     due: "",
     limit: "",
     assignmentId: "none",
+    category: categories[0] ?? "none",
     grammar: true,
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
@@ -290,17 +368,26 @@ function NewAssessment({
   const create = useMutation({
     mutationFn: async () => {
       if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const title = form.title.trim().slice(0, 160);
+      const assignmentId = await resolveGradebookColumn({
+        classId,
+        assignmentId: form.assignmentId,
+        category: form.category,
+        title,
+        due: form.due,
+      });
       const { error } = await supabase.from("assessments").insert({
         class_id: classId,
-        title: form.title.trim().slice(0, 160),
+        title,
         kind: form.kind,
         instructions: form.instructions.trim().slice(0, 2000) || null,
         due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
         time_limit_minutes: form.limit ? Number(form.limit) : null,
-        assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+        assignment_id: assignmentId,
         grammar_check_enabled: form.grammar,
       });
       if (error) throw error;
+
     },
     onSuccess: () => {
       toast.success("Assessment created — add questions next");
@@ -308,7 +395,9 @@ function NewAssessment({
       setForm(blank);
       draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
+
 
     onError: (e: Error) => toast.error(e.message),
   });
@@ -372,25 +461,51 @@ function NewAssessment({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="a-assignment">Gradebook column</Label>
+              <Label htmlFor="a-category">Category</Label>
               <Select
-                value={form.assignmentId}
-                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
               >
-                <SelectTrigger id="a-assignment">
+                <SelectTrigger id="a-category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not linked</SelectItem>
-                  {assignments.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.title}
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
+                  <SelectItem value="none">Not graded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="a-assignment">Gradebook column</Label>
+            <Select
+              value={form.assignmentId}
+              onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              disabled={form.category === "none"}
+            >
+              <SelectTrigger id="a-assignment">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Create a new column for this assessment</SelectItem>
+                {assignments.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.title}
+                    {a.category ? ` · ${a.category}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              The category above comes from this class's grading setup and is what the
+              gradebook weights this assessment under.
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="a-instructions">Instructions</Label>
             <Textarea
@@ -424,62 +539,72 @@ function EditAssessment({
   classId,
   assessment,
   assignments,
+  categories,
 }: {
   classId: string;
   assessment: AssessmentRow;
-  assignments: { id: string; title: string; points_possible: number }[];
+  assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
+  categories: string[];
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const currentCategory = () => {
+    const column = assignments.find((a) => a.id === assessment.assignment_id);
+    if (!column) return "none";
+    return column.category?.trim() || categories[0] || "none";
+  };
+  const initial = () => ({
     title: assessment.title,
     kind: assessment.kind as AssessmentKind,
     instructions: assessment.instructions ?? "",
     due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
     limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
     assignmentId: assessment.assignment_id ?? "none",
+    category: currentCategory(),
     grammar: assessment.grammar_check_enabled,
   });
+  const [form, setForm] = useState(initial);
 
   function openChange(next: boolean) {
-    if (next) {
-      setForm({
-        title: assessment.title,
-        kind: assessment.kind as AssessmentKind,
-        instructions: assessment.instructions ?? "",
-        due: assessment.due_at ? assessment.due_at.slice(0, 10) : "",
-        limit: assessment.time_limit_minutes ? String(assessment.time_limit_minutes) : "",
-        assignmentId: assessment.assignment_id ?? "none",
-        grammar: assessment.grammar_check_enabled,
-      });
-    }
+    if (next) setForm(initial());
     setOpen(next);
   }
 
   const save = useMutation({
     mutationFn: async () => {
       if (form.title.trim().length < 2) throw new Error("Give the assessment a title");
+      const title = form.title.trim().slice(0, 160);
+      const assignmentId = await resolveGradebookColumn({
+        classId,
+        assignmentId: form.assignmentId,
+        category: form.category,
+        title,
+        due: form.due,
+      });
       const { error } = await supabase
         .from("assessments")
         .update({
-          title: form.title.trim().slice(0, 160),
+          title,
           kind: form.kind,
           instructions: form.instructions.trim().slice(0, 2000) || null,
           due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
           time_limit_minutes: form.limit ? Number(form.limit) : null,
-          assignment_id: form.assignmentId === "none" ? null : form.assignmentId,
+          assignment_id: assignmentId,
           grammar_check_enabled: form.grammar,
         })
         .eq("id", assessment.id);
       if (error) throw error;
+      await syncColumnPoints(assessment.id);
     },
     onSuccess: () => {
       toast.success("Assessment updated");
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <Dialog open={open} onOpenChange={openChange}>
@@ -542,25 +667,47 @@ function EditAssessment({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor={`e-assign-${assessment.id}`}>Gradebook assignment</Label>
+              <Label htmlFor={`e-cat-${assessment.id}`}>Category</Label>
               <Select
-                value={form.assignmentId}
-                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
               >
-                <SelectTrigger id={`e-assign-${assessment.id}`}>
+                <SelectTrigger id={`e-cat-${assessment.id}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not linked</SelectItem>
-                  {assignments.map((as) => (
-                    <SelectItem key={as.id} value={as.id}>
-                      {as.title}
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
+                  <SelectItem value="none">Not graded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-assign-${assessment.id}`}>Gradebook column</Label>
+            <Select
+              value={form.assignmentId}
+              onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              disabled={form.category === "none"}
+            >
+              <SelectTrigger id={`e-assign-${assessment.id}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Create a new column for this assessment</SelectItem>
+                {assignments.map((as) => (
+                  <SelectItem key={as.id} value={as.id}>
+                    {as.title}
+                    {as.category ? ` · ${as.category}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor={`e-instr-${assessment.id}`}>Instructions</Label>
             <Textarea
@@ -744,10 +891,12 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       if (error) throw error;
       return "added" as const;
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       toast.success(result === "updated" ? "Question updated" : "Question added");
       reset();
+      await syncColumnPoints(assessmentId);
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -757,12 +906,15 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       const { error } = await supabase.from("assessment_questions").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: (_d, id) => {
+    onSuccess: async (_d, id) => {
       if (editingId === id) reset();
+      await syncColumnPoints(assessmentId);
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const total = questions.reduce((s, q) => s + Number(q.points), 0);
 
