@@ -21,7 +21,9 @@ import {
 import {
   applySharedGradingSetup,
   shareGradingSetup,
+  unshareGradingSetup,
 } from "@/lib/grading-sharing.functions";
+
 import { parseGradingSetup } from "@/lib/grading";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +51,8 @@ export function GradingLibrary({
   const { user, isAdmin } = useAuth();
   const share = useServerFn(shareGradingSetup);
   const apply = useServerFn(applySharedGradingSetup);
+  const remove = useServerFn(unshareGradingSetup);
+
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(`${className} grading setup`);
   const [note, setNote] = useState("");
@@ -83,16 +87,10 @@ export function GradingLibrary({
   });
 
   const unshare = useMutation({
-    mutationFn: async (resourceId: string) => {
-      const { error } = await supabase
-        .from("shared_resources")
-        .delete()
-        .eq("id", resourceId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+    mutationFn: async (resourceId: string) => remove({ data: { resourceId } }),
+    onSuccess: async () => {
       toast.success("Shared grading setup removed");
-      queryClient.invalidateQueries({ queryKey: ["shared-grading-setups"] });
+      await queryClient.invalidateQueries({ queryKey: ["shared-grading-setups"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -100,12 +98,16 @@ export function GradingLibrary({
   const useSetup = useMutation({
     mutationFn: async (resourceId: string) =>
       apply({ data: { resourceId, classIds: [classId] } }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Grading setup applied to this class");
-      queryClient.invalidateQueries({ queryKey: ["class", classId] });
+      await queryClient.invalidateQueries({ queryKey: ["class", classId] });
+      await queryClient.refetchQueries({ queryKey: ["class", classId] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <div className="panel p-5">
