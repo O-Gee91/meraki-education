@@ -22,7 +22,7 @@ export function needsEmailRegistration(email: string | null | undefined): boolea
   return value.length === 0 || value.endsWith(`@${USERNAME_EMAIL_DOMAIN}`);
 }
 
-export function RegisterEmailGate() {
+export function RegisterEmailGate({ onSkip }: { onSkip?: () => void }) {
   const queryClient = useQueryClient();
   const save = useServerFn(registerMyEmail);
   const [email, setEmail] = useState("");
@@ -38,12 +38,12 @@ export function RegisterEmailGate() {
 
   return (
     <Dialog open>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md [&>button]:hidden">
         <DialogHeader>
-          <DialogTitle>Register your email address</DialogTitle>
+          <DialogTitle>Add your email address</DialogTitle>
           <DialogDescription>
-            Your account was created with a username. Add an email address so messages, grade
-            notices and password resets can reach you. This is required before you continue.
+            Your account was created with a username, so an email is not required. We strongly
+            recommend adding one so messages, grade notices and password resets can reach you.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
@@ -57,7 +57,12 @@ export function RegisterEmailGate() {
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2">
+          {onSkip && (
+            <Button variant="ghost" onClick={onSkip}>
+              Not now
+            </Button>
+          )}
           <Button onClick={() => submit.mutate()} disabled={submit.isPending || !email.trim()}>
             {submit.isPending ? "Saving…" : "Save email"}
           </Button>
@@ -66,3 +71,4 @@ export function RegisterEmailGate() {
     </Dialog>
   );
 }
+

@@ -115,6 +115,10 @@ const HERO_CLASSES = {
 
 type HeroClassKey = keyof typeof HERO_CLASSES;
 
+/** A student may swap their character class at most this many times. */
+export const MAX_CLASS_CHANGES = 3;
+
+
 function pickHeroClass(stats: Record<StatKey, number>): HeroClassKey {
   const values = Object.values(stats);
   const max = Math.max(...values);
@@ -180,13 +184,16 @@ export function StudentHero() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hero_profiles")
-        .select("hero_class, quest_started_at")
+        .select("hero_class, quest_started_at, class_changes")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+
+  const changesUsed = heroProfile?.class_changes ?? 0;
+  const changesLeft = Math.max(0, MAX_CLASS_CHANGES - changesUsed);
 
   const chooseClass = useMutation({
     mutationFn: async (key: HeroClassKey) => {
@@ -203,6 +210,7 @@ export function StudentHero() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
 
   const { data: classes = [] } = useQuery({
@@ -500,11 +508,13 @@ export function StudentHero() {
       <ClassChooser
         suggested={suggestedKey}
         current={chosenKey}
+        changesLeft={changesLeft}
         saving={chooseClass.isPending}
         onChoose={(key) => chooseClass.mutate(key)}
         {...(chosenKey ? { onCancel: () => setPicking(false) } : {})}
       />
     );
+
   }
 
   return (
@@ -545,15 +555,22 @@ export function StudentHero() {
                 <p className="text-xs text-muted-foreground">
                   Quest began {formatDate(heroProfile?.quest_started_at)}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPicking(true)}
-                  className="text-xs font-medium text-accent hover:underline"
-                >
-                  Change class
-                </button>
+                {changesLeft > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPicking(true)}
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    Change class ({changesLeft} left)
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    No class changes left — this is your hero for the year.
+                  </span>
+                )}
               </div>
             </div>
+
 
 
             <div className="w-full md:w-64">
@@ -737,16 +754,19 @@ function StatOrb({ value, stat, delay }: { value: number; stat: StatKey; delay: 
 function ClassChooser({
   suggested,
   current,
+  changesLeft,
   saving,
   onChoose,
   onCancel,
 }: {
   suggested: HeroClassKey;
   current: HeroClassKey | null;
+  changesLeft: number;
   saving: boolean;
   onChoose: (key: HeroClassKey) => void;
   onCancel?: () => void;
 }) {
+
   const [selected, setSelected] = useState<HeroClassKey>(current ?? suggested);
   const keys = Object.keys(HERO_CLASSES) as HeroClassKey[];
 
@@ -816,7 +836,10 @@ function ClassChooser({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button onClick={() => onChoose(selected)} disabled={saving}>
+        <Button
+          onClick={() => onChoose(selected)}
+          disabled={saving || (!!current && changesLeft === 0)}
+        >
           {saving
             ? "Starting your quest…"
             : current
@@ -824,9 +847,14 @@ function ClassChooser({
               : `Begin the year as a ${HERO_CLASSES[selected].name}`}
         </Button>
         <p className="text-xs text-muted-foreground">
-          You can change your class later from your hero profile.
+          {current
+            ? changesLeft > 0
+              ? `You have ${changesLeft} of ${MAX_CLASS_CHANGES} class changes left — choose carefully.`
+              : "You have used all 3 class changes, so your class is now locked in."
+            : `Choose carefully — after this you may change your class only ${MAX_CLASS_CHANGES} times.`}
         </p>
       </div>
+
     </section>
   );
 }
