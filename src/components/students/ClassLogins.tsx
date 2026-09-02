@@ -31,9 +31,13 @@ function uniqueUsername(base: string, used: Set<string>): string {
 
 export function ClassLogins({
   fixedClassId,
+  studentIds,
+  disabled,
   triggerLabel = "Print class logins",
 }: {
   fixedClassId?: string;
+  studentIds?: string[];
+  disabled?: boolean;
   triggerLabel?: string;
 } = {}) {
   const queryClient = useQueryClient();
@@ -42,6 +46,8 @@ export function ClassLogins({
   const [classId, setClassId] = useState(fixedClassId ?? "");
   const [resetExisting, setResetExisting] = useState(false);
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
+  const selectedOnly = (studentIds?.length ?? 0) > 0;
+
 
 
   const { data: classes = [] } = useQuery({
@@ -61,12 +67,17 @@ export function ClassLogins({
     mutationFn: async () => {
       if (!classId) throw new Error("Choose a class first");
 
-      const { data: enrollments, error: enrErr } = await supabase
-        .from("enrollments")
-        .select("student_id")
-        .eq("class_id", classId);
-      if (enrErr) throw enrErr;
-      const ids = (enrollments ?? []).map((e) => e.student_id);
+      let ids: string[];
+      if (selectedOnly) {
+        ids = studentIds!;
+      } else {
+        const { data: enrollments, error: enrErr } = await supabase
+          .from("enrollments")
+          .select("student_id")
+          .eq("class_id", classId);
+        if (enrErr) throw enrErr;
+        ids = (enrollments ?? []).map((e) => e.student_id);
+      }
       if (ids.length === 0) throw new Error("No students are enrolled in this class yet");
 
       const { data: students, error: stErr } = await supabase
@@ -75,6 +86,7 @@ export function ClassLogins({
         .in("id", ids)
         .order("last_name");
       if (stErr) throw stErr;
+
 
       const used = new Set<string>();
       const entries = (students ?? []).map((s) => {
@@ -125,17 +137,26 @@ export function ClassLogins({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">{triggerLabel}</Button>
+        <Button variant="outline" disabled={disabled}>
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Class login slips</DialogTitle>
+          <DialogTitle>
+            {selectedOnly
+              ? `Login slips for ${studentIds!.length} selected student${studentIds!.length === 1 ? "" : "s"}`
+              : "Class login slips"}
+          </DialogTitle>
           <DialogDescription>
-            {fixedClassId
-              ? "Create sign-in details for every student (and guardian) in this class who doesn't have an account yet, then print the slips to hand out."
-              : "Pick a class to create sign-in details for every student (and guardian) who doesn't have an account yet, then print the slips to hand out."}
+            {selectedOnly
+              ? "Create or re-issue sign-in details for just the students you ticked, then print their slips."
+              : fixedClassId
+                ? "Create sign-in details for every student (and guardian) in this class who doesn't have an account yet, then print the slips to hand out."
+                : "Pick a class to create sign-in details for every student (and guardian) who doesn't have an account yet, then print the slips to hand out."}
           </DialogDescription>
         </DialogHeader>
+
 
         {!fixedClassId && (
           <div className="space-y-1.5">
