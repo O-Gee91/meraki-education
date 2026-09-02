@@ -667,25 +667,47 @@ function EditAssessment({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor={`e-assign-${assessment.id}`}>Gradebook assignment</Label>
+              <Label htmlFor={`e-cat-${assessment.id}`}>Category</Label>
               <Select
-                value={form.assignmentId}
-                onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
               >
-                <SelectTrigger id={`e-assign-${assessment.id}`}>
+                <SelectTrigger id={`e-cat-${assessment.id}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not linked</SelectItem>
-                  {assignments.map((as) => (
-                    <SelectItem key={as.id} value={as.id}>
-                      {as.title}
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
+                  <SelectItem value="none">Not graded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`e-assign-${assessment.id}`}>Gradebook column</Label>
+            <Select
+              value={form.assignmentId}
+              onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+              disabled={form.category === "none"}
+            >
+              <SelectTrigger id={`e-assign-${assessment.id}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Create a new column for this assessment</SelectItem>
+                {assignments.map((as) => (
+                  <SelectItem key={as.id} value={as.id}>
+                    {as.title}
+                    {as.category ? ` · ${as.category}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor={`e-instr-${assessment.id}`}>Instructions</Label>
             <Textarea
