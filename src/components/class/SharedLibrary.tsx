@@ -61,13 +61,10 @@ export function SharedLibrary({ classId }: { classId: string }) {
   });
 
   const unshare = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("shared_resources").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+    mutationFn: async (id: string) => removeShared({ data: { resourceId: id } }),
+    onSuccess: async () => {
       toast.success("Removed from the shared library");
-      queryClient.invalidateQueries({ queryKey: ["shared-resources"] });
+      await queryClient.invalidateQueries({ queryKey: ["shared-resources"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
