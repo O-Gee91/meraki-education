@@ -753,16 +753,19 @@ function StatOrb({ value, stat, delay }: { value: number; stat: StatKey; delay: 
 function ClassChooser({
   suggested,
   current,
+  changesLeft,
   saving,
   onChoose,
   onCancel,
 }: {
   suggested: HeroClassKey;
   current: HeroClassKey | null;
+  changesLeft: number;
   saving: boolean;
   onChoose: (key: HeroClassKey) => void;
   onCancel?: () => void;
 }) {
+
   const [selected, setSelected] = useState<HeroClassKey>(current ?? suggested);
   const keys = Object.keys(HERO_CLASSES) as HeroClassKey[];
 
