@@ -508,11 +508,13 @@ export function StudentHero() {
       <ClassChooser
         suggested={suggestedKey}
         current={chosenKey}
+        changesLeft={changesLeft}
         saving={chooseClass.isPending}
         onChoose={(key) => chooseClass.mutate(key)}
         {...(chosenKey ? { onCancel: () => setPicking(false) } : {})}
       />
     );
+
   }
 
   return (
