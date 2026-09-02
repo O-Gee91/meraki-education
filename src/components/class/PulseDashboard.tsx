@@ -247,11 +247,12 @@ export function PulseDashboard({
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Sparkles className="size-4 text-accent" />
-              Pulse
+              {isStaff ? "Pulse" : "My progress"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Traffic-light view of the class. Tap a student for their standing and a one-click
-              check-in.
+              {isStaff
+                ? "Traffic-light view of the class. Tap a student for their standing and a one-click check-in."
+                : "Your current standing and upcoming deadlines at a glance."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
