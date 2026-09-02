@@ -72,16 +72,28 @@ export const applySharedGradingSetup = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    // Read through the caller's client so grade-level visibility rules apply.
-    const { data: resource, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: resource, error } = await supabaseAdmin
       .from("shared_resources")
-      .select("id, kind, payload")
+      .select("id, kind, payload, grade_level, shared_by")
       .eq("id", data.resourceId)
       .maybeSingle();
     if (error) throw error;
     if (!resource || resource.kind !== "grading") {
-      throw new Error("This shared grading setup is not available to you");
+      throw new Error("This shared grading setup is no longer available");
     }
+
+    // Visibility: admins, the owner, or teachers of that grade.
+    const { data: isAdmin } = await context.supabase.rpc("is_admin");
+    let visible = !!isAdmin || resource.shared_by === context.userId;
+    if (!visible && resource.grade_level != null) {
+      const { data: teaches } = await context.supabase.rpc("teaches_grade", {
+        _grade: resource.grade_level,
+      });
+      visible = !!teaches;
+    }
+    if (!visible) throw new Error("This shared grading setup is not available to you");
 
     const setup = parseGradingSetup(resource.payload);
     if (setup.mode === "weighted" && Math.round(totalWeight(setup.categories)) !== 100) {
@@ -89,18 +101,58 @@ export const applySharedGradingSetup = createServerFn({ method: "POST" })
     }
 
     for (const classId of data.classIds) {
-      const { data: canManage } = await context.supabase.rpc("can_manage_class", {
-        _class_id: classId,
-      });
+      const { data: canManage, error: rpcErr } = await context.supabase.rpc(
+        "can_manage_class",
+        { _class_id: classId },
+      );
+      if (rpcErr) throw rpcErr;
       if (!canManage) throw new Error("You can only apply setups to classes you teach");
     }
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error: upErr } = await supabaseAdmin
+    const { data: updated, error: upErr } = await supabaseAdmin
       .from("classes")
       .update({ weights: setup as unknown as Json })
-      .in("id", data.classIds);
+      .in("id", data.classIds)
+      .select("id");
     if (upErr) throw upErr;
+    if (!updated || updated.length === 0) {
+      throw new Error("The grading setup could not be applied — please try again");
+    }
 
-    return { applied: data.classIds.length };
+    return { applied: updated.length };
   });
+
+/** Remove a shared grading setup from the library (owner or admin only). */
+export const unshareGradingSetup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ resourceId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: resource, error } = await supabaseAdmin
+      .from("shared_resources")
+      .select("id, kind, shared_by")
+      .eq("id", data.resourceId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!resource) return { removed: 0 };
+
+    const { data: isAdmin } = await context.supabase.rpc("is_admin");
+    if (!isAdmin && resource.shared_by !== context.userId) {
+      throw new Error("Only the teacher who shared this (or an admin) can remove it");
+    }
+
+    const { data: deleted, error: delErr } = await supabaseAdmin
+      .from("shared_resources")
+      .delete()
+      .eq("id", data.resourceId)
+      .select("id");
+    if (delErr) throw delErr;
+    if (!deleted || deleted.length === 0) {
+      throw new Error("The shared setup could not be removed — please try again");
+    }
+    return { removed: deleted.length };
+  });
+
