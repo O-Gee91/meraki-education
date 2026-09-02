@@ -31,6 +31,8 @@ export function autoGrade(
       return { isCorrect: correct, pointsAwarded: correct ? points : 0 };
     }
     case "short_answer": {
+      // "Answers will vary" (or no key at all) waits for the teacher.
+      if (key.manual || (key.accepted ?? []).length === 0) return null;
       const given = normalize(response.text ?? "");
       const correct =
         given.length > 0 && (key.accepted ?? []).some((a) => normalize(a) === given);

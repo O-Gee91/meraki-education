@@ -43,6 +43,8 @@ export type AnswerKey = {
   accepted?: string[] | undefined;
   value?: number | undefined;
   tolerance?: number | undefined;
+  /** "Answers will vary" — leave ungraded until the teacher scores it. */
+  manual?: boolean | undefined;
 };
 
 export type AnswerResponse = {
