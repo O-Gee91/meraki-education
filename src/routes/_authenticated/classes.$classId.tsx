@@ -52,10 +52,12 @@ import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDra
 import {
   computeAverage,
   findMark,
+  isExtraCredit,
   letterFor,
   markCodeFromComment,
   parseGradingSetup,
   quickScoreCellValue,
+  EXTRA_CREDIT_CATEGORY,
 } from "@/lib/grading";
 
 
