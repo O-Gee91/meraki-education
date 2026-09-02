@@ -835,7 +835,10 @@ function ClassChooser({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button onClick={() => onChoose(selected)} disabled={saving}>
+        <Button
+          onClick={() => onChoose(selected)}
+          disabled={saving || (!!current && changesLeft === 0)}
+        >
           {saving
             ? "Starting your quest…"
             : current
@@ -843,9 +846,14 @@ function ClassChooser({
               : `Begin the year as a ${HERO_CLASSES[selected].name}`}
         </Button>
         <p className="text-xs text-muted-foreground">
-          You can change your class later from your hero profile.
+          {current
+            ? changesLeft > 0
+              ? `You have ${changesLeft} of ${MAX_CLASS_CHANGES} class changes left — choose carefully.`
+              : "You have used all 3 class changes, so your class is now locked in."
+            : `Choose carefully — after this you may change your class only ${MAX_CLASS_CHANGES} times.`}
         </p>
       </div>
+
     </section>
   );
 }
