@@ -821,7 +821,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setOptions(opts.length > 0 ? opts : ["", "", "", ""]);
     setCorrect(key.choices ?? (key.choice != null ? [key.choice] : []));
     setAccepted((key.accepted ?? []).join("\n"));
-    setManualKey(Boolean(key.manual) || (q.kind === "short_answer" && (key.accepted ?? []).length === 0));
+    setManualKey(
+      Boolean(key.manual) ||
+        (q.kind === "short_answer" && (key.accepted ?? []).length === 0) ||
+        q.kind === "essay",
+    );
     setNumeric({
       value: key.value != null ? String(key.value) : "",
       tolerance: String(key.tolerance ?? 0),
@@ -862,6 +866,8 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       const value = Number(numeric.value);
       if (Number.isNaN(value)) throw new Error("Enter the correct numeric answer");
       key = { value, tolerance: Number(numeric.tolerance) || 0 };
+    } else if (kind === "essay" && manualKey) {
+      key = { manual: true };
     }
 
     return {
@@ -947,7 +953,9 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {QUESTION_KIND_LABELS[q.kind as QuestionKind] ?? q.kind} · {q.points} pts ·{" "}
-                  {q.kind === "essay" ? "teacher / AI reviewed" : "auto-graded"}
+                  {q.kind === "essay" || (q.answer_key as AnswerKey | null)?.manual
+                    ? "answers will vary · teacher scored"
+                    : "auto-graded"}
                   {editingId === q.id ? " · editing" : ""}
                 </p>
               </div>
@@ -1112,14 +1120,30 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
         )}
 
         {kind === "essay" && (
-          <div className="mt-3 space-y-1.5">
-            <Label htmlFor="q-rubric">Rubric (guides AI grammar proof and scoring)</Label>
-            <Textarea
-              id="q-rubric"
-              rows={3}
-              value={rubric}
-              onChange={(e) => setRubric(e.target.value)}
-            />
+          <div className="mt-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={manualKey}
+                onChange={(e) => setManualKey(e.target.checked)}
+              />
+              Answers will vary — leave ungraded for me to score
+            </label>
+            <p className="text-xs text-muted-foreground">
+              {manualKey
+                ? "Responses arrive in the grading panel marked “Needs review”. Nothing is scored until you award points — the AI proof stays a suggestion."
+                : "Responses still wait for your review; the rubric guides the AI proofreading and suggested score."}
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="q-rubric">Rubric (guides AI grammar proof and scoring)</Label>
+              <Textarea
+                id="q-rubric"
+                rows={3}
+                value={rubric}
+                onChange={(e) => setRubric(e.target.value)}
+              />
+            </div>
           </div>
         )}
 
