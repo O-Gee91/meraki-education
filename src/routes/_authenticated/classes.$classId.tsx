@@ -230,14 +230,18 @@ function ClassDetailPage() {
       title={klass?.name ?? "Class"}
       description={
         klass
-          ? `${klass.subject ?? "General"} · Period ${klass.period ?? "—"} · Room ${klass.room ?? "—"} · ${klass.term}`
+          ? isStaff
+            ? `${klass.subject ?? "General"} · Period ${klass.period ?? "—"} · Room ${klass.room ?? "—"} · ${klass.term}`
+            : `${klass.subject ?? "General"} · Period ${klass.period ?? "—"}`
           : undefined
       }
       actions={
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={toggleIds}>
-            {useIds ? "Show names" : "Show student IDs"}
-          </Button>
+          {isStaff && (
+            <Button variant="outline" size="sm" onClick={toggleIds}>
+              {useIds ? "Show names" : "Show student IDs"}
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link to="/classes">All classes</Link>
           </Button>
