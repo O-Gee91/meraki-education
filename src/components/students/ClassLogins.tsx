@@ -136,7 +136,10 @@ export function ClassLogins({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) {
+        if (next) {
+          // Freeze the ticked students at open time so the run can't widen.
+          setLockedIds(studentIds ?? []);
+        } else {
           setAccounts([]);
           setClassId(fixedClassId ?? "");
         }
@@ -151,9 +154,10 @@ export function ClassLogins({
         <DialogHeader>
           <DialogTitle>
             {selectedOnly
-              ? `Login slips for ${studentIds!.length} selected student${studentIds!.length === 1 ? "" : "s"}`
+              ? `Login slips for ${lockedIds.length} selected student${lockedIds.length === 1 ? "" : "s"}`
               : "Class login slips"}
           </DialogTitle>
+
           <DialogDescription>
             {selectedOnly
               ? "Create or re-issue sign-in details for just the students you ticked, then print their slips."
