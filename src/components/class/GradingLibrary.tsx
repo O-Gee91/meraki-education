@@ -21,7 +21,9 @@ import {
 import {
   applySharedGradingSetup,
   shareGradingSetup,
+  unshareGradingSetup,
 } from "@/lib/grading-sharing.functions";
+
 import { parseGradingSetup } from "@/lib/grading";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
