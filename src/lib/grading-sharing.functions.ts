@@ -119,7 +119,11 @@ export const applySharedGradingSetup = createServerFn({ method: "POST" })
       throw new Error("The grading setup could not be applied — please try again");
     }
 
-    return { applied: updated.length };
+    if (updated.length !== data.classIds.length) {
+      throw new Error("The grading setup was not applied to every selected class");
+    }
+
+    return { applied: updated.length, setup };
   });
 
 /** Remove a shared grading setup from the library (owner or admin only). */

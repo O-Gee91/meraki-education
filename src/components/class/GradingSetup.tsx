@@ -474,7 +474,11 @@ export function GradingSetupTab({
         </Button>
       </div>
 
-      <GradingLibrary classId={classId} className={className} />
+      <GradingLibrary
+        classId={classId}
+        className={className}
+        onApplied={(appliedSetup) => setDraft(appliedSetup)}
+      />
     </div>
   );
 
