@@ -373,7 +373,7 @@ function StudentsPage() {
                         {" · "}
                         {s.guardian_user_id ? "Guardian ✓" : "No guardian login"}
                       </span>
-                      {isStaff ? <CreateLogins student={s} /> : null}
+                      {isAdmin ? <CreateLogins student={s} /> : null}
                     </div>
                   </td>
                   {isStaff ? (
@@ -390,7 +390,8 @@ function StudentsPage() {
                     </td>
                   ) : null}
                 </tr>
-              ))
+                )),
+              ])
             )}
           </tbody>
         </table>
