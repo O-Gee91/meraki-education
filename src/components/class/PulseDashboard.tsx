@@ -316,7 +316,9 @@ export function PulseDashboard({
                 {selectedCard.avg == null
                   ? "no graded work yet"
                   : `${selectedCard.avg.toFixed(1)}% ${letterFor(selectedCard.avg, setup.scale)}`}
-                {selectedCard.missing > 0 ? ` · ${selectedCard.missing} missing item(s)` : ""}
+                {selectedCard.missing > 0
+                  ? ` · ${selectedCard.missing} missing ${isStaff ? "item(s)" : "assignment(s)"}`
+                  : ""}
               </p>
             </div>
             {isStaff && (
