@@ -22,6 +22,7 @@ import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
 import { QuickScoreBar, QuickScoreEditButton } from "@/components/class/QuickScoreBar";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { findMark, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -391,12 +392,26 @@ function StaffCollectPanel({
   const [open, setOpen] = useState(false);
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
+  const { data: setup } = useQuery({
+    queryKey: ["grading-setup", classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("weights")
+        .eq("id", classId)
+        .maybeSingle();
+      if (error) throw error;
+      return parseGradingSetup(data?.weights);
+    },
+  });
+  const marks = setup?.marks ?? [];
+
   const { data: grades = [] } = useQuery({
     queryKey: ["assignment-grades", assignment.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, student_id, points_earned")
+        .select("id, student_id, points_earned, comment")
         .eq("assignment_id", assignment.id);
       if (error) throw error;
       return data;
@@ -444,9 +459,15 @@ function StaffCollectPanel({
   const score = useMutation({
     mutationFn: async (input: { studentId: string; value: string; note?: string }) => {
       const raw = input.value.trim();
-      const points = raw === "" ? null : Number(raw);
+      const mark = findMark(raw ? raw.toUpperCase() : null, marks);
+      const points = mark || raw === "" ? null : Number(raw);
       if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
-        throw new Error("Enter a valid score");
+        throw new Error(
+          marks.length
+            ? `Enter a number or a mark code (${marks.map((m) => m.code).join(", ")})`
+            : "Enter a valid score",
+        );
+      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
