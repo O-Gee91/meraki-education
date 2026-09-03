@@ -80,6 +80,15 @@ export const reportIntegrityViolation = createServerFn({ method: "POST" })
       return { flagged: false, reason: "cooldown" as const, strikes: 0 };
     }
 
+    // Attribute the strike to an administrator so the 3-strike trigger can send
+    // its notification messages to the family and admins.
+    const { data: adminRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin")
+      .limit(1)
+      .maybeSingle();
+
     const today = new Date().toISOString().slice(0, 10);
     const notes =
       `${NOTE_PREFIX}${REASONS[data.reason as IntegrityReason]}` +
@@ -94,6 +103,7 @@ export const reportIntegrityViolation = createServerFn({ method: "POST" })
         kind: "strike",
         severity: 3,
         notes,
+        recorded_by: adminRow?.user_id ?? null,
       })),
     );
     if (insErr) throw insErr;
