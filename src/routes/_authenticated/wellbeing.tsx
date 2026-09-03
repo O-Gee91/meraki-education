@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -60,6 +61,7 @@ function WellbeingPage() {
   const [mood, setMood] = useState("3");
   const [note, setNote] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -74,13 +76,15 @@ function WellbeingPage() {
   });
 
   const { data: checkins = [] } = useQuery({
-    queryKey: ["checkins"],
+    queryKey: ["checkins", filterDate],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("checkins")
         .select("id, student_id, mood, note, date, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
+      if (filterDate) q = q.eq("date", filterDate);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -219,12 +223,30 @@ function WellbeingPage() {
 
         <section className="panel p-5 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Recent check-ins</h2>
+            <h2 className="text-sm font-semibold">
+              {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
+            </h2>
             {average != null ? (
               <p className="text-xs text-muted-foreground">
                 Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
               </p>
             ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <div className="w-44 space-y-1.5">
+              <Label htmlFor="checkin-date">View a specific date</Label>
+              <Input
+                id="checkin-date"
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+            </div>
+            {filterDate && (
+              <Button size="sm" variant="ghost" onClick={() => setFilterDate("")}>
+                Show all dates
+              </Button>
+            )}
           </div>
           {checkins.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No check-ins recorded yet.</p>
