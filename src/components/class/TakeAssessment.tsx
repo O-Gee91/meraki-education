@@ -117,7 +117,8 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   });
 
   const limitMinutes = data?.assessment.time_limit_minutes;
-  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, () => {
+  const isTimed = Boolean(limitMinutes && limitMinutes > 0);
+  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, hasStarted, () => {
     if (!submit.isPending && !mySubmission) {
       toast.warning("Time is up — your assessment is being submitted automatically.");
       submit.mutate();
