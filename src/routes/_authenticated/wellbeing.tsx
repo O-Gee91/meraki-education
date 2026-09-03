@@ -60,6 +60,7 @@ function WellbeingPage() {
   const [mood, setMood] = useState("3");
   const [note, setNote] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
