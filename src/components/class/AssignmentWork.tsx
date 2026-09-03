@@ -473,6 +473,7 @@ function StaffCollectPanel({
           assignment_id: assignment.id,
           student_id: input.studentId,
           points_earned: points,
+          comment: markComment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -482,7 +483,7 @@ function StaffCollectPanel({
       // A score means the work was handed in — keep the collected state in sync
       // so teachers never have to tick the box separately.
       const existing = submissions.find((s) => s.student_id === input.studentId);
-      if (points != null) {
+      if (points != null || mark) {
         if (existing) {
           await supabase
             .from("assignment_submissions")
@@ -505,6 +506,12 @@ function StaffCollectPanel({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const cellText = (g?: { points_earned: number | null; comment?: string | null }) => {
+    const code = markCodeFromComment(g?.comment);
+    if (code) return code;
+    return g?.points_earned == null ? "" : String(g.points_earned);
+  };
 
   const turnedIn = submissions.filter((s) => s.status !== "draft").length;
 
@@ -573,13 +580,19 @@ function StaffCollectPanel({
                           <Badge variant="outline">Not due yet</Badge>
                         )}
                         <Input
-                          key={String(g?.points_earned ?? "")}
+                          key={cellText(g)}
                           className="h-8 w-24"
-                          inputMode="decimal"
                           placeholder={`/${assignment.points_possible}`}
-                          defaultValue={g?.points_earned ?? ""}
+                          defaultValue={cellText(g)}
+                          title={
+                            marks.length
+                              ? `Enter points or a mark: ${marks
+                                  .map((m) => `${m.code} = ${m.label}`)
+                                  .join(", ")}`
+                              : undefined
+                          }
                           onBlur={(e) => {
-                            if (e.target.value === String(g?.points_earned ?? "")) return;
+                            if (e.target.value === cellText(g)) return;
                             score.mutate({ studentId: s.id, value: e.target.value });
                           }}
                         />
