@@ -22,6 +22,7 @@ import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
 import { QuickScoreBar, QuickScoreEditButton } from "@/components/class/QuickScoreBar";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { findMark, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -391,12 +392,26 @@ function StaffCollectPanel({
   const [open, setOpen] = useState(false);
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
+  const { data: setup } = useQuery({
+    queryKey: ["grading-setup", classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("weights")
+        .eq("id", classId)
+        .maybeSingle();
+      if (error) throw error;
+      return parseGradingSetup(data?.weights);
+    },
+  });
+  const marks = setup?.marks ?? [];
+
   const { data: grades = [] } = useQuery({
     queryKey: ["assignment-grades", assignment.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, student_id, points_earned")
+        .select("id, student_id, points_earned, comment")
         .eq("assignment_id", assignment.id);
       if (error) throw error;
       return data;
@@ -444,14 +459,21 @@ function StaffCollectPanel({
   const score = useMutation({
     mutationFn: async (input: { studentId: string; value: string; note?: string }) => {
       const raw = input.value.trim();
-      const points = raw === "" ? null : Number(raw);
+      const mark = findMark(raw ? raw.toUpperCase() : null, marks);
+      const points = mark || raw === "" ? null : Number(raw);
       if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
-        throw new Error("Enter a valid score");
+        throw new Error(
+          marks.length
+            ? `Enter a number or a mark code (${marks.map((m) => m.code).join(", ")})`
+            : "Enter a valid score",
+        );
+      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
           student_id: input.studentId,
           points_earned: points,
+          comment: markComment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -461,7 +483,7 @@ function StaffCollectPanel({
       // A score means the work was handed in — keep the collected state in sync
       // so teachers never have to tick the box separately.
       const existing = submissions.find((s) => s.student_id === input.studentId);
-      if (points != null) {
+      if (points != null || mark) {
         if (existing) {
           await supabase
             .from("assignment_submissions")
@@ -484,6 +506,12 @@ function StaffCollectPanel({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const cellText = (g?: { points_earned: number | null; comment?: string | null }) => {
+    const code = markCodeFromComment(g?.comment);
+    if (code) return code;
+    return g?.points_earned == null ? "" : String(g.points_earned);
+  };
 
   const turnedIn = submissions.filter((s) => s.status !== "draft").length;
 
@@ -552,13 +580,19 @@ function StaffCollectPanel({
                           <Badge variant="outline">Not due yet</Badge>
                         )}
                         <Input
-                          key={String(g?.points_earned ?? "")}
+                          key={cellText(g)}
                           className="h-8 w-24"
-                          inputMode="decimal"
                           placeholder={`/${assignment.points_possible}`}
-                          defaultValue={g?.points_earned ?? ""}
+                          defaultValue={cellText(g)}
+                          title={
+                            marks.length
+                              ? `Enter points or a mark: ${marks
+                                  .map((m) => `${m.code} = ${m.label}`)
+                                  .join(", ")}`
+                              : undefined
+                          }
                           onBlur={(e) => {
-                            if (e.target.value === String(g?.points_earned ?? "")) return;
+                            if (e.target.value === cellText(g)) return;
                             score.mutate({ studentId: s.id, value: e.target.value });
                           }}
                         />
