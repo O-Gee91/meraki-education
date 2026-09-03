@@ -143,6 +143,11 @@ function AuthPage() {
           : window.location.origin,
         data: {
           full_name: fullName.trim(),
+          // SECURITY: `role` here is only a signup hint consumed once by the
+          // account-creation trigger. It lives in user metadata, which any
+          // signed-in user can rewrite via supabase.auth.updateUser(), so it
+          // must never be used for authorization. Authorization is always read
+          // from the RLS-protected user_roles table (has_role/is_admin/is_staff).
           role,
           username: normalized,
           contact_email: contactEmail,
