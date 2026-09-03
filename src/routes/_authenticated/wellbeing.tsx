@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -75,13 +76,15 @@ function WellbeingPage() {
   });
 
   const { data: checkins = [] } = useQuery({
-    queryKey: ["checkins"],
+    queryKey: ["checkins", filterDate],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("checkins")
         .select("id, student_id, mood, note, date, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
+      if (filterDate) q = q.eq("date", filterDate);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
