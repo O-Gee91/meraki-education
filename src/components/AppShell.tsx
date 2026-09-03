@@ -200,6 +200,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             {actions}
+            <ThemeToggle />
             <Button asChild variant="ghost" size="sm" className="lg:hidden">
               <Link to="/settings">Password</Link>
             </Button>
