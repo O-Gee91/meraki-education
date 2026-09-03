@@ -223,12 +223,30 @@ function WellbeingPage() {
 
         <section className="panel p-5 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Recent check-ins</h2>
+            <h2 className="text-sm font-semibold">
+              {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
+            </h2>
             {average != null ? (
               <p className="text-xs text-muted-foreground">
                 Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
               </p>
             ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <div className="w-44 space-y-1.5">
+              <Label htmlFor="checkin-date">View a specific date</Label>
+              <Input
+                id="checkin-date"
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+            </div>
+            {filterDate && (
+              <Button size="sm" variant="ghost" onClick={() => setFilterDate("")}>
+                Show all dates
+              </Button>
+            )}
           </div>
           {checkins.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No check-ins recorded yet.</p>
