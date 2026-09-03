@@ -130,7 +130,9 @@ function PeoplePage() {
       title="People & roles"
       description="Grant teaching, guardian or administrator access to accounts."
     >
-      <div className="panel p-5">
+      <StaffRequests enabled={isAdmin} />
+
+      <div className="panel mt-5 p-5">
         <Input
           placeholder="Search by name, username or email"
           value={search}
