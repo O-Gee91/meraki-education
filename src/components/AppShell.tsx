@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
 import { HeroClassGate } from "@/components/HeroClassGate";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NavItem = {
   to: string;
@@ -200,6 +201,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             {actions}
+            <ThemeToggle />
             <Button asChild variant="ghost" size="sm" className="lg:hidden">
               <Link to="/settings">Password</Link>
             </Button>

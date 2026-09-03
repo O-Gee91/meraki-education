@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -129,6 +130,7 @@ function Landing() {
             <span className="font-display text-lg font-semibold">Meraki Education</span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button asChild size="sm">
               <Link to="/auth">Sign in</Link>
             </Button>
