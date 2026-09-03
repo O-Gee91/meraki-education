@@ -349,7 +349,7 @@ function AuthPage() {
                       Messages sent to you in Meraki are also delivered to this inbox.
                     </p>
                   </div>
-                  {role === "educator" && !SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
+                  {!SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
                     <div className="space-y-2">
                       <Label htmlFor="staff-note">Why do you need staff access?</Label>
                       <Textarea
