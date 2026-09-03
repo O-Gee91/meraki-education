@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ResetAccess } from "@/components/students/ResetAccess";
+import { StaffRequests } from "@/components/people/StaffRequests";
 
 export const Route = createFileRoute("/_authenticated/people")({
   head: () => ({
@@ -129,7 +130,9 @@ function PeoplePage() {
       title="People & roles"
       description="Grant teaching, guardian or administrator access to accounts."
     >
-      <div className="panel p-5">
+      <StaffRequests enabled={isAdmin} />
+
+      <div className="panel mt-5 p-5">
         <Input
           placeholder="Search by name, username or email"
           value={search}

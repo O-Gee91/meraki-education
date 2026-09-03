@@ -17,6 +17,7 @@ import { recordLogin } from "@/lib/login-tracking";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -78,6 +79,8 @@ function AuthPage() {
   const [role, setRole] = useState("student");
   const [busy, setBusy] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
+  const [staffNote, setStaffNote] = useState("");
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -126,9 +129,10 @@ function AuthPage() {
       return;
     }
     const isEducator = role === "educator";
-    if (isEducator && !SCHOOL_STAFF_EMAIL_RE.test(contactEmail)) {
+    const staffDomain = isEducator && SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+    if (isEducator && !staffDomain && staffNote.trim().length < 10) {
       toast.error(
-        "Educator accounts require a school email address on an ssbs, ssbs2 or ssbs3 domain.",
+        "Tell the administrator who you are and why you need staff access (at least 10 characters).",
       );
       return;
     }
@@ -151,6 +155,7 @@ function AuthPage() {
           role,
           username: normalized,
           contact_email: contactEmail,
+          staff_note: isEducator && !staffDomain ? staffNote.trim() : "",
         },
       },
     });
@@ -158,6 +163,10 @@ function AuthPage() {
     setBusy(false);
     if (error) {
       toast.error(error.message);
+      return;
+    }
+    if (isEducator && !staffDomain) {
+      setPendingApproval(true);
       return;
     }
     if (!data.session) {
@@ -203,7 +212,19 @@ function AuthPage() {
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">
         <div className="w-full max-w-md">
-          {pendingConfirm ? (
+          {pendingApproval ? (
+            <div className="panel p-6 text-center">
+              <h1 className="text-xl font-semibold">Waiting for administrator approval</h1>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Your account was created, but staff access from an email outside the approved
+                school domains has to be approved by a school administrator. You will be able to
+                use teacher tools as soon as your request is approved.
+              </p>
+              <Button className="mt-6" variant="outline" onClick={() => setPendingApproval(false)}>
+                Back to sign in
+              </Button>
+            </div>
+          ) : pendingConfirm ? (
             <div className="panel p-6 text-center">
               <h1 className="text-xl font-semibold">Check your email</h1>
               <p className="mt-3 text-sm text-muted-foreground">
@@ -295,7 +316,7 @@ function AuthPage() {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       {role === "educator"
-                        ? "Educator / staff access requires a school email on an ssbs, ssbs2 or ssbs3 domain. Sign in with that email address and confirm it — teacher access is granted automatically once verified."
+                        ? "Only teachers and administrators may hold staff access. Use a school email on an ssbs, ssbs2 or ssbs3 domain and teacher access is granted automatically once you confirm it. Another email domain is allowed, but a school administrator must approve it first."
                         : "Teacher and admin access is granted by a school administrator after your account is created."}
                     </p>
 
@@ -326,6 +347,23 @@ function AuthPage() {
                       Messages sent to you in Meraki are also delivered to this inbox.
                     </p>
                   </div>
+                  {role === "educator" && !SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="staff-note">Why do you need staff access?</Label>
+                      <Textarea
+                        id="staff-note"
+                        value={staffNote}
+                        maxLength={500}
+                        rows={3}
+                        placeholder="e.g. Grade 7 English teacher, starting this term — approved by Ms. Chen"
+                        onChange={(e) => setStaffNote(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your email is not on an approved school domain, so an administrator will
+                        review this request before teacher access is granted.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
                     <Input
