@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ResetAccess } from "@/components/students/ResetAccess";
+import { StaffRequests } from "@/components/people/StaffRequests";
 
 export const Route = createFileRoute("/_authenticated/people")({
   head: () => ({
