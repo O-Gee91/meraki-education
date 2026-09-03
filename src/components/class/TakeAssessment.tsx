@@ -26,13 +26,14 @@ function formatTime(ms: number) {
 function useAssessmentTimer(
   limitMinutes: number | null | undefined,
   assessmentId: string,
+  enabled: boolean,
   onExpire: () => void,
 ) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (!limitMinutes) return;
+    if (!limitMinutes || !enabled) return;
     const key = `assessment-start:${assessmentId}`;
     let start = Number(localStorage.getItem(key));
     if (!start || Number.isNaN(start)) {
@@ -49,7 +50,7 @@ function useAssessmentTimer(
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [limitMinutes, assessmentId, onExpire]);
+  }, [limitMinutes, assessmentId, enabled, onExpire]);
 
   return { remaining, started };
 }
@@ -62,6 +63,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const [responses, setResponses] = useState<Record<string, AnswerResponse>>(
     () => readDraft<Record<string, AnswerResponse>>(`assessment:${assessmentId}`) ?? {},
   );
+  const [hasStarted, setHasStarted] = useState(false);
   const answered = Object.keys(responses).length > 0;
   const draft = useAutosaveDraft(draftKey, responses, { dirty: answered });
 
@@ -115,7 +117,8 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   });
 
   const limitMinutes = data?.assessment.time_limit_minutes;
-  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, () => {
+  const isTimed = Boolean(limitMinutes && limitMinutes > 0);
+  const { remaining, started } = useAssessmentTimer(limitMinutes, assessmentId, hasStarted, () => {
     if (!submit.isPending && !mySubmission) {
       toast.warning("Time is up — your assessment is being submitted automatically.");
       submit.mutate();
@@ -146,6 +149,41 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
 
   const setResponse = (id: string, next: AnswerResponse) =>
     setResponses((prev) => ({ ...prev, [id]: next }));
+
+  if (isTimed && !hasStarted) {
+    return (
+      <div className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <Clock className="mt-0.5 size-6 text-destructive" />
+          <div className="space-y-2">
+            <h3 className="font-display text-lg font-semibold">Timed assessment</h3>
+            <p className="text-sm text-muted-foreground">
+              This assessment has a <strong>{limitMinutes} minute</strong> timer. Once you
+              click <strong>Start assessment</strong>, the timer begins and cannot be paused.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>Complete it in one sitting — leaving the page will not stop the timer.</li>
+              <li>Your answers autosave, but only your final submission is counted.</li>
+              <li>When time runs out, your work will be submitted automatically.</li>
+            </ul>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <Button
+            onClick={() => {
+              setHasStarted(true);
+              toast.info("Timer started — good luck!");
+            }}
+          >
+            Start assessment
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Click only when you are ready to begin.
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
