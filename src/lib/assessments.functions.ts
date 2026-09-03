@@ -60,13 +60,15 @@ export const submitAssessment = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: student, error: sErr } = await context.supabase
+    const { data: studentRows, error: sErr } = await context.supabase
       .from("students")
       .select("id")
       .eq("user_id", context.userId)
-      .maybeSingle();
+      .limit(1);
     if (sErr) throw sErr;
+    const student = studentRows?.[0];
     if (!student) throw new Error("Only enrolled students can submit an assessment");
+
 
     const { data: assessment, error: aErr } = await context.supabase
       .from("assessments")
