@@ -150,6 +150,41 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const setResponse = (id: string, next: AnswerResponse) =>
     setResponses((prev) => ({ ...prev, [id]: next }));
 
+  if (isTimed && !hasStarted) {
+    return (
+      <div className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <Clock className="mt-0.5 size-6 text-destructive" />
+          <div className="space-y-2">
+            <h3 className="font-display text-lg font-semibold">Timed assessment</h3>
+            <p className="text-sm text-muted-foreground">
+              This assessment has a <strong>{limitMinutes} minute</strong> timer. Once you
+              click <strong>Start assessment</strong>, the timer begins and cannot be paused.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>Complete it in one sitting — leaving the page will not stop the timer.</li>
+              <li>Your answers autosave, but only your final submission is counted.</li>
+              <li>When time runs out, your work will be submitted automatically.</li>
+            </ul>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <Button
+            onClick={() => {
+              setHasStarted(true);
+              toast.info("Timer started — good luck!");
+            }}
+          >
+            Start assessment
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Click only when you are ready to begin.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {limitMinutes && started && remaining != null && (
