@@ -63,6 +63,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const [responses, setResponses] = useState<Record<string, AnswerResponse>>(
     () => readDraft<Record<string, AnswerResponse>>(`assessment:${assessmentId}`) ?? {},
   );
+  const [hasStarted, setHasStarted] = useState(false);
   const answered = Object.keys(responses).length > 0;
   const draft = useAutosaveDraft(draftKey, responses, { dirty: answered });
 
