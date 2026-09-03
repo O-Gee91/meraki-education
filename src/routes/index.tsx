@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
