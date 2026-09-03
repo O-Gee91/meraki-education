@@ -4,7 +4,6 @@ import { GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import {
   identifierToEmail,
   isValidUsername,
@@ -175,21 +174,6 @@ function AuthPage() {
       return;
     }
     goToApp();
-  }
-
-  async function googleSignIn() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: returnTo
-        ? `${window.location.origin}${returnTo}`
-        : window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Google sign-in failed. Please try again.");
-      return;
-    }
-    if (result.redirected) return;
-    goToApp();
-
   }
 
   return (
