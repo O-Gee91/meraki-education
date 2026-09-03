@@ -126,9 +126,10 @@ function AuthPage() {
       return;
     }
     const isEducator = role === "educator";
-    if (isEducator && !SCHOOL_STAFF_EMAIL_RE.test(contactEmail)) {
+    const staffDomain = isEducator && SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+    if (isEducator && !staffDomain && staffNote.trim().length < 10) {
       toast.error(
-        "Educator accounts require a school email address on an ssbs, ssbs2 or ssbs3 domain.",
+        "Tell the administrator who you are and why you need staff access (at least 10 characters).",
       );
       return;
     }
