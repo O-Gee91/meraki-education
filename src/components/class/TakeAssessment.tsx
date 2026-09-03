@@ -26,13 +26,14 @@ function formatTime(ms: number) {
 function useAssessmentTimer(
   limitMinutes: number | null | undefined,
   assessmentId: string,
+  enabled: boolean,
   onExpire: () => void,
 ) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (!limitMinutes) return;
+    if (!limitMinutes || !enabled) return;
     const key = `assessment-start:${assessmentId}`;
     let start = Number(localStorage.getItem(key));
     if (!start || Number.isNaN(start)) {
@@ -49,7 +50,7 @@ function useAssessmentTimer(
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [limitMinutes, assessmentId, onExpire]);
+  }, [limitMinutes, assessmentId, enabled, onExpire]);
 
   return { remaining, started };
 }
