@@ -76,7 +76,7 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState("educator");
   const [busy, setBusy] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [staffNote, setStaffNote] = useState("");
@@ -128,8 +128,9 @@ function AuthPage() {
       toast.error("Enter the email address where you want notifications sent");
       return;
     }
-    const isEducator = role === "educator";
-    const staffDomain = isEducator && SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+    const isEducator = true;
+    const staffDomain = SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+
     if (isEducator && !staffDomain && staffNote.trim().length < 10) {
       toast.error(
         "Tell the administrator who you are and why you need staff access (at least 10 characters).",
@@ -309,18 +310,19 @@ function AuthPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="parent">Parent / guardian</SelectItem>
-                        <SelectItem value="educator">Educator / staff</SelectItem>
+                        <SelectItem value="educator">Educator</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {role === "educator"
-                        ? "Only teachers and administrators may hold staff access. Use a school email on an ssbs, ssbs2 or ssbs3 domain and teacher access is granted automatically once you confirm it. Another email domain is allowed, but a school administrator must approve it first."
-                        : "Teacher and admin access is granted by a school administrator after your account is created."}
+                      Only educators can create an account here. Students and guardians receive
+                      their login details from their school. Use a school email on an ssbs, ssbs2
+                      or ssbs3 domain and teacher access is granted automatically once you confirm
+                      it. Another email domain is allowed, but a school administrator must approve
+                      it first.
                     </p>
 
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
                     <Input
@@ -347,7 +349,7 @@ function AuthPage() {
                       Messages sent to you in Meraki are also delivered to this inbox.
                     </p>
                   </div>
-                  {role === "educator" && !SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
+                  {!SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
                     <div className="space-y-2">
                       <Label htmlFor="staff-note">Why do you need staff access?</Label>
                       <Textarea
