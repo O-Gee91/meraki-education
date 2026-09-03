@@ -128,8 +128,9 @@ function AuthPage() {
       toast.error("Enter the email address where you want notifications sent");
       return;
     }
-    const isEducator = role === "educator";
-    const staffDomain = isEducator && SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+    const isEducator = true;
+    const staffDomain = SCHOOL_STAFF_EMAIL_RE.test(contactEmail);
+
     if (isEducator && !staffDomain && staffNote.trim().length < 10) {
       toast.error(
         "Tell the administrator who you are and why you need staff access (at least 10 characters).",
