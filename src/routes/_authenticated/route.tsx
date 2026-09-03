@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { recordLogin } from "@/lib/login-tracking";
+import { useAuth } from "@/hooks/useAuth";
+import { useIntegrityGuard } from "@/hooks/useIntegrityGuard";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -14,10 +16,17 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
+  const { isStaff, loading } = useAuth();
+
   // Record one sign-in per browser session (covers OAuth/restored sessions;
   // password sign-ins also call recordLogin directly from the auth page).
   useEffect(() => {
     void recordLogin();
   }, []);
+
+  // Students and guardians may not script, bot or run code — automation attempts
+  // earn an automatic behavior strike.
+  useIntegrityGuard(!loading && !isStaff);
+
   return <Outlet />;
 }
