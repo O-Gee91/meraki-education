@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Clock } from "lucide-react";
+import { Clock, Maximize2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,17 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
     () => readDraft<Record<string, AnswerResponse>>(`assessment:${assessmentId}`) ?? {},
   );
   const [hasStarted, setHasStarted] = useState(false);
+
+  // Assessment mode: while the paper is open we take over the screen so the
+  // navigation tabs, banners and other classwork are out of sight.
+  useEffect(() => {
+    if (!hasStarted) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [hasStarted]);
   const answered = Object.keys(responses).length > 0;
   const draft = useAutosaveDraft(draftKey, responses, { dirty: answered });
 
@@ -111,6 +122,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
           : `Submitted — you scored ${result.autoScore}/${result.totalPoints}`,
       );
       draft.clear();
+      setHasStarted(false);
       queryClient.invalidateQueries({ queryKey: ["my-submission", assessmentId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -150,21 +162,44 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const setResponse = (id: string, next: AnswerResponse) =>
     setResponses((prev) => ({ ...prev, [id]: next }));
 
-  if (isTimed && !hasStarted) {
+  if (!hasStarted) {
     return (
       <div className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="flex items-start gap-3">
-          <Clock className="mt-0.5 size-6 text-destructive" />
+          {isTimed ? (
+            <Clock className="mt-0.5 size-6 text-destructive" />
+          ) : (
+            <Maximize2 className="mt-0.5 size-6 text-primary" />
+          )}
           <div className="space-y-2">
-            <h3 className="font-display text-lg font-semibold">Timed assessment</h3>
+            <h3 className="font-display text-lg font-semibold">
+              {isTimed ? "Timed assessment" : "Assessment mode"}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              This assessment has a <strong>{limitMinutes} minute</strong> timer. Once you
-              click <strong>Start assessment</strong>, the timer begins and cannot be paused.
+              {isTimed ? (
+                <>
+                  This assessment has a <strong>{limitMinutes} minute</strong> timer. Once you
+                  click <strong>Start assessment</strong>, the timer begins and cannot be
+                  paused.
+                </>
+              ) : (
+                <>
+                  Starting opens <strong>assessment mode</strong> — a full-screen view with no
+                  tabs, menus or banners so you can focus on your work.
+                </>
+              )}
             </p>
             <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>Complete it in one sitting — leaving the page will not stop the timer.</li>
+              <li>The rest of the site is hidden until you submit or exit.</li>
+              {isTimed ? (
+                <li>Complete it in one sitting — leaving the page will not stop the timer.</li>
+              ) : (
+                <li>You can leave assessment mode and come back to finish later.</li>
+              )}
               <li>Your answers autosave, but only your final submission is counted.</li>
-              <li>When time runs out, your work will be submitted automatically.</li>
+              {isTimed ? (
+                <li>When time runs out, your work will be submitted automatically.</li>
+              ) : null}
             </ul>
           </div>
         </div>
@@ -172,7 +207,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
           <Button
             onClick={() => {
               setHasStarted(true);
-              toast.info("Timer started — good luck!");
+              toast.info(isTimed ? "Timer started — good luck!" : "Assessment mode on");
             }}
           >
             Start assessment
@@ -186,7 +221,29 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-background">
+      <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Assessment mode
+          </p>
+          <h2 className="font-display text-lg font-semibold">{data.assessment.title}</h2>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            if (isTimed) {
+              toast.warning("The timer keeps running — reopen the assessment to continue.");
+            }
+            setHasStarted(false);
+          }}
+        >
+          <X className="mr-1 size-4" />
+          Exit
+        </Button>
+      </div>
       {limitMinutes && started && remaining != null && (
         <div
           className={`sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 shadow-float ${
@@ -315,6 +372,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
           ) : null}
         </div>
       )}
+      </div>
     </div>
   );
 }
