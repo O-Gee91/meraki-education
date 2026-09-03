@@ -76,7 +76,7 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState("educator");
   const [busy, setBusy] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [staffNote, setStaffNote] = useState("");
