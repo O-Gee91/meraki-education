@@ -309,18 +309,19 @@ function AuthPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="parent">Parent / guardian</SelectItem>
-                        <SelectItem value="educator">Educator / staff</SelectItem>
+                        <SelectItem value="educator">Educator</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {role === "educator"
-                        ? "Only teachers and administrators may hold staff access. Use a school email on an ssbs, ssbs2 or ssbs3 domain and teacher access is granted automatically once you confirm it. Another email domain is allowed, but a school administrator must approve it first."
-                        : "Teacher and admin access is granted by a school administrator after your account is created."}
+                      Only educators can create an account here. Students and guardians receive
+                      their login details from their school. Use a school email on an ssbs, ssbs2
+                      or ssbs3 domain and teacher access is granted automatically once you confirm
+                      it. Another email domain is allowed, but a school administrator must approve
+                      it first.
                     </p>
 
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
                     <Input
