@@ -265,14 +265,6 @@ function AuthPage() {
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy ? "Signing in…" : "Sign in"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={googleSignIn}
-                  >
-                    Continue with Google
-                  </Button>
                 </form>
               </TabsContent>
 
@@ -363,14 +355,6 @@ function AuthPage() {
                   </div>
                   <Button type="submit" className="w-full" disabled={busy}>
                     {busy ? "Creating account…" : "Create account"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={googleSignIn}
-                  >
-                    Continue with Google
                   </Button>
                 </form>
               </TabsContent>
