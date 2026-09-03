@@ -78,15 +78,20 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const { data: mySubmission } = useQuery({
     queryKey: ["my-submission", assessmentId],
     queryFn: async () => {
+      // Never use .single()/.maybeSingle() here: a student can be visible through
+      // more than one roster link, which makes PostgREST throw "JSON object
+      // requested, multiple (or no) rows returned" mid-quiz.
       const { data: rows, error: err } = await supabase
         .from("assessment_submissions")
         .select("id, status, auto_score, manual_score, total_points, submitted_at")
         .eq("assessment_id", assessmentId)
-        .maybeSingle();
+        .order("submitted_at", { ascending: false })
+        .limit(1);
       if (err) throw err;
-      return rows;
+      return rows?.[0] ?? null;
     },
   });
+
 
   const submit = useMutation({
     mutationFn: async () => {
