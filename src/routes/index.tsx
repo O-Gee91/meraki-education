@@ -129,6 +129,7 @@ function Landing() {
             <span className="font-display text-lg font-semibold">Meraki Education</span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button asChild size="sm">
               <Link to="/auth">Sign in</Link>
             </Button>
