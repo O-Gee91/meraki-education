@@ -235,6 +235,13 @@ export function AppShell({
             {description ? (
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             ) : null}
+            {canSwitchRole ? (
+              <p className="mt-1 text-xs font-medium text-muted-foreground">
+                {primaryRole === "admin"
+                  ? "Admin mode · whole school in scope"
+                  : "Teacher mode · your classes only"}
+              </p>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             {actions}

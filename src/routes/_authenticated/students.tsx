@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function StudentsPage() {
   const queryClient = useQueryClient();
-  const { isStaff, isAdmin } = useAuth();
+  const { isStaff, isAdmin, teacherMode, user, profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
@@ -56,7 +56,35 @@ function StudentsPage() {
     studentNumber: "",
   });
 
-  const { data: students = [] } = useQuery({
+  // While working as a teacher, the directory is limited to students enrolled in
+  // this person's own classes.
+  const { data: myStudentIds } = useQuery({
+    queryKey: ["my-class-student-ids", user?.id, teacherMode],
+    enabled: !!user && teacherMode,
+    queryFn: async () => {
+      const myName = (profile?.full_name ?? "").trim().toLowerCase();
+      const { data: classRows, error: classError } = await supabase
+        .from("classes")
+        .select("id, teacher_id, teacher_name");
+      if (classError) throw classError;
+      const mine = (classRows ?? [])
+        .filter(
+          (c) =>
+            c.teacher_id === user!.id ||
+            (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+        )
+        .map((c) => c.id);
+      if (mine.length === 0) return new Set<string>();
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("student_id")
+        .in("class_id", mine);
+      if (error) throw error;
+      return new Set((data ?? []).map((r) => r.student_id));
+    },
+  });
+
+  const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -135,6 +163,9 @@ function StudentsPage() {
         : `Remove ${ids.length} students from the school directory? Their records will be deleted.`;
     if (window.confirm(label)) removeStudents.mutate(ids);
   };
+
+  const students =
+    teacherMode && myStudentIds ? allStudents.filter((s) => myStudentIds.has(s.id)) : allStudents;
 
   const filtered = students
     .filter((s) =>
