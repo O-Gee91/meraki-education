@@ -28,7 +28,7 @@ export function useSession() {
 export function useAuth() {
   const { session, user, loading } = useSession();
 
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+  const { data: fetchedRoles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["roles", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Role[]> => {
