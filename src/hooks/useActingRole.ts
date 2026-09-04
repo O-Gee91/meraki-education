@@ -34,7 +34,9 @@ export function useActingRoleStore() {
     const listener = () => setValue(current);
     listeners.add(listener);
     listener();
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   }, []);
 
   return value;
