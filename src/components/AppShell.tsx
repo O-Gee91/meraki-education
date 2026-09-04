@@ -238,6 +238,26 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             {actions}
+            {canSwitchRole ? (
+              <div className="flex rounded-md border border-border p-0.5 lg:hidden">
+                {(["admin", "teacher"] as const).map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => switchRole(role)}
+                    aria-pressed={primaryRole === role}
+                    className={cn(
+                      "rounded px-2 py-1 text-xs font-medium transition-colors",
+                      primaryRole === role
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {role === "admin" ? "Admin" : "Teacher"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm" className="lg:hidden">
               <Link to="/settings">Password</Link>
