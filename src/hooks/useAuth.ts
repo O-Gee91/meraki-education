@@ -32,11 +32,17 @@ export function useAuth() {
     queryKey: ["roles", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Role[]> => {
-      const { data, error } = await supabase.from("user_roles").select("role");
+      // Admins can read every row in user_roles, so this MUST stay scoped to the
+      // signed-in account or an admin would appear to hold every role.
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []).map((r) => r.role as Role);
     },
   });
+
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],

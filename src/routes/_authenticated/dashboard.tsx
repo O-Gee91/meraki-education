@@ -8,6 +8,8 @@ import { HeroProfilePanel } from "@/components/HeroProfilePanel";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
 
@@ -40,9 +42,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { isStaff, primaryRole, profile } = useAuth();
+  const { classIds, studentIds } = useTeacherScope();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: classes = [] } = useQuery({
+  const { data: allClasses = [] } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,7 +57,7 @@ function DashboardPage() {
     },
   });
 
-  const { data: students = [] } = useQuery({
+  const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -65,6 +68,11 @@ function DashboardPage() {
       return data;
     },
   });
+
+  // Working as a teacher narrows the overview to their own classes and rosters.
+  const classes = classIds ? allClasses.filter((c) => classIds.has(c.id)) : allClasses;
+  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],

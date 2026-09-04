@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 
@@ -57,13 +59,14 @@ const STRATEGIES: Record<number, string> = {
 
 function WellbeingPage() {
   const { isStaff } = useAuth();
+  const { studentIds } = useTeacherScope();
   const queryClient = useQueryClient();
   const [mood, setMood] = useState("3");
   const [note, setNote] = useState("");
   const [studentId, setStudentId] = useState("");
   const [filterDate, setFilterDate] = useState("");
 
-  const { data: students = [] } = useQuery({
+  const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -75,7 +78,7 @@ function WellbeingPage() {
     },
   });
 
-  const { data: checkins = [] } = useQuery({
+  const { data: allCheckins = [] } = useQuery({
     queryKey: ["checkins", filterDate],
     queryFn: async () => {
       let q = supabase
@@ -89,6 +92,13 @@ function WellbeingPage() {
       return data;
     },
   });
+
+  // Working as a teacher shows only the check-ins of their own students.
+  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+  const checkins = studentIds
+    ? allCheckins.filter((c) => studentIds.has(c.student_id))
+    : allCheckins;
+
 
   const { data: staffNotes = [] } = useQuery({
     queryKey: ["checkin-staff-notes"],
