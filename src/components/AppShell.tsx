@@ -245,21 +245,22 @@ export function AppShell({
                 </span>
                 <div className="flex rounded-md border border-border p-0.5">
                   {(["admin", "teacher"] as const).map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => switchRole(role)}
-                    aria-pressed={primaryRole === role}
-                    className={cn(
-                      "rounded px-2 py-1 text-xs font-medium transition-colors",
-                      primaryRole === role
-                        ? "bg-secondary text-secondary-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {role === "admin" ? "Admin" : "Teacher"}
-                  </button>
-                ))}
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => switchRole(role)}
+                      aria-pressed={primaryRole === role}
+                      className={cn(
+                        "rounded px-2 py-1 text-xs font-medium transition-colors",
+                        primaryRole === role
+                          ? "bg-secondary text-secondary-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {role === "admin" ? "Admin" : "Teacher"}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
             <ThemeToggle />
