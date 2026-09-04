@@ -121,7 +121,8 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
     [notes, gradeFilter],
   );
 
-  const { data: students = [] } = useQuery({
+  const { studentIds } = useTeacherScope();
+  const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     enabled: isStaff,
     queryFn: async () => {
@@ -133,6 +134,9 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  // Teacher mode limits logging to students this person actually teaches.
+  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+
 
   const create = useMutation({
     mutationFn: async () => {
