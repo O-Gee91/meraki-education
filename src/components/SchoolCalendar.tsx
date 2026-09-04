@@ -88,6 +88,7 @@ type EventRow = {
   category: string;
   audience: string;
   audiences: Audience[] | null;
+  class_id: string | null;
   color: string;
 };
 
@@ -146,7 +147,7 @@ function formatTime(value?: string | null) {
 }
 
 export function SchoolCalendar() {
-  const { isStaff, user } = useAuth();
+  const { isStaff, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -163,9 +164,29 @@ export function SchoolCalendar() {
     end_time: "",
     location: "",
     event_date: "",
+    class_id: "" as string,
   };
   const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
+
+  const { data: myClasses = [] } = useQuery({
+    queryKey: ["calendar-scope-classes", user?.id],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // An admin posting as a teacher should default to their own class, not the school.
+  useEffect(() => {
+    if (editingId || isAdmin || !myClasses.length) return;
+    setForm((prev) => (prev.class_id ? prev : { ...prev, class_id: myClasses[0]!.id }));
+  }, [editingId, isAdmin, myClasses]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
@@ -176,7 +197,7 @@ export function SchoolCalendar() {
       const { data, error } = await supabase
         .from("calendar_events")
         .select(
-          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color",
+          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id",
         )
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
@@ -235,6 +256,7 @@ export function SchoolCalendar() {
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         location: form.location.trim() || null,
+        class_id: form.class_id || null,
       };
       if (editingId) {
         const { error } = await supabase
@@ -275,6 +297,7 @@ export function SchoolCalendar() {
       end_time: e.end_time?.slice(0, 5) ?? "",
       location: e.location ?? "",
       event_date: e.event_date,
+      class_id: e.class_id ?? "",
     });
   };
 
@@ -527,6 +550,30 @@ export function SchoolCalendar() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {colorOption(form.color).description}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="cal-scope">Who is this for</Label>
+                <Select
+                  value={form.class_id || "school"}
+                  onValueChange={(v) => setForm({ ...form, class_id: v === "school" ? "" : v })}
+                >
+                  <SelectTrigger id="cal-scope">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isAdmin && <SelectItem value="school">Whole school</SelectItem>}
+                    {myClasses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {form.class_id
+                    ? "Only this class and their families will see it."
+                    : "Everyone at the school will see it."}
                 </p>
               </div>
               <div>
