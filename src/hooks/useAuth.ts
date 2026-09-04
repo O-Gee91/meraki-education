@@ -91,6 +91,12 @@ export function useAuth() {
     isStaff: hasAdminRole || hasTeacherRole,
     /** Reflects the active hat, so an admin working as a teacher stays class-scoped. */
     isAdmin: primaryRole === "admin",
+    /**
+     * True when a staff member is deliberately working as a teacher. Row-level
+     * security still allows an admin to read everything, so lists must narrow
+     * themselves to the classes this person teaches while this is on.
+     */
+    teacherMode: primaryRole === "teacher" && hasTeacherRole,
     loading: loading || (!!user && rolesLoading),
   };
 }
