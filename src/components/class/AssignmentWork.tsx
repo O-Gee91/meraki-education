@@ -743,3 +743,78 @@ function StaffCollectPanel({
     </div>
   );
 }
+
+/** One-click "fill everyone" toolbar for a whole class. */
+function BulkFillBar({
+  classId,
+  pointsPossible,
+  marks,
+  pending,
+  onFill,
+}: {
+  classId: string;
+  pointsPossible: number;
+  marks: SpecialMark[];
+  pending: boolean;
+  onFill: (value: string, onlyBlank: boolean) => void;
+}) {
+  const { data: setup } = useClassGradingSetup(classId);
+  const [onlyBlank, setOnlyBlank] = useState(true);
+  const [custom, setCustom] = useState("");
+  const quick = setup?.quickScores ?? [];
+
+  return (
+    <div className="space-y-2 border-t border-border pt-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-xs font-medium">
+          <Users className="h-3.5 w-3.5" /> Fill all students
+        </span>
+        {quick.map((q, i) => (
+          <Button
+            key={`${q.label}-${i}`}
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-7 px-2 text-xs"
+            disabled={pending}
+            onClick={() => onFill(quickScoreCellValue(q, pointsPossible), onlyBlank)}
+          >
+            {q.label}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="h-7 px-2 text-xs"
+          disabled={pending}
+          onClick={() => onFill(String(pointsPossible), onlyBlank)}
+        >
+          Full credit ({pointsPossible})
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          className="h-7 w-28 text-xs"
+          placeholder={marks.length ? `Score or ${marks[0]?.code}` : "Score"}
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs"
+          disabled={pending || !custom.trim()}
+          onClick={() => onFill(custom, onlyBlank)}
+        >
+          Apply to all
+        </Button>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Checkbox checked={onlyBlank} onCheckedChange={(v) => setOnlyBlank(!!v)} />
+          Only students without a score
+        </label>
+      </div>
+    </div>
+  );
+}
