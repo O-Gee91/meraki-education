@@ -8,6 +8,8 @@ import { HeroProfilePanel } from "@/components/HeroProfilePanel";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
 

@@ -84,10 +84,11 @@ function ReportsPage() {
 
 function ReportCards({ isStaff }: { isStaff: boolean }) {
   const { user } = useAuth();
+  const { classIds, studentIds } = useTeacherScope();
   const queryClient = useQueryClient();
   const [classId, setClassId] = useState("");
 
-  const { data: classes = [] } = useQuery({
+  const { data: allClasses = [] } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -99,7 +100,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     },
   });
 
-  const { data: students = [] } = useQuery({
+  const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -111,7 +112,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     },
   });
 
-  const { data: cards = [] } = useQuery({
+  const { data: allCards = [] } = useQuery({
     queryKey: ["report-cards"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -122,6 +123,13 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+
+  // Teacher mode keeps report cards limited to the classes this person teaches.
+  const classes = classIds ? allClasses.filter((c) => classIds.has(c.id)) : allClasses;
+  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+  const cards = classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards;
+
+
 
   const generate = useMutation({
     mutationFn: async () => {
