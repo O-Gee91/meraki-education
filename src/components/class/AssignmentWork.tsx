@@ -390,6 +390,7 @@ function StaffCollectPanel({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [proofreading, setProofreading] = useState<Record<string, boolean>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
   const { data: setup } = useQuery({
