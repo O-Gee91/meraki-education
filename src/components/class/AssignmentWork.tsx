@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Download, Paperclip } from "lucide-react";
+import { CheckCircle2, Circle, Download, Paperclip, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
-import { QuickScoreBar, QuickScoreEditButton } from "@/components/class/QuickScoreBar";
+import {
+  QuickScoreBar,
+  QuickScoreEditButton,
+  useClassGradingSetup,
+} from "@/components/class/QuickScoreBar";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
-import { findMark, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
+import {
+  findMark,
+  markCodeFromComment,
+  parseGradingSetup,
+  quickScoreCellValue,
+  type SpecialMark,
+} from "@/lib/grading";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
