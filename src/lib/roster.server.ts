@@ -64,25 +64,30 @@ async function claimFreeUsername(
   username: string,
   role: "student" | "parent",
   studentId: string,
+  startAt = 0,
 ): Promise<{ username: string; userId: string | null }> {
   const suffixBase = username.replace(/(\d+)$/, "");
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  for (let attempt = startAt; attempt < startAt + 60; attempt += 1) {
     const candidate =
       attempt === 0 ? username : `${suffixBase}${attempt + 1}`.slice(0, 30);
     const userId = await findUserIdByUsername(admin, candidate);
     if (!userId) return { username: candidate, userId: null };
 
-    // The account exists — only reuse it when it already belongs to this student.
+    // The account exists — only reuse it when it is already linked to THIS
+    // student. Anything else (another same-named student, or an orphan account
+    // nobody is linked to) must get a fresh username, otherwise two different
+    // students end up sharing one login and neither can sign in reliably.
     const column = role === "student" ? "user_id" : "guardian_user_id";
-    const { data: owner } = await admin
+    const { data: owners } = await admin
       .from("students")
       .select("id")
       .eq(column, userId)
-      .maybeSingle();
-    if (!owner || owner.id === studentId) return { username: candidate, userId };
+      .limit(1);
+    if (owners?.[0]?.id === studentId) return { username: candidate, userId };
   }
   return { username, userId: null };
 }
+
 
 type Target = {
   role: "student" | "parent";
