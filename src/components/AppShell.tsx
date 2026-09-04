@@ -18,6 +18,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Role } from "@/hooks/useAuth";
+import { setActingRole } from "@/hooks/useActingRole";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
@@ -109,7 +110,7 @@ export function AppShell({
   actions?: ReactNode | undefined;
   children: ReactNode;
 }) {
-  const { profile, primaryRole, user } = useAuth();
+  const { profile, primaryRole, user, canSwitchRole } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -118,6 +119,12 @@ export function AppShell({
     ...item,
     label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
   }));
+
+  function switchRole(role: "admin" | "teacher") {
+    setActingRole(role);
+    // Role decides what data and audiences are in scope, so refetch everything.
+    void queryClient.invalidateQueries();
+  }
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -174,6 +181,36 @@ export function AppShell({
             {profile?.full_name || user?.email || "Signed in"}
           </p>
           <p className="text-xs text-sidebar-foreground/70">{ROLE_LABEL[primaryRole]}</p>
+          {canSwitchRole ? (
+            <div className="mt-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-sidebar-foreground/60">
+                Working as
+              </p>
+              <div className="mt-1.5 flex rounded-md bg-sidebar/70 p-0.5">
+                {(["admin", "teacher"] as const).map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => switchRole(role)}
+                    aria-pressed={primaryRole === role}
+                    className={cn(
+                      "flex-1 rounded px-2 py-1 text-xs font-medium transition-colors",
+                      primaryRole === role
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    {role === "admin" ? "Admin" : "Teacher"}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] leading-snug text-sidebar-foreground/60">
+                {primaryRole === "admin"
+                  ? "Updates can go school-wide."
+                  : "Updates stay scoped to your own classes."}
+              </p>
+            </div>
+          ) : null}
           <div className="mt-3 flex items-center gap-4">
             <Link
               to="/settings"
@@ -201,6 +238,26 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             {actions}
+            {canSwitchRole ? (
+              <div className="flex rounded-md border border-border p-0.5 lg:hidden">
+                {(["admin", "teacher"] as const).map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => switchRole(role)}
+                    aria-pressed={primaryRole === role}
+                    className={cn(
+                      "rounded px-2 py-1 text-xs font-medium transition-colors",
+                      primaryRole === role
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {role === "admin" ? "Admin" : "Teacher"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm" className="lg:hidden">
               <Link to="/settings">Password</Link>

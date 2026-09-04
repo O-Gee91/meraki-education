@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useActingRoleStore } from "@/hooks/useActingRole";
 
 export type Role = "admin" | "teacher" | "student" | "parent";
 
@@ -51,13 +52,23 @@ export function useAuth() {
     },
   });
 
-  const primaryRole: Role = roles.includes("admin")
+  const hasAdminRole = roles.includes("admin");
+  const hasTeacherRole = roles.includes("teacher");
+  // Only people who genuinely hold both hats get to switch between them.
+  const canSwitchRole = hasAdminRole && hasTeacherRole;
+
+  const storedActingRole = useActingRoleStore();
+  const actingRole: Role | null = canSwitchRole ? (storedActingRole ?? "admin") : null;
+
+  const baseRole: Role = hasAdminRole
     ? "admin"
-    : roles.includes("teacher")
+    : hasTeacherRole
       ? "teacher"
       : roles.includes("parent")
         ? "parent"
         : "student";
+
+  const primaryRole: Role = actingRole ?? baseRole;
 
   return {
     session,
@@ -65,8 +76,14 @@ export function useAuth() {
     profile,
     roles,
     primaryRole,
-    isStaff: roles.includes("admin") || roles.includes("teacher"),
-    isAdmin: roles.includes("admin"),
+    /** The role the user is currently acting as (null when they hold only one staff role). */
+    actingRole,
+    canSwitchRole,
+    hasAdminRole,
+    hasTeacherRole,
+    isStaff: hasAdminRole || hasTeacherRole,
+    /** Reflects the active hat, so an admin working as a teacher stays class-scoped. */
+    isAdmin: primaryRole === "admin",
     loading: loading || (!!user && rolesLoading),
   };
 }
