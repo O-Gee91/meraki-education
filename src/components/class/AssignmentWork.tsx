@@ -603,13 +603,23 @@ function StaffCollectPanel({
           <DialogHeader>
             <DialogTitle>{assignment.title}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              Quick scores below each student apply instantly — tweak the list to fit this
-              assignment.
-            </p>
-            <QuickScoreEditButton classId={classId} />
+          <div className="space-y-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Quick scores below each student apply instantly — tweak the list to fit this
+                assignment.
+              </p>
+              <QuickScoreEditButton classId={classId} />
+            </div>
+            <BulkFillBar
+              classId={classId}
+              pointsPossible={Number(assignment.points_possible)}
+              marks={marks}
+              pending={bulkFill.isPending}
+              onFill={(value, onlyBlank) => bulkFill.mutate({ value, onlyBlank })}
+            />
           </div>
+
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {roster.length === 0 ? (
               <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
