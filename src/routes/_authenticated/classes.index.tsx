@@ -53,7 +53,7 @@ const emptyForm = {
 };
 
 function ClassesPage() {
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { isStaff, isAdmin, teacherMode, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,7 +65,7 @@ function ClassesPage() {
     grade: number | null;
   } | null>(null);
 
-  const { data: classes = [], isLoading } = useQuery({
+  const { data: allClasses = [], isLoading } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -116,6 +116,18 @@ function ClassesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+
+  // Working as a teacher narrows everything to the classes this person teaches,
+  // even though their admin row-level access could see the whole school.
+  const classes = useMemo(() => {
+    if (!teacherMode) return allClasses;
+    const myName = (profile?.full_name ?? "").trim().toLowerCase();
+    return allClasses.filter(
+      (c) =>
+        c.teacher_id === user?.id ||
+        (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+    );
+  }, [allClasses, teacherMode, user?.id, profile?.full_name]);
 
   const visible = useMemo(
     () =>
