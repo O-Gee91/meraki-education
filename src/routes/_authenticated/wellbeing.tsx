@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 
