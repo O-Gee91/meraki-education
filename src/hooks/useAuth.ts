@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +28,7 @@ export function useSession() {
 export function useAuth() {
   const { session, user, loading } = useSession();
 
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+  const { data: fetchedRoles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["roles", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Role[]> => {
@@ -51,6 +51,13 @@ export function useAuth() {
       return data;
     },
   });
+
+  // Roles briefly come back empty while queries are invalidated (which happens
+  // every time staff switch hats). Falling back to the last known set keeps the
+  // Admin/Teacher switch on screen instead of vanishing mid-refetch.
+  const lastRoles = useRef<Role[]>([]);
+  if (fetchedRoles.length > 0) lastRoles.current = fetchedRoles;
+  const roles = fetchedRoles.length > 0 ? fetchedRoles : user ? lastRoles.current : [];
 
   const hasAdminRole = roles.includes("admin");
   const hasTeacherRole = roles.includes("teacher");
