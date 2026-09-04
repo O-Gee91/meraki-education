@@ -598,7 +598,11 @@ function StaffCollectPanel({
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
-        {assignment.submission_mode === "online" ? "Complete online" : "Collected in class"}
+        {assignment.submission_mode === "online"
+          ? "Complete online"
+          : assignment.submission_mode === "other"
+            ? "Other — scored by teacher"
+            : "Collected in class"}
       </Badge>
       <span className="text-muted-foreground">
         {turnedIn}/{roster.length} turned in
@@ -606,7 +610,11 @@ function StaffCollectPanel({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="h-7">
-            {assignment.submission_mode === "online" ? "Review & score" : "Check in & score"}
+            {assignment.submission_mode === "online"
+              ? "Review & score"
+              : assignment.submission_mode === "other"
+                ? "Score students"
+                : "Check in & score"}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl">

@@ -668,11 +668,13 @@ function AssignmentsTab({
                   <SelectContent>
                     <SelectItem value="online">Completed online in the site</SelectItem>
                     <SelectItem value="collected">Collected in class (e.g. notebooks)</SelectItem>
+                    <SelectItem value="other">Other (scored by you, no hand-in)</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Online work opens for students to type a response or attach a file. Collected work
-                  is checked in by you, then scored.
+                  is checked in by you, then scored. Other covers anything else — participation,
+                  presentations, projects — and is simply scored by you.
                 </p>
               </div>
               <div className="space-y-1.5">
@@ -892,6 +894,7 @@ function EditAssignment({
               <SelectContent>
                 <SelectItem value="online">Completed online in the site</SelectItem>
                 <SelectItem value="collected">Collected in class (e.g. notebooks)</SelectItem>
+                <SelectItem value="other">Other (scored by you, no hand-in)</SelectItem>
               </SelectContent>
             </Select>
           </div>
