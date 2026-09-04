@@ -239,13 +239,19 @@ function StudentWorkPanel({
   if (assignment.submission_mode !== "online") {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Badge variant="outline">Collected in class</Badge>
+        <Badge variant="outline">
+          {assignment.submission_mode === "other" ? "Scored by your teacher" : "Collected in class"}
+        </Badge>
         {mine?.status === "collected" || mine?.status === "returned" ? (
           <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
             <CheckCircle2 className="h-3 w-3" /> Checked in by teacher
           </Badge>
         ) : (
-          <span className="text-muted-foreground">Hand this in to your teacher.</span>
+          <span className="text-muted-foreground">
+            {assignment.submission_mode === "other"
+              ? "Nothing to hand in here — your teacher records the score."
+              : "Hand this in to your teacher."}
+          </span>
         )}
         {scored ? (
           <span className="font-medium">
@@ -598,7 +604,11 @@ function StaffCollectPanel({
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
-        {assignment.submission_mode === "online" ? "Complete online" : "Collected in class"}
+        {assignment.submission_mode === "online"
+          ? "Complete online"
+          : assignment.submission_mode === "other"
+            ? "Other — scored by teacher"
+            : "Collected in class"}
       </Badge>
       <span className="text-muted-foreground">
         {turnedIn}/{roster.length} turned in
@@ -606,7 +616,11 @@ function StaffCollectPanel({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="h-7">
-            {assignment.submission_mode === "online" ? "Review & score" : "Check in & score"}
+            {assignment.submission_mode === "online"
+              ? "Review & score"
+              : assignment.submission_mode === "other"
+                ? "Score students"
+                : "Check in & score"}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl">
