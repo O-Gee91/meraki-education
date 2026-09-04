@@ -192,22 +192,49 @@ export async function provisionRosterAccounts(
 
       if (!userId) {
         password = tempPassword();
-        const { data, error } = await admin.auth.admin.createUser({
-          email: target.email,
-          password,
-          email_confirm: true,
-          user_metadata: {
-            full_name: target.role === "student" ? name : `${entry.last_name} guardian`,
-            role: target.role,
-            ...(target.contactEmail ? { contact_email: target.contactEmail } : {}),
-            ...(target.username ? { username: target.username } : {}),
-          },
-        });
-        if (error || !data.user) {
-          fail(error?.message ?? "could not create account");
+        let created: { id: string } | null = null;
+        let lastError = "could not create account";
+
+        // The auth user can already own the derived sign-in address even when no
+        // profile row points at it (a partially created account). Step up the
+        // username suffix until a genuinely free address is found.
+        for (let tries = 0; tries < 25 && !created; tries += 1) {
+          const { data, error } = await admin.auth.admin.createUser({
+            email: target.email,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: target.role === "student" ? name : `${entry.last_name} guardian`,
+              role: target.role,
+              ...(target.contactEmail ? { contact_email: target.contactEmail } : {}),
+              ...(target.username ? { username: target.username } : {}),
+            },
+          });
+          if (data?.user) {
+            created = { id: data.user.id };
+            break;
+          }
+          lastError = error?.message ?? lastError;
+          const taken = /already|registered|exists|duplicate/i.test(lastError);
+          if (!taken || !target.username) break;
+          const next = await claimFreeUsername(
+            admin,
+            target.username,
+            target.role,
+            entry.student_id,
+            tries + 1,
+          );
+          if (next.username === target.username) break;
+          target.username = next.username;
+          target.email = usernameToEmail(next.username);
+        }
+
+        if (!created) {
+          fail(lastError);
           continue;
         }
-        userId = data.user.id;
+        userId = created.id;
+
         status = "created";
         if (!target.contactEmail) {
           // No inbox yet — clear the synthetic address so the person is asked
