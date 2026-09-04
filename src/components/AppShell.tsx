@@ -239,8 +239,12 @@ export function AppShell({
           <div className="flex items-center gap-2">
             {actions}
             {canSwitchRole ? (
-              <div className="flex rounded-md border border-border p-0.5 lg:hidden">
-                {(["admin", "teacher"] as const).map((role) => (
+              <div className="flex items-center gap-2">
+                <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+                  Working as
+                </span>
+                <div className="flex rounded-md border border-border p-0.5">
+                  {(["admin", "teacher"] as const).map((role) => (
                   <button
                     key={role}
                     type="button"
