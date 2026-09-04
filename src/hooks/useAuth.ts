@@ -52,6 +52,13 @@ export function useAuth() {
     },
   });
 
+  // Roles briefly come back empty while queries are invalidated (which happens
+  // every time staff switch hats). Falling back to the last known set keeps the
+  // Admin/Teacher switch on screen instead of vanishing mid-refetch.
+  const lastRoles = useRef<Role[]>([]);
+  if (fetchedRoles.length > 0) lastRoles.current = fetchedRoles;
+  const roles = fetchedRoles.length > 0 ? fetchedRoles : user ? lastRoles.current : [];
+
   const hasAdminRole = roles.includes("admin");
   const hasTeacherRole = roles.includes("teacher");
   // Only people who genuinely hold both hats get to switch between them.
