@@ -33,7 +33,7 @@ export const notifyMessageRecipient = createServerFn({ method: "POST" })
     if (!email || !email.includes("@")) return { sent: false as const };
 
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-    const origin = process.env["PUBLIC_SITE_URL"] ?? "https://ignite-learner-zone.lovable.app";
+    const origin = process.env["PUBLIC_SITE_URL"] ?? "https://meraki-education.app";
 
     try {
       const result = await sendTemplateEmail("message-notification", email, {

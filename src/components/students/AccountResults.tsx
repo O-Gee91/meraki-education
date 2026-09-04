@@ -33,8 +33,15 @@ function realEmail(email: string) {
   return email && !email.endsWith("@meraki.local") ? email : null;
 }
 
-/** Address printed on every slip so families know where to sign in. */
-export const SITE_URL = "https://meraki-education.lovable.app";
+/**
+ * Address printed on every slip so families know where to sign in.
+ * Always the school's own domain — the *.lovable.app host only redirects here,
+ * and that extra hop is what school networks / antivirus tools block, which
+ * families see as "cannot establish a secure connection", a virus warning, or a
+ * sign-in that silently bounces back to the home screen.
+ */
+export const SITE_URL = "https://meraki-education.app";
+
 
 function buildSlips(accounts: ProvisionedAccount[]) {
   const usable = accounts.filter((a) => a.status !== "failed");
