@@ -514,6 +514,75 @@ function StaffCollectPanel({
     return g?.points_earned == null ? "" : String(g.points_earned);
   };
 
+  // One click fills every student (or only the blank ones) with the same score.
+  const bulkFill = useMutation({
+    mutationFn: async (input: { value: string; onlyBlank: boolean }) => {
+      const raw = input.value.trim();
+      const mark = findMark(raw ? raw.toUpperCase() : null, marks);
+      const points = mark || raw === "" ? null : Number(raw);
+      if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
+        throw new Error("Enter a valid score or mark code");
+
+      const targets = roster.filter((s) => {
+        if (!input.onlyBlank) return true;
+        const g = grades.find((x) => x.student_id === s.id);
+        return cellText(g) === "";
+      });
+      if (targets.length === 0) throw new Error("Every student already has a score");
+
+      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
+      const stamp = new Date().toISOString();
+      const { error } = await supabase.from("grades").upsert(
+        targets.map((s) => ({
+          assignment_id: assignment.id,
+          student_id: s.id,
+          points_earned: points,
+          comment: markComment,
+          updated_at: stamp,
+        })),
+        { onConflict: "assignment_id,student_id" },
+      );
+      if (error) throw error;
+
+      if (points != null || mark) {
+        const withSub = targets.filter((s) =>
+          submissions.some((x) => x.student_id === s.id),
+        );
+        const withoutSub = targets.filter(
+          (s) => !submissions.some((x) => x.student_id === s.id),
+        );
+        if (withSub.length) {
+          await supabase
+            .from("assignment_submissions")
+            .update({ status: "returned" })
+            .eq("assignment_id", assignment.id)
+            .in(
+              "student_id",
+              withSub.map((s) => s.id),
+            );
+        }
+        if (withoutSub.length) {
+          await supabase.from("assignment_submissions").insert(
+            withoutSub.map((s) => ({
+              assignment_id: assignment.id,
+              student_id: s.id,
+              status: "returned",
+            })),
+          );
+        }
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Filled ${count} student${count === 1 ? "" : "s"}`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   const turnedIn = submissions.filter((s) => s.status !== "draft").length;
 
   return (
