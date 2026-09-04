@@ -608,23 +608,38 @@ function StaffCollectPanel({
                       />
                     </div>
 
-                    {sub ? (
-                      <ProofreadEditor
-                        submissionId={sub.id}
-                        body={sub.body ?? ""}
-                        teacherNote={sub.teacher_note}
-                        onNoteSaved={() =>
-                          queryClient.invalidateQueries({
-                            queryKey: ["assignment-submissions", assignment.id],
-                          })
-                        }
-                      />
+                    {proofreading[s.id] && sub ? (
+                      <>
+                        <ProofreadEditor
+                          submissionId={sub.id}
+                          body={sub.body ?? ""}
+                          teacherNote={sub.teacher_note}
+                          onNoteSaved={() =>
+                            queryClient.invalidateQueries({
+                              queryKey: ["assignment-submissions", assignment.id],
+                            })
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="mt-2 h-7"
+                          onClick={() =>
+                            setProofreading((p) => ({ ...p, [s.id]: false }))
+                          }
+                        >
+                          Hide proofreading
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         size="sm"
                         variant="ghost"
                         className="mt-2 h-7"
-                        onClick={() => startFeedback.mutate(s.id)}
+                        onClick={() => {
+                          setProofreading((p) => ({ ...p, [s.id]: true }));
+                          if (!sub) startFeedback.mutate(s.id);
+                        }}
                         disabled={startFeedback.isPending}
                       >
                         Proofread & comment
