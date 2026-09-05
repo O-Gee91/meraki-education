@@ -187,12 +187,12 @@ function AuthPage() {
           <h2 className="text-3xl font-semibold leading-tight">
             The whole school day, in one place.
           </h2>
-          <p className="mt-4 max-w-sm text-sm text-primary-foreground/80">
+          <p className="mt-4 max-w-sm text-sm text-current/85">
             Grades, roll, behavior notes, family messages and reporting — for teachers,
             students, guardians and admins.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/60">{"\n"}</p>
+        <p className="text-xs text-current/70">{"\n"}</p>
       </div>
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">
