@@ -99,6 +99,7 @@
   --sidebar-border: oklch(0.34 0.06 247);
   --sidebar-ring: oklch(0.62 0.089 217);
 
+  --deep-foreground: oklch(0.98 0.008 220);
   --gradient-deep: linear-gradient(140deg, oklch(0.26 0.062 249), oklch(0.4 0.075 244) 55%, oklch(0.62 0.089 217));
 }
 
@@ -141,6 +142,7 @@
   --sidebar-border: oklch(0.4 0.032 58);
   --sidebar-ring: oklch(0.63 0.085 58);
 
+  --deep-foreground: oklch(0.98 0.008 220);
   --gradient-deep: linear-gradient(140deg, oklch(0.31 0.032 58), oklch(0.45 0.05 60) 55%, oklch(0.63 0.085 58));
 }
 
@@ -184,6 +186,7 @@
   --sidebar-border: oklch(0.4 0.035 250);
   --sidebar-ring: oklch(0.82 0.075 195);
 
+  --deep-foreground: oklch(0.98 0.008 220);
   --gradient-deep: linear-gradient(140deg, oklch(0.24 0.032 252), oklch(0.33 0.045 244) 55%, oklch(0.46 0.06 217));
 }
 
@@ -226,6 +229,7 @@
   --sidebar-border: oklch(0.39 0.006 60);
   --sidebar-ring: oklch(0.76 0.12 62);
 
+  --deep-foreground: oklch(0.98 0.008 220);
   --gradient-deep: linear-gradient(140deg, oklch(0.22 0.005 60), oklch(0.32 0.02 60) 55%, oklch(0.5 0.08 62));
 }
 
@@ -252,7 +256,7 @@
 
 @utility surface-deep {
   background-image: var(--gradient-deep);
-  color: var(--color-primary-foreground);
+  color: var(--deep-foreground);
 }
 
 @utility panel {

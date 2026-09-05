@@ -141,13 +141,13 @@ function Landing() {
       <section className="surface-deep">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary-foreground/70">
+            <p className="text-sm font-semibold uppercase tracking-widest text-current/75">
               {"\n"}
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
               Simplify teaching for your school
             </h1>
-            <p className="mt-5 max-w-lg text-base text-primary-foreground/80">
+            <p className="mt-5 max-w-lg text-base text-current/85">
               Gradebook, attendance, behavior, family messaging, rosters and reporting — one
               student information system your teachers will actually use.
             </p>
