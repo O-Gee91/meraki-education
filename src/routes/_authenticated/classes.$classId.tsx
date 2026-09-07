@@ -921,7 +921,13 @@ function EditAssignment({
               </SelectContent>
             </Select>
           </div>
+          <RubricSelect
+            classId={classId}
+            value={form.rubricId}
+            onChange={(v) => setForm({ ...form, rubricId: v })}
+          />
           <div className="space-y-1.5">
+
             <Label htmlFor={`e-desc-${assignment.id}`}>Instructions</Label>
             <Textarea
               id={`e-desc-${assignment.id}`}
