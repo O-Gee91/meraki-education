@@ -188,7 +188,10 @@ export function DynamicScoringInterface({
 
                   {picker === "dropdown" && (
                     <Select
-                      value={criterion.score === null ? undefined : String(criterion.score)}
+                      {...(criterion.score === null
+                        ? {}
+                        : { value: String(criterion.score) })}
+
                       onValueChange={(value) =>
                         updateCriterion(criterion.id, { score: Number(value) })
                       }
