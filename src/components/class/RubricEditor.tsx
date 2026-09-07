@@ -278,19 +278,20 @@ export function RubricEditor({
                       className="h-7 text-xs"
                       onClick={() =>
                         updateCriterion(index, {
-                          levels: c.levels.map((x, i) => ({
-                            ...x,
-                            points:
+                          levels: c.levels.map((x, i) => {
+                            const pts =
                               c.levels.length > 1
                                 ? Math.round(
                                     (top -
                                       (i * (top - 1)) / (c.levels.length - 1)) *
                                       100,
                                   ) / 100
-                                : top,
-                          })),
+                                : top;
+                            return { ...x, points: pts, maxPoints: pts };
+                          }),
                         })
                       }
+
                     >
                       1 – {top}
                     </Button>
