@@ -68,12 +68,6 @@ const NAV: NavItem[] = [
     icon: HeartPulse,
     roles: ["admin", "teacher", "student", "parent"],
   },
-  {
-    to: "/score",
-    label: "Score",
-    icon: Calculator,
-    roles: ["admin", "teacher"],
-  },
   { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
 
   {
