@@ -24,7 +24,6 @@ import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
-import { Route as AuthenticatedScoreRouteImport } from './routes/_authenticated/score'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
 import { Route as AuthenticatedWellbeingRouteImport } from './routes/_authenticated/wellbeing'
@@ -112,11 +111,6 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedScoreRoute = AuthenticatedScoreRouteImport.update({
-  id: '/score',
-  path: '/score',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -187,7 +181,6 @@ export interface FileRoutesByFullPath {
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/score': typeof AuthenticatedScoreRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
   '/wellbeing': typeof AuthenticatedWellbeingRoute
@@ -214,7 +207,6 @@ export interface FileRoutesByTo {
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/score': typeof AuthenticatedScoreRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
   '/wellbeing': typeof AuthenticatedWellbeingRoute
@@ -243,7 +235,6 @@ export interface FileRoutesById {
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
-  '/_authenticated/score': typeof AuthenticatedScoreRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
   '/_authenticated/wellbeing': typeof AuthenticatedWellbeingRoute
@@ -272,7 +263,6 @@ export interface FileRouteTypes {
     | '/messages'
     | '/people'
     | '/reports'
-    | '/score'
     | '/settings'
     | '/students'
     | '/wellbeing'
@@ -299,7 +289,6 @@ export interface FileRouteTypes {
     | '/messages'
     | '/people'
     | '/reports'
-    | '/score'
     | '/settings'
     | '/students'
     | '/wellbeing'
@@ -327,7 +316,6 @@ export interface FileRouteTypes {
     | '/_authenticated/messages'
     | '/_authenticated/people'
     | '/_authenticated/reports'
-    | '/_authenticated/score'
     | '/_authenticated/settings'
     | '/_authenticated/students'
     | '/_authenticated/wellbeing'
@@ -463,13 +451,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/score': {
-      id: '/_authenticated/score'
-      path: '/score'
-      fullPath: '/score'
-      preLoaderRoute: typeof AuthenticatedScoreRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -551,7 +532,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
-  AuthenticatedScoreRoute: typeof AuthenticatedScoreRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
   AuthenticatedWellbeingRoute: typeof AuthenticatedWellbeingRoute
@@ -567,7 +547,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
-  AuthenticatedScoreRoute: AuthenticatedScoreRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
   AuthenticatedWellbeingRoute: AuthenticatedWellbeingRoute,
