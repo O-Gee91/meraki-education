@@ -127,7 +127,7 @@ export function selectionsTotal(
   criteria: RubricCriterion[],
   selections: RubricSelections,
 ): number {
-  const sum = criteria.reduce((acc, c) => acc + (selections[c.id] ?? 0), 0);
+  const sum = criteria.reduce((acc, c) => acc + criterionEarned(c, selections), 0);
   return Math.round(sum * 100) / 100;
 }
 
