@@ -744,6 +744,24 @@ function AssignmentsTab({
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </div>
+              {siblingClasses.length > 0 ? (
+                <div className="rounded-md border border-border p-3">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id="apply-subject"
+                      checked={applyToSubject}
+                      onCheckedChange={(v) => setApplyToSubject(v === true)}
+                    />
+                    <Label htmlFor="apply-subject" className="text-sm font-normal">
+                      Also add this to my other {subject} classes
+                      <span className="block text-xs text-muted-foreground">
+                        {siblingClasses.map((c) => c.name).join(", ")} — each class gets its own
+                        copy to score separately.
+                      </span>
+                    </Label>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <DialogFooter className="sm:justify-between">
               <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
