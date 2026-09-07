@@ -8,6 +8,8 @@ export type RubricCriterion = {
   id: string;
   title: string;
   description: string;
+  /** How much this row counts, e.g. 2 makes it worth double. */
+  weight: number;
   levels: RubricLevel[];
 };
 
