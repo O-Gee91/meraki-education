@@ -125,8 +125,9 @@ export function criterionWeight(criterion: RubricCriterion): number {
 
 /** Highest level points on the row, before the multiplier. */
 export function criterionRawMax(criterion: RubricCriterion): number {
-  return criterion.levels.reduce((max, l) => Math.max(max, l.points), 0);
+  return criterion.levels.reduce((max, l) => Math.max(max, levelMax(l)), 0);
 }
+
 
 /** Highest points the row can contribute, multiplier included. */
 export function criterionMax(criterion: RubricCriterion): number {
