@@ -40,6 +40,7 @@ export function blankCriterion(points = 4): RubricCriterion {
     id: newId(),
     title: "",
     description: "",
+    weight: 1,
     levels: DEFAULT_LEVEL_LABELS.map((label, i) => ({
       label,
       points: Math.max(0, points - i),
