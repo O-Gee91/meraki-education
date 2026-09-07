@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  criterionEarned,
   criterionMax,
+  criterionWeight,
   parseCriteria,
   parseSelections,
   rubricTotal,
