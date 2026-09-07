@@ -38,6 +38,7 @@ import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
 import { SharedLibrary } from "@/components/class/SharedLibrary";
+import { RubricsTab, RubricSelect } from "@/components/class/RubricsTab";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { PulseDashboard } from "@/components/class/PulseDashboard";
 
@@ -129,7 +130,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -260,6 +261,7 @@ function ClassDetailPage() {
           <TabsTrigger value="gradebook">{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
           <TabsTrigger value="coursework">Coursework</TabsTrigger>
           <TabsTrigger value="discussions">Discussion board</TabsTrigger>
+          {isStaff && <TabsTrigger value="rubrics">Rubrics</TabsTrigger>}
           {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
           <TabsTrigger value="roster">Roster</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -471,6 +473,16 @@ function ClassDetailPage() {
         </TabsContent>
 
         {isStaff && (
+          <TabsContent value="rubrics" className="mt-4">
+            <RubricsTab
+              classId={classId}
+              gradeLevel={klass?.grade_level ?? null}
+              subject={klass?.subject ?? null}
+            />
+          </TabsContent>
+        )}
+
+        {isStaff && (
           <TabsContent value="shared">
             <SharedLibrary classId={classId} />
           </TabsContent>
@@ -515,6 +527,7 @@ type AssignmentRow = {
   due_date: string | null;
   description: string | null;
   submission_mode: string;
+  rubric_id: string | null;
 };
 
 function AssignmentsTab({
@@ -542,6 +555,7 @@ function AssignmentsTab({
     due: "",
     description: "",
     mode: "collected",
+    rubricId: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const formDirty = form.title.trim().length > 0 || form.description.trim().length > 0;
@@ -567,6 +581,7 @@ function AssignmentsTab({
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
         submission_mode: form.mode,
+        rubric_id: form.rubricId || null,
       });
       if (error) throw error;
     },
@@ -677,6 +692,11 @@ function AssignmentsTab({
                   presentations, projects — and is simply scored by you.
                 </p>
               </div>
+              <RubricSelect
+                classId={classId}
+                value={form.rubricId}
+                onChange={(v) => setForm({ ...form, rubricId: v })}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="description">Instructions</Label>
                 <Textarea
@@ -778,6 +798,7 @@ function EditAssignment({
     due: assignment.due_date ?? "",
     description: assignment.description ?? "",
     mode: assignment.submission_mode,
+    rubricId: assignment.rubric_id ?? "",
   });
 
   function openChange(next: boolean) {
@@ -789,6 +810,7 @@ function EditAssignment({
         due: assignment.due_date ?? "",
         description: assignment.description ?? "",
         mode: assignment.submission_mode,
+        rubricId: assignment.rubric_id ?? "",
       });
     }
     setOpen(next);
@@ -809,6 +831,7 @@ function EditAssignment({
           due_date: form.due || null,
           description: form.description.trim().slice(0, 1000) || null,
           submission_mode: form.mode,
+          rubric_id: form.rubricId || null,
         })
         .eq("id", assignment.id);
       if (error) throw error;
@@ -898,7 +921,13 @@ function EditAssignment({
               </SelectContent>
             </Select>
           </div>
+          <RubricSelect
+            classId={classId}
+            value={form.rubricId}
+            onChange={(v) => setForm({ ...form, rubricId: v })}
+          />
           <div className="space-y-1.5">
+
             <Label htmlFor={`e-desc-${assignment.id}`}>Instructions</Label>
             <Textarea
               id={`e-desc-${assignment.id}`}

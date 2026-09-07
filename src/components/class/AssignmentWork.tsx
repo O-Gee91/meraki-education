@@ -25,6 +25,7 @@ import {
   QuickScoreEditButton,
   useClassGradingSetup,
 } from "@/components/class/QuickScoreBar";
+import { RubricScorePanel } from "@/components/class/RubricScorePanel";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import {
   findMark,
@@ -93,6 +94,7 @@ export function AssignmentWork({
     due_date: string | null;
     description: string | null;
     submission_mode: string;
+    rubric_id?: string | null;
   };
   classId: string;
   isStaff: boolean;
@@ -117,6 +119,7 @@ function StudentWorkPanel({
     due_date: string | null;
     description: string | null;
     submission_mode: string;
+    rubric_id?: string | null;
   };
   classId: string;
 }) {
@@ -324,6 +327,16 @@ function StudentWorkPanel({
             {assignment.description ? (
               <p className="text-sm text-muted-foreground">{assignment.description}</p>
             ) : null}
+            {assignment.rubric_id && me ? (
+              <RubricScorePanel
+                assignmentId={assignment.id}
+                rubricId={assignment.rubric_id}
+                studentId={me.id}
+                pointsPossible={Number(assignment.points_possible)}
+                readOnly
+              />
+            ) : null}
+
             <div className="space-y-1.5">
               <Label htmlFor={`body-${assignment.id}`}>Your response</Label>
               <Textarea
@@ -400,6 +413,7 @@ function StaffCollectPanel({
     points_possible: number;
     submission_mode: string;
     due_date?: string | null;
+    rubric_id?: string | null;
   };
   roster: Student[];
   classId: string;
@@ -710,6 +724,15 @@ function StaffCollectPanel({
                         onPick={(value) => score.mutate({ studentId: s.id, value })}
                       />
                     </div>
+
+                    {assignment.rubric_id ? (
+                      <RubricScorePanel
+                        assignmentId={assignment.id}
+                        rubricId={assignment.rubric_id}
+                        studentId={s.id}
+                        pointsPossible={Number(assignment.points_possible)}
+                      />
+                    ) : null}
 
                     {proofreading[s.id] && sub ? (
                       <>
