@@ -326,6 +326,16 @@ function StudentWorkPanel({
             {assignment.description ? (
               <p className="text-sm text-muted-foreground">{assignment.description}</p>
             ) : null}
+            {assignment.rubric_id && me ? (
+              <RubricScorePanel
+                assignmentId={assignment.id}
+                rubricId={assignment.rubric_id}
+                studentId={me.id}
+                pointsPossible={Number(assignment.points_possible)}
+                readOnly
+              />
+            ) : null}
+
             <div className="space-y-1.5">
               <Label htmlFor={`body-${assignment.id}`}>Your response</Label>
               <Textarea
