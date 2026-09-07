@@ -156,12 +156,13 @@ export function RubricScorePanel({
             <div className="mt-2 grid gap-1 sm:grid-cols-2">
               {c.levels.map((lv, li) => {
                 const options = levelOptions(lv);
-                const picked = selections[c.id];
+                const picked = Number(selections[c.id]);
                 const active =
                   Number.isFinite(picked) &&
                   picked >= levelMin(lv) &&
                   picked <= levelMax(lv);
-                const showing = active ? Number(picked) : options[0];
+                const showing = active ? picked : options[0];
+
                 return (
                   <button
                     key={li}
