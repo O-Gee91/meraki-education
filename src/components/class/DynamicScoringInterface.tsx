@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Calculator, RotateCcw } from "lucide-react";
+import { Plus, X, Calculator, RotateCcw, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,17 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-export type ScoreRange = {
-  min: number;
-  max: number;
-  /** Label shown next to the score picker, e.g. "Score (1–5)". */
-  label: string;
-  /** Optional descriptions keyed by score value. */
-  descriptions?: Record<number, string>;
-};
 
 export type ScoringCriterion = {
   id: string;
@@ -29,16 +21,21 @@ export type ScoringCriterion = {
   score: number | null;
 };
 
-const DEFAULT_RANGE: ScoreRange = {
-  min: 1,
-  max: 5,
-  label: "Score (1–5)",
-  descriptions: {
+type PickerStyle = "dropdown" | "slider" | "stars";
+
+const SCALE_LABELS: Record<number, Record<number, string>> = {
+  5: { 1: "Poor", 2: "Fair", 3: "Good", 4: "Very good", 5: "Excellent" },
+  10: {
     1: "Poor",
-    2: "Fair",
-    3: "Good",
-    4: "Very good",
-    5: "Excellent",
+    2: "Weak",
+    3: "Developing",
+    4: "Fair",
+    5: "Satisfactory",
+    6: "Good",
+    7: "Strong",
+    8: "Very good",
+    9: "Excellent",
+    10: "Outstanding",
   },
 };
 
@@ -53,18 +50,24 @@ function defaultCriteria(count = 4): ScoringCriterion[] {
 export function DynamicScoringInterface({
   title = "Dynamic Scoring",
   description = "Add criteria, choose a score for each, and calculate the total.",
-  range = DEFAULT_RANGE,
   showAverage = true,
   onSubmit,
 }: {
   title?: string;
   description?: string;
-  range?: ScoreRange;
   showAverage?: boolean;
   onSubmit?: (payload: { criteria: ScoringCriterion[]; total: number; average: number }) => void;
 }) {
   const [criteria, setCriteria] = useState<ScoringCriterion[]>(() => defaultCriteria(4));
-  const [result, setResult] = useState<{ total: number; average: number; scored: number } | null>(null);
+  const [maxScore, setMaxScore] = useState<5 | 10>(5);
+  const [picker, setPicker] = useState<PickerStyle>("dropdown");
+  const [result, setResult] = useState<{ total: number; average: number; scored: number } | null>(
+    null,
+  );
+
+  const labels = SCALE_LABELS[maxScore] ?? {};
+  const rangeLabel = `Score (1–${maxScore})`;
+  const scoreOptions = Array.from({ length: maxScore }, (_, i) => i + 1);
 
   const scored = criteria.filter((c) => c.score !== null && c.name.trim().length > 0);
   const allNamed = criteria.every((c) => c.name.trim().length > 0);
@@ -84,13 +87,20 @@ export function DynamicScoringInterface({
     setResult(null);
   }
 
+  function changeScale(next: 5 | 10) {
+    setMaxScore(next);
+    setCriteria((list) =>
+      list.map((c) => (c.score !== null && c.score > next ? { ...c, score: next } : c)),
+    );
+    setResult(null);
+  }
+
   function calculate() {
     const valid = criteria.filter((c) => c.score !== null && c.name.trim().length > 0);
     const total = valid.reduce((sum, c) => sum + (c.score ?? 0), 0);
     const average = valid.length > 0 ? total / valid.length : 0;
-    const payload = { criteria: valid, total, average };
     setResult({ total, average, scored: valid.length });
-    onSubmit?.(payload);
+    onSubmit?.({ criteria: valid, total, average });
   }
 
   function reset() {
@@ -98,10 +108,8 @@ export function DynamicScoringInterface({
     setResult(null);
   }
 
-  const scoreOptions = Array.from({ length: range.max - range.min + 1 }, (_, i) => range.min + i);
-
   return (
-    <Card className="w-full max-w-3xl mx-auto shadow-panel">
+    <Card className="mx-auto w-full max-w-3xl shadow-panel">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -112,6 +120,37 @@ export function DynamicScoringInterface({
             Total criteria: {criteria.length}
           </Badge>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-4 rounded-lg border border-border bg-muted/40 p-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="score-scale">Scoring range</Label>
+            <Select
+              value={String(maxScore)}
+              onValueChange={(v) => changeScale(Number(v) === 10 ? 10 : 5)}
+            >
+              <SelectTrigger id="score-scale" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">1 – 5</SelectItem>
+                <SelectItem value="10">1 – 10</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="score-picker">How to pick scores</Label>
+            <Select value={picker} onValueChange={(v) => setPicker(v as PickerStyle)}>
+              <SelectTrigger id="score-picker" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dropdown">Dropdown</SelectItem>
+                <SelectItem value="stars">Star rating</SelectItem>
+                <SelectItem value="slider">Slider</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-5">
@@ -119,70 +158,111 @@ export function DynamicScoringInterface({
           {criteria.map((criterion, index) => (
             <div
               key={criterion.id}
-              className="rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-sm"
+              className="relative rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-sm"
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-2 h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => removeCriterion(criterion.id)}
+                aria-label={`Remove criterion ${index + 1}`}
+                disabled={criteria.length <= 1}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+
+              <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start">
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor={`criterion-name-${criterion.id}`}>
-                    Criterion {index + 1}
-                  </Label>
+                  <Label htmlFor={`criterion-name-${criterion.id}`}>Criterion {index + 1}</Label>
                   <Input
                     id={`criterion-name-${criterion.id}`}
                     placeholder="Describe what is being scored"
                     value={criterion.name}
-                    onChange={(e) =>
-                      updateCriterion(criterion.id, { name: e.target.value })
-                    }
+                    onChange={(e) => updateCriterion(criterion.id, { name: e.target.value })}
                     maxLength={200}
                   />
                 </div>
 
-                <div className="w-full sm:w-44 space-y-1.5">
-                  <Label htmlFor={`criterion-score-${criterion.id}`}>{range.label}</Label>
-                  <Select
-                    value={criterion.score === null ? "" : String(criterion.score)}
-                    onValueChange={(value) =>
-                      updateCriterion(criterion.id, { score: value === "" ? null : Number(value) })
-                    }
-                  >
-                    <SelectTrigger id={`criterion-score-${criterion.id}`}>
-                      <SelectValue placeholder="Select score" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {scoreOptions.map((score) => (
-                        <SelectItem key={score} value={String(score)}>
-                          <span className="inline-flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
-                                score >= range.max - 1
-                                  ? "bg-success text-success-foreground"
-                                  : score >= range.min + 2
-                                    ? "bg-warning text-warning-foreground"
-                                    : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {score}
-                            </span>
-                            {range.descriptions?.[score] ?? `Score ${score}`}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="w-full space-y-1.5 sm:w-56">
+                  <Label htmlFor={`criterion-score-${criterion.id}`}>{rangeLabel}</Label>
 
-                <div className="flex items-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => removeCriterion(criterion.id)}
-                    aria-label={`Remove criterion ${index + 1}`}
-                    disabled={criteria.length <= 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {picker === "dropdown" && (
+                    <Select
+                      value={criterion.score === null ? undefined : String(criterion.score)}
+                      onValueChange={(value) =>
+                        updateCriterion(criterion.id, { score: Number(value) })
+                      }
+                    >
+                      <SelectTrigger id={`criterion-score-${criterion.id}`}>
+                        <SelectValue placeholder="Select score" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scoreOptions.map((score) => (
+                          <SelectItem key={score} value={String(score)}>
+                            {score}
+                            {labels[score] ? ` – ${labels[score]}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {picker === "stars" && (
+                    <div id={`criterion-score-${criterion.id}`}>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {scoreOptions.map((score) => {
+                          const active = criterion.score !== null && score <= criterion.score;
+                          return (
+                            <button
+                              key={score}
+                              type="button"
+                              aria-label={`Score ${score} of ${maxScore}`}
+                              aria-pressed={criterion.score === score}
+                              onClick={() => updateCriterion(criterion.id, { score })}
+                              className="rounded p-0.5 transition hover:scale-110"
+                            >
+                              <Star
+                                className={cn(
+                                  "h-5 w-5",
+                                  active
+                                    ? "fill-warning text-warning"
+                                    : "text-muted-foreground/40",
+                                )}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {criterion.score === null
+                          ? "Select score"
+                          : `${criterion.score}/${maxScore}${
+                              labels[criterion.score] ? ` · ${labels[criterion.score]}` : ""
+                            }`}
+                      </p>
+                    </div>
+                  )}
+
+                  {picker === "slider" && (
+                    <div id={`criterion-score-${criterion.id}`} className="pt-2">
+                      <Slider
+                        min={1}
+                        max={maxScore}
+                        step={1}
+                        value={[criterion.score ?? 1]}
+                        onValueChange={(v) =>
+                          updateCriterion(criterion.id, { score: v[0] ?? 1 })
+                        }
+                      />
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {criterion.score === null
+                          ? "Select score — drag to choose"
+                          : `${criterion.score}/${maxScore}${
+                              labels[criterion.score] ? ` · ${labels[criterion.score]}` : ""
+                            }`}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -193,7 +273,7 @@ export function DynamicScoringInterface({
           <Plus className="mr-1.5 h-4 w-4" /> Add criteria
         </Button>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-muted/40 p-4">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
             {scored.length} of {criteria.length} criteria scored
             {!allNamed && (
@@ -219,7 +299,7 @@ export function DynamicScoringInterface({
                 Total score
               </div>
               <div className="mt-1 text-3xl font-bold text-primary">
-                {result.total.toFixed(1)}
+                {result.total.toFixed(1)} / {result.scored * maxScore}
               </div>
             </div>
             {showAverage && (
