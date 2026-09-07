@@ -91,11 +91,18 @@ export function parseCriteria(value: unknown): RubricCriterion[] {
         .map((l) => {
           const lv = (l ?? {}) as Record<string, unknown>;
           const pts = Number(lv["points"]);
+          const rawMax = Number(lv["maxPoints"]);
+          const base = Number.isFinite(pts) ? Math.max(0, Math.round(pts * 100) / 100) : 0;
+          const top = Number.isFinite(rawMax)
+            ? Math.max(0, Math.round(rawMax * 100) / 100)
+            : base;
           return {
             label: String(lv["label"] ?? "").slice(0, 60) || "Level",
-            points: Number.isFinite(pts) ? Math.max(0, Math.round(pts * 100) / 100) : 0,
+            points: Math.min(base, top),
+            maxPoints: Math.max(base, top),
             descriptor: String(lv["descriptor"] ?? "").slice(0, 600),
           };
+
         })
         .slice(0, 8);
       const w = Number(c["weight"]);
