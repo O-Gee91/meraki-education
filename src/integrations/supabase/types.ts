@@ -415,6 +415,7 @@ export type Database = {
           due_date: string | null
           id: string
           points_possible: number
+          rubric_id: string | null
           submission_mode: string
           title: string
         }
@@ -426,6 +427,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           points_possible?: number
+          rubric_id?: string | null
           submission_mode?: string
           title: string
         }
@@ -437,6 +439,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           points_possible?: number
+          rubric_id?: string | null
           submission_mode?: string
           title?: string
         }
@@ -446,6 +449,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "rubrics"
             referencedColumns: ["id"]
           },
         ]
@@ -1568,6 +1578,117 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_scores: {
+        Row: {
+          assignment_id: string
+          comment: string | null
+          created_at: string
+          graded_by: string | null
+          id: string
+          points_earned: number | null
+          rubric_id: string | null
+          selections: Json
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          comment?: string | null
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          points_earned?: number | null
+          rubric_id?: string | null
+          selections?: Json
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          comment?: string | null
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          points_earned?: number | null
+          rubric_id?: string | null
+          selections?: Json
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_scores_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rubric_scores_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "rubrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rubric_scores_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubrics: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          created_by: string | null
+          criteria: Json
+          description: string | null
+          grade_level: number | null
+          id: string
+          subject: string | null
+          title: string
+          total_points: number
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          description?: string | null
+          grade_level?: number | null
+          id?: string
+          subject?: string | null
+          title: string
+          total_points?: number
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          description?: string | null
+          grade_level?: number | null
+          id?: string
+          subject?: string | null
+          title?: string
+          total_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubrics_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
