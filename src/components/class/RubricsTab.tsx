@@ -318,3 +318,52 @@ export function RubricsTab({
     </div>
   );
 }
+
+/** Small picker used in the coursework form to attach a rubric. */
+export function RubricSelect({
+  classId,
+  value,
+  onChange,
+}: {
+  classId: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const { data: rubrics = [] } = useQuery({
+    queryKey: ["rubrics", classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rubrics")
+        .select(
+          "id, class_id, title, description, grade_level, subject, criteria, total_points, created_by, created_at, updated_at",
+        )
+        .eq("class_id", classId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as RubricRow[];
+    },
+  });
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="assignment-rubric">Rubric (optional)</Label>
+      <Select value={value || "none"} onValueChange={(v) => onChange(v === "none" ? "" : v)}>
+        <SelectTrigger id="assignment-rubric">
+          <SelectValue placeholder="No rubric" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No rubric</SelectItem>
+          {rubrics.map((r) => (
+            <SelectItem key={r.id} value={r.id}>
+              {r.title} · {Number(r.total_points) || rubricTotal(parseCriteria(r.criteria))} pts
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        Attach a rubric and you can score each row per student — the total is converted into this
+        assignment's points automatically. Create rubrics in the Rubrics tab.
+      </p>
+    </div>
+  );
+}
