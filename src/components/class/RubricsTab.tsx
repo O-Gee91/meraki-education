@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { RubricEditor } from "@/components/class/RubricEditor";
-import { DynamicScoringInterface } from "@/components/class/DynamicScoringInterface";
 import { copySharedRubric, shareRubric } from "@/lib/rubrics.functions";
 import { unshareGradingSetup } from "@/lib/grading-sharing.functions";
 import { parseCriteria, rubricTotal, type RubricRow } from "@/lib/rubrics";
