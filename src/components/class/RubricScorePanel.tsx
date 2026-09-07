@@ -9,7 +9,11 @@ import {
   criterionEarned,
   criterionMax,
   criterionWeight,
+  levelMax,
+  levelMin,
+  levelOptions,
   parseCriteria,
+
   parseSelections,
   rubricTotal,
   scaleToAssignment,
