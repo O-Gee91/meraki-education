@@ -49,11 +49,11 @@ export function RubricEditor({
   triggerVariant = "default",
 }: {
   classId: string;
-  gradeLevel?: number | null;
-  subject?: string | null;
-  rubric?: RubricRow;
-  triggerLabel?: string;
-  triggerVariant?: "default" | "outline" | "ghost";
+  gradeLevel?: number | null | undefined;
+  subject?: string | null | undefined;
+  rubric?: RubricRow | undefined;
+  triggerLabel?: string | undefined;
+  triggerVariant?: "default" | "outline" | "ghost" | undefined;
 }) {
   const queryClient = useQueryClient();
   const digitize = useServerFn(digitizeRubric);

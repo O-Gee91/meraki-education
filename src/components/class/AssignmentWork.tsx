@@ -25,6 +25,7 @@ import {
   QuickScoreEditButton,
   useClassGradingSetup,
 } from "@/components/class/QuickScoreBar";
+import { RubricScorePanel } from "@/components/class/RubricScorePanel";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import {
   findMark,
@@ -412,6 +413,7 @@ function StaffCollectPanel({
     points_possible: number;
     submission_mode: string;
     due_date?: string | null;
+    rubric_id?: string | null;
   };
   roster: Student[];
   classId: string;
