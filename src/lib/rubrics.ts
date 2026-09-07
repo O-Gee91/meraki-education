@@ -71,18 +71,42 @@ export function parseCriteria(value: unknown): RubricCriterion[] {
           };
         })
         .slice(0, 8);
+      const w = Number(c["weight"]);
       return {
         id: String(c["id"] ?? newId()),
         title: String(c["title"] ?? "").slice(0, 160),
         description: String(c["description"] ?? "").slice(0, 600),
+        weight: Number.isFinite(w) && w > 0 ? Math.min(20, Math.round(w * 100) / 100) : 1,
         levels: parsedLevels.length ? parsedLevels : blankCriterion().levels,
       };
     })
     .slice(0, 30);
 }
 
-export function criterionMax(criterion: RubricCriterion): number {
+/** The multiplier for a row, defaulting to 1 when missing. */
+export function criterionWeight(criterion: RubricCriterion): number {
+  const w = Number(criterion.weight);
+  return Number.isFinite(w) && w > 0 ? w : 1;
+}
+
+/** Highest level points on the row, before the multiplier. */
+export function criterionRawMax(criterion: RubricCriterion): number {
   return criterion.levels.reduce((max, l) => Math.max(max, l.points), 0);
+}
+
+/** Highest points the row can contribute, multiplier included. */
+export function criterionMax(criterion: RubricCriterion): number {
+  return Math.round(criterionRawMax(criterion) * criterionWeight(criterion) * 100) / 100;
+}
+
+/** What a chosen level is worth on this row, multiplier included. */
+export function criterionEarned(
+  criterion: RubricCriterion,
+  selections: RubricSelections,
+): number {
+  const picked = selections[criterion.id];
+  if (!Number.isFinite(picked)) return 0;
+  return Math.round(Number(picked) * criterionWeight(criterion) * 100) / 100;
 }
 
 export function rubricTotal(criteria: RubricCriterion[]): number {
