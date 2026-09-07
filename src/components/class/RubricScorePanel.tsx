@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  criterionEarned,
   criterionMax,
+  criterionWeight,
   parseCriteria,
   parseSelections,
   rubricTotal,
@@ -132,9 +134,16 @@ export function RubricScorePanel({
         {criteria.map((c) => (
           <div key={c.id} className="rounded-md border border-border/70 bg-background p-2">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="text-sm font-medium">{c.title || "Untitled row"}</span>
+              <span className="text-sm font-medium">
+                {c.title || "Untitled row"}
+                {criterionWeight(c) !== 1 && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ×{criterionWeight(c)}
+                  </span>
+                )}
+              </span>
               <span className="text-xs text-muted-foreground">
-                {selections[c.id] ?? 0}/{criterionMax(c)}
+                {criterionEarned(c, selections)}/{criterionMax(c)}
               </span>
             </div>
             {c.description && (

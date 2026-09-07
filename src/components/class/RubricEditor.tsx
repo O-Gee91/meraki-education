@@ -239,6 +239,19 @@ export function RubricEditor({
                       onChange={(e) => updateCriterion(index, { title: e.target.value })}
                     />
                   </div>
+                  <div className="w-28 space-y-1.5">
+                    <Label htmlFor={`weight-${c.id}`}>Multiplier</Label>
+                    <Input
+                      id={`weight-${c.id}`}
+                      inputMode="decimal"
+                      value={String(c.weight ?? 1)}
+                      onChange={(e) =>
+                        updateCriterion(index, {
+                          weight: Math.min(20, Math.max(0, Number(e.target.value) || 0)),
+                        })
+                      }
+                    />
+                  </div>
                   <div className="pt-7 text-xs text-muted-foreground">
                     {criterionMax(c)} pts max
                   </div>
