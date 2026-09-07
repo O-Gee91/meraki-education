@@ -93,6 +93,7 @@ export function AssignmentWork({
     due_date: string | null;
     description: string | null;
     submission_mode: string;
+    rubric_id?: string | null;
   };
   classId: string;
   isStaff: boolean;
@@ -117,6 +118,7 @@ function StudentWorkPanel({
     due_date: string | null;
     description: string | null;
     submission_mode: string;
+    rubric_id?: string | null;
   };
   classId: string;
 }) {
@@ -710,6 +712,15 @@ function StaffCollectPanel({
                         onPick={(value) => score.mutate({ studentId: s.id, value })}
                       />
                     </div>
+
+                    {assignment.rubric_id ? (
+                      <RubricScorePanel
+                        assignmentId={assignment.id}
+                        rubricId={assignment.rubric_id}
+                        studentId={s.id}
+                        pointsPossible={Number(assignment.points_possible)}
+                      />
+                    ) : null}
 
                     {proofreading[s.id] && sub ? (
                       <>
