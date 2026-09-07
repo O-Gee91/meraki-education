@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Wand2 } from "lucide-react";
+import { Plus, Trash2, Upload, Wand2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -265,6 +265,41 @@ export function RubricEditor({
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-muted/40 p-2">
+                  <span className="text-xs text-muted-foreground">
+                    Set points for this row automatically:
+                  </span>
+                  {[5, 10].map((top) => (
+                    <Button
+                      key={top}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() =>
+                        updateCriterion(index, {
+                          levels: c.levels.map((x, i) => ({
+                            ...x,
+                            points:
+                              c.levels.length > 1
+                                ? Math.round(
+                                    (top -
+                                      (i * (top - 1)) / (c.levels.length - 1)) *
+                                      100,
+                                  ) / 100
+                                : top,
+                          })),
+                        })
+                      }
+                    >
+                      1 – {top}
+                    </Button>
+                  ))}
+                  <span className="text-xs text-muted-foreground">
+                    {c.levels.length} level{c.levels.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {c.levels.map((lv, li) => (
                     <div key={li} className="rounded-md border border-border/70 p-2">
@@ -295,6 +330,20 @@ export function RubricEditor({
                             })
                           }
                         />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove level ${li + 1}`}
+                          disabled={c.levels.length <= 1}
+                          onClick={() =>
+                            updateCriterion(index, {
+                              levels: c.levels.filter((_, i) => i !== li),
+                            })
+                          }
+                        >
+                          <X className="size-4" />
+                        </Button>
                       </div>
                       <Textarea
                         className="mt-2 min-h-16 text-xs"
@@ -312,6 +361,26 @@ export function RubricEditor({
                     </div>
                   ))}
                 </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2 text-xs"
+                  disabled={c.levels.length >= 8}
+                  onClick={() =>
+                    updateCriterion(index, {
+                      levels: [
+                        ...c.levels,
+                        {
+                          label: `Level ${c.levels.length + 1}`,
+                          points: 0,
+                          descriptor: "",
+                        },
+                      ],
+                    })
+                  }
+                >
+                  <Plus className="mr-1 size-4" /> Add level
+                </Button>
               </div>
             ))}
             <Button
@@ -322,6 +391,7 @@ export function RubricEditor({
               <Plus className="mr-1 size-4" /> Add row
             </Button>
           </div>
+
         </div>
 
         <DialogFooter className="sm:justify-between">

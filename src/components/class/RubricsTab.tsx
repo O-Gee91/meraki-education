@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { RubricEditor } from "@/components/class/RubricEditor";
-import { DynamicScoringInterface } from "@/components/class/DynamicScoringInterface";
 import { copySharedRubric, shareRubric } from "@/lib/rubrics.functions";
 import { unshareGradingSetup } from "@/lib/grading-sharing.functions";
 import { parseCriteria, rubricTotal, type RubricRow } from "@/lib/rubrics";
@@ -256,16 +255,8 @@ export function RubricsTab({
         )}
       </div>
 
-      <div className="panel p-5">
-        <h3 className="font-semibold">Quick scoring sheet</h3>
-        <p className="text-sm text-muted-foreground">
-          Need something fast that isn't a saved rubric? Add as many criteria boxes as you like,
-          pick a score for each, and get the total and average right away.
-        </p>
-        <div className="mt-4">
-          <DynamicScoringInterface />
-        </div>
-      </div>
+
+
 
 
 
