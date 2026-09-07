@@ -256,16 +256,8 @@ export function RubricsTab({
         )}
       </div>
 
-      <div className="panel p-5">
-        <h3 className="font-semibold">Quick scoring sheet</h3>
-        <p className="text-sm text-muted-foreground">
-          Need something fast that isn't a saved rubric? Add as many criteria boxes as you like,
-          pick a score for each, and get the total and average right away.
-        </p>
-        <div className="mt-4">
-          <DynamicScoringInterface />
-        </div>
-      </div>
+
+
 
 
 
