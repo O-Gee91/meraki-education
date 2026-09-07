@@ -394,8 +394,10 @@ export function RubricEditor({
                         {
                           label: `Level ${c.levels.length + 1}`,
                           points: 0,
+                          maxPoints: 0,
                           descriptor: "",
                         },
+
                       ],
                     })
                   }
