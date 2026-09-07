@@ -1,8 +1,35 @@
 export type RubricLevel = {
   label: string;
+  /** Lowest points this level can be worth. */
   points: number;
+  /** Highest points this level can be worth (same as points when it is a single value). */
+  maxPoints?: number;
   descriptor: string;
 };
+
+/** Lowest points a level can award. */
+export function levelMin(level: RubricLevel): number {
+  return Math.min(level.points, level.maxPoints ?? level.points);
+}
+
+/** Highest points a level can award. */
+export function levelMax(level: RubricLevel): number {
+  return Math.max(level.points, level.maxPoints ?? level.points);
+}
+
+/** Every point value a teacher can cycle through on a level. */
+export function levelOptions(level: RubricLevel): number[] {
+  const min = levelMin(level);
+  const max = levelMax(level);
+  if (max <= min) return [min];
+  const out: number[] = [];
+  for (let v = min; v <= max + 0.0001 && out.length < 26; v += 1) {
+    out.push(Math.round(v * 100) / 100);
+  }
+  if (out[out.length - 1] !== max) out.push(max);
+  return out;
+}
+
 
 export type RubricCriterion = {
   id: string;
