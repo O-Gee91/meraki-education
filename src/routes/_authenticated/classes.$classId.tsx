@@ -442,6 +442,7 @@ function ClassDetailPage() {
             roster={roster}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
+            subject={klass?.subject ?? null}
           />
           <AssessmentsTab
             classId={classId}
