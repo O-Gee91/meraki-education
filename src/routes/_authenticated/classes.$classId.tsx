@@ -442,6 +442,7 @@ function ClassDetailPage() {
             roster={roster}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
+            subject={klass?.subject ?? null}
           />
           <AssessmentsTab
             classId={classId}
@@ -537,6 +538,7 @@ function AssignmentsTab({
   roster,
   categories,
   gradeLevel,
+  subject,
 }: {
   classId: string;
   isStaff: boolean;
@@ -544,6 +546,7 @@ function AssignmentsTab({
   roster: RosterRow[];
   categories: string[];
   gradeLevel?: number | null;
+  subject?: string | null;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -558,9 +561,30 @@ function AssignmentsTab({
     rubricId: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
+  const [applyToSubject, setApplyToSubject] = useState(false);
   const formDirty = form.title.trim().length > 0 || form.description.trim().length > 0;
   const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
 
+  // Other classes this teacher runs for the same subject, so one piece of work
+  // can be handed to every one of them at once.
+  const { data: siblingClasses = [] } = useQuery({
+    queryKey: ["sibling-subject-classes", classId, subject],
+    enabled: isStaff && open && !!subject,
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return [] as { id: string; name: string }[];
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, name, subject, teacher_id")
+        .eq("teacher_id", uid)
+        .eq("subject", subject!)
+        .neq("id", classId)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []).map((c) => ({ id: c.id, name: c.name }));
+    },
+  });
 
   const students = roster
     .map((r) => r.students)
@@ -573,24 +597,38 @@ function AssignmentsTab({
       const points = Number(form.points);
       if (Number.isNaN(points) || points <= 0 || points > 10000)
         throw new Error("Points possible must be between 1 and 10000");
-      const { error } = await supabase.from("assignments").insert({
-        class_id: classId,
+      const targets = [
+        classId,
+        ...(applyToSubject ? siblingClasses.map((c) => c.id) : []),
+      ];
+      const base = {
         title: form.title.trim().slice(0, 140),
         category: form.category,
         points_possible: points,
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
         submission_mode: form.mode,
-        rubric_id: form.rubricId || null,
-      });
+      };
+      const { error } = await supabase.from("assignments").insert(
+        targets.map((cid) => ({
+          ...base,
+          class_id: cid,
+          // A rubric belongs to one class, so only the original class keeps it.
+          rubric_id: cid === classId ? form.rubricId || null : null,
+        })),
+      );
       if (error) throw error;
+      return targets.length;
     },
-    onSuccess: () => {
-      toast.success("Assignment added");
+    onSuccess: (count) => {
+      toast.success(
+        count > 1 ? `Assignment added to ${count} classes` : "Assignment added",
+      );
       setOpen(false);
       setForm(blank);
+      setApplyToSubject(false);
       draft.clear();
-      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
 
     onError: (e: Error) => toast.error(e.message),
@@ -706,6 +744,24 @@ function AssignmentsTab({
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </div>
+              {siblingClasses.length > 0 ? (
+                <div className="rounded-md border border-border p-3">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id="apply-subject"
+                      checked={applyToSubject}
+                      onCheckedChange={(v) => setApplyToSubject(v === true)}
+                    />
+                    <Label htmlFor="apply-subject" className="text-sm font-normal">
+                      Also add this to my other {subject} classes
+                      <span className="block text-xs text-muted-foreground">
+                        {siblingClasses.map((c) => c.name).join(", ")} — each class gets its own
+                        copy to score separately.
+                      </span>
+                    </Label>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <DialogFooter className="sm:justify-between">
               <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
