@@ -1,8 +1,35 @@
 export type RubricLevel = {
   label: string;
+  /** Lowest points this level can be worth. */
   points: number;
+  /** Highest points this level can be worth (same as points when it is a single value). */
+  maxPoints?: number;
   descriptor: string;
 };
+
+/** Lowest points a level can award. */
+export function levelMin(level: RubricLevel): number {
+  return Math.min(level.points, level.maxPoints ?? level.points);
+}
+
+/** Highest points a level can award. */
+export function levelMax(level: RubricLevel): number {
+  return Math.max(level.points, level.maxPoints ?? level.points);
+}
+
+/** Every point value a teacher can cycle through on a level. */
+export function levelOptions(level: RubricLevel): number[] {
+  const min = levelMin(level);
+  const max = levelMax(level);
+  if (max <= min) return [min];
+  const out: number[] = [];
+  for (let v = min; v <= max + 0.0001 && out.length < 26; v += 1) {
+    out.push(Math.round(v * 100) / 100);
+  }
+  if (out[out.length - 1] !== max) out.push(max);
+  return out;
+}
+
 
 export type RubricCriterion = {
   id: string;
@@ -64,11 +91,18 @@ export function parseCriteria(value: unknown): RubricCriterion[] {
         .map((l) => {
           const lv = (l ?? {}) as Record<string, unknown>;
           const pts = Number(lv["points"]);
+          const rawMax = Number(lv["maxPoints"]);
+          const base = Number.isFinite(pts) ? Math.max(0, Math.round(pts * 100) / 100) : 0;
+          const top = Number.isFinite(rawMax)
+            ? Math.max(0, Math.round(rawMax * 100) / 100)
+            : base;
           return {
             label: String(lv["label"] ?? "").slice(0, 60) || "Level",
-            points: Number.isFinite(pts) ? Math.max(0, Math.round(pts * 100) / 100) : 0,
+            points: Math.min(base, top),
+            maxPoints: Math.max(base, top),
             descriptor: String(lv["descriptor"] ?? "").slice(0, 600),
           };
+
         })
         .slice(0, 8);
       const w = Number(c["weight"]);
@@ -91,8 +125,9 @@ export function criterionWeight(criterion: RubricCriterion): number {
 
 /** Highest level points on the row, before the multiplier. */
 export function criterionRawMax(criterion: RubricCriterion): number {
-  return criterion.levels.reduce((max, l) => Math.max(max, l.points), 0);
+  return criterion.levels.reduce((max, l) => Math.max(max, levelMax(l)), 0);
 }
+
 
 /** Highest points the row can contribute, multiplier included. */
 export function criterionMax(criterion: RubricCriterion): number {

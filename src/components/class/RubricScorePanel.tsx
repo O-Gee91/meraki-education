@@ -9,7 +9,11 @@ import {
   criterionEarned,
   criterionMax,
   criterionWeight,
+  levelMax,
+  levelMin,
+  levelOptions,
   parseCriteria,
+
   parseSelections,
   rubricTotal,
   scaleToAssignment,
@@ -151,15 +155,33 @@ export function RubricScorePanel({
             )}
             <div className="mt-2 grid gap-1 sm:grid-cols-2">
               {c.levels.map((lv, li) => {
-                const active = selections[c.id] === lv.points;
+                const options = levelOptions(lv);
+                const picked = Number(selections[c.id]);
+                const active =
+                  Number.isFinite(picked) &&
+                  picked >= levelMin(lv) &&
+                  picked <= levelMax(lv);
+                const showing = active ? picked : options[0];
+
                 return (
                   <button
                     key={li}
                     type="button"
                     disabled={readOnly}
-                    onClick={() =>
-                      setSelections((s) => ({ ...s, [c.id]: lv.points }))
-                    }
+                    onClick={() => {
+                      if (readOnly) return;
+                      setSelections((s) => {
+                        const current = s[c.id];
+                        const inRange =
+                          Number.isFinite(current) &&
+                          Number(current) >= levelMin(lv) &&
+                          Number(current) <= levelMax(lv);
+                        if (!inRange) return { ...s, [c.id]: options[0] as number };
+                        const at = options.indexOf(Number(current));
+                        const next = options[(at + 1) % options.length] as number;
+                        return { ...s, [c.id]: next };
+                      });
+                    }}
                     className={cn(
                       "rounded-md border p-2 text-left text-xs transition",
                       active
@@ -169,8 +191,23 @@ export function RubricScorePanel({
                     )}
                   >
                     <span className="font-medium">
-                      {lv.label} · {lv.points}
+                      {lv.label} ·{" "}
+                      {options.length > 1 ? (
+                        <>
+                          {showing}{" "}
+                          <span className="font-normal text-muted-foreground">
+                            (of {levelMin(lv)}–{levelMax(lv)})
+                          </span>
+                        </>
+                      ) : (
+                        options[0]
+                      )}
                     </span>
+                    {options.length > 1 && !readOnly && (
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        Click again to change the points
+                      </span>
+                    )}
                     {lv.descriptor && (
                       <span className="mt-0.5 block text-muted-foreground">
                         {lv.descriptor}
@@ -180,6 +217,7 @@ export function RubricScorePanel({
                 );
               })}
             </div>
+
           </div>
         ))}
       </div>

@@ -278,19 +278,20 @@ export function RubricEditor({
                       className="h-7 text-xs"
                       onClick={() =>
                         updateCriterion(index, {
-                          levels: c.levels.map((x, i) => ({
-                            ...x,
-                            points:
+                          levels: c.levels.map((x, i) => {
+                            const pts =
                               c.levels.length > 1
                                 ? Math.round(
                                     (top -
                                       (i * (top - 1)) / (c.levels.length - 1)) *
                                       100,
                                   ) / 100
-                                : top,
-                          })),
+                                : top;
+                            return { ...x, points: pts, maxPoints: pts };
+                          }),
                         })
                       }
+
                     >
                       1 – {top}
                     </Button>
@@ -316,20 +317,40 @@ export function RubricEditor({
                             })
                           }
                         />
-                        <Input
-                          className="h-8 w-20"
-                          inputMode="decimal"
-                          value={String(lv.points)}
-                          onChange={(e) =>
-                            updateCriterion(index, {
-                              levels: c.levels.map((x, i) =>
-                                i === li
-                                  ? { ...x, points: Number(e.target.value) || 0 }
-                                  : x,
-                              ),
-                            })
-                          }
-                        />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            className="h-8 w-16"
+                            inputMode="decimal"
+                            aria-label="Lowest points"
+                            value={String(lv.points)}
+                            onChange={(e) =>
+                              updateCriterion(index, {
+                                levels: c.levels.map((x, i) =>
+                                  i === li
+                                    ? { ...x, points: Number(e.target.value) || 0 }
+                                    : x,
+                                ),
+                              })
+                            }
+                          />
+                          <span className="text-xs text-muted-foreground">–</span>
+                          <Input
+                            className="h-8 w-16"
+                            inputMode="decimal"
+                            aria-label="Highest points"
+                            value={String(lv.maxPoints ?? lv.points)}
+                            onChange={(e) =>
+                              updateCriterion(index, {
+                                levels: c.levels.map((x, i) =>
+                                  i === li
+                                    ? { ...x, maxPoints: Number(e.target.value) || 0 }
+                                    : x,
+                                ),
+                              })
+                            }
+                          />
+                        </div>
+
                         <Button
                           size="icon"
                           variant="ghost"
@@ -373,8 +394,10 @@ export function RubricEditor({
                         {
                           label: `Level ${c.levels.length + 1}`,
                           points: 0,
+                          maxPoints: 0,
                           descriptor: "",
                         },
+
                       ],
                     })
                   }
