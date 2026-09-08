@@ -40,7 +40,12 @@ export function UnlinkedAccounts({ students }: { students: StudentOption[] }) {
   const accounts = data?.accounts ?? [];
 
   const sortedStudents = useMemo(
-    () => [...students].sort((a, b) => a.last_name.localeCompare(b.last_name)),
+    () =>
+      [...students].sort((a, b) => {
+        const last = a.last_name.localeCompare(b.last_name, undefined, { sensitivity: "base" });
+        if (last !== 0) return last;
+        return a.first_name.localeCompare(b.first_name, undefined, { sensitivity: "base" });
+      }),
     [students],
   );
 

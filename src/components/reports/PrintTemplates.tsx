@@ -116,7 +116,11 @@ export function PrintTemplates() {
     return (data ?? [])
       .map((r) => r.students)
       .filter((s): s is NonNullable<typeof s> => !!s)
-      .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      .sort((a, b) => {
+        const last = a.last_name.localeCompare(b.last_name, undefined, { sensitivity: "base" });
+        if (last !== 0) return last;
+        return a.first_name.localeCompare(b.first_name, undefined, { sensitivity: "base" });
+      });
   }
 
   function headerMeta(extra: string[] = []) {
