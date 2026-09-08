@@ -26,9 +26,19 @@ export function AttendanceTab({ classId }: { classId: string }) {
         .select("id, student_id, students(first_name, last_name)")
         .eq("class_id", classId);
       if (error) throw error;
-      return (data ?? []).sort((a, b) =>
-        (a.students?.last_name ?? "").localeCompare(b.students?.last_name ?? ""),
-      );
+      return (data ?? []).sort((a, b) => {
+        const last = (a.students?.last_name ?? "").localeCompare(
+          b.students?.last_name ?? "",
+          undefined,
+          { sensitivity: "base" },
+        );
+        if (last !== 0) return last;
+        return (a.students?.first_name ?? "").localeCompare(
+          b.students?.first_name ?? "",
+          undefined,
+          { sensitivity: "base" },
+        );
+      });
     },
   });
 

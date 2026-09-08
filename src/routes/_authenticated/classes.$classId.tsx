@@ -118,9 +118,19 @@ function ClassDetailPage() {
       if (error) throw error;
       return (data ?? [])
         .filter((r) => r.students)
-        .sort((a, b) =>
-          (a.students?.last_name ?? "").localeCompare(b.students?.last_name ?? ""),
-        );
+        .sort((a, b) => {
+          const last = (a.students?.last_name ?? "").localeCompare(
+            b.students?.last_name ?? "",
+            undefined,
+            { sensitivity: "base" },
+          );
+          if (last !== 0) return last;
+          return (a.students?.first_name ?? "").localeCompare(
+            b.students?.first_name ?? "",
+            undefined,
+            { sensitivity: "base" },
+          );
+        });
     },
   });
 
