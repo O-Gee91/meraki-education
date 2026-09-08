@@ -25,6 +25,9 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     if (error) throw error;
     if (!assessment) throw new Error("Assessment not found");
 
+    // Only staff may see grading guidance; it can reveal expected answers.
+    const { data: isStaff } = await context.supabase.rpc("is_staff");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error: qErr } = await supabaseAdmin
       .from("assessment_questions")
@@ -40,8 +43,9 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
       prompt: q.prompt,
       options: Array.isArray(q.options) ? (q.options as string[]) : [],
       points: Number(q.points),
-      rubric: q.rubric,
+      rubric: isStaff === true ? q.rubric : null,
     }));
+
 
     return { assessment, questions };
   });
