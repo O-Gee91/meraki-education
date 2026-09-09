@@ -615,6 +615,67 @@ function StaffCollectPanel({
 
   const turnedIn = submissions.filter((s) => s.status !== "draft").length;
 
+  // One click marks every student who hasn't handed anything in as collected.
+  // Scored/returned students are already collected by definition and are skipped.
+  const collectAll = useMutation({
+    mutationFn: async () => {
+      const isDone = (studentId: string) => {
+        const sub = submissions.find((x) => x.student_id === studentId);
+        const g = grades.find((x) => x.student_id === studentId);
+        return (
+          g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
+        );
+      };
+      const targets = roster.filter((s) => !isDone(s.id));
+      if (targets.length === 0) throw new Error("Everyone is already collected");
+
+      const withSub = targets.filter((s) => submissions.some((x) => x.student_id === s.id));
+      const withoutSub = targets.filter(
+        (s) => !submissions.some((x) => x.student_id === s.id),
+      );
+      if (withSub.length) {
+        const { error } = await supabase
+          .from("assignment_submissions")
+          .update({ status: "collected" })
+          .eq("assignment_id", assignment.id)
+          .in(
+            "student_id",
+            withSub.map((s) => s.id),
+          );
+        if (error) throw error;
+      }
+      if (withoutSub.length) {
+        const { error } = await supabase.from("assignment_submissions").insert(
+          withoutSub.map((s) => ({
+            assignment_id: assignment.id,
+            student_id: s.id,
+            status: "collected",
+          })),
+        );
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Collected ${count} student${count === 1 ? "" : "s"}`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const collectedCount =
+    assignment.submission_mode === "collected"
+      ? roster.filter((s) => {
+          const sub = submissions.find((x) => x.student_id === s.id);
+          const g = grades.find((x) => x.student_id === s.id);
+          return (
+            g?.points_earned != null ||
+            sub?.status === "collected" ||
+            sub?.status === "returned"
+          );
+        }).length
+      : 0;
+
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
@@ -627,6 +688,19 @@ function StaffCollectPanel({
       <span className="text-muted-foreground">
         {turnedIn}/{roster.length} turned in
       </span>
+      {assignment.submission_mode === "collected" &&
+        roster.length > 0 &&
+        collectedCount < roster.length && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-6 px-2 text-xs"
+            disabled={collectAll.isPending}
+            onClick={() => collectAll.mutate()}
+          >
+            Collect all
+          </Button>
+        )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="h-7">
