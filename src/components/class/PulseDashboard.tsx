@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Clock, Moon, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, ClipboardList, Moon, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { studentLabel } from "@/lib/student-display";
 import { letterFor, type GradingSetup } from "@/lib/grading";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDate } from "@/lib/school";
 
 type RosterRow = {
   id: string;
@@ -94,20 +96,39 @@ export function PulseDashboard({
   useIds: boolean;
   studentAverage: (studentId: string) => number | null;
 }) {
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const today = new Date();
   const todayKey = today.toISOString().slice(0, 10);
 
+  const { data: myStudentIds = new Set<string>() } = useQuery({
+    queryKey: ["pulse-my-students", user?.id],
+    enabled: !!user && !isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id")
+        .or(`user_id.eq.${user!.id},guardian_user_id.eq.${user!.id}`);
+      if (error) throw error;
+      return new Set((data ?? []).map((s) => s.id));
+    },
+  });
+
+  const visibleRoster = useMemo(() => {
+    if (isStaff) return roster;
+    return roster.filter((r) => myStudentIds.has(r.student_id));
+  }, [isStaff, roster, myStudentIds]);
+
   const { data: links = [] } = useQuery({
-    queryKey: ["pulse-student-links", classId, roster.length],
-    enabled: isStaff && roster.length > 0,
+    queryKey: ["pulse-student-links", classId, visibleRoster.length],
+    enabled: isStaff && visibleRoster.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
         .select("id, user_id, guardian_user_id")
         .in(
           "id",
-          roster.map((r) => r.student_id),
+          visibleRoster.map((r) => r.student_id),
         );
       if (error) throw error;
       return data ?? [];
@@ -128,21 +149,19 @@ export function PulseDashboard({
     },
   });
 
+  const isMissing = (studentId: string, assignment: AssignmentRow) => {
+    const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
+    if (g?.points_earned != null) return false;
+    return !submissions.some(
+      (s) => s.assignment_id === assignment.id && s.student_id === studentId,
+    );
+  };
+
   const cards = useMemo(() => {
-    // Only work whose due date has already passed can count as missing.
     const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
-    return roster.map((r) => {
+    return visibleRoster.map((r) => {
       const avg = studentAverage(r.student_id);
-      const missing = pastDue.filter((a) => {
-        const g = grades.find(
-          (x) => x.student_id === r.student_id && x.assignment_id === a.id,
-        );
-        if (g?.points_earned != null) return false;
-        // Turned in / collected but not graded yet is not "missing".
-        return !submissions.some(
-          (s) => s.assignment_id === a.id && s.student_id === r.student_id,
-        );
-      }).length;
+      const missing = pastDue.filter((a) => isMissing(r.student_id, a)).length;
 
       // Stay gray until the teacher has actually entered scores for this student.
       let status: Status = "none";
@@ -153,40 +172,38 @@ export function PulseDashboard({
       }
       return { row: r, avg, missing, status };
     });
-  }, [assignments, grades, roster, studentAverage, submissions, todayKey]);
+  }, [assignments, grades, visibleRoster, studentAverage, submissions, todayKey]);
 
   const counts = cards.reduce<Record<Status, number>>(
     (acc, c) => ({ ...acc, [c.status]: acc[c.status] + 1 }),
     { green: 0, yellow: 0, red: 0, none: 0 },
   );
 
-  const week = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      const due = assignments.filter((a) => a.due_date === key);
-      const dueCount = due.length * Math.max(roster.length, 1);
-      const scored = due.flatMap((a) =>
-        grades
-          .filter((g) => g.assignment_id === a.id && g.points_earned != null)
-          .map((g) => (Number(g.points_earned) / Number(a.points_possible || 1)) * 100),
-      );
-      const avg = scored.length
-        ? scored.reduce((s, v) => s + v, 0) / scored.length
-        : null;
-      return {
-        key,
-        label: d.toLocaleDateString("en-US", { weekday: "short" }),
-        day: d.getDate(),
-        items: due.length,
-        dueCount,
-        avg,
-      };
-    });
-  }, [assignments, grades, roster.length, today]);
+  const missingList = useMemo(() => {
+    const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
+    const rows = visibleRoster
+      .map((r) => {
+        const items = pastDue.filter((a) => isMissing(r.student_id, a));
+        return { row: r, items };
+      })
+      .filter((entry) => entry.items.length > 0)
+      .sort((a, b) => {
+        const last = (a.row.students?.last_name ?? "").localeCompare(
+          b.row.students?.last_name ?? "",
+          undefined,
+          { sensitivity: "base" },
+        );
+        if (last !== 0) return last;
+        return (a.row.students?.first_name ?? "").localeCompare(
+          b.row.students?.first_name ?? "",
+          undefined,
+          { sensitivity: "base" },
+        );
+      });
+    return rows;
+  }, [assignments, grades, visibleRoster, submissions, todayKey]);
 
-  const maxDue = Math.max(1, ...week.map((w) => w.dueCount));
+  const totalMissing = missingList.reduce((sum, entry) => sum + entry.items.length, 0);
 
   const hours = useMemo(() => {
     const buckets = Array.from({ length: 24 }, () => 0);
@@ -194,7 +211,6 @@ export function PulseDashboard({
       if (!s.submitted_at) continue;
       const h = new Date(s.submitted_at).getHours();
       buckets[h] = (buckets[h] ?? 0) + 1;
-
     }
     return buckets;
   }, [submissions]);
@@ -204,6 +220,9 @@ export function PulseDashboard({
   const totalSubs = hours.reduce((a, b) => a + b, 0);
 
   const selectedCard = cards.find((c) => c.row.student_id === selected) ?? null;
+  const selectedMissing = missingList.find(
+    (m) => m.row.student_id === selectedCard?.row.student_id,
+  );
 
   const checkIn = useMutation({
     mutationFn: async (studentId: string) => {
@@ -308,7 +327,7 @@ export function PulseDashboard({
 
         {selectedCard && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-muted/40 p-4">
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">
                 {studentLabel(selectedCard.row.students, useIds)}
               </p>
@@ -321,6 +340,16 @@ export function PulseDashboard({
                   ? ` · ${selectedCard.missing} missing ${isStaff ? "item(s)" : "assignment(s)"}`
                   : ""}
               </p>
+              {selectedMissing && (
+                <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                  {selectedMissing.items.map((a) => (
+                    <li key={a.id}>
+                      <span className="font-medium text-foreground">{a.title}</span>
+                      <span className="ml-1 text-[10px]">· due {formatDate(a.due_date)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {isStaff && (
               <Button
@@ -339,39 +368,66 @@ export function PulseDashboard({
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="panel p-5">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Clock className="size-4" /> {isStaff ? "Next 7 days" : "My upcoming 7 days"}
+            <ClipboardList className="size-4" />
+            {isStaff ? "Missing work tracker" : "My missing work"}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
             {isStaff
-              ? "Circle size = submissions due · color = class average on that work."
-              : "Circle size = work due · color = average score."}
+              ? "Past-due assignments with no score and no hand-in yet."
+              : "Your past-due assignments that still need to be turned in."}
           </p>
-          <div className="mt-5 grid grid-cols-7 gap-2">
-            {week.map((d) => {
-              const scale = 28 + Math.round((d.dueCount / maxDue) * 34);
-              return (
-                <div key={d.key} className="flex flex-col items-center gap-2">
-                  <div className="flex h-16 items-center justify-center">
-                    {d.items === 0 ? (
-                      <span className="size-2 rounded-full bg-border" />
-                    ) : (
-                      <span
-                        className={`flex items-center justify-center rounded-full text-[11px] font-semibold text-primary-foreground ${averageTone(d.avg)}`}
-                        style={{ width: scale, height: scale }}
-                        title={`${d.items} item(s) · ${d.dueCount} submissions due${
-                          d.avg == null ? "" : ` · avg ${d.avg.toFixed(0)}%`
-                        }`}
-                      >
-                        {d.items}
+
+          {totalMissing === 0 ? (
+            <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-success">
+              {isStaff
+                ? "No missing work — everyone in this class is caught up."
+                : "You have no missing assignments. Great work!"}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-destructive/10 px-2 py-1 font-medium text-destructive">
+                  {totalMissing} missing item{totalMissing === 1 ? "" : "s"}
+                </span>
+                {isStaff && (
+                  <span className="text-muted-foreground">
+                    across {missingList.length} student{missingList.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                {missingList.map(({ row, items }) => (
+                  <div
+                    key={row.student_id}
+                    className="rounded-xl border border-border bg-muted/40 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-sm font-semibold">
+                        {studentLabel(row.students, useIds)}
+                      </p>
+                      <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                        {items.length} missing
                       </span>
-                    )}
+                    </div>
+                    <ul className="mt-2 space-y-1">
+                      {items.map((a) => (
+                        <li
+                          key={a.id}
+                          className="flex items-center justify-between gap-2 text-xs"
+                        >
+                          <span className="min-w-0 truncate font-medium">{a.title}</span>
+                          <span className="shrink-0 text-[10px] text-muted-foreground">
+                            due {formatDate(a.due_date)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <span className="text-[11px] font-medium">{d.label}</span>
-                  <span className="text-[11px] text-muted-foreground">{d.day}</span>
-                </div>
-              );
-            })}
-          </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="panel p-5">
