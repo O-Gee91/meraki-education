@@ -156,7 +156,7 @@ export function FileLibrary({
     list.push(f);
     grouped.set(f.storage_path, list);
   }
-  const shown = [...grouped.values()].map((rows) => rows[0]);
+  const shown = [...grouped.values()].map((rows) => rows[0]!);
 
   const classNameFor = (id: string | null) =>
     myClasses.find((c) => c.id === id)?.name ?? null;
