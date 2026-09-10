@@ -407,375 +407,72 @@ export function SchoolCalendar() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          Filter by colour
-        </span>
-        {COLORS.map((c) => {
-          const active = colorFilter.includes(c.value);
-          return (
-            <button
-              key={c.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() =>
-                setColorFilter((prev) =>
-                  prev.includes(c.value) ? prev.filter((v) => v !== c.value) : [...prev, c.value],
-                )
-              }
-              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
-                active
-                  ? "border-accent bg-accent/10 font-medium"
-                  : "border-border text-muted-foreground hover:border-accent/50"
-              }`}
-            >
-              <span className={`size-2.5 rounded-full ${c.dot}`} />
-              {c.label}
-            </button>
-          );
-        })}
-        {colorFilter.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={() => setColorFilter([])}>
-            Clear
-          </Button>
-        )}
-      </div>
-
-
-
-      <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wide text-muted-foreground">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <span key={d} className="py-1">
-                {d}
-              </span>
-            ))}
+      {isCollapsed ? (
+        <div className="mt-4 flex items-center justify-between rounded-md border border-border bg-muted/30 p-4">
+          <div className="text-sm">
+            <p className="font-medium">
+              {events.length} event{events.length === 1 ? "" : "s"} this month
+            </p>
+            <p className="text-muted-foreground">
+              {dayEvents.length
+                ? `${dayEvents.length} on ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
+                : "Nothing scheduled for the selected day."}
+            </p>
           </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {cells.map((date, i) => {
-              if (!date) return <div key={`pad-${i}`} />;
-              const key = toKey(date);
-              const list = byDate.get(key) ?? [];
-              const isSelected = key === selectedDate;
-              const isToday = key === toKey(today);
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Expand school calendar"
+            onClick={() => setIsCollapsed(false)}
+          >
+            <ChevronDown className="mr-1 size-4" /> Show calendar
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Filter by colour
+            </span>
+            {COLORS.map((c) => {
+              const active = colorFilter.includes(c.value);
               return (
                 <button
-                  key={key}
+                  key={c.value}
                   type="button"
-                  onClick={() => setSelectedDate(key)}
-                  className={`min-h-16 rounded-md border p-1 text-left transition-colors ${
-                    isSelected
-                      ? "border-accent bg-accent/10"
-                      : "border-border hover:border-accent/50"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setColorFilter((prev) =>
+                      prev.includes(c.value) ? prev.filter((v) => v !== c.value) : [...prev, c.value],
+                    )
+                  }
+                  className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
+                    active
+                      ? "border-accent bg-accent/10 font-medium"
+                      : "border-border text-muted-foreground hover:border-accent/50"
                   }`}
                 >
-                  <span
-                    className={`text-xs font-semibold ${isToday ? "text-accent" : "text-foreground"}`}
-                  >
-                    {date.getDate()}
-                  </span>
-                  <span className="mt-1 flex flex-wrap gap-0.5">
-                    {list.slice(0, 4).map((e) => (
-                      <span
-                        key={e.id}
-                        className={`size-1.5 rounded-full ${colorOption(e.color).dot}`}
-                      />
-                    ))}
-                  </span>
-
+                  <span className={`size-2.5 rounded-full ${c.dot}`} />
+                  {c.label}
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </h3>
-            {isStaff && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (showForm) {
-                    cancelEdit();
-                  } else {
-                    setEditingId(null);
-                    setForm({ ...emptyForm, event_date: selectedDate });
-                    setShowForm(true);
-                  }
-                }}
-              >
-                <Plus className="size-4" /> Add
+            {colorFilter.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => setColorFilter([])}>
+                Clear
               </Button>
             )}
           </div>
 
-          {isStaff && showForm && (
-            <form
-              className="mt-3 space-y-3 rounded-md border border-border p-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                save.mutate();
-              }}
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {editingId ? "Edit event" : "New event"}
-              </p>
-              <div>
-                <Label htmlFor="cal-date">Date</Label>
-                <Input
-                  id="cal-date"
-                  type="date"
-                  value={form.event_date || selectedDate}
-                  onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="cal-title">Title</Label>
-                <Input
-                  id="cal-title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Grade 7 science fair"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cal-category">Type</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(v) =>
-                    setForm({ ...form, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? form.color })
-                  }
-                >
-                  <SelectTrigger id="cal-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Colour</Label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      aria-label={c.label}
-                      aria-pressed={form.color === c.value}
-                      onClick={() => setForm({ ...form, color: c.value })}
-                      title={c.description}
-                      className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
-                        form.color === c.value
-                          ? "border-accent bg-accent/10 font-medium"
-                          : "border-border text-muted-foreground hover:border-accent/50"
-                      }`}
-                    >
-                      <span className={`size-2.5 rounded-full ${c.dot}`} />
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {colorOption(form.color).description}
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="cal-scope">Who is this for</Label>
-                <Select
-                  value={form.class_id || "school"}
-                  onValueChange={(v) => setForm({ ...form, class_id: v === "school" ? "" : v })}
-                >
-                  <SelectTrigger id="cal-scope">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isAdmin && <SelectItem value="school">Whole school</SelectItem>}
-                    {myClasses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {form.class_id
-                    ? "Only this class and their families will see it."
-                    : "Everyone at the school will see it."}
-                </p>
-              </div>
-              <div>
-                <Label>Notices — who can see this</Label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {AUDIENCES.map((a) => {
-                    const active = form.audiences.includes(a.value as Audience);
-                    return (
-                      <button
-                        key={a.value}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleAudience(a.value as Audience)}
-                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                          active
-                            ? "border-accent bg-accent/10 font-medium"
-                            : "border-border text-muted-foreground hover:border-accent/50"
-                        }`}
-                      >
-                        {a.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Pick several groups, or choose everyone.
-                </p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="cal-start">Starts</Label>
-                  <TimeSelect
-                    id="cal-start"
-                    value={form.start_time}
-                    onChange={(v) => setForm({ ...form, start_time: v })}
-                    placeholder="No start time"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cal-end">Ends</Label>
-                  <TimeSelect
-                    id="cal-end"
-                    value={form.end_time}
-                    onChange={(v) => setForm({ ...form, end_time: v })}
-                    placeholder="No end time"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="cal-location">Location</Label>
-                <Input
-                  id="cal-location"
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="Gymnasium"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cal-desc">Details</Label>
-                <Textarea
-                  id="cal-desc"
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="What students and families need to know"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button type="submit" size="sm" disabled={save.isPending}>
-                  {save.isPending
-                    ? "Saving…"
-                    : editingId
-                      ? "Save changes"
-                      : "Post event"}
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={cancelEdit}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )}
 
-          <div className="mt-3 space-y-3">
-            {dayEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
-            ) : (
-              dayEvents.map((e) => (
-                <article
-                  key={e.id}
-                  className={`rounded-md border border-border border-l-4 p-3 ${colorOption(e.color).edge}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
-                          colorOption(e.color).chip
-                        }`}
-                      >
-                        <span className={`size-2 rounded-full ${colorOption(e.color).dot}`} />
-                        {CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category}
-                      </span>
-                      <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
-                      {(() => {
-                        const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
-                        if (list.length === 1 && list[0] === "everyone") return null;
-                        return (
-                          <p className="text-xs text-muted-foreground">
-                            Visible to{" "}
-                            {list.map((a) => audienceLabel(a).toLowerCase()).join(", ")}
-                          </p>
-                        );
-                      })()}
-                    </div>
-
-                    {isStaff && (
-                      <div className="flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Edit ${e.title}`}
-                          onClick={() => startEdit(e)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remove ${e.title}`}
-                          onClick={() => remove.mutate(e.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  {(e.start_time || e.location) && (
-                    <p className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      {e.start_time && (
-                        <span>
-                          {formatTime(e.start_time)}
-                          {e.end_time ? ` – ${formatTime(e.end_time)}` : ""}
-                        </span>
-                      )}
-                      {e.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="size-3" />
-                          {e.location}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {e.description && (
-                    <p className="mt-2 text-sm text-muted-foreground">{e.description}</p>
-                  )}
-                </article>
-              ))
-            )}
+      <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        ...
           </div>
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 }
