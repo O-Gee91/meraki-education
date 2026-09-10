@@ -367,6 +367,26 @@ export function SchoolCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {!isStaff && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? "Expand school calendar" : "Collapse school calendar"}
+              onClick={() => setIsCollapsed((v) => !v)}
+              className="gap-1"
+            >
+              {isCollapsed ? (
+                <>
+                  <ChevronDown className="size-4" /> Show
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="size-4" /> Hide
+                </>
+              )}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"
