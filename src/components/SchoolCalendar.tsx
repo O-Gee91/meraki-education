@@ -154,6 +154,7 @@ export function SchoolCalendar() {
   const [selectedDate, setSelectedDate] = useState(toKey(today));
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const emptyForm = {
     title: "",
     description: "",
@@ -168,6 +169,26 @@ export function SchoolCalendar() {
   };
   const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
+
+  // Students and families can collapse the calendar to save space.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem("school-calendar-collapsed");
+      if (stored) setIsCollapsed(stored === "true");
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("school-calendar-collapsed", String(isCollapsed));
+    } catch {
+      // ignore storage errors
+    }
+  }, [isCollapsed]);
 
   const { data: myClasses = [] } = useQuery({
     queryKey: ["calendar-scope-classes", user?.id],
