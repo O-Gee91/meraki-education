@@ -187,6 +187,15 @@ export async function provisionRosterAccounts(
         if (!target.email) target.email = prof?.email ?? "";
       }
 
+      if (userId && !target.contactEmail) {
+        // A slip must never print an address the person has not registered
+        // themselves. Until their first sign-in, keep the email line blank.
+        const { data: existing } = await admin.auth.admin.getUserById(userId);
+        if (!existing?.user?.last_sign_in_at) {
+          target.email = target.username ? usernameToEmail(target.username) : "";
+        }
+      }
+
       let password: string | null = null;
       let status: ProvisionedAccount["status"] = "linked";
 
