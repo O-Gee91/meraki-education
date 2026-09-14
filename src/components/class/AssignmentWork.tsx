@@ -910,7 +910,10 @@ function StaffCollectPanel({
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-              <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
+              <label
+                className="flex min-h-10 items-center gap-2 text-sm font-semibold"
+                title={collectedInView.length === 0 ? "No collected assignments." : undefined}
+              >
                 <Checkbox
                   className="h-5 w-5"
                   checked={masterState}
@@ -975,27 +978,30 @@ function StaffCollectPanel({
                           title={collected ? undefined : "Only collected work can be selected"}
                           onCheckedChange={(value) => toggleRow(student.id, value === true)}
                         />
-                        <button
+                        <Button
                           ref={(node) => { rowRefs.current[student.id] = node; }}
                           type="button"
+                          variant="ghost"
                           role="option"
                           aria-selected={isActive}
-                          className="min-w-0 text-left"
+                          className="h-auto min-w-0 justify-start p-0 text-left hover:bg-transparent"
                           onClick={() => selectStudent(student.id, true)}
                         >
-                          <span className="block truncate text-base font-semibold">
-                            {student.last_name}, {student.first_name}
+                          <span className="min-w-0">
+                            <span className="block truncate text-base font-semibold">
+                              {student.last_name}, {student.first_name}
+                            </span>
+                            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                              {collected ? (
+                                <Badge variant="secondary">{shownScore ? "Collected (scored)" : "Collected"}</Badge>
+                              ) : submission?.status === "draft" ? (
+                                <Badge variant="outline">In progress</Badge>
+                              ) : (
+                                <Badge variant="outline">Not collected</Badge>
+                              )}
+                            </span>
                           </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {collected ? (
-                              <Badge variant="secondary">{shownScore ? "Collected (scored)" : "Collected"}</Badge>
-                            ) : submission?.status === "draft" ? (
-                              <Badge variant="outline">In progress</Badge>
-                            ) : (
-                              <Badge variant="outline">Not collected</Badge>
-                            )}
-                          </span>
-                        </button>
+                        </Button>
                         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
                           <Input
                             key={shownScore}
