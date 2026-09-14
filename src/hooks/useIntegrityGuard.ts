@@ -72,15 +72,30 @@ export function useIntegrityGuard(enabled: boolean) {
     if (hit) void flag("automation_global", hit);
 
     // 3. Synthetic (script-generated) clicks and keystrokes.
+    //    Whitelist: browser autofill (password managers, saved logins) fires
+    //    untrusted change/input/keydown events on form fields. On the account
+    //    settings page that is normal behaviour, not scripting, so those
+    //    events are ignored instead of earning a strike.
+    const AUTOFILL_SAFE_PATHS = ["/settings"];
+    const isAutofillEvent = (event: Event) => {
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
+      if (!AUTOFILL_SAFE_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return false;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      return tag === "input" || tag === "select" || tag === "textarea" || tag === "form";
+    };
+
     let synthetic = 0;
     const onSynthetic = (event: Event) => {
       if (event.isTrusted) return;
+      if (isAutofillEvent(event)) return;
       synthetic += 1;
       if (synthetic >= 3) void flag("synthetic_input", `${synthetic} untrusted events`);
     };
     for (const type of ["click", "keydown", "submit", "change"]) {
       document.addEventListener(type, onSynthetic, true);
     }
+
 
     // 4. Direct eval() from the console (the app bundle never calls eval).
     const originalEval = window.eval;
