@@ -4,7 +4,6 @@ import {
   Flame,
   Heart,
   Shield,
-  Sparkles,
   Swords,
   Target,
   Wand2,
