@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -799,7 +799,7 @@ function StaffCollectPanel({
   };
 
   const saveOnEnter = (studentId: string, currentValue: string) =>
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
+    (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key !== "Enter") return;
       event.preventDefault();
       const value = event.currentTarget.value;
@@ -834,7 +834,13 @@ function StaffCollectPanel({
             Collect all
           </Button>
         )}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setShowMobileDetail(false);
+        }}
+      >
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="h-7">
             {assignment.submission_mode === "online"
