@@ -8,6 +8,8 @@ import { studentLabel } from "@/lib/student-display";
 import { letterFor, type GradingSetup } from "@/lib/grading";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/school";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 
 type RosterRow = {
   id: string;
@@ -98,6 +100,7 @@ export function PulseDashboard({
 }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useStudentSort(`pulse-${classId}`);
   const today = new Date();
   const todayKey = today.toISOString().slice(0, 10);
 
@@ -157,9 +160,14 @@ export function PulseDashboard({
     );
   };
 
+  const sortedVisibleRoster = useMemo(
+    () => sortStudents(visibleRoster, sortMode, (row) => row.students),
+    [visibleRoster, sortMode],
+  );
+
   const cards = useMemo(() => {
     const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
-    return visibleRoster.map((r) => {
+    return sortedVisibleRoster.map((r) => {
       const avg = studentAverage(r.student_id);
       const missing = pastDue.filter((a) => isMissing(r.student_id, a)).length;
 
@@ -172,7 +180,7 @@ export function PulseDashboard({
       }
       return { row: r, avg, missing, status };
     });
-  }, [assignments, grades, visibleRoster, studentAverage, submissions, todayKey]);
+  }, [assignments, grades, sortedVisibleRoster, studentAverage, submissions, todayKey]);
 
   const counts = cards.reduce<Record<Status, number>>(
     (acc, c) => ({ ...acc, [c.status]: acc[c.status] + 1 }),
@@ -181,27 +189,14 @@ export function PulseDashboard({
 
   const missingList = useMemo(() => {
     const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
-    const rows = visibleRoster
+    const rows = sortedVisibleRoster
       .map((r) => {
         const items = pastDue.filter((a) => isMissing(r.student_id, a));
         return { row: r, items };
       })
-      .filter((entry) => entry.items.length > 0)
-      .sort((a, b) => {
-        const last = (a.row.students?.last_name ?? "").localeCompare(
-          b.row.students?.last_name ?? "",
-          undefined,
-          { sensitivity: "base" },
-        );
-        if (last !== 0) return last;
-        return (a.row.students?.first_name ?? "").localeCompare(
-          b.row.students?.first_name ?? "",
-          undefined,
-          { sensitivity: "base" },
-        );
-      });
+      .filter((entry) => entry.items.length > 0);
     return rows;
-  }, [assignments, grades, visibleRoster, submissions, todayKey]);
+  }, [assignments, grades, sortedVisibleRoster, submissions, todayKey]);
 
   const totalMissing = missingList.reduce((sum, entry) => sum + entry.items.length, 0);
 
@@ -276,6 +271,7 @@ export function PulseDashboard({
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
+            {isStaff ? <StudentSortControl value={sortMode} onChange={setSortMode} /> : null}
             {(["green", "yellow", "red", "none"] as Status[]).map((s) => (
               <span
                 key={s}

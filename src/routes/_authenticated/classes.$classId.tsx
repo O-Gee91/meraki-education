@@ -34,6 +34,8 @@ import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 
 import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
@@ -86,6 +88,7 @@ function ClassDetailPage() {
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [quickIndex, setQuickIndex] = useState<number | null>(null);
+  const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -116,23 +119,10 @@ function ClassDetailPage() {
         .select("id, student_id, students(id, first_name, last_name, grade_level, student_number)")
         .eq("class_id", classId);
       if (error) throw error;
-      return (data ?? [])
-        .filter((r) => r.students)
-        .sort((a, b) => {
-          const last = (a.students?.last_name ?? "").localeCompare(
-            b.students?.last_name ?? "",
-            undefined,
-            { sensitivity: "base" },
-          );
-          if (last !== 0) return last;
-          return (a.students?.first_name ?? "").localeCompare(
-            b.students?.first_name ?? "",
-            undefined,
-            { sensitivity: "base" },
-          );
-        });
+      return (data ?? []).filter((r) => r.students);
     },
   });
+  const gradebookRoster = sortStudents(roster, gradebookSort, (row) => row.students);
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["assignments", classId],
@@ -292,7 +282,7 @@ function ClassDetailPage() {
           <PulseDashboard
             classId={classId}
             className={klass?.name ?? "this class"}
-            roster={roster}
+            roster={gradebookRoster}
             assignments={assignments}
             grades={grades}
             setup={setup}
@@ -300,6 +290,11 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
+          {isStaff && roster.length > 0 && (
+            <div className="mt-4 flex justify-end">
+              <StudentSortControl value={gradebookSort} onChange={setGradebookSort} />
+            </div>
+          )}
           {isStaff && setup.quickScores.length > 0 && (
             <div className="panel mt-4 flex flex-wrap items-center gap-2 p-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -369,7 +364,7 @@ function ClassDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {roster.map((r) => {
+                  {gradebookRoster.map((r) => {
                     const avg = studentAverage(r.student_id);
                     return (
                       <tr key={r.id}>
@@ -449,7 +444,7 @@ function ClassDetailPage() {
             classId={classId}
             isStaff={isStaff}
             assignments={assignments}
-            roster={roster}
+            roster={gradebookRoster}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
             subject={klass?.subject ?? null}
@@ -1156,7 +1151,7 @@ function RosterTab({
     guardianEmail: "",
   };
   const [newForm, setNewForm] = useState(blankNew);
-  const [sortBy, setSortBy] = useState<"last" | "first">("last");
+  const [sortMode, setSortMode] = useStudentSort(`class-roster-${classId}`);
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -1251,21 +1246,11 @@ function RosterTab({
   });
 
   const enrolledIds = new Set(roster.map((r) => r.student_id));
-  const available = students.filter((s) => !enrolledIds.has(s.id));
+  const available = sortStudents(students.filter((s) => !enrolledIds.has(s.id)), sortMode);
 
   const [groupBy, setGroupBy] = useState<"none" | "grade" | "homeroom">("none");
 
-  const sortedRoster = [...roster].sort((a, b) => {
-    const aStudent = a.students;
-    const bStudent = b.students;
-    const aKey = sortBy === "last" ? aStudent?.last_name : aStudent?.first_name;
-    const bKey = sortBy === "last" ? bStudent?.last_name : bStudent?.first_name;
-    const cmp = (aKey ?? "").localeCompare(bKey ?? "", undefined, { sensitivity: "base" });
-    if (cmp !== 0) return cmp;
-    const aSub = sortBy === "last" ? aStudent?.first_name : aStudent?.last_name;
-    const bSub = sortBy === "last" ? bStudent?.first_name : bStudent?.last_name;
-    return (aSub ?? "").localeCompare(bSub ?? "", undefined, { sensitivity: "base" });
-  });
+  const sortedRoster = sortStudents(roster, sortMode, (row) => row.students);
 
   const { data: homerooms = {} } = useQuery({
     queryKey: ["roster-homerooms", classId],
@@ -1470,17 +1455,7 @@ function RosterTab({
 
       {roster.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Sort by</span>
-          {(["last", "first"] as const).map((k) => (
-            <Button
-              key={k}
-              size="sm"
-              variant={sortBy === k ? "default" : "outline"}
-              onClick={() => setSortBy(k)}
-            >
-              {k === "last" ? "Last name" : "First name"}
-            </Button>
-          ))}
+          <StudentSortControl value={sortMode} onChange={setSortMode} />
           <span className="ml-2 text-sm text-muted-foreground">Group by</span>
           {(["none", "grade", "homeroom"] as const).map((g) => (
             <Button

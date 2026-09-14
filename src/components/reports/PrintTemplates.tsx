@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, percent } from "@/lib/school";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
+import { sortStudents } from "@/lib/student-sort";
 import {
   buildDocument,
   docHeader,
@@ -113,14 +114,9 @@ export function PrintTemplates() {
       .select("student_id, students(id, first_name, last_name, grade_level, student_number)")
       .eq("class_id", classId);
     if (error) throw error;
-    return (data ?? [])
+    return sortStudents((data ?? [])
       .map((r) => r.students)
-      .filter((s): s is NonNullable<typeof s> => !!s)
-      .sort((a, b) => {
-        const last = a.last_name.localeCompare(b.last_name, undefined, { sensitivity: "base" });
-        if (last !== 0) return last;
-        return a.first_name.localeCompare(b.first_name, undefined, { sensitivity: "base" });
-      });
+      .filter((s): s is NonNullable<typeof s> => !!s));
   }
 
   function headerMeta(extra: string[] = []) {

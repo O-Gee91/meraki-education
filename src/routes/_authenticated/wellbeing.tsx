@@ -20,6 +20,8 @@ import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 
 export const Route = createFileRoute("/_authenticated/wellbeing")({
   head: () => ({
@@ -65,6 +67,7 @@ function WellbeingPage() {
   const [note, setNote] = useState("");
   const [studentId, setStudentId] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [sortMode, setSortMode] = useStudentSort("wellbeing-students");
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
@@ -94,7 +97,10 @@ function WellbeingPage() {
   });
 
   // Working as a teacher shows only the check-ins of their own students.
-  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+  const students = sortStudents(
+    studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+    sortMode,
+  );
   const checkins = studentIds
     ? allCheckins.filter((c) => studentIds.has(c.student_id))
     : allCheckins;
@@ -197,6 +203,9 @@ function WellbeingPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="mt-2">
+                <StudentSortControl value={sortMode} onChange={setSortMode} className="w-full" />
+              </div>
             </div>
           )}
           <div className="mt-3">

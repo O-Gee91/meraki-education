@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { provisionStudentAccounts } from "@/lib/roster.functions";
 import { suggestUsername } from "@/lib/usernames";
+import { sortStudents } from "@/lib/student-sort";
 import { AccountResults, type ProvisionedAccount } from "./AccountResults";
 
 function uniqueUsername(base: string, used: Set<string>): string {
@@ -95,7 +96,7 @@ export function ClassLogins({
 
 
       const used = new Set<string>();
-      const entries = (students ?? []).map((s) => {
+      const entries = sortStudents(students ?? []).map((s) => {
         const base = suggestUsername(s.first_name, s.last_name);
         return {
           student_id: s.id,

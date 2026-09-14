@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate } from "@/lib/school";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 
 export const Route = createFileRoute("/_authenticated/behavior")({
   head: () => ({
@@ -105,6 +107,7 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
   const { data: notes = [] } = useNotes();
   const [gradeFilter, setGradeFilter] = useState("all");
+  const [sortMode, setSortMode] = useStudentSort("behavior-student-picker");
 
   const grades = useMemo(
     () =>
@@ -135,7 +138,10 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
     },
   });
   // Teacher mode limits logging to students this person actually teaches.
-  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
+  const students = sortStudents(
+    studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+    sortMode,
+  );
 
 
   const create = useMutation({
@@ -189,6 +195,11 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+              <StudentSortControl
+                value={sortMode}
+                onChange={setSortMode}
+                className="w-full"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="kind">Type</Label>

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { compareStudentNames } from "@/lib/student-sort";
 
 export type UnlinkedAccount = {
   user_id: string;
@@ -77,7 +78,12 @@ export async function listUnlinkedAccounts(
       } satisfies UnlinkedAccount;
     })
     .filter((v): v is UnlinkedAccount => v !== null)
-    .sort((a, b) => a.full_name.localeCompare(b.full_name));
+    .sort((a, b) =>
+      compareStudentNames(
+        { id: a.user_id, last_name: a.full_name },
+        { id: b.user_id, last_name: b.full_name },
+      ),
+    );
 }
 
 /** Attach a self-registered account to an existing student record, or create one for them. */

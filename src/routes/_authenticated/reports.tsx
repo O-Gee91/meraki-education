@@ -22,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
 import { PrintTemplates } from "@/components/reports/PrintTemplates";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { compareStudentNames, sortStudents } from "@/lib/student-sort";
 
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -89,6 +91,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
   const { classIds, studentIds } = useTeacherScope();
   const queryClient = useQueryClient();
   const [classId, setClassId] = useState("");
+  const [sortMode, setSortMode] = useStudentSort("report-cards");
 
   const { data: allClasses = [] } = useQuery({
     queryKey: ["classes"],
@@ -128,8 +131,18 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
 
   // Teacher mode keeps report cards limited to the classes this person teaches.
   const classes = classIds ? allClasses.filter((c) => classIds.has(c.id)) : allClasses;
-  const students = studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents;
-  const cards = classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards;
+  const students = sortStudents(
+    studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+    sortMode,
+  );
+  const cards = [...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards)].sort(
+    (a, b) => {
+      const aStudent = students.find((student) => student.id === a.student_id);
+      const bStudent = students.find((student) => student.id === b.student_id);
+      const byName = compareStudentNames(aStudent, bStudent, sortMode);
+      return byName || a.id.localeCompare(b.id);
+    },
+  );
 
 
 
@@ -228,6 +241,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
           <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
             Generate term report cards
           </Button>
+          <StudentSortControl value={sortMode} onChange={setSortMode} />
         </div>
       )}
 
@@ -433,6 +447,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ studentId: "", title: "", link: "", description: "" });
+  const [sortMode, setSortMode] = useStudentSort("portfolios");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -445,6 +460,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const sortedStudents = sortStudents(students, sortMode);
 
   const { data: items = [] } = useQuery({
     queryKey: ["portfolio-items"],
@@ -509,13 +525,16 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {students.map((s) => (
+                 {sortedStudents.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.last_name}, {s.first_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <div className="mt-2">
+              <StudentSortControl value={sortMode} onChange={setSortMode} className="w-full" />
+            </div>
           </div>
         )}
         <div>
