@@ -876,15 +876,24 @@ function StaffCollectPanel({
               <p className="text-sm text-muted-foreground">No students match that filter.</p>
             ) : (
               visibleRoster.map((s) => {
-
                 const sub = submissions.find((x) => x.student_id === s.id);
                 const g = grades.find((x) => x.student_id === s.id);
+                const collected = isCollected(s.id);
                 return (
                   <div key={s.id} className="rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm font-medium">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Checkbox
+                          className="h-3.5 w-3.5"
+                          checked={selected.includes(s.id)}
+                          disabled={!collected}
+                          aria-label={`Select ${s.first_name} ${s.last_name}`}
+                          title={collected ? undefined : "Only collected work can be selected"}
+                          onCheckedChange={(v) => toggleRow(s.id, v === true)}
+                        />
                         {s.last_name}, {s.first_name}
                       </span>
+
                       <div className="flex items-center gap-3">
                         {assignment.submission_mode === "collected" ? (
                           <label className="flex items-center gap-2 text-xs">
