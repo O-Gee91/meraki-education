@@ -1001,13 +1001,26 @@ function StaffCollectPanel({
                               {student.last_name}, {student.first_name}
                             </span>
                             <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                              {collected ? (
-                                <Badge variant="secondary">{shownScore ? "Collected (scored)" : "Collected"}</Badge>
-                              ) : submission?.status === "draft" ? (
-                                <Badge variant="outline">In progress</Badge>
-                              ) : (
-                                <Badge variant="outline">Not collected</Badge>
-                              )}
+                              {(() => {
+                                const online = assignment.submission_mode === "online";
+                                const handedInLabel = online ? "Turned in" : "Collected";
+                                if (collected)
+                                  return (
+                                    <Badge variant="secondary">
+                                      {shownScore ? `${handedInLabel} (scored)` : handedInLabel}
+                                    </Badge>
+                                  );
+                                if (submission?.status === "draft")
+                                  return <Badge variant="outline">In progress</Badge>;
+                                if (online && assignment.due_date) {
+                                  return assignment.due_date < new Date().toISOString().slice(0, 10) ? (
+                                    <Badge variant="destructive">Missing</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not due yet</Badge>
+                                  );
+                                }
+                                return <Badge variant="outline">Not collected</Badge>;
+                              })()}
                             </span>
                           </span>
                         </Button>
