@@ -421,7 +421,12 @@ function StaffCollectPanel({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [proofreading, setProofreading] = useState<Record<string, boolean>>({});
+  // Bulk selection of collected work. Kept in state (not derived) so it survives
+  // filtering, sorting and scrolling until the teacher clears it explicitly.
+  const [selected, setSelected] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
   const { data: submissions = [] } = useSubmissions(assignment.id);
+
 
   const { data: setup } = useQuery({
     queryKey: ["grading-setup", classId],
