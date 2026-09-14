@@ -541,10 +541,6 @@ export function StudentHero() {
                 <span className="text-muted-foreground"> — “{hero.title}”</span>
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">{hero.blurb}</p>
-              <p className={`mt-2 text-sm font-medium ${hero.accent}`}>
-                <Sparkles className="mr-1 inline size-4" />
-                {hero.buff}
-              </p>
               <div className="mt-3 flex items-center gap-3">
                 <p className="text-xs text-muted-foreground">
                   Quest began {formatDate(heroProfile?.quest_started_at)}
@@ -591,9 +587,7 @@ export function StudentHero() {
                 </p>
               </div>
             </div>
-          </div>
-
-          <p className={`mt-4 text-sm font-medium md:hidden ${hero.accent}`}>{hero.buff}</p>
+        </div>
         </div>
 
         {/* Stat orbs */}
@@ -775,8 +769,8 @@ function ClassChooser({
             {current ? "Change your character class" : "Choose your character class"}
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Your class shapes how your quest for the school year plays out — its passive buff, your
-            title and the way your attributes level up. Based on your work so far we would suggest
+            Your class gives you a hero title and shapes the way your attributes level up.
+            Based on your work so far we would suggest
             the <span className="font-medium text-foreground">{HERO_CLASSES[suggested].name}</span>,
             but the choice is yours.
           </p>
@@ -815,10 +809,6 @@ function ClassChooser({
                 </div>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{hero.blurb}</p>
-              <p className={`mt-2 text-xs font-medium ${hero.accent}`}>
-                <Sparkles className="mr-1 inline size-3" />
-                {hero.buff}
-              </p>
               {key === suggested && (
                 <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
                   Suggested for you
