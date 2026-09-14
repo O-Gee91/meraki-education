@@ -1,7 +1,17 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Download, Paperclip, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Download,
+  Paperclip,
+  Search,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -10,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -425,6 +436,9 @@ function StaffCollectPanel({
   // filtering, sorting and scrolling until the teacher clears it explicitly.
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
 
@@ -703,6 +717,28 @@ function StaffCollectPanel({
           .includes(term),
       )
     : roster;
+  const activeStudent =
+    visibleRoster.find((student) => student.id === activeStudentId) ?? visibleRoster[0] ?? null;
+  const activeIndex = activeStudent
+    ? visibleRoster.findIndex((student) => student.id === activeStudent.id)
+    : -1;
+
+  useEffect(() => {
+    if (!open || activeStudentId || roster.length === 0) return;
+    setActiveStudentId(roster[0]?.id ?? null);
+  }, [activeStudentId, open, roster]);
+
+  const moveActive = (step: -1 | 1) => {
+    if (visibleRoster.length === 0) return;
+    const nextIndex = Math.min(
+      visibleRoster.length - 1,
+      Math.max(0, (activeIndex < 0 ? 0 : activeIndex) + step),
+    );
+    const next = visibleRoster[nextIndex];
+    if (!next) return;
+    setActiveStudentId(next.id);
+    rowRefs.current[next.id]?.scrollIntoView({ block: "nearest" });
+  };
   // The master checkbox applies to the currently filtered set only.
   const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
   const selectedInView = collectedInView.filter((id) => selected.includes(id));
@@ -744,6 +780,12 @@ function StaffCollectPanel({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const scoredCount = roster.filter((student) => {
+    const grade = grades.find((row) => row.student_id === student.id);
+    return cellText(grade) !== "";
+  }).length;
+  const progressCollectedCount = roster.filter((student) => isCollected(student.id)).length;
 
 
 
