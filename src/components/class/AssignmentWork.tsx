@@ -698,7 +698,8 @@ function StaffCollectPanel({
           return (
             g?.points_earned != null ||
             sub?.status === "collected" ||
-            sub?.status === "returned"
+            sub?.status === "returned" ||
+            sub?.status === "submitted"
           );
         }).length
       : 0;
@@ -708,7 +709,10 @@ function StaffCollectPanel({
     const sub = submissions.find((x) => x.student_id === studentId);
     const g = grades.find((x) => x.student_id === studentId);
     return (
-      g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
+      g?.points_earned != null ||
+      sub?.status === "collected" ||
+      sub?.status === "returned" ||
+      sub?.status === "submitted"
     );
   };
 
