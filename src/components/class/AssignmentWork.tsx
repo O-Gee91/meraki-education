@@ -686,6 +686,67 @@ function StaffCollectPanel({
         }).length
       : 0;
 
+  /* ---- bulk selection of collected work ---- */
+  const isCollected = (studentId: string) => {
+    const sub = submissions.find((x) => x.student_id === studentId);
+    const g = grades.find((x) => x.student_id === studentId);
+    return (
+      g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
+    );
+  };
+
+  const term = search.trim().toLowerCase();
+  const visibleRoster = term
+    ? roster.filter((s) =>
+        `${s.first_name} ${s.last_name} ${s.last_name} ${s.first_name}`
+          .toLowerCase()
+          .includes(term),
+      )
+    : roster;
+  // The master checkbox applies to the currently filtered set only.
+  const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
+  const selectedInView = collectedInView.filter((id) => selected.includes(id));
+  const masterState: boolean | "indeterminate" =
+    collectedInView.length > 0 && selectedInView.length === collectedInView.length
+      ? true
+      : selectedInView.length > 0
+        ? "indeterminate"
+        : false;
+
+  const toggleMaster = (next: boolean) => {
+    setSelected((prev) =>
+      next
+        ? Array.from(new Set([...prev, ...collectedInView]))
+        : prev.filter((id) => !collectedInView.includes(id)),
+    );
+  };
+
+  const toggleRow = (studentId: string, next: boolean) =>
+    setSelected((prev) =>
+      next ? Array.from(new Set([...prev, studentId])) : prev.filter((id) => id !== studentId),
+    );
+
+  // Bulk action: hand the selected collected work back to students.
+  const returnSelected = useMutation({
+    mutationFn: async () => {
+      if (selected.length === 0) throw new Error("Select some collected work first");
+      const { error } = await supabase
+        .from("assignment_submissions")
+        .update({ status: "returned" })
+        .eq("assignment_id", assignment.id)
+        .in("student_id", selected);
+      if (error) throw error;
+      return selected.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Returned ${count} student${count === 1 ? "" : "s"}`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
+
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
