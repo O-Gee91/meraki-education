@@ -1,7 +1,17 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Download, Paperclip, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Download,
+  Paperclip,
+  Search,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -10,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -425,6 +436,9 @@ function StaffCollectPanel({
   // filtering, sorting and scrolling until the teacher clears it explicitly.
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
 
@@ -703,6 +717,28 @@ function StaffCollectPanel({
           .includes(term),
       )
     : roster;
+  const activeStudent =
+    visibleRoster.find((student) => student.id === activeStudentId) ?? visibleRoster[0] ?? null;
+  const activeIndex = activeStudent
+    ? visibleRoster.findIndex((student) => student.id === activeStudent.id)
+    : -1;
+
+  useEffect(() => {
+    if (!open || activeStudentId || roster.length === 0) return;
+    setActiveStudentId(roster[0]?.id ?? null);
+  }, [activeStudentId, open, roster]);
+
+  const moveActive = (step: -1 | 1) => {
+    if (visibleRoster.length === 0) return;
+    const nextIndex = Math.min(
+      visibleRoster.length - 1,
+      Math.max(0, (activeIndex < 0 ? 0 : activeIndex) + step),
+    );
+    const next = visibleRoster[nextIndex];
+    if (!next) return;
+    setActiveStudentId(next.id);
+    rowRefs.current[next.id]?.scrollIntoView({ block: "nearest" });
+  };
   // The master checkbox applies to the currently filtered set only.
   const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
   const selectedInView = collectedInView.filter((id) => selected.includes(id));
@@ -745,6 +781,32 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const scoredCount = roster.filter((student) => {
+    const grade = grades.find((row) => row.student_id === student.id);
+    return cellText(grade) !== "";
+  }).length;
+  const progressCollectedCount = roster.filter((student) => isCollected(student.id)).length;
+  const activeSubmission = activeStudent
+    ? submissions.find((row) => row.student_id === activeStudent.id)
+    : undefined;
+  const activeGrade = activeStudent
+    ? grades.find((row) => row.student_id === activeStudent.id)
+    : undefined;
+
+  const selectStudent = (studentId: string, openDetail = false) => {
+    setActiveStudentId(studentId);
+    if (openDetail) setShowMobileDetail(true);
+  };
+
+  const saveOnEnter = (studentId: string, currentValue: string) =>
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      const value = event.currentTarget.value;
+      if (value !== currentValue) score.mutate({ studentId, value });
+      moveActive(1);
+    };
+
 
 
   return (
@@ -772,7 +834,13 @@ function StaffCollectPanel({
             Collect all
           </Button>
         )}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setShowMobileDetail(false);
+        }}
+      >
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="h-7">
             {assignment.submission_mode === "online"
@@ -782,231 +850,314 @@ function StaffCollectPanel({
                 : "Check in & score"}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{assignment.title}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+        <DialogContent
+          className="inset-0 left-0 top-0 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden border-0 p-0 sm:rounded-none"
+          onKeyDown={(event) => {
+            const target = event.target as HTMLElement;
+            if (target.matches("input, textarea, button, [role='checkbox']")) return;
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveActive(-1);
+            }
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveActive(1);
+            }
+          }}
+        >
+          <header className="shrink-0 border-b border-border bg-background px-4 py-3 pr-14 lg:px-6">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+              <DialogHeader className="min-w-0 space-y-1 text-left">
+                <DialogTitle className="truncate text-xl lg:text-2xl">{assignment.title}</DialogTitle>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <span>{progressCollectedCount} of {roster.length} collected</span>
+                  <span>{scoredCount} scored</span>
+                  <span>{activeIndex >= 0 ? `Student ${activeIndex + 1} of ${visibleRoster.length}` : "No student selected"}</span>
+                </div>
+              </DialogHeader>
+              <DialogClose asChild>
+                <Button variant="outline" size="sm">Close</Button>
+              </DialogClose>
+            </div>
+          </header>
+
+          <div className="shrink-0 space-y-3 border-b border-border bg-secondary/30 px-4 py-3 lg:px-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                Quick scores below each student apply instantly — tweak the list to fit this
-                assignment.
-              </p>
+              <BulkFillBar
+                classId={classId}
+                pointsPossible={Number(assignment.points_possible)}
+                marks={marks}
+                pending={bulkFill.isPending}
+                selectedCount={selected.length}
+                onFill={(value, onlyBlank) =>
+                  bulkFill.mutate({
+                    value,
+                    onlyBlank,
+                    ...(selected.length ? { studentIds: selected } : {}),
+                  })
+                }
+              />
               <QuickScoreEditButton classId={classId} />
             </div>
-            <BulkFillBar
-              classId={classId}
-              pointsPossible={Number(assignment.points_possible)}
-              marks={marks}
-              pending={bulkFill.isPending}
-              selectedCount={selected.length}
-              onFill={(value, onlyBlank) =>
-                bulkFill.mutate({
-                  value,
-                  onlyBlank,
-                  ...(selected.length ? { studentIds: selected } : {}),
-                })
-              }
-            />
-          </div>
-
-          {/* Bulk selector for collected work */}
-          <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="grid gap-2 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto] md:items-center">
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 pl-9 text-sm"
+                  placeholder="Jump to student"
+                  aria-label="Jump to student"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
               <label
-                className="flex items-center gap-2 text-sm font-semibold"
-                title={
-                  collectedInView.length === 0
-                    ? "No collected assignments."
-                    : "Selects only work marked collected in the current list"
-                }
+                className="flex min-h-10 items-center gap-2 text-sm font-semibold"
+                title={collectedInView.length === 0 ? "No collected assignments." : undefined}
               >
                 <Checkbox
                   className="h-5 w-5"
                   checked={masterState}
                   disabled={collectedInView.length === 0}
-                  onCheckedChange={(v) => toggleMaster(v === true)}
+                  onCheckedChange={(value) => toggleMaster(value === true)}
                 />
                 Select all collected
               </label>
-              <span className="text-xs text-muted-foreground">
-                {selected.length} collected selected
-                {collectedInView.length === 0
-                  ? " — no collected assignments"
-                  : ` of ${collectedInView.length} shown`}
+              <span className="text-sm text-muted-foreground">
+                {selected.length} selected of {collectedInView.length} shown
               </span>
-              <Input
-                className="h-7 w-40 text-xs"
-                placeholder="Filter students"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs"
-                disabled={selected.length === 0 || returnSelected.isPending}
-                onClick={() => returnSelected.mutate()}
-              >
-                Return selected
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs"
-                disabled={selected.length === 0}
-                onClick={() => setSelected([])}
-              >
-                Clear selection
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={selected.length === 0 || returnSelected.isPending}
+                  onClick={() => returnSelected.mutate()}
+                >
+                  Return selected
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={selected.length === 0}
+                  onClick={() => setSelected([])}
+                >
+                  Clear selection
+                </Button>
+              </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Only work marked collected can be selected, and the checkbox applies to the students
-              currently shown by the filter. Your selection stays put while you scroll, filter or
-              sort — newly collected work is not added automatically.
-            </p>
           </div>
 
-          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-            {roster.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
-            ) : visibleRoster.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No students match that filter.</p>
-            ) : (
-              visibleRoster.map((s) => {
-                const sub = submissions.find((x) => x.student_id === s.id);
-                const g = grades.find((x) => x.student_id === s.id);
-                const collected = isCollected(s.id);
-                return (
-                  <div key={s.id} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 text-sm font-medium">
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(28rem,0.9fr)_minmax(30rem,1.1fr)]">
+            <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r border-border lg:flex`}>
+              <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                <p className="text-sm font-semibold">Student roster</p>
+                <p className="text-xs text-muted-foreground">{visibleRoster.length} shown</p>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto" role="listbox" aria-label="Students">
+                {roster.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">No students enrolled yet.</p>
+                ) : visibleRoster.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">No students match that filter.</p>
+                ) : (
+                  visibleRoster.map((student, index) => {
+                    const submission = submissions.find((row) => row.student_id === student.id);
+                    const grade = grades.find((row) => row.student_id === student.id);
+                    const collected = isCollected(student.id);
+                    const shownScore = cellText(grade);
+                    const isActive = activeStudent?.id === student.id;
+                    return (
+                      <div
+                        key={student.id}
+                        className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-3 py-3 transition-colors ${
+                          isActive ? "bg-primary/10" : index % 2 ? "bg-secondary/20" : "bg-background"
+                        } hover:bg-secondary/50`}
+                      >
                         <Checkbox
-                          className="h-3.5 w-3.5"
-                          checked={selected.includes(s.id)}
+                          checked={selected.includes(student.id)}
                           disabled={!collected}
-                          aria-label={`Select ${s.first_name} ${s.last_name}`}
+                          aria-label={`Select ${student.first_name} ${student.last_name}`}
                           title={collected ? undefined : "Only collected work can be selected"}
-                          onCheckedChange={(v) => toggleRow(s.id, v === true)}
+                          onCheckedChange={(value) => toggleRow(student.id, value === true)}
                         />
-                        {s.last_name}, {s.first_name}
-                      </span>
-
-                      <div className="flex items-center gap-3">
-                        {assignment.submission_mode === "collected" ? (
-                          <label className="flex items-center gap-2 text-xs">
-                            <Checkbox
-                              checked={
-                                g?.points_earned != null ||
-                                sub?.status === "collected" ||
-                                sub?.status === "returned"
-                              }
-                              disabled={g?.points_earned != null}
-                              onCheckedChange={(v) =>
-                                check.mutate({ studentId: s.id, collected: !!v })
-                              }
+                        <Button
+                          ref={(node) => { rowRefs.current[student.id] = node; }}
+                          type="button"
+                          variant="ghost"
+                          role="option"
+                          aria-selected={isActive}
+                          className="h-auto min-w-0 justify-start p-0 text-left hover:bg-transparent"
+                          onClick={() => selectStudent(student.id, true)}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-base font-semibold">
+                              {student.last_name}, {student.first_name}
+                            </span>
+                            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                              {collected ? (
+                                <Badge variant="secondary">{shownScore ? "Collected (scored)" : "Collected"}</Badge>
+                              ) : submission?.status === "draft" ? (
+                                <Badge variant="outline">In progress</Badge>
+                              ) : (
+                                <Badge variant="outline">Not collected</Badge>
+                              )}
+                            </span>
+                          </span>
+                        </Button>
+                        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                          <Input
+                            key={shownScore}
+                            className="h-10 w-24 text-base"
+                            placeholder={`/${assignment.points_possible}`}
+                            defaultValue={shownScore}
+                            aria-label={`Score for ${student.first_name} ${student.last_name}`}
+                            onFocus={() => selectStudent(student.id)}
+                            onKeyDown={saveOnEnter(student.id, shownScore)}
+                            onBlur={(event) => {
+                              if (event.target.value === shownScore) return;
+                              score.mutate({ studentId: student.id, value: event.target.value });
+                            }}
+                          />
+                          <div className="hidden xl:block">
+                            <QuickScoreBar
+                              classId={classId}
+                              pointsPossible={Number(assignment.points_possible)}
+                              editable={false}
+                              label=""
+                              onPick={(value) => score.mutate({ studentId: student.id, value })}
                             />
-                            {g?.points_earned != null ? "Collected (scored)" : "Collected"}
-                          </label>
-                        ) : sub && sub.status !== "draft" ? (
-                          <Badge variant="secondary">Turned in</Badge>
-                        ) : sub ? (
-                          <Badge variant="outline">In progress</Badge>
-                        ) : assignment.due_date &&
-                          assignment.due_date < new Date().toISOString().slice(0, 10) ? (
-                          <Badge variant="outline">Missing</Badge>
-                        ) : (
-                          <Badge variant="outline">Not due yet</Badge>
-                        )}
-                        <Input
-                          key={cellText(g)}
-                          className="h-8 w-24"
-                          placeholder={`/${assignment.points_possible}`}
-                          defaultValue={cellText(g)}
-                          title={
-                            marks.length
-                              ? `Enter points or a mark: ${marks
-                                  .map((m) => `${m.code} = ${m.label}`)
-                                  .join(", ")}`
-                              : undefined
-                          }
-                          onBlur={(e) => {
-                            if (e.target.value === cellText(g)) return;
-                            score.mutate({ studentId: s.id, value: e.target.value });
-                          }}
-                        />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <section className={`${showMobileDetail ? "flex" : "hidden"} min-h-0 flex-col bg-background lg:flex`}>
+              {activeStudent ? (
+                <>
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 lg:px-6">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="shrink-0 lg:hidden"
+                        aria-label="Back to student roster"
+                        onClick={() => setShowMobileDetail(false)}
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-xl font-semibold">{activeStudent.first_name} {activeStudent.last_name}</h3>
+                        <p className="text-sm text-muted-foreground">Student {activeIndex + 1} of {visibleRoster.length}</p>
                       </div>
                     </div>
-                    <div className="mt-2">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button size="icon" variant="outline" disabled={activeIndex <= 0} onClick={() => moveActive(-1)} aria-label="Previous student">
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="outline" disabled={activeIndex < 0 || activeIndex >= visibleRoster.length - 1} onClick={() => moveActive(1)} aria-label="Next student">
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-6">
+                    <div className="space-y-5">
+                      <div className="grid gap-4 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                        <div className="space-y-2">
+                          <Label htmlFor={`detail-score-${activeStudent.id}`} className="text-sm">Score</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              key={cellText(activeGrade)}
+                              id={`detail-score-${activeStudent.id}`}
+                              className="h-11 max-w-32 text-lg"
+                              placeholder={`/${assignment.points_possible}`}
+                              defaultValue={cellText(activeGrade)}
+                              onKeyDown={saveOnEnter(activeStudent.id, cellText(activeGrade))}
+                              onBlur={(event) => {
+                                if (event.target.value === cellText(activeGrade)) return;
+                                score.mutate({ studentId: activeStudent.id, value: event.target.value });
+                              }}
+                            />
+                            <span className="text-sm text-muted-foreground">of {assignment.points_possible}</span>
+                          </div>
+                        </div>
+                        {assignment.submission_mode === "collected" ? (
+                          <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                            <Checkbox
+                              checked={isCollected(activeStudent.id)}
+                              disabled={activeGrade?.points_earned != null}
+                              onCheckedChange={(value) => check.mutate({ studentId: activeStudent.id, collected: value === true })}
+                            />
+                            {activeGrade?.points_earned != null ? "Collected (scored)" : "Collected"}
+                          </label>
+                        ) : null}
+                      </div>
+
                       <QuickScoreBar
                         classId={classId}
                         pointsPossible={Number(assignment.points_possible)}
                         editable={false}
-                        onPick={(value) => score.mutate({ studentId: s.id, value })}
+                        onPick={(value) => score.mutate({ studentId: activeStudent.id, value })}
                       />
-                    </div>
 
-                    {assignment.rubric_id ? (
-                      <RubricScorePanel
-                        assignmentId={assignment.id}
-                        rubricId={assignment.rubric_id}
-                        studentId={s.id}
-                        pointsPossible={Number(assignment.points_possible)}
-                      />
-                    ) : null}
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold uppercase text-muted-foreground">Submission</h4>
+                        {activeSubmission?.body ? (
+                          <div className="max-h-72 overflow-y-auto whitespace-pre-wrap border-l-2 border-primary pl-4 text-base leading-7">
+                            {activeSubmission.body}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No typed response submitted.</p>
+                        )}
+                        {activeSubmission?.file_uploads ? (
+                          <Button variant="outline" size="sm" onClick={() => openFile(activeSubmission.file_uploads?.storage_path ?? "")}>
+                            <Download className="mr-2 h-4 w-4" /> {activeSubmission.file_uploads.file_name}
+                          </Button>
+                        ) : null}
+                      </div>
 
-                    {proofreading[s.id] && sub ? (
-                      <>
-                        <ProofreadEditor
-                          submissionId={sub.id}
-                          body={sub.body ?? ""}
-                          teacherNote={sub.teacher_note}
-                          onNoteSaved={() =>
-                            queryClient.invalidateQueries({
-                              queryKey: ["assignment-submissions", assignment.id],
-                            })
-                          }
+                      {assignment.rubric_id ? (
+                        <RubricScorePanel
+                          assignmentId={assignment.id}
+                          rubricId={assignment.rubric_id}
+                          studentId={activeStudent.id}
+                          pointsPossible={Number(assignment.points_possible)}
                         />
+                      ) : null}
+
+                      {proofreading[activeStudent.id] && activeSubmission ? (
+                        <>
+                          <ProofreadEditor
+                            key={activeSubmission.id}
+                            submissionId={activeSubmission.id}
+                            body={activeSubmission.body ?? ""}
+                            teacherNote={activeSubmission.teacher_note}
+                            onNoteSaved={() => queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] })}
+                          />
+                          <Button variant="ghost" size="sm" onClick={() => setProofreading((current) => ({ ...current, [activeStudent.id]: false }))}>
+                            Hide proofreading
+                          </Button>
+                        </>
+                      ) : (
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          className="mt-2 h-7"
-                          onClick={() =>
-                            setProofreading((p) => ({ ...p, [s.id]: false }))
-                          }
+                          variant="outline"
+                          onClick={() => {
+                            setProofreading((current) => ({ ...current, [activeStudent.id]: true }));
+                            if (!activeSubmission) startFeedback.mutate(activeStudent.id);
+                          }}
+                          disabled={startFeedback.isPending}
                         >
-                          Hide proofreading
+                          Proofread & comment
                         </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="mt-2 h-7"
-                        onClick={() => {
-                          setProofreading((p) => ({ ...p, [s.id]: true }));
-                          if (!sub) startFeedback.mutate(s.id);
-                        }}
-                        disabled={startFeedback.isPending}
-                      >
-                        Proofread & comment
-                      </Button>
-                    )}
-                    {sub?.file_uploads ? (
-                      <button
-                        type="button"
-                        onClick={() => openFile(sub.file_uploads!.storage_path)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
-                      >
-                        <Download className="h-3 w-3" /> {sub.file_uploads.file_name}
-                      </button>
-                    ) : null}
+                      )}
+                    </div>
                   </div>
-                );
-              })
-            )}
+                </>
+              ) : (
+                <div className="grid flex-1 place-items-center p-8 text-center text-muted-foreground">Select a student to begin grading.</div>
+              )}
+            </section>
           </div>
         </DialogContent>
       </Dialog>
