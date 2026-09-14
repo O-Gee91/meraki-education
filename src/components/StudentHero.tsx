@@ -4,7 +4,6 @@ import {
   Flame,
   Heart,
   Shield,
-  Sparkles,
   Swords,
   Target,
   Wand2,
@@ -61,7 +60,6 @@ const HERO_CLASSES = {
     name: "Barbarian",
     title: "The Homework Slayer",
     blurb: "Turns in everything. Heavy lifting is your specialty.",
-    buff: "Rampage — 5% XP boost for five assignments handed in without a miss.",
     icon: Swords,
     accent: "text-destructive",
     ring: "border-destructive/40 bg-destructive/10",
@@ -70,7 +68,6 @@ const HERO_CLASSES = {
     name: "Rogue",
     title: "The Swift Quill",
     blurb: "Finishes quizzes long before the timer runs out.",
-    buff: "Haste — early finishes bank a Dodge charge for one easy question.",
     icon: Target,
     accent: "text-warning",
     ring: "border-warning/40 bg-warning/10",
@@ -79,7 +76,6 @@ const HERO_CLASSES = {
     name: "Druid",
     title: "The Ever-Present",
     blurb: "Never misses a day. Your stamina is legendary.",
-    buff: "Spirit Bond — your streak grants your study group a 2% XP boost.",
     icon: Heart,
     accent: "text-success",
     ring: "border-success/40 bg-success/10",
@@ -88,7 +84,6 @@ const HERO_CLASSES = {
     name: "Sorceress",
     title: "The Arcane Scholar",
     blurb: "Tests bend to your knowledge, even on a rough week.",
-    buff: "Arcane Precision — lose fewer points to small mistakes on exams.",
     icon: Wand2,
     accent: "text-accent",
     ring: "border-accent/40 bg-accent/10",
@@ -97,7 +92,6 @@ const HERO_CLASSES = {
     name: "Necromancer",
     title: "The Steady Keeper",
     blurb: "Balanced across every stat — the dependable solid student.",
-    buff: "Corpse Explosion — helping a classmate in a discussion earns you both bonus XP.",
     icon: Skull,
     accent: "text-muted-foreground",
     ring: "border-border bg-muted/40",
@@ -106,7 +100,6 @@ const HERO_CLASSES = {
     name: "Paladin",
     title: "The Aura of Excellence",
     blurb: "Strong in every attribute. Rare and radiant.",
-    buff: "Aura of Excellence — the whole class gains a small XP boost just from your presence.",
     icon: Shield,
     accent: "text-primary",
     ring: "border-primary/40 bg-primary/10",
@@ -451,8 +444,8 @@ export function StudentHero() {
     missing.slice(0, 4).forEach((a) =>
       items.push({
         id: `miss-${a.id}`,
-        text: `💀 ${a.title} in ${classNameById.get(a.class_id) ?? "class"} is overdue. −15 HP — visit the Healer (your teacher) to recover.`,
-        tone: "text-destructive",
+        text: `📜 ${a.title} in ${classNameById.get(a.class_id) ?? "class"} is overdue — hand it in to clear your quest log.`,
+        tone: "text-muted-foreground",
       }),
     );
 
@@ -547,10 +540,6 @@ export function StudentHero() {
                 <span className="text-muted-foreground"> — “{hero.title}”</span>
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">{hero.blurb}</p>
-              <p className={`mt-2 text-sm font-medium ${hero.accent}`}>
-                <Sparkles className="mr-1 inline size-4" />
-                {hero.buff}
-              </p>
               <div className="mt-3 flex items-center gap-3">
                 <p className="text-xs text-muted-foreground">
                   Quest began {formatDate(heroProfile?.quest_started_at)}
@@ -597,9 +586,7 @@ export function StudentHero() {
                 </p>
               </div>
             </div>
-          </div>
-
-          <p className={`mt-4 text-sm font-medium md:hidden ${hero.accent}`}>{hero.buff}</p>
+        </div>
         </div>
 
         {/* Stat orbs */}
@@ -781,8 +768,8 @@ function ClassChooser({
             {current ? "Change your character class" : "Choose your character class"}
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Your class shapes how your quest for the school year plays out — its passive buff, your
-            title and the way your attributes level up. Based on your work so far we would suggest
+            Your class gives you a hero title and shapes the way your attributes level up.
+            Based on your work so far we would suggest
             the <span className="font-medium text-foreground">{HERO_CLASSES[suggested].name}</span>,
             but the choice is yours.
           </p>
@@ -821,10 +808,6 @@ function ClassChooser({
                 </div>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{hero.blurb}</p>
-              <p className={`mt-2 text-xs font-medium ${hero.accent}`}>
-                <Sparkles className="mr-1 inline size-3" />
-                {hero.buff}
-              </p>
               {key === suggested && (
                 <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
                   Suggested for you
