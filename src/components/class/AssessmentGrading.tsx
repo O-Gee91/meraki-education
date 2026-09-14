@@ -72,8 +72,8 @@ export function AssessmentGrading({
   });
   const sortedSubmissions = sortStudents(submissions, sortMode, (row) => ({
     id: row.student_id,
-    first_name: row.students?.first_name,
-    last_name: row.students?.last_name,
+    first_name: row.students?.first_name ?? null,
+    last_name: row.students?.last_name ?? null,
   }));
 
   return (

@@ -729,7 +729,7 @@ function StaffCollectPanel({
 
   useEffect(() => {
     if (!open || activeStudentId || roster.length === 0) return;
-    setActiveStudentId(roster[0]?.id ?? null);
+    setActiveStudentId(visibleRoster[0]?.id ?? null);
   }, [activeStudentId, open, visibleRoster]);
 
   const moveActive = (step: -1 | 1) => {

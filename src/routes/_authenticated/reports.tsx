@@ -135,7 +135,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
     sortMode,
   );
-  const cards = (classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards).toSorted(
+  const cards = [...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards)].sort(
     (a, b) => {
       const aStudent = students.find((student) => student.id === a.student_id);
       const bStudent = students.find((student) => student.id === b.student_id);
