@@ -421,7 +421,12 @@ function StaffCollectPanel({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [proofreading, setProofreading] = useState<Record<string, boolean>>({});
+  // Bulk selection of collected work. Kept in state (not derived) so it survives
+  // filtering, sorting and scrolling until the teacher clears it explicitly.
+  const [selected, setSelected] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
   const { data: submissions = [] } = useSubmissions(assignment.id);
+
 
   const { data: setup } = useQuery({
     queryKey: ["grading-setup", classId],
@@ -545,20 +550,25 @@ function StaffCollectPanel({
   };
 
   // One click fills every student (or only the blank ones) with the same score.
+  // When rows are selected, only those students are affected.
   const bulkFill = useMutation({
-    mutationFn: async (input: { value: string; onlyBlank: boolean }) => {
+    mutationFn: async (input: { value: string; onlyBlank: boolean; studentIds?: string[] }) => {
       const raw = input.value.trim();
       const mark = findMark(raw ? raw.toUpperCase() : null, marks);
       const points = mark || raw === "" ? null : Number(raw);
       if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
         throw new Error("Enter a valid score or mark code");
 
-      const targets = roster.filter((s) => {
+      const scope = input.studentIds?.length
+        ? roster.filter((s) => input.studentIds!.includes(s.id))
+        : roster;
+      const targets = scope.filter((s) => {
         if (!input.onlyBlank) return true;
         const g = grades.find((x) => x.student_id === s.id);
         return cellText(g) === "";
       });
       if (targets.length === 0) throw new Error("Every student already has a score");
+
 
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const stamp = new Date().toISOString();
@@ -676,6 +686,67 @@ function StaffCollectPanel({
         }).length
       : 0;
 
+  /* ---- bulk selection of collected work ---- */
+  const isCollected = (studentId: string) => {
+    const sub = submissions.find((x) => x.student_id === studentId);
+    const g = grades.find((x) => x.student_id === studentId);
+    return (
+      g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
+    );
+  };
+
+  const term = search.trim().toLowerCase();
+  const visibleRoster = term
+    ? roster.filter((s) =>
+        `${s.first_name} ${s.last_name} ${s.last_name} ${s.first_name}`
+          .toLowerCase()
+          .includes(term),
+      )
+    : roster;
+  // The master checkbox applies to the currently filtered set only.
+  const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
+  const selectedInView = collectedInView.filter((id) => selected.includes(id));
+  const masterState: boolean | "indeterminate" =
+    collectedInView.length > 0 && selectedInView.length === collectedInView.length
+      ? true
+      : selectedInView.length > 0
+        ? "indeterminate"
+        : false;
+
+  const toggleMaster = (next: boolean) => {
+    setSelected((prev) =>
+      next
+        ? Array.from(new Set([...prev, ...collectedInView]))
+        : prev.filter((id) => !collectedInView.includes(id)),
+    );
+  };
+
+  const toggleRow = (studentId: string, next: boolean) =>
+    setSelected((prev) =>
+      next ? Array.from(new Set([...prev, studentId])) : prev.filter((id) => id !== studentId),
+    );
+
+  // Bulk action: hand the selected collected work back to students.
+  const returnSelected = useMutation({
+    mutationFn: async () => {
+      if (selected.length === 0) throw new Error("Select some collected work first");
+      const { error } = await supabase
+        .from("assignment_submissions")
+        .update({ status: "returned" })
+        .eq("assignment_id", assignment.id)
+        .in("student_id", selected);
+      if (error) throw error;
+      return selected.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Returned ${count} student${count === 1 ? "" : "s"}`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
+
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
@@ -728,23 +799,101 @@ function StaffCollectPanel({
               pointsPossible={Number(assignment.points_possible)}
               marks={marks}
               pending={bulkFill.isPending}
-              onFill={(value, onlyBlank) => bulkFill.mutate({ value, onlyBlank })}
+              selectedCount={selected.length}
+              onFill={(value, onlyBlank) =>
+                bulkFill.mutate({
+                  value,
+                  onlyBlank,
+                  ...(selected.length ? { studentIds: selected } : {}),
+                })
+              }
             />
+          </div>
+
+          {/* Bulk selector for collected work */}
+          <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                className="flex items-center gap-2 text-sm font-semibold"
+                title={
+                  collectedInView.length === 0
+                    ? "No collected assignments."
+                    : "Selects only work marked collected in the current list"
+                }
+              >
+                <Checkbox
+                  className="h-5 w-5"
+                  checked={masterState}
+                  disabled={collectedInView.length === 0}
+                  onCheckedChange={(v) => toggleMaster(v === true)}
+                />
+                Select all collected
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {selected.length} collected selected
+                {collectedInView.length === 0
+                  ? " — no collected assignments"
+                  : ` of ${collectedInView.length} shown`}
+              </span>
+              <Input
+                className="h-7 w-40 text-xs"
+                placeholder="Filter students"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                disabled={selected.length === 0 || returnSelected.isPending}
+                onClick={() => returnSelected.mutate()}
+              >
+                Return selected
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                disabled={selected.length === 0}
+                onClick={() => setSelected([])}
+              >
+                Clear selection
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Only work marked collected can be selected, and the checkbox applies to the students
+              currently shown by the filter. Your selection stays put while you scroll, filter or
+              sort — newly collected work is not added automatically.
+            </p>
           </div>
 
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {roster.length === 0 ? (
               <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
+            ) : visibleRoster.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No students match that filter.</p>
             ) : (
-              roster.map((s) => {
+              visibleRoster.map((s) => {
                 const sub = submissions.find((x) => x.student_id === s.id);
                 const g = grades.find((x) => x.student_id === s.id);
+                const collected = isCollected(s.id);
                 return (
                   <div key={s.id} className="rounded-lg border border-border p-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm font-medium">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Checkbox
+                          className="h-3.5 w-3.5"
+                          checked={selected.includes(s.id)}
+                          disabled={!collected}
+                          aria-label={`Select ${s.first_name} ${s.last_name}`}
+                          title={collected ? undefined : "Only collected work can be selected"}
+                          onCheckedChange={(v) => toggleRow(s.id, v === true)}
+                        />
                         {s.last_name}, {s.first_name}
                       </span>
+
                       <div className="flex items-center gap-3">
                         {assignment.submission_mode === "collected" ? (
                           <label className="flex items-center gap-2 text-xs">
@@ -872,12 +1021,14 @@ function BulkFillBar({
   marks,
   pending,
   onFill,
+  selectedCount,
 }: {
   classId: string;
   pointsPossible: number;
   marks: SpecialMark[];
   pending: boolean;
   onFill: (value: string, onlyBlank: boolean) => void;
+  selectedCount: number;
 }) {
   const { data: setup } = useClassGradingSetup(classId);
   const [onlyBlank, setOnlyBlank] = useState(true);
@@ -888,8 +1039,10 @@ function BulkFillBar({
     <div className="space-y-2 border-t border-border pt-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 text-xs font-medium">
-          <Users className="h-3.5 w-3.5" /> Fill all students
+          <Users className="h-3.5 w-3.5" />{" "}
+          {selectedCount > 0 ? `Fill ${selectedCount} selected` : "Fill all students"}
         </span>
+
         {quick.map((q, i) => (
           <Button
             key={`${q.label}-${i}`}
