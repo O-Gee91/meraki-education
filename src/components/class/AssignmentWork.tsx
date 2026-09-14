@@ -804,7 +804,7 @@ function StaffCollectPanel({
                 bulkFill.mutate({
                   value,
                   onlyBlank,
-                  studentIds: selected.length ? selected : undefined,
+                  ...(selected.length ? { studentIds: selected } : {}),
                 })
               }
             />
