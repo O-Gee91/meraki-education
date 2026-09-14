@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { sortStudents } from "@/lib/student-sort";
 
 type StudentOption = {
   id: string;
@@ -39,15 +40,7 @@ export function UnlinkedAccounts({ students }: { students: StudentOption[] }) {
 
   const accounts = data?.accounts ?? [];
 
-  const sortedStudents = useMemo(
-    () =>
-      [...students].sort((a, b) => {
-        const last = a.last_name.localeCompare(b.last_name, undefined, { sensitivity: "base" });
-        if (last !== 0) return last;
-        return a.first_name.localeCompare(b.first_name, undefined, { sensitivity: "base" });
-      }),
-    [students],
-  );
+  const sortedStudents = useMemo(() => sortStudents(students), [students]);
 
   const attach = useMutation({
     mutationFn: async (account: (typeof accounts)[number]) => {
