@@ -13,6 +13,8 @@ import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { QuickScoreBar } from "@/components/class/QuickScoreBar";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 
 
 type AnswerRow = {
@@ -52,6 +54,7 @@ export function AssessmentGrading({
   grammarEnabled: boolean;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useStudentSort(`assessment-grading-${assessmentId}`);
 
   const { data: submissions = [] } = useQuery({
     queryKey: ["assessment-submissions", assessmentId],
@@ -67,12 +70,20 @@ export function AssessmentGrading({
       return (data ?? []) as unknown as SubmissionRow[];
     },
   });
+  const sortedSubmissions = sortStudents(submissions, sortMode, (row) => ({
+    id: row.student_id,
+    first_name: row.students?.first_name,
+    last_name: row.students?.last_name,
+  }));
 
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Submissions & grading
-      </h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Submissions & grading
+        </h4>
+        <StudentSortControl value={sortMode} onChange={setSortMode} />
+      </div>
       {submissions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No submissions yet. Objective questions score automatically the moment a student
@@ -80,7 +91,7 @@ export function AssessmentGrading({
         </p>
       ) : (
         <ul className="space-y-2">
-          {submissions.map((s) => {
+          {sortedSubmissions.map((s) => {
             const score = Number(s.auto_score) + Number(s.manual_score);
             const pct = percent(score, Number(s.total_points));
             return (

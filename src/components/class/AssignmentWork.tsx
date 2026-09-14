@@ -37,6 +37,8 @@ import {
   useClassGradingSetup,
 } from "@/components/class/QuickScoreBar";
 import { RubricScorePanel } from "@/components/class/RubricScorePanel";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import {
   findMark,
@@ -436,6 +438,7 @@ function StaffCollectPanel({
   // filtering, sorting and scrolling until the teacher clears it explicitly.
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useStudentSort(`assignment-grading-${classId}`);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -710,13 +713,14 @@ function StaffCollectPanel({
   };
 
   const term = search.trim().toLowerCase();
-  const visibleRoster = term
+  const filteredRoster = term
     ? roster.filter((s) =>
         `${s.first_name} ${s.last_name} ${s.last_name} ${s.first_name}`
           .toLowerCase()
           .includes(term),
       )
     : roster;
+  const visibleRoster = sortStudents(filteredRoster, sortMode);
   const activeStudent =
     visibleRoster.find((student) => student.id === activeStudentId) ?? visibleRoster[0] ?? null;
   const activeIndex = activeStudent
@@ -726,7 +730,7 @@ function StaffCollectPanel({
   useEffect(() => {
     if (!open || activeStudentId || roster.length === 0) return;
     setActiveStudentId(roster[0]?.id ?? null);
-  }, [activeStudentId, open, roster]);
+  }, [activeStudentId, open, visibleRoster]);
 
   const moveActive = (step: -1 | 1) => {
     if (visibleRoster.length === 0) return;
@@ -899,7 +903,7 @@ function StaffCollectPanel({
               />
               <QuickScoreEditButton classId={classId} />
             </div>
-            <div className="grid gap-2 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto] md:items-center">
+            <div className="grid gap-2 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto_auto] md:items-center">
               <div className="relative min-w-0">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -910,6 +914,7 @@ function StaffCollectPanel({
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
+              <StudentSortControl value={sortMode} onChange={setSortMode} className="w-44" />
               <label
                 className="flex min-h-10 items-center gap-2 text-sm font-semibold"
                 title={collectedInView.length === 0 ? "No collected assignments." : undefined}

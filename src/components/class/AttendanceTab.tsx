@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { attendanceTone, formatDate } from "@/lib/school";
+import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
+import { sortStudents } from "@/lib/student-sort";
 
 const STATUSES = ["present", "absent", "tardy", "excused"] as const;
 
@@ -16,6 +18,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [sortMode, setSortMode] = useStudentSort(`attendance-${classId}`);
 
   const { data: roster = [] } = useQuery({
     queryKey: ["attendance-roster", classId],
@@ -26,19 +29,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
         .select("id, student_id, students(first_name, last_name)")
         .eq("class_id", classId);
       if (error) throw error;
-      return (data ?? []).sort((a, b) => {
-        const last = (a.students?.last_name ?? "").localeCompare(
-          b.students?.last_name ?? "",
-          undefined,
-          { sensitivity: "base" },
-        );
-        if (last !== 0) return last;
-        return (a.students?.first_name ?? "").localeCompare(
-          b.students?.first_name ?? "",
-          undefined,
-          { sensitivity: "base" },
-        );
-      });
+      return data ?? [];
     },
   });
 
@@ -124,9 +115,16 @@ export function AttendanceTab({ classId }: { classId: string }) {
     );
   }
 
+  const sortedRoster = sortStudents(roster, sortMode, (row) => ({
+    id: row.student_id,
+    first_name: row.students?.first_name,
+    last_name: row.students?.last_name,
+  }));
+
   return (
     <div className="mt-4">
-      <div className="w-44 space-y-1.5">
+      <div className="flex flex-wrap items-end gap-3">
+       <div className="w-44 space-y-1.5">
         <Label htmlFor="attendance-date">Date</Label>
         <Input
           id="attendance-date"
@@ -134,6 +132,8 @@ export function AttendanceTab({ classId }: { classId: string }) {
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
+       </div>
+       <StudentSortControl value={sortMode} onChange={setSortMode} />
       </div>
 
       {roster.length > 0 && (
@@ -173,7 +173,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
             No students enrolled in this class yet.
           </p>
         ) : (
-          roster.map((r) => {
+           sortedRoster.map((r) => {
             const current = records.find((rec) => rec.student_id === r.student_id)?.status;
             return (
               <div
