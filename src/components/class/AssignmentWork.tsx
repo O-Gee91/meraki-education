@@ -550,20 +550,25 @@ function StaffCollectPanel({
   };
 
   // One click fills every student (or only the blank ones) with the same score.
+  // When rows are selected, only those students are affected.
   const bulkFill = useMutation({
-    mutationFn: async (input: { value: string; onlyBlank: boolean }) => {
+    mutationFn: async (input: { value: string; onlyBlank: boolean; studentIds?: string[] }) => {
       const raw = input.value.trim();
       const mark = findMark(raw ? raw.toUpperCase() : null, marks);
       const points = mark || raw === "" ? null : Number(raw);
       if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
         throw new Error("Enter a valid score or mark code");
 
-      const targets = roster.filter((s) => {
+      const scope = input.studentIds?.length
+        ? roster.filter((s) => input.studentIds!.includes(s.id))
+        : roster;
+      const targets = scope.filter((s) => {
         if (!input.onlyBlank) return true;
         const g = grades.find((x) => x.student_id === s.id);
         return cellText(g) === "";
       });
       if (targets.length === 0) throw new Error("Every student already has a score");
+
 
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const stamp = new Date().toISOString();
