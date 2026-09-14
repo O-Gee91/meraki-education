@@ -1021,12 +1021,14 @@ function BulkFillBar({
   marks,
   pending,
   onFill,
+  selectedCount,
 }: {
   classId: string;
   pointsPossible: number;
   marks: SpecialMark[];
   pending: boolean;
   onFill: (value: string, onlyBlank: boolean) => void;
+  selectedCount: number;
 }) {
   const { data: setup } = useClassGradingSetup(classId);
   const [onlyBlank, setOnlyBlank] = useState(true);
@@ -1037,8 +1039,10 @@ function BulkFillBar({
     <div className="space-y-2 border-t border-border pt-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 text-xs font-medium">
-          <Users className="h-3.5 w-3.5" /> Fill all students
+          <Users className="h-3.5 w-3.5" />{" "}
+          {selectedCount > 0 ? `Fill ${selectedCount} selected` : "Fill all students"}
         </span>
+
         {quick.map((q, i) => (
           <Button
             key={`${q.label}-${i}`}
