@@ -799,15 +799,84 @@ function StaffCollectPanel({
               pointsPossible={Number(assignment.points_possible)}
               marks={marks}
               pending={bulkFill.isPending}
-              onFill={(value, onlyBlank) => bulkFill.mutate({ value, onlyBlank })}
+              selectedCount={selected.length}
+              onFill={(value, onlyBlank) =>
+                bulkFill.mutate({
+                  value,
+                  onlyBlank,
+                  studentIds: selected.length ? selected : undefined,
+                })
+              }
             />
+          </div>
+
+          {/* Bulk selector for collected work */}
+          <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                className="flex items-center gap-2 text-sm font-semibold"
+                title={
+                  collectedInView.length === 0
+                    ? "No collected assignments."
+                    : "Selects only work marked collected in the current list"
+                }
+              >
+                <Checkbox
+                  className="h-5 w-5"
+                  checked={masterState}
+                  disabled={collectedInView.length === 0}
+                  onCheckedChange={(v) => toggleMaster(v === true)}
+                />
+                Select all collected
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {selected.length} collected selected
+                {collectedInView.length === 0
+                  ? " — no collected assignments"
+                  : ` of ${collectedInView.length} shown`}
+              </span>
+              <Input
+                className="h-7 w-40 text-xs"
+                placeholder="Filter students"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                disabled={selected.length === 0 || returnSelected.isPending}
+                onClick={() => returnSelected.mutate()}
+              >
+                Return selected
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                disabled={selected.length === 0}
+                onClick={() => setSelected([])}
+              >
+                Clear selection
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Only work marked collected can be selected, and the checkbox applies to the students
+              currently shown by the filter. Your selection stays put while you scroll, filter or
+              sort — newly collected work is not added automatically.
+            </p>
           </div>
 
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {roster.length === 0 ? (
               <p className="text-sm text-muted-foreground">No students enrolled yet.</p>
+            ) : visibleRoster.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No students match that filter.</p>
             ) : (
-              roster.map((s) => {
+              visibleRoster.map((s) => {
+
                 const sub = submissions.find((x) => x.student_id === s.id);
                 const g = grades.find((x) => x.student_id === s.id);
                 return (
