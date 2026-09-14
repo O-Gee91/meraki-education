@@ -1178,6 +1178,59 @@ export type Database = {
         }
         Relationships: []
       }
+      integrity_strike_reversals: {
+        Row: {
+          behavior_note_id: string
+          id: string
+          original_class_id: string | null
+          original_created_at: string
+          original_date: string
+          original_kind: string
+          original_notes: string
+          original_recorded_by: string | null
+          original_severity: number
+          reversal_reason: string
+          reversed_at: string
+          student_id: string
+        }
+        Insert: {
+          behavior_note_id: string
+          id?: string
+          original_class_id?: string | null
+          original_created_at: string
+          original_date: string
+          original_kind: string
+          original_notes: string
+          original_recorded_by?: string | null
+          original_severity: number
+          reversal_reason: string
+          reversed_at?: string
+          student_id: string
+        }
+        Update: {
+          behavior_note_id?: string
+          id?: string
+          original_class_id?: string | null
+          original_created_at?: string
+          original_date?: string
+          original_kind?: string
+          original_notes?: string
+          original_recorded_by?: string | null
+          original_severity?: number
+          reversal_reason?: string
+          reversed_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrity_strike_reversals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount_cents: number
