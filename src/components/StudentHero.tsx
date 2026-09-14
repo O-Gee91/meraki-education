@@ -61,7 +61,6 @@ const HERO_CLASSES = {
     name: "Barbarian",
     title: "The Homework Slayer",
     blurb: "Turns in everything. Heavy lifting is your specialty.",
-    buff: "Rampage — 5% XP boost for five assignments handed in without a miss.",
     icon: Swords,
     accent: "text-destructive",
     ring: "border-destructive/40 bg-destructive/10",
@@ -70,7 +69,6 @@ const HERO_CLASSES = {
     name: "Rogue",
     title: "The Swift Quill",
     blurb: "Finishes quizzes long before the timer runs out.",
-    buff: "Haste — early finishes bank a Dodge charge for one easy question.",
     icon: Target,
     accent: "text-warning",
     ring: "border-warning/40 bg-warning/10",
@@ -79,7 +77,6 @@ const HERO_CLASSES = {
     name: "Druid",
     title: "The Ever-Present",
     blurb: "Never misses a day. Your stamina is legendary.",
-    buff: "Spirit Bond — your streak grants your study group a 2% XP boost.",
     icon: Heart,
     accent: "text-success",
     ring: "border-success/40 bg-success/10",
@@ -88,7 +85,6 @@ const HERO_CLASSES = {
     name: "Sorceress",
     title: "The Arcane Scholar",
     blurb: "Tests bend to your knowledge, even on a rough week.",
-    buff: "Arcane Precision — lose fewer points to small mistakes on exams.",
     icon: Wand2,
     accent: "text-accent",
     ring: "border-accent/40 bg-accent/10",
@@ -97,7 +93,6 @@ const HERO_CLASSES = {
     name: "Necromancer",
     title: "The Steady Keeper",
     blurb: "Balanced across every stat — the dependable solid student.",
-    buff: "Corpse Explosion — helping a classmate in a discussion earns you both bonus XP.",
     icon: Skull,
     accent: "text-muted-foreground",
     ring: "border-border bg-muted/40",
@@ -106,7 +101,6 @@ const HERO_CLASSES = {
     name: "Paladin",
     title: "The Aura of Excellence",
     blurb: "Strong in every attribute. Rare and radiant.",
-    buff: "Aura of Excellence — the whole class gains a small XP boost just from your presence.",
     icon: Shield,
     accent: "text-primary",
     ring: "border-primary/40 bg-primary/10",
@@ -451,8 +445,8 @@ export function StudentHero() {
     missing.slice(0, 4).forEach((a) =>
       items.push({
         id: `miss-${a.id}`,
-        text: `💀 ${a.title} in ${classNameById.get(a.class_id) ?? "class"} is overdue. −15 HP — visit the Healer (your teacher) to recover.`,
-        tone: "text-destructive",
+        text: `📜 ${a.title} in ${classNameById.get(a.class_id) ?? "class"} is overdue — hand it in to clear your quest log.`,
+        tone: "text-muted-foreground",
       }),
     );
 
