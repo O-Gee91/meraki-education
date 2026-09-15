@@ -383,6 +383,8 @@ function NewAssessment({
     assignmentId: "none",
     category: categories[0] ?? "none",
     grammar: true,
+    availableFrom: "",
+    closesAt: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const formDirty = form.title.trim().length > 0 || form.instructions.trim().length > 0;
