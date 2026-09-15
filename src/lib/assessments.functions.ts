@@ -18,7 +18,7 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     const { data: assessment, error } = await context.supabase
       .from("assessments")
       .select(
-        "id, class_id, assignment_id, title, instructions, kind, time_limit_minutes, due_at, published, grammar_check_enabled",
+        "id, class_id, assignment_id, title, instructions, kind, time_limit_minutes, due_at, available_from, closes_at, published, grammar_check_enabled",
       )
       .eq("id", data.assessmentId)
       .maybeSingle();
@@ -27,6 +27,21 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
 
     // Only staff may see grading guidance; it can reveal expected answers.
     const { data: isStaff } = await context.supabase.rpc("is_staff");
+
+    const { data: klass } = await context.supabase
+      .from("classes")
+      .select("timezone")
+      .eq("id", assessment.class_id)
+      .maybeSingle();
+    const timeZone = klass?.timezone ?? "Asia/Shanghai";
+
+    // Before the start time the paper itself stays hidden from students.
+    const notYet =
+      assessment.available_from != null &&
+      Date.now() < Date.parse(assessment.available_from);
+    if (notYet && isStaff !== true) {
+      return { assessment, questions: [] as PaperQuestion[], timeZone };
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error: qErr } = await supabaseAdmin
@@ -47,7 +62,7 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     }));
 
 
-    return { assessment, questions };
+    return { assessment, questions, timeZone };
   });
 
 /** Submit an attempt; objective questions are graded instantly. */
