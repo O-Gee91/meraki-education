@@ -53,6 +53,12 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 
 import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { classTimeZone, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import {
+  CourseworkWindowFields,
+  WindowBadge,
+  WindowSummary,
+} from "@/components/class/CourseworkWindowFields";
 
 import {
   computeAverage,
@@ -103,7 +109,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, weights, grade_level")
+        .select("id, name, subject, period, room, term, weights, grade_level, timezone")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
@@ -112,6 +118,8 @@ function ClassDetailPage() {
   });
 
   const setup = parseGradingSetup(klass?.weights);
+  // All start/end times are shown in the class's own time zone.
+  const timeZone = classTimeZone(klass?.timezone);
   const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
   // Every class also gets a bonus bucket teachers can use however they like.
   const assignmentCategories = [
@@ -138,7 +146,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, available_from, closes_at",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -448,6 +456,7 @@ function ClassDetailPage() {
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
             subject={klass?.subject ?? null}
+            timeZone={timeZone}
           />
           <AssessmentsTab
             classId={classId}
@@ -455,6 +464,7 @@ function ClassDetailPage() {
             assignments={assignments}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
+            timeZone={timeZone}
           />
 
         </TabsContent>
