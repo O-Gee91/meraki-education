@@ -264,28 +264,11 @@ function StudentWorkPanel({
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
-  // Availability window. Before the start time nothing is shown; after the end
-  // time work can still be handed in, but it is flagged late.
-  const state = windowState(assignment.available_from, assignment.closes_at);
+  // Assignments have no availability window — lateness is measured against the
+  // due date only.
   const wasLate =
-    turnedIn &&
-    isLateAt(
-      Date.parse(mine!.submitted_at),
-      assignment.closes_at,
-      assignment.due_date,
-      timeZone,
-    );
+    turnedIn && isLateAt(Date.parse(mine!.submitted_at), null, assignment.due_date, timeZone);
 
-  if (state === "not_yet") {
-    return (
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Badge variant="outline">Not yet available</Badge>
-        <span className="text-muted-foreground">
-          Opens {formatZoned(assignment.available_from, timeZone)}
-        </span>
-      </div>
-    );
-  }
 
   if (assignment.submission_mode !== "online") {
     return (
