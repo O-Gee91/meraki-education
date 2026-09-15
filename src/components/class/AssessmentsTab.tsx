@@ -131,7 +131,12 @@ export function AssessmentsTab({
         Online quizzes, tests &amp; essays
       </h3>
       {isStaff && (
-        <NewAssessment classId={classId} assignments={assignments} categories={categories} />
+        <NewAssessment
+          classId={classId}
+          assignments={assignments}
+          categories={categories}
+          timeZone={timeZone}
+        />
       )}
 
 
@@ -164,6 +169,11 @@ export function AssessmentsTab({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>{a.due_at ? `Due ${formatDate(a.due_at.slice(0, 10))}` : "No due date"}</span>
+                    <WindowBadge
+                      availableFrom={a.available_from}
+                      closesAt={a.closes_at}
+                      timeZone={timeZone}
+                    />
                     {a.time_limit_minutes ? (
                       <Badge variant="outline" className="gap-1">
                         <Clock className="size-3" />
@@ -200,6 +210,7 @@ export function AssessmentsTab({
                         assessment={a}
                         assignments={assignments}
                         categories={categories}
+                        timeZone={timeZone}
                       />
 
                       <ShareResourceButton
