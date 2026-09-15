@@ -775,13 +775,6 @@ function AssignmentsTab({
                   onChange={(e) => setForm({ ...form, due: e.target.value })}
                 />
               </div>
-              <CourseworkWindowFields
-                idPrefix="new-assignment"
-                timeZone={timeZone}
-                availableFrom={form.availableFrom}
-                closesAt={form.closesAt}
-                onChange={(next) => setForm({ ...form, ...next })}
-              />
               <div className="space-y-1.5">
                 <Label htmlFor="mode">How is this handed in?</Label>
                 <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
