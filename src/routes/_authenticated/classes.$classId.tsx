@@ -589,8 +589,6 @@ function AssignmentsTab({
     description: "",
     mode: "collected",
     rubricId: "",
-    availableFrom: "",
-    closesAt: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const [applyToSubject, setApplyToSubject] = useState(false);
