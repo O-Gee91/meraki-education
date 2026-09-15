@@ -50,17 +50,14 @@ import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 import { StudentImport } from "@/components/students/StudentImport";
 import { ClassLogins } from "@/components/students/ClassLogins";
 
-import { formatDate, gradeTone } from "@/lib/school";
+import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 import {
   computeAverage,
-  findMark,
   isExtraCredit,
-  letterFor,
   markCodeFromComment,
   parseGradingSetup,
-  quickScoreCellValue,
   EXTRA_CREDIT_CATEGORY,
 } from "@/lib/grading";
 
@@ -88,10 +85,16 @@ function ClassDetailPage() {
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
-  const [quickIndex, setQuickIndex] = useState<number | null>(null);
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
-  const [gradebookSearch, setGradebookSearch] = useState("");
   const [gradebookCategory, setGradebookCategory] = useState("all");
+  const [gradebookDueFrom, setGradebookDueFrom] = useState("");
+  const [gradebookDueTo, setGradebookDueTo] = useState("");
+  const [gradebookAssignmentSort, setGradebookAssignmentSort] = useState<
+    "title" | "category" | "due_date" | "average"
+  >("due_date");
+  const [gradebookSortDirection, setGradebookSortDirection] = useState<"asc" | "desc">(
+    "asc",
+  );
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -151,24 +154,6 @@ function ClassDetailPage() {
       }, {}),
     [assignments],
   );
-  const visibleGradebookAssignments = useMemo(
-    () =>
-      assignments.filter(
-        (assignment) =>
-          gradebookCategory === "all" || assignment.category === gradebookCategory,
-      ),
-    [assignments, gradebookCategory],
-  );
-  const visibleGradebookRoster = useMemo(() => {
-    const needle = gradebookSearch.trim().toLocaleLowerCase();
-    if (!needle) return gradebookRoster;
-    return gradebookRoster.filter((row) => {
-      const student = row.students;
-      return [student?.first_name, student?.last_name, student?.student_number]
-        .filter(Boolean)
-        .some((value) => String(value).trim().toLocaleLowerCase().includes(needle));
-    });
-  }, [gradebookRoster, gradebookSearch]);
   const { data: grades = [] } = useQuery({
     queryKey: ["grades", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
@@ -185,45 +170,6 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
-  const cellValue = (studentId: string, assignmentId: string) => {
-    const g = gradeFor(studentId, assignmentId);
-    const mark = markCodeFromComment(g?.comment);
-    if (mark) return mark;
-    return g?.points_earned == null ? "" : String(g.points_earned);
-  };
-
-  const saveGrade = useMutation({
-    mutationFn: async (input: { studentId: string; assignmentId: string; value: string }) => {
-      const raw = input.value.trim();
-      const mark = findMark(raw ? raw.toUpperCase() : null, setup.marks);
-      let points: number | null = null;
-      let comment: string | null = null;
-
-      if (mark) {
-        comment = `MARK:${mark.code.toUpperCase()}`;
-      } else if (raw !== "") {
-        points = Number(raw);
-        if (Number.isNaN(points) || points < 0 || points > 10000) {
-          throw new Error("Enter a valid score or a special mark code");
-        }
-      }
-
-      const { error } = await supabase.from("grades").upsert(
-        {
-          assignment_id: input.assignmentId,
-          student_id: input.studentId,
-          points_earned: points,
-          comment,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "assignment_id,student_id" },
-      );
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["grades", classId] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   function studentAverage(studentId: string) {
     return computeAverage(
       assignments.map((a) => {
@@ -239,28 +185,71 @@ function ClassDetailPage() {
     );
   }
 
-  const activeQuick = quickIndex == null ? null : (setup.quickScores[quickIndex] ?? null);
-
-  async function fillColumn(
-    assignmentId: string,
-    pointsPossible: number,
-    onlyBlanks: boolean,
-  ) {
-    if (!activeQuick) return;
-    const value = quickScoreCellValue(activeQuick, pointsPossible);
-    const targets = roster.filter((r) => {
-      if (!onlyBlanks) return true;
-      return cellValue(r.student_id, assignmentId) === "";
+  const gradebookRows = useMemo(() => {
+    const collator = new Intl.Collator(undefined, {
+      sensitivity: "base",
+      numeric: true,
     });
-    if (targets.length === 0) {
-      toast.info("Nothing to fill in that column");
-      return;
-    }
-    for (const r of targets) {
-      await saveGrade.mutateAsync({ studentId: r.student_id, assignmentId, value });
-    }
-    toast.success(`${activeQuick.label} applied to ${targets.length} student(s)`);
-  }
+    const rows = assignments
+      .filter(
+        (assignment) =>
+          gradebookCategory === "all" || assignment.category === gradebookCategory,
+      )
+      .filter((assignment) => !gradebookDueFrom || (assignment.due_date ?? "") >= gradebookDueFrom)
+      .filter((assignment) => !gradebookDueTo || (assignment.due_date ?? "") <= gradebookDueTo)
+      .map((assignment) => {
+        const numericGrades = grades.filter(
+          (grade) =>
+            grade.assignment_id === assignment.id && grade.points_earned != null,
+        );
+        const possible = Number(assignment.points_possible);
+        const average =
+          numericGrades.length > 0 && possible > 0
+            ? (numericGrades.reduce(
+                (sum, grade) => sum + Number(grade.points_earned),
+                0,
+              ) /
+                (numericGrades.length * possible)) *
+              100
+            : null;
+        return { assignment, average, scoredCount: numericGrades.length };
+      });
+
+    rows.sort((left, right) => {
+      let result = 0;
+      if (gradebookAssignmentSort === "title") {
+        result = collator.compare(left.assignment.title.trim(), right.assignment.title.trim());
+      } else if (gradebookAssignmentSort === "category") {
+        result = collator.compare(
+          left.assignment.category.trim(),
+          right.assignment.category.trim(),
+        );
+      } else if (gradebookAssignmentSort === "average") {
+        if (left.average == null && right.average == null) result = 0;
+        else if (left.average == null) result = 1;
+        else if (right.average == null) result = -1;
+        else result = left.average - right.average;
+      } else {
+        if (!left.assignment.due_date && !right.assignment.due_date) result = 0;
+        else if (!left.assignment.due_date) result = 1;
+        else if (!right.assignment.due_date) result = -1;
+        else result = left.assignment.due_date.localeCompare(right.assignment.due_date);
+      }
+      if (result === 0) {
+        result = collator.compare(left.assignment.title.trim(), right.assignment.title.trim());
+      }
+      return gradebookSortDirection === "asc" ? result : -result;
+    });
+    return rows;
+  }, [
+    assignments,
+    grades,
+    gradebookAssignmentSort,
+    gradebookCategory,
+    gradebookDueFrom,
+    gradebookDueTo,
+    gradebookSortDirection,
+  ]);
 
   return (
     <AppShell
