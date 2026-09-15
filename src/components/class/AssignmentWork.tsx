@@ -40,12 +40,7 @@ import { RubricScorePanel } from "@/components/class/RubricScorePanel";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
-import {
-  DEFAULT_TIME_ZONE,
-  formatZoned,
-  isLateAt,
-  windowState,
-} from "@/lib/coursework-window";
+import { DEFAULT_TIME_ZONE, isLateAt } from "@/lib/coursework-window";
 import {
   findMark,
   markCodeFromComment,
@@ -108,8 +103,6 @@ type WorkAssignment = {
   description: string | null;
   submission_mode: string;
   rubric_id?: string | null;
-  available_from?: string | null;
-  closes_at?: string | null;
 };
 
 export function AssignmentWork({
@@ -448,8 +441,6 @@ function StaffCollectPanel({
     submission_mode: string;
     due_date?: string | null;
     rubric_id?: string | null;
-    available_from?: string | null;
-    closes_at?: string | null;
   };
   roster: Student[];
   classId: string;
