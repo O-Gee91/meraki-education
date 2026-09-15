@@ -478,13 +478,13 @@ function ClassDetailPage() {
                             const rowTone = rowIndex % 2 === 0 ? "bg-card" : "bg-secondary/20";
                             return (
                               <tr key={r.id} className="group">
-                                <td className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 font-semibold group-hover:bg-coursework-mist ${rowTone}`}>
+                                <td className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
                                   {studentLabel(r.students, useIds)}
                                 </td>
                                 {visibleGradebookAssignments.map((a) => {
                                   const shown = cellValue(r.student_id, a.id);
                                   return (
-                                    <td key={a.id} className={`border-b border-r border-border px-3 py-2 group-hover:bg-coursework-mist ${rowTone}`}>
+                                    <td key={a.id} className={`border-b border-r border-border px-3 py-2 group-hover:bg-secondary/60 ${rowTone}`}>
                                       {isStaff ? (
                                         <div className="flex items-center gap-1.5">
                                           {activeQuick && (
@@ -527,7 +527,7 @@ function ClassDetailPage() {
                                     </td>
                                   );
                                 })}
-                                <td className={`sticky right-0 z-10 border-b border-l border-border px-4 py-2.5 font-semibold group-hover:bg-coursework-mist ${rowTone}`}>
+                                <td className={`sticky right-0 z-10 border-b border-l border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
                                   {avg == null ? (
                                     <span className="text-muted-foreground">—</span>
                                   ) : (
