@@ -7,4 +7,4 @@
 - [x] Validate typechecking, preview build, visible controls, and saved choices.
 - [x] Redesign the Classes coursework list as a scalable Meraki assignment ledger.
 - [x] Add category filtering, assignment search, due-date ordering, and grading progress.
-- [ ] Verify the redesigned ledger on desktop and mobile without breaking assignment actions.
+- [x] Verify the redesigned ledger on desktop and mobile without breaking assignment actions.
