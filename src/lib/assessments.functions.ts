@@ -265,10 +265,14 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
         graded_at: pendingEssay ? null : new Date().toISOString(),
       })
       .eq("id", answer.submission_id)
-      .select("id, student_id, auto_score, assessment_id")
+      .select("id, student_id, auto_score, assessment_id, is_late, late_accepted")
       .single();
 
-    if (submission && !pendingEssay) {
+    // A late attempt only counts once the teacher has accepted it.
+    const countsTowardGrade =
+      submission != null && (!submission.is_late || submission.late_accepted);
+
+    if (submission && !pendingEssay && countsTowardGrade) {
       const { data: assessment } = await supabaseAdmin
         .from("assessments")
         .select("assignment_id")
@@ -289,6 +293,60 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
     }
 
     return { ok: true };
+  });
+
+/**
+ * Staff: decide whether a late attempt counts. Accepting pushes the score into
+ * the gradebook; withdrawing acceptance removes it again.
+ */
+export const setLateAcceptance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ submissionId: z.string().uuid(), accepted: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isStaff } = await context.supabase.rpc("is_staff");
+    if (!isStaff) throw new Error("Only teachers and admins can accept late work");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: submission, error } = await supabaseAdmin
+      .from("assessment_submissions")
+      .update({ late_accepted: data.accepted })
+      .eq("id", data.submissionId)
+      .select("id, student_id, auto_score, manual_score, status, assessment_id")
+      .single();
+    if (error) throw error;
+
+    const { data: assessment } = await supabaseAdmin
+      .from("assessments")
+      .select("assignment_id")
+      .eq("id", submission.assessment_id)
+      .maybeSingle();
+    if (!assessment?.assignment_id) return { ok: true, accepted: data.accepted };
+
+    if (data.accepted) {
+      if (submission.status === "graded") {
+        await supabaseAdmin.from("grades").upsert(
+          {
+            assignment_id: assessment.assignment_id,
+            student_id: submission.student_id,
+            points_earned: Number(submission.auto_score) + Number(submission.manual_score),
+            comment: "Late assessment accepted",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "assignment_id,student_id" },
+        );
+      }
+    } else {
+      await supabaseAdmin
+        .from("grades")
+        .delete()
+        .eq("assignment_id", assessment.assignment_id)
+        .eq("student_id", submission.student_id);
+    }
+
+    return { ok: true, accepted: data.accepted };
   });
 
 /** Staff: AI grammar + writing proof of an essay response. */
