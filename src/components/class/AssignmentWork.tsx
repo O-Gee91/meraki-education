@@ -313,11 +313,6 @@ function StudentWorkPanel({
         </Badge>
       )}
       {wasLate ? <Badge variant="destructive">Late</Badge> : null}
-      {state === "closed" ? (
-        <Badge variant="destructive" title={`Closed ${formatZoned(assignment.closes_at, timeZone)}`}>
-          Closed
-        </Badge>
-      ) : null}
       {scored ? (
         <span className="font-medium">
           Score {String(grade?.points_earned)}/{assignment.points_possible}
