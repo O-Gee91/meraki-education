@@ -50,17 +50,15 @@ import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 import { StudentImport } from "@/components/students/StudentImport";
 import { ClassLogins } from "@/components/students/ClassLogins";
 
-import { formatDate, gradeTone } from "@/lib/school";
+import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 import {
   computeAverage,
   findMark,
   isExtraCredit,
-  letterFor,
   markCodeFromComment,
   parseGradingSetup,
-  quickScoreCellValue,
   EXTRA_CREDIT_CATEGORY,
 } from "@/lib/grading";
 
@@ -88,10 +86,16 @@ function ClassDetailPage() {
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
-  const [quickIndex, setQuickIndex] = useState<number | null>(null);
-  const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
-  const [gradebookSearch, setGradebookSearch] = useState("");
+  const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookCategory, setGradebookCategory] = useState("all");
+  const [gradebookDueFrom, setGradebookDueFrom] = useState("");
+  const [gradebookDueTo, setGradebookDueTo] = useState("");
+  const [gradebookAssignmentSort, setGradebookAssignmentSort] = useState<
+    "title" | "category" | "due_date" | "average"
+  >("due_date");
+  const [gradebookSortDirection, setGradebookSortDirection] = useState<"asc" | "desc">(
+    "asc",
+  );
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -151,24 +155,6 @@ function ClassDetailPage() {
       }, {}),
     [assignments],
   );
-  const visibleGradebookAssignments = useMemo(
-    () =>
-      assignments.filter(
-        (assignment) =>
-          gradebookCategory === "all" || assignment.category === gradebookCategory,
-      ),
-    [assignments, gradebookCategory],
-  );
-  const visibleGradebookRoster = useMemo(() => {
-    const needle = gradebookSearch.trim().toLocaleLowerCase();
-    if (!needle) return gradebookRoster;
-    return gradebookRoster.filter((row) => {
-      const student = row.students;
-      return [student?.first_name, student?.last_name, student?.student_number]
-        .filter(Boolean)
-        .some((value) => String(value).trim().toLocaleLowerCase().includes(needle));
-    });
-  }, [gradebookRoster, gradebookSearch]);
   const { data: grades = [] } = useQuery({
     queryKey: ["grades", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
@@ -185,45 +171,6 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
-  const cellValue = (studentId: string, assignmentId: string) => {
-    const g = gradeFor(studentId, assignmentId);
-    const mark = markCodeFromComment(g?.comment);
-    if (mark) return mark;
-    return g?.points_earned == null ? "" : String(g.points_earned);
-  };
-
-  const saveGrade = useMutation({
-    mutationFn: async (input: { studentId: string; assignmentId: string; value: string }) => {
-      const raw = input.value.trim();
-      const mark = findMark(raw ? raw.toUpperCase() : null, setup.marks);
-      let points: number | null = null;
-      let comment: string | null = null;
-
-      if (mark) {
-        comment = `MARK:${mark.code.toUpperCase()}`;
-      } else if (raw !== "") {
-        points = Number(raw);
-        if (Number.isNaN(points) || points < 0 || points > 10000) {
-          throw new Error("Enter a valid score or a special mark code");
-        }
-      }
-
-      const { error } = await supabase.from("grades").upsert(
-        {
-          assignment_id: input.assignmentId,
-          student_id: input.studentId,
-          points_earned: points,
-          comment,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "assignment_id,student_id" },
-      );
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["grades", classId] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   function studentAverage(studentId: string) {
     return computeAverage(
       assignments.map((a) => {
@@ -239,28 +186,73 @@ function ClassDetailPage() {
     );
   }
 
-  const activeQuick = quickIndex == null ? null : (setup.quickScores[quickIndex] ?? null);
-
-  async function fillColumn(
-    assignmentId: string,
-    pointsPossible: number,
-    onlyBlanks: boolean,
-  ) {
-    if (!activeQuick) return;
-    const value = quickScoreCellValue(activeQuick, pointsPossible);
-    const targets = roster.filter((r) => {
-      if (!onlyBlanks) return true;
-      return cellValue(r.student_id, assignmentId) === "";
+  const gradebookRows = useMemo(() => {
+    const collator = new Intl.Collator(undefined, {
+      sensitivity: "base",
+      numeric: true,
     });
-    if (targets.length === 0) {
-      toast.info("Nothing to fill in that column");
-      return;
-    }
-    for (const r of targets) {
-      await saveGrade.mutateAsync({ studentId: r.student_id, assignmentId, value });
-    }
-    toast.success(`${activeQuick.label} applied to ${targets.length} student(s)`);
-  }
+    const rows = assignments
+      .filter(
+        (assignment) =>
+          gradebookCategory === "all" || assignment.category === gradebookCategory,
+      )
+      .filter((assignment) => !gradebookDueFrom || (assignment.due_date ?? "") >= gradebookDueFrom)
+      .filter((assignment) => !gradebookDueTo || (assignment.due_date ?? "") <= gradebookDueTo)
+      .map((assignment) => {
+        const possible = Number(assignment.points_possible);
+        const countedScores = grades
+          .filter((grade) => grade.assignment_id === assignment.id)
+          .flatMap((grade) => {
+            const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
+            if (mark?.behavior === "exclude") return [];
+            if (mark?.behavior === "zero") return [0];
+            if (mark?.behavior === "value") return [Number(mark.value ?? 0)];
+            if (grade.points_earned == null || possible <= 0) return [];
+            return [(Number(grade.points_earned) / possible) * 100];
+          });
+        const average =
+          countedScores.length > 0
+            ? countedScores.reduce((sum, percentage) => sum + percentage, 0) /
+              countedScores.length
+            : null;
+        return { assignment, average, scoredCount: countedScores.length };
+      });
+
+    rows.sort((left, right) => {
+      let result = 0;
+      if (gradebookAssignmentSort === "title") {
+        result = collator.compare(left.assignment.title.trim(), right.assignment.title.trim());
+      } else if (gradebookAssignmentSort === "category") {
+        result = collator.compare(
+          left.assignment.category.trim(),
+          right.assignment.category.trim(),
+        );
+      } else if (gradebookAssignmentSort === "average") {
+        if (left.average == null && right.average == null) result = 0;
+        else if (left.average == null) result = 1;
+        else if (right.average == null) result = -1;
+        else result = left.average - right.average;
+      } else {
+        if (!left.assignment.due_date && !right.assignment.due_date) result = 0;
+        else if (!left.assignment.due_date) result = 1;
+        else if (!right.assignment.due_date) result = -1;
+        else result = left.assignment.due_date.localeCompare(right.assignment.due_date);
+      }
+      if (result === 0) {
+        result = collator.compare(left.assignment.title.trim(), right.assignment.title.trim());
+      }
+      return gradebookSortDirection === "asc" ? result : -result;
+    });
+    return rows;
+  }, [
+    assignments,
+    grades,
+    gradebookAssignmentSort,
+    gradebookCategory,
+    gradebookDueFrom,
+    gradebookDueTo,
+    gradebookSortDirection,
+  ]);
 
   return (
     <AppShell
@@ -327,223 +319,119 @@ function ClassDetailPage() {
                   : "Your teacher will add assignments and scores here."}
               </p>
             ) : (
-              <div className="grid min-h-[30rem] lg:grid-cols-[13rem_minmax(0,1fr)]">
-                <aside className="hidden border-r border-border bg-secondary/35 p-3 lg:block">
-                  <p className="px-2 pb-2 text-xs font-semibold uppercase text-muted-foreground">
-                    Grade categories
-                  </p>
-                  <div className="space-y-1">
-                    <Button
-                      type="button"
-                      variant={gradebookCategory === "all" ? "default" : "ghost"}
-                      className="w-full justify-between"
-                      onClick={() => setGradebookCategory("all")}
-                    >
-                      <span>All assignments</span>
-                      <span className="text-xs opacity-70">{assignments.length}</span>
-                    </Button>
-                    {Object.entries(gradebookCategoryCounts)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([category, count]) => (
-                        <Button
-                          key={category}
-                          type="button"
-                          variant={gradebookCategory === category ? "default" : "ghost"}
-                          className="w-full justify-between"
-                          onClick={() => setGradebookCategory(category)}
-                        >
-                          <span className="truncate">{category}</span>
-                          <span className="text-xs opacity-70">{count}</span>
-                        </Button>
-                      ))}
+              <div>
+                <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
+                  <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold">Assignment overview</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {gradebookRows.length} of {assignments.length} assignments
+                      </p>
+                    </div>
+                    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-5">
+                      <div className="space-y-1">
+                        <Label htmlFor="gradebook-category" className="text-xs">Category</Label>
+                        <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
+                          <SelectTrigger id="gradebook-category" aria-label="Filter assignments by category">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All categories ({assignments.length})</SelectItem>
+                            {Object.entries(gradebookCategoryCounts)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([category, count]) => (
+                                <SelectItem key={category} value={category}>
+                                  {category} ({count})
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="gradebook-due-from" className="text-xs">Due from</Label>
+                        <Input id="gradebook-due-from" type="date" value={gradebookDueFrom} onChange={(event) => setGradebookDueFrom(event.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="gradebook-due-to" className="text-xs">Due through</Label>
+                        <Input id="gradebook-due-to" type="date" value={gradebookDueTo} onChange={(event) => setGradebookDueTo(event.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="gradebook-sort" className="text-xs">Sort by</Label>
+                        <Select value={gradebookAssignmentSort} onValueChange={(value) => setGradebookAssignmentSort(value as typeof gradebookAssignmentSort)}>
+                          <SelectTrigger id="gradebook-sort" aria-label="Sort assignments">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="due_date">Due date</SelectItem>
+                            <SelectItem value="title">Assignment name</SelectItem>
+                            <SelectItem value="category">Category</SelectItem>
+                            <SelectItem value="average">Class average</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="gradebook-direction" className="text-xs">Direction</Label>
+                        <Select value={gradebookSortDirection} onValueChange={(value) => setGradebookSortDirection(value as "asc" | "desc")}>
+                          <SelectTrigger id="gradebook-direction" aria-label="Sort direction">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="asc">Ascending</SelectItem>
+                            <SelectItem value="desc">Descending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
-                </aside>
+                </header>
 
-                <div className="min-w-0">
-                  <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-semibold">Gradebook ledger</h2>
-                        <p className="text-xs text-muted-foreground">
-                          {visibleGradebookRoster.length} of {roster.length} students · {visibleGradebookAssignments.length} of {assignments.length} assignments
-                        </p>
-                      </div>
-                      <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto">
-                        <div className="relative min-w-52 flex-1 xl:w-64">
-                          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            value={gradebookSearch}
-                            onChange={(event) => setGradebookSearch(event.target.value)}
-                            placeholder="Find a student"
-                            aria-label="Find a student in the gradebook"
-                            className="pl-9"
-                          />
-                        </div>
-                        {isStaff && (
-                          <StudentSortControl value={gradebookSort} onChange={setGradebookSort} />
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 lg:hidden">
-                      <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
-                        <SelectTrigger aria-label="Filter gradebook by category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All assignments ({assignments.length})</SelectItem>
-                          {Object.entries(gradebookCategoryCounts)
-                            .sort(([a], [b]) => a.localeCompare(b))
-                            .map(([category, count]) => (
-                              <SelectItem key={category} value={category}>
-                                {category} ({count})
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {isStaff && setup.quickScores.length > 0 && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                        <span className="text-xs font-semibold uppercase text-muted-foreground">
-                          Quick scores
-                        </span>
-                        {setup.quickScores.map((q, i) => (
-                          <Button
-                            key={`${q.label}-${i}`}
-                            size="sm"
-                            variant={quickIndex === i ? "default" : "outline"}
-                            onClick={() => setQuickIndex(quickIndex === i ? null : i)}
-                          >
-                            {q.label || "(unnamed)"}
-                          </Button>
-                        ))}
-                        <span className="text-xs text-muted-foreground xl:ml-auto">
-                          {activeQuick
-                            ? "Use the bolt on one score, or fill an assignment from its heading."
-                            : "Choose a quick score to enable one-click grading."}
-                        </span>
-                      </div>
-                    )}
-                  </header>
-
-                  {visibleGradebookRoster.length === 0 ? (
-                    <p className="p-8 text-center text-sm text-muted-foreground">
-                      No students match this search.
-                    </p>
-                  ) : (
-                    <div className="max-h-[70vh] overflow-auto">
-                      <table className="w-full min-w-max border-separate border-spacing-0 text-sm">
-                        <thead className="sticky top-0 z-20 text-left text-xs text-muted-foreground">
-                          <tr>
-                            <th className="sticky left-0 z-30 min-w-48 border-b border-r border-border bg-secondary px-4 py-3 font-semibold uppercase">
-                              {isStaff ? "Student" : "Name"}
-                            </th>
-                            {visibleGradebookAssignments.map((a) => {
-                              const scoredCount = grades.filter(
-                                (grade) => grade.assignment_id === a.id && grade.points_earned != null,
-                              ).length;
-                              const fullyScored = roster.length > 0 && scoredCount === roster.length;
-                              return (
-                                <th key={a.id} className="relative min-w-36 border-b border-r border-border bg-secondary px-3 py-3 align-top font-medium">
-                                  <span
-                                    aria-hidden="true"
-                                    className={`absolute inset-x-3 top-0 h-1 rounded-b ${fullyScored ? "bg-success" : scoredCount > 0 ? "bg-coursework-gold" : "bg-coursework-teal"}`}
-                                  />
-                                  <div className="max-w-40 truncate font-semibold text-foreground" title={a.title}>
-                                    {a.title}
-                                  </div>
-                                  <div className="mt-0.5 text-[11px] normal-case text-muted-foreground">
-                                    {a.category} · {a.points_possible} pts · {scoredCount}/{roster.length}
-                                  </div>
-                                  {isStaff && activeQuick && (
-                                    <div className="mt-2 flex gap-1">
-                                      <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => fillColumn(a.id, Number(a.points_possible), true)}>
-                                        Fill blanks
-                                      </Button>
-                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" onClick={() => fillColumn(a.id, Number(a.points_possible), false)}>
-                                        Fill all
-                                      </Button>
-                                    </div>
-                                  )}
-                                </th>
-                              );
-                            })}
-                            <th className="sticky right-0 z-30 min-w-28 border-b border-l border-border bg-secondary px-4 py-3 font-semibold uppercase">
-                              {isStaff ? "Average" : "My average"}
-                            </th>
+                {gradebookRows.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-muted-foreground">
+                    No assignments match these filters.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[42rem] text-sm">
+                      <thead className="bg-secondary text-left text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Assignment name</th>
+                          <th className="px-4 py-3 font-semibold">Category</th>
+                          <th className="px-4 py-3 font-semibold">Due date</th>
+                          <th className="px-4 py-3 text-right font-semibold">Class average</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gradebookRows.map(({ assignment, average, scoredCount }, rowIndex) => (
+                          <tr key={assignment.id} className={rowIndex % 2 === 0 ? "bg-card" : "bg-secondary/20"}>
+                            <td className="border-t border-border px-4 py-4 font-semibold text-foreground">
+                              {assignment.title}
+                            </td>
+                            <td className="border-t border-border px-4 py-4">
+                              <Badge variant="secondary">{assignment.category}</Badge>
+                            </td>
+                            <td className="border-t border-border px-4 py-4 text-muted-foreground">
+                              {assignment.due_date ? formatDate(assignment.due_date) : "No due date"}
+                            </td>
+                            <td className="border-t border-border px-4 py-4 text-right">
+                              {average == null ? (
+                                <span className="text-muted-foreground">Not graded</span>
+                              ) : (
+                                <div>
+                                  <span className="text-base font-semibold tabular-nums text-foreground">
+                                    {average.toFixed(1)}%
+                                  </span>
+                                  <p className="text-xs text-muted-foreground">
+                                    {scoredCount} {scoredCount === 1 ? "score" : "scores"}
+                                  </p>
+                                </div>
+                              )}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {visibleGradebookRoster.map((r, rowIndex) => {
-                            const avg = studentAverage(r.student_id);
-                            const rowTone = rowIndex % 2 === 0 ? "bg-card" : "bg-secondary/20";
-                            return (
-                              <tr key={r.id} className="group">
-                                <td className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
-                                  {studentLabel(r.students, useIds)}
-                                </td>
-                                {visibleGradebookAssignments.map((a) => {
-                                  const shown = cellValue(r.student_id, a.id);
-                                  return (
-                                    <td key={a.id} className={`border-b border-r border-border px-3 py-2 group-hover:bg-secondary/60 ${rowTone}`}>
-                                      {isStaff ? (
-                                        <div className="flex items-center gap-1.5">
-                                          {activeQuick && (
-                                            <Button
-                                              type="button"
-                                              size="icon"
-                                              variant="outline"
-                                              title={`Apply ${activeQuick.label}`}
-                                              aria-label={`Apply ${activeQuick.label}`}
-                                              className="size-8 shrink-0 text-primary"
-                                              onClick={() =>
-                                                saveGrade.mutate({
-                                                  studentId: r.student_id,
-                                                  assignmentId: a.id,
-                                                  value: quickScoreCellValue(activeQuick, Number(a.points_possible)),
-                                                })
-                                              }
-                                            >
-                                              ⚡
-                                            </Button>
-                                          )}
-                                          <Input
-                                            key={shown}
-                                            aria-label={`${a.title} score for ${studentLabel(r.students, false)}`}
-                                            className="h-8 w-20 bg-card text-center font-medium"
-                                            defaultValue={shown}
-                                            onBlur={(e) => {
-                                              const value = e.target.value;
-                                              if (value.trim() === shown) return;
-                                              saveGrade.mutate({ studentId: r.student_id, assignmentId: a.id, value });
-                                            }}
-                                          />
-                                        </div>
-                                      ) : (
-                                        <span className="font-medium">
-                                          {shown === "" ? "—" : shown}
-                                          {/^\d/.test(shown) ? `/${a.points_possible}` : ""}
-                                        </span>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                                <td className={`sticky right-0 z-10 border-b border-l border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
-                                  {avg == null ? (
-                                    <span className="text-muted-foreground">—</span>
-                                  ) : (
-                                    <span className={gradeTone(avg)}>
-                                      {avg.toFixed(1)}% {letterFor(avg, setup.scale)}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </section>

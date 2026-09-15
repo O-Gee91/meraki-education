@@ -10,3 +10,6 @@
 - [x] Verify the redesigned ledger on desktop and mobile without breaking assignment actions.
 - [x] Apply the compact Meraki ledger design to the class Gradebook.
 - [x] Verify Gradebook filtering, sorting, score editing, and responsive scrolling.
+- [x] Replace the Gradebook score grid with a simplified assignment list.
+- [x] Add category and due-date filters plus assignment-level sorting.
+- [x] Calculate and display class averages without exposing individual scores.
