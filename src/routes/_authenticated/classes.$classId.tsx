@@ -660,8 +660,6 @@ function AssignmentsTab({
         classId,
         ...(applyToSubject ? siblingClasses.map((c) => c.id) : []),
       ];
-      if (form.availableFrom && form.closesAt && form.closesAt <= form.availableFrom)
-        throw new Error("The end time must be after the start time");
       const base = {
         title: form.title.trim().slice(0, 140),
         category: form.category,
@@ -669,9 +667,8 @@ function AssignmentsTab({
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
         submission_mode: form.mode,
-        available_from: zonedInputToIso(form.availableFrom, timeZone),
-        closes_at: zonedInputToIso(form.closesAt, timeZone),
       };
+
       const { error } = await supabase.from("assignments").insert(
         targets.map((cid) => ({
           ...base,
