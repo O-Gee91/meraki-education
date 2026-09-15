@@ -15,6 +15,12 @@ import { getAssessmentPaper, submitAssessment } from "@/lib/assessments.function
 import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import {
+  DEFAULT_TIME_ZONE,
+  formatZoned,
+  windowState,
+  zoneLabel,
+} from "@/lib/coursework-window";
 
 function formatTime(ms: number) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
