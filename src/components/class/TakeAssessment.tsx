@@ -102,7 +102,9 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
       // requested, multiple (or no) rows returned" mid-quiz.
       const { data: rows, error: err } = await supabase
         .from("assessment_submissions")
-        .select("id, status, auto_score, manual_score, total_points, submitted_at")
+        .select(
+          "id, status, auto_score, manual_score, total_points, submitted_at, is_late, late_accepted",
+        )
         .eq("assessment_id", assessmentId)
         .order("submitted_at", { ascending: false })
         .limit(1);
