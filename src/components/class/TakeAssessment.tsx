@@ -153,22 +153,22 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const state = windowState(availableFrom, closesAt);
 
   // When the end time arrives mid-paper, hand the work in exactly as it stands.
+  // A paper that was already closed before the student started is a deliberate
+  // late attempt: leave it alone so they can actually write something.
   useEffect(() => {
     if (!hasStarted || !closesAt || mySubmission || submit.isPending) return;
     const end = Date.parse(closesAt);
     if (Number.isNaN(end)) return;
-    const fire = () => {
+    const remainingMs = end - Date.now();
+    if (remainingMs <= 0) return;
+    const timer = setTimeout(() => {
       toast.warning("The assessment has closed — your work is being handed in as it is.");
       submit.mutate();
-    };
-    if (Date.now() >= end) {
-      fire();
-      return;
-    }
-    const timer = setTimeout(fire, end - Date.now());
+    }, remainingMs);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasStarted, closesAt, mySubmission, submit.isPending]);
+
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-destructive">{(error as Error).message}</p>;
