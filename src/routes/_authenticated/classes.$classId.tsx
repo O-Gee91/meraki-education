@@ -146,7 +146,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, available_from, closes_at",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
