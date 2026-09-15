@@ -101,6 +101,16 @@ export function PulseDashboard({
   const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const [sortMode, setSortMode] = useStudentSort(`pulse-${classId}`);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
+  }, [classId]);
+  const toggleOpen = () => {
+    setOpen((v) => {
+      window.localStorage.setItem(`meraki.pulse-open.${classId}`, v ? "0" : "1");
+      return !v;
+    });
+  };
   const today = new Date();
   const todayKey = today.toISOString().slice(0, 10);
 
