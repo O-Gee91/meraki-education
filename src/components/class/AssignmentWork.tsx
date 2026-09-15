@@ -336,13 +336,8 @@ function StudentWorkPanel({
       >
         <DialogTrigger asChild>
           <Button size="sm" variant={mine ? "outline" : "default"} className="h-7">
-            {turnedIn
-              ? "View / edit work"
-              : state === "closed"
-                ? "Hand in late"
-                : mine
-                  ? "Keep working"
-                  : "Start assignment"}
+            {turnedIn ? "View / edit work" : mine ? "Keep working" : "Start assignment"}
+
           </Button>
         </DialogTrigger>
         <DialogContent>
