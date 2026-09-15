@@ -90,6 +90,8 @@ function ClassDetailPage() {
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [quickIndex, setQuickIndex] = useState<number | null>(null);
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
+  const [gradebookSearch, setGradebookSearch] = useState("");
+  const [gradebookCategory, setGradebookCategory] = useState("all");
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
@@ -141,6 +143,32 @@ function ClassDetailPage() {
   });
 
   const assignmentIds = assignments.map((a) => a.id);
+  const gradebookCategoryCounts = useMemo(
+    () =>
+      assignments.reduce<Record<string, number>>((counts, assignment) => {
+        counts[assignment.category] = (counts[assignment.category] ?? 0) + 1;
+        return counts;
+      }, {}),
+    [assignments],
+  );
+  const visibleGradebookAssignments = useMemo(
+    () =>
+      assignments.filter(
+        (assignment) =>
+          gradebookCategory === "all" || assignment.category === gradebookCategory,
+      ),
+    [assignments, gradebookCategory],
+  );
+  const visibleGradebookRoster = useMemo(() => {
+    const needle = gradebookSearch.trim().toLocaleLowerCase();
+    if (!needle) return gradebookRoster;
+    return gradebookRoster.filter((row) => {
+      const student = row.students;
+      return [student?.first_name, student?.last_name, student?.student_number]
+        .filter(Boolean)
+        .some((value) => String(value).trim().toLocaleLowerCase().includes(needle));
+    });
+  }, [gradebookRoster, gradebookSearch]);
   const { data: grades = [] } = useQuery({
     queryKey: ["grades", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
@@ -291,35 +319,7 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
-          {isStaff && roster.length > 0 && (
-            <div className="mt-4 flex justify-end">
-              <StudentSortControl value={gradebookSort} onChange={setGradebookSort} />
-            </div>
-          )}
-          {isStaff && setup.quickScores.length > 0 && (
-            <div className="panel mt-4 flex flex-wrap items-center gap-2 p-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Quick scores
-              </span>
-              {setup.quickScores.map((q, i) => (
-                <Button
-                  key={`${q.label}-${i}`}
-                  size="sm"
-                  variant={quickIndex === i ? "default" : "outline"}
-                  onClick={() => setQuickIndex(quickIndex === i ? null : i)}
-                >
-                  {q.label || "(unnamed)"}
-                </Button>
-              ))}
-              <span className="ml-auto text-xs text-muted-foreground">
-                {activeQuick
-                  ? "Click a cell's ⚡ to apply, or fill a whole column from its header."
-                  : "Pick one to grade with a single click. Edit them in Grading setup."}
-              </span>
-            </div>
-          )}
-          <div className="panel mt-4 overflow-x-auto p-0">
-
+          <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
                 {isStaff
@@ -327,117 +327,226 @@ function ClassDetailPage() {
                   : "Your teacher will add assignments and scores here."}
               </p>
             ) : (
-              <table className="w-full min-w-max text-sm">
-                <thead className="border-b border-border bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="sticky left-0 bg-secondary/40 px-4 py-3">
-                      {isStaff ? "Student" : "Name"}
-                    </th>
-                    {assignments.map((a) => (
-                      <th key={a.id} className="px-3 py-3 font-medium">
-                        <div className="max-w-32 truncate" title={a.title}>
-                          {a.title}
+              <div className="grid min-h-[30rem] lg:grid-cols-[13rem_minmax(0,1fr)]">
+                <aside className="hidden border-r border-border bg-secondary/35 p-3 lg:block">
+                  <p className="px-2 pb-2 text-xs font-semibold uppercase text-muted-foreground">
+                    Grade categories
+                  </p>
+                  <div className="space-y-1">
+                    <Button
+                      type="button"
+                      variant={gradebookCategory === "all" ? "default" : "ghost"}
+                      className="w-full justify-between"
+                      onClick={() => setGradebookCategory("all")}
+                    >
+                      <span>All assignments</span>
+                      <span className="text-xs opacity-70">{assignments.length}</span>
+                    </Button>
+                    {Object.entries(gradebookCategoryCounts)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([category, count]) => (
+                        <Button
+                          key={category}
+                          type="button"
+                          variant={gradebookCategory === category ? "default" : "ghost"}
+                          className="w-full justify-between"
+                          onClick={() => setGradebookCategory(category)}
+                        >
+                          <span className="truncate">{category}</span>
+                          <span className="text-xs opacity-70">{count}</span>
+                        </Button>
+                      ))}
+                  </div>
+                </aside>
+
+                <div className="min-w-0">
+                  <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-semibold">Gradebook ledger</h2>
+                        <p className="text-xs text-muted-foreground">
+                          {visibleGradebookRoster.length} of {roster.length} students · {visibleGradebookAssignments.length} of {assignments.length} assignments
+                        </p>
+                      </div>
+                      <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto">
+                        <div className="relative min-w-52 flex-1 xl:w-64">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={gradebookSearch}
+                            onChange={(event) => setGradebookSearch(event.target.value)}
+                            placeholder="Find a student"
+                            aria-label="Find a student in the gradebook"
+                            className="pl-9"
+                          />
                         </div>
-                        <div className="text-[10px] normal-case text-muted-foreground">
-                          {a.category} · {a.points_possible} pts
-                        </div>
-                        {isStaff && activeQuick && (
-                          <div className="mt-1 flex gap-1">
-                            <button
-                              type="button"
-                              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium normal-case text-primary hover:bg-primary/20"
-                              onClick={() => fillColumn(a.id, Number(a.points_possible), true)}
-                            >
-                              Fill blanks
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium normal-case text-foreground hover:bg-secondary/70"
-                              onClick={() => fillColumn(a.id, Number(a.points_possible), false)}
-                            >
-                              Fill all
-                            </button>
-                          </div>
+                        {isStaff && (
+                          <StudentSortControl value={gradebookSort} onChange={setGradebookSort} />
                         )}
-                      </th>
-                    ))}
-                    <th className="px-4 py-3">{isStaff ? "Average" : "My average"}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {gradebookRoster.map((r) => {
-                    const avg = studentAverage(r.student_id);
-                    return (
-                      <tr key={r.id}>
-                        <td className="sticky left-0 bg-card px-4 py-2 font-medium">
-                          {studentLabel(r.students, useIds)}
-                        </td>
-                        {assignments.map((a) => {
-                          const shown = cellValue(r.student_id, a.id);
-                          return (
-                            <td key={a.id} className="px-3 py-2">
-                              {isStaff ? (
-                                <div className="flex items-center gap-1">
-                                {activeQuick && (
-                                  <button
-                                    type="button"
-                                    title={`Apply ${activeQuick.label}`}
-                                    aria-label={`Apply ${activeQuick.label}`}
-                                    className="rounded border border-border px-1 text-xs text-primary hover:bg-primary/10"
-                                    onClick={() =>
-                                      saveGrade.mutate({
-                                        studentId: r.student_id,
-                                        assignmentId: a.id,
-                                        value: quickScoreCellValue(
-                                          activeQuick,
-                                          Number(a.points_possible),
-                                        ),
-                                      })
-                                    }
-                                  >
-                                    ⚡
-                                  </button>
-                                )}
-                                <Input
-                                  key={shown}
-                                  className="h-8 w-20"
-                                  defaultValue={shown}
-                                  onBlur={(e) => {
-                                    const value = e.target.value;
-                                    if (value.trim() === shown) return;
-                                    saveGrade.mutate({
-                                      studentId: r.student_id,
-                                      assignmentId: a.id,
-                                      value,
-                                    });
-                                  }}
-                                />
-                                </div>
-                              ) : (
-                                <span>
-                                  {shown === "" ? "—" : shown}
-                                  {/^\d/.test(shown) ? `/${a.points_possible}` : ""}
-                                </span>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 py-2 font-semibold">
-                          {avg == null ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <span className={gradeTone(avg)}>
-                              {avg.toFixed(1)}% {letterFor(avg, setup.scale)}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div className="mt-3 lg:hidden">
+                      <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
+                        <SelectTrigger aria-label="Filter gradebook by category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All assignments ({assignments.length})</SelectItem>
+                          {Object.entries(gradebookCategoryCounts)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([category, count]) => (
+                              <SelectItem key={category} value={category}>
+                                {category} ({count})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {isStaff && setup.quickScores.length > 0 && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground">
+                          Quick scores
+                        </span>
+                        {setup.quickScores.map((q, i) => (
+                          <Button
+                            key={`${q.label}-${i}`}
+                            size="sm"
+                            variant={quickIndex === i ? "default" : "outline"}
+                            onClick={() => setQuickIndex(quickIndex === i ? null : i)}
+                          >
+                            {q.label || "(unnamed)"}
+                          </Button>
+                        ))}
+                        <span className="text-xs text-muted-foreground xl:ml-auto">
+                          {activeQuick
+                            ? "Use the bolt on one score, or fill an assignment from its heading."
+                            : "Choose a quick score to enable one-click grading."}
+                        </span>
+                      </div>
+                    )}
+                  </header>
+
+                  {visibleGradebookRoster.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-muted-foreground">
+                      No students match this search.
+                    </p>
+                  ) : (
+                    <div className="max-h-[70vh] overflow-auto">
+                      <table className="w-full min-w-max border-separate border-spacing-0 text-sm">
+                        <thead className="sticky top-0 z-20 text-left text-xs text-muted-foreground">
+                          <tr>
+                            <th className="sticky left-0 z-30 min-w-48 border-b border-r border-border bg-secondary px-4 py-3 font-semibold uppercase">
+                              {isStaff ? "Student" : "Name"}
+                            </th>
+                            {visibleGradebookAssignments.map((a) => {
+                              const scoredCount = grades.filter(
+                                (grade) => grade.assignment_id === a.id && grade.points_earned != null,
+                              ).length;
+                              const fullyScored = roster.length > 0 && scoredCount === roster.length;
+                              return (
+                                <th key={a.id} className="relative min-w-36 border-b border-r border-border bg-secondary px-3 py-3 align-top font-medium">
+                                  <span
+                                    aria-hidden="true"
+                                    className={`absolute inset-x-3 top-0 h-1 rounded-b ${fullyScored ? "bg-success" : scoredCount > 0 ? "bg-coursework-gold" : "bg-coursework-teal"}`}
+                                  />
+                                  <div className="max-w-40 truncate font-semibold text-foreground" title={a.title}>
+                                    {a.title}
+                                  </div>
+                                  <div className="mt-0.5 text-[11px] normal-case text-muted-foreground">
+                                    {a.category} · {a.points_possible} pts · {scoredCount}/{roster.length}
+                                  </div>
+                                  {isStaff && activeQuick && (
+                                    <div className="mt-2 flex gap-1">
+                                      <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => fillColumn(a.id, Number(a.points_possible), true)}>
+                                        Fill blanks
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" onClick={() => fillColumn(a.id, Number(a.points_possible), false)}>
+                                        Fill all
+                                      </Button>
+                                    </div>
+                                  )}
+                                </th>
+                              );
+                            })}
+                            <th className="sticky right-0 z-30 min-w-28 border-b border-l border-border bg-secondary px-4 py-3 font-semibold uppercase">
+                              {isStaff ? "Average" : "My average"}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleGradebookRoster.map((r, rowIndex) => {
+                            const avg = studentAverage(r.student_id);
+                            const rowTone = rowIndex % 2 === 0 ? "bg-card" : "bg-secondary/20";
+                            return (
+                              <tr key={r.id} className="group">
+                                <td className={`sticky left-0 z-10 border-b border-r border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
+                                  {studentLabel(r.students, useIds)}
+                                </td>
+                                {visibleGradebookAssignments.map((a) => {
+                                  const shown = cellValue(r.student_id, a.id);
+                                  return (
+                                    <td key={a.id} className={`border-b border-r border-border px-3 py-2 group-hover:bg-secondary/60 ${rowTone}`}>
+                                      {isStaff ? (
+                                        <div className="flex items-center gap-1.5">
+                                          {activeQuick && (
+                                            <Button
+                                              type="button"
+                                              size="icon"
+                                              variant="outline"
+                                              title={`Apply ${activeQuick.label}`}
+                                              aria-label={`Apply ${activeQuick.label}`}
+                                              className="size-8 shrink-0 text-primary"
+                                              onClick={() =>
+                                                saveGrade.mutate({
+                                                  studentId: r.student_id,
+                                                  assignmentId: a.id,
+                                                  value: quickScoreCellValue(activeQuick, Number(a.points_possible)),
+                                                })
+                                              }
+                                            >
+                                              ⚡
+                                            </Button>
+                                          )}
+                                          <Input
+                                            key={shown}
+                                            aria-label={`${a.title} score for ${studentLabel(r.students, false)}`}
+                                            className="h-8 w-20 bg-card text-center font-medium"
+                                            defaultValue={shown}
+                                            onBlur={(e) => {
+                                              const value = e.target.value;
+                                              if (value.trim() === shown) return;
+                                              saveGrade.mutate({ studentId: r.student_id, assignmentId: a.id, value });
+                                            }}
+                                          />
+                                        </div>
+                                      ) : (
+                                        <span className="font-medium">
+                                          {shown === "" ? "—" : shown}
+                                          {/^\d/.test(shown) ? `/${a.points_possible}` : ""}
+                                        </span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                                <td className={`sticky right-0 z-10 border-b border-l border-border px-4 py-2.5 font-semibold group-hover:bg-secondary/60 ${rowTone}`}>
+                                  {avg == null ? (
+                                    <span className="text-muted-foreground">—</span>
+                                  ) : (
+                                    <span className={gradeTone(avg)}>
+                                      {avg.toFixed(1)}% {letterFor(avg, setup.scale)}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
-          </div>
+          </section>
         </TabsContent>
 
         <TabsContent value="coursework">
