@@ -1048,8 +1048,6 @@ function EditAssignment({
     description: assignment.description ?? "",
     mode: assignment.submission_mode,
     rubricId: assignment.rubric_id ?? "",
-    availableFrom: isoToZonedInput(assignment.available_from, timeZone),
-    closesAt: isoToZonedInput(assignment.closes_at, timeZone),
   });
   const [form, setForm] = useState(initial);
 
