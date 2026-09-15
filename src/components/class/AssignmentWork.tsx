@@ -41,6 +41,12 @@ import { StudentSortControl, useStudentSort } from "@/components/students/Studen
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import {
+  DEFAULT_TIME_ZONE,
+  formatZoned,
+  isLateAt,
+  windowState,
+} from "@/lib/coursework-window";
+import {
   findMark,
   markCodeFromComment,
   parseGradingSetup,
@@ -258,6 +264,28 @@ function StudentWorkPanel({
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
+  // Availability window. Before the start time nothing is shown; after the end
+  // time work can still be handed in, but it is flagged late.
+  const state = windowState(assignment.available_from, assignment.closes_at);
+  const wasLate =
+    turnedIn &&
+    isLateAt(
+      Date.parse(mine!.submitted_at),
+      assignment.closes_at,
+      assignment.due_date,
+      timeZone,
+    );
+
+  if (state === "not_yet") {
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="outline">Not yet available</Badge>
+        <span className="text-muted-foreground">
+          Opens {formatZoned(assignment.available_from, timeZone)}
+        </span>
+      </div>
+    );
+  }
 
   if (assignment.submission_mode !== "online") {
     return (
@@ -426,6 +454,7 @@ function StaffCollectPanel({
   assignment,
   roster,
   classId,
+  timeZone,
 }: {
   assignment: {
     id: string;
@@ -434,9 +463,12 @@ function StaffCollectPanel({
     submission_mode: string;
     due_date?: string | null;
     rubric_id?: string | null;
+    available_from?: string | null;
+    closes_at?: string | null;
   };
   roster: Student[];
   classId: string;
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
