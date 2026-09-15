@@ -188,6 +188,26 @@ export function AssessmentGrading({
                           ) : (
                             <Badge>Graded</Badge>
                           )}
+                          {s.is_late ? (
+                            <>
+                              <Badge variant={s.late_accepted ? "secondary" : "destructive"}>
+                                {s.late_accepted ? "Late — counted" : "Late — not counted"}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={lateDecision.isPending}
+                                onClick={() =>
+                                  lateDecision.mutate({
+                                    submissionId: s.id,
+                                    accepted: !s.late_accepted,
+                                  })
+                                }
+                              >
+                                {s.late_accepted ? "Don't count" : "Count this"}
+                              </Button>
+                            </>
+                          ) : null}
                           <Button
                             size="sm"
                             variant="outline"
