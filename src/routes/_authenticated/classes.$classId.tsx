@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -444,6 +445,7 @@ function ClassDetailPage() {
             classId={classId}
             isStaff={isStaff}
             assignments={assignments}
+            grades={grades}
             roster={gradebookRoster}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
@@ -540,6 +542,7 @@ function AssignmentsTab({
   classId,
   isStaff,
   assignments,
+  grades,
   roster,
   categories,
   gradeLevel,
@@ -548,6 +551,11 @@ function AssignmentsTab({
   classId: string;
   isStaff: boolean;
   assignments: AssignmentRow[];
+  grades: Array<{
+    assignment_id: string;
+    student_id: string;
+    points_earned: number | null;
+  }>;
   roster: RosterRow[];
   categories: string[];
   gradeLevel?: number | null;
@@ -555,6 +563,8 @@ function AssignmentsTab({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [assignmentSearch, setAssignmentSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const draftKey = `new-assignment:${classId}`;
   const blank = {
     title: "",
@@ -595,6 +605,33 @@ function AssignmentsTab({
     .map((r) => r.students)
     .filter((s): s is NonNullable<typeof s> => !!s)
     .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }));
+
+  const categoryCounts = useMemo(
+    () =>
+      assignments.reduce<Record<string, number>>((counts, assignment) => {
+        counts[assignment.category] = (counts[assignment.category] ?? 0) + 1;
+        return counts;
+      }, {}),
+    [assignments],
+  );
+
+  const visibleAssignments = useMemo(() => {
+    const needle = assignmentSearch.trim().toLocaleLowerCase();
+    return assignments
+      .filter((assignment) => categoryFilter === "all" || assignment.category === categoryFilter)
+      .filter(
+        (assignment) =>
+          !needle ||
+          assignment.title.toLocaleLowerCase().includes(needle) ||
+          assignment.category.toLocaleLowerCase().includes(needle),
+      )
+      .sort((a, b) => {
+        if (!a.due_date && !b.due_date) return a.title.localeCompare(b.title);
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return b.due_date.localeCompare(a.due_date) || a.title.localeCompare(b.title);
+      });
+  }, [assignmentSearch, assignments, categoryFilter]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -779,64 +816,172 @@ function AssignmentsTab({
         </Dialog>
       )}
 
-      <div className="panel mt-4 divide-y divide-border">
+      <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
         {assignments.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No assignments yet.</p>
         ) : (
-          assignments.map((a) => (
-            <div key={a.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-              <div className="min-w-0">
-                <p className="font-medium">{a.title}</p>
-                {a.description ? (
-                  <p className="mt-1 max-w-xl text-sm text-muted-foreground">{a.description}</p>
-                ) : null}
-                <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
-                <AssignmentWork
-                  assignment={a}
-                  classId={classId}
-                  isStaff={isStaff}
-                  roster={students}
-                />
+          <div className="grid min-h-[28rem] lg:grid-cols-[13rem_minmax(0,1fr)]">
+            <aside className="hidden border-r border-border bg-secondary/35 p-3 lg:block">
+              <p className="px-2 pb-2 text-xs font-semibold uppercase text-muted-foreground">
+                Categories
+              </p>
+              <div className="space-y-1">
+                <Button
+                  type="button"
+                  variant={categoryFilter === "all" ? "default" : "ghost"}
+                  className="w-full justify-between"
+                  onClick={() => setCategoryFilter("all")}
+                >
+                  <span>All coursework</span>
+                  <span className="text-xs opacity-70">{assignments.length}</span>
+                </Button>
+                {Object.entries(categoryCounts)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([category, count]) => (
+                    <Button
+                      key={category}
+                      type="button"
+                      variant={categoryFilter === category ? "default" : "ghost"}
+                      className="w-full justify-between"
+                      onClick={() => setCategoryFilter(category)}
+                    >
+                      <span className="truncate">{category}</span>
+                      <span className="text-xs opacity-70">{count}</span>
+                    </Button>
+                  ))}
               </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
-                  {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
-                </Badge>
-                <span>{a.points_possible} pts</span>
-                <span>Due {formatDate(a.due_date)}</span>
-                {isStaff && (
-                  <>
-                    <EditAssignment assignment={a} classId={classId} categories={categories} />
-                    <ShareResourceButton
+            </aside>
 
-                      kind="assignment"
-                      id={a.id}
-                      title={a.title}
-                      defaultGrade={gradeLevel ?? null}
+            <div className="min-w-0">
+              <header className="sticky top-0 z-10 border-b border-border bg-card/95 p-4 backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">Course assignments</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {visibleAssignments.length} of {assignments.length} shown · newest due dates first
+                    </p>
+                  </div>
+                  <div className="relative w-full sm:w-72">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={assignmentSearch}
+                      onChange={(event) => setAssignmentSearch(event.target.value)}
+                      placeholder="Find an assignment"
+                      aria-label="Find an assignment"
+                      className="pl-9"
                     />
-                    <CopyToClassesButton
-                      kind="assignment"
-                      id={a.id}
-                      title={a.title}
-                      classId={classId}
-                    />
+                  </div>
+                </div>
+                <div className="mt-3 lg:hidden">
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger aria-label="Filter assignments by category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All coursework ({assignments.length})</SelectItem>
+                      {Object.entries(categoryCounts)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([category, count]) => (
+                          <SelectItem key={category} value={category}>
+                            {category} ({count})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </header>
 
-                    <ConfirmDeleteButton
-                      title={`Delete "${a.title}"?`}
-                      description="This removes the assignment along with its scores, submissions and linked standards."
-                      onConfirm={() => removeAssignment.mutate(a.id)}
-                      disabled={removeAssignment.isPending}
-                    />
-                  </>
+              <div className="max-h-[70vh] space-y-2 overflow-y-auto bg-secondary/15 p-3 sm:p-4">
+                {visibleAssignments.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-muted-foreground">
+                    No assignments match this search.
+                  </p>
+                ) : (
+                  visibleAssignments.map((a) => {
+                    const scoredCount = grades.filter(
+                      (grade) => grade.assignment_id === a.id && grade.points_earned != null,
+                    ).length;
+                    const fullyScored = roster.length > 0 && scoredCount === roster.length;
+                    const progressTone = fullyScored
+                      ? "bg-success"
+                      : scoredCount > 0
+                        ? "bg-coursework-gold"
+                        : "bg-coursework-teal";
+                    return (
+                      <article
+                        key={a.id}
+                        className="group relative rounded-lg border border-border bg-card p-4 transition-[border-color,box-shadow] hover:border-coursework-teal hover:shadow-[var(--shadow-panel)]"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`absolute inset-y-4 left-0 w-1 rounded-r ${progressTone}`}
+                        />
+                        <div className="flex flex-col gap-3 pl-2 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
+                                {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
+                              </Badge>
+                              <span>Due {formatDate(a.due_date)}</span>
+                              <span>·</span>
+                              <span>{a.points_possible} points</span>
+                            </div>
+                            <h3 className="text-base font-semibold text-foreground">{a.title}</h3>
+                            {a.description ? (
+                              <p className="mt-1 line-clamp-2 max-w-3xl text-sm text-muted-foreground">
+                                {a.description}
+                              </p>
+                            ) : null}
+                            <div className="mt-2">
+                              <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
+                              <AssignmentWork
+                                assignment={a}
+                                classId={classId}
+                                isStaff={isStaff}
+                                roster={students}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-72 xl:justify-end">
+                            {isStaff ? (
+                              <Badge variant={fullyScored ? "default" : "outline"}>
+                                {scoredCount}/{roster.length} scored
+                              </Badge>
+                            ) : null}
+                            {isStaff && (
+                              <>
+                                <EditAssignment assignment={a} classId={classId} categories={categories} />
+                                <ShareResourceButton
+                                  kind="assignment"
+                                  id={a.id}
+                                  title={a.title}
+                                  defaultGrade={gradeLevel ?? null}
+                                />
+                                <CopyToClassesButton
+                                  kind="assignment"
+                                  id={a.id}
+                                  title={a.title}
+                                  classId={classId}
+                                />
+                                <ConfirmDeleteButton
+                                  title={`Delete "${a.title}"?`}
+                                  description="This removes the assignment along with its scores, submissions and linked standards."
+                                  onConfirm={() => removeAssignment.mutate(a.id)}
+                                  disabled={removeAssignment.isPending}
+                                />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
                 )}
               </div>
-
             </div>
-          ))
-
-
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
