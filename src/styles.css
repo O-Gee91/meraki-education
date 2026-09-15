@@ -50,6 +50,10 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-coursework-teal: var(--coursework-teal);
+  --color-coursework-ink: var(--coursework-ink);
+  --color-coursework-gold: var(--coursework-gold);
+  --color-coursework-mist: var(--coursework-mist);
   --shadow-panel: 0 1px 2px oklch(0.2 0.06 240 / 0.06), 0 8px 24px -12px oklch(0.2 0.06 240 / 0.18);
   --shadow-float: 0 20px 50px -24px oklch(0.2 0.06 240 / 0.35);
 }
@@ -101,6 +105,11 @@
 
   --deep-foreground: oklch(0.98 0.008 220);
   --gradient-deep: linear-gradient(140deg, oklch(0.26 0.062 249), oklch(0.4 0.075 244) 55%, oklch(0.62 0.089 217));
+  /* Academic Teal — Coursework ledger */
+  --coursework-teal: oklch(0.48 0.08 190);
+  --coursework-ink: oklch(0.31 0.06 249);
+  --coursework-gold: oklch(0.75 0.12 82);
+  --coursework-mist: oklch(0.97 0.006 170);
 }
 
 /* Warm Sand — low-glare light scheme */
@@ -264,4 +273,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-panel);
+}
+
+@utility coursework-ledger {
+  scrollbar-color: color-mix(in oklab, var(--coursework-teal) 45%, transparent) transparent;
 }
