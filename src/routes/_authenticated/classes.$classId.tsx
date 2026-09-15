@@ -53,12 +53,7 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 
 import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
-import { classTimeZone, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
-import {
-  CourseworkWindowFields,
-  WindowBadge,
-  WindowSummary,
-} from "@/components/class/CourseworkWindowFields";
+import { classTimeZone } from "@/lib/coursework-window";
 
 import {
   computeAverage,
