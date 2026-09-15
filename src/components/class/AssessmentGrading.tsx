@@ -61,6 +61,24 @@ export function AssessmentGrading({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useStudentSort(`assessment-grading-${assessmentId}`);
+  const queryClient = useQueryClient();
+  const acceptLate = useServerFn(setLateAcceptance);
+  // Late attempts stay out of the gradebook until the teacher counts them.
+  const lateDecision = useMutation({
+    mutationFn: (input: { submissionId: string; accepted: boolean }) =>
+      acceptLate({ data: input }),
+    onSuccess: (result) => {
+      toast.success(
+        result.accepted
+          ? "Late work accepted — the score now counts"
+          : "Late work no longer counts toward the grade",
+      );
+      queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const { data: submissions = [] } = useQuery({
     queryKey: ["assessment-submissions", assessmentId],
