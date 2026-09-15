@@ -139,9 +139,43 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const urgent = remaining != null && remaining <= 60_000;
   const warning = remaining != null && remaining <= 5 * 60_000 && !urgent;
 
+  const closesAt = data?.assessment.closes_at ?? null;
+  const availableFrom = data?.assessment.available_from ?? null;
+  const timeZone = data?.timeZone ?? DEFAULT_TIME_ZONE;
+  const state = windowState(availableFrom, closesAt);
+
+  // When the end time arrives mid-paper, hand the work in exactly as it stands.
+  useEffect(() => {
+    if (!hasStarted || !closesAt || mySubmission || submit.isPending) return;
+    const end = Date.parse(closesAt);
+    if (Number.isNaN(end)) return;
+    const fire = () => {
+      toast.warning("The assessment has closed — your work is being handed in as it is.");
+      submit.mutate();
+    };
+    if (Date.now() >= end) {
+      fire();
+      return;
+    }
+    const timer = setTimeout(fire, end - Date.now());
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasStarted, closesAt, mySubmission, submit.isPending]);
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-destructive">{(error as Error).message}</p>;
   if (!data) return null;
+
+  if (state === "not_yet" && !mySubmission) {
+    return (
+      <div className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
+        <p className="font-medium">Not yet available</p>
+        <p className="text-muted-foreground">
+          This opens {formatZoned(availableFrom, timeZone)} ({zoneLabel(timeZone)}).
+        </p>
+      </div>
+    );
+  }
 
   if (mySubmission) {
     const score = Number(mySubmission.auto_score) + Number(mySubmission.manual_score);
