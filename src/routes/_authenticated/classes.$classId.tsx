@@ -55,6 +55,7 @@ import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDra
 
 import {
   computeAverage,
+  findMark,
   isExtraCredit,
   markCodeFromComment,
   parseGradingSetup,
@@ -85,7 +86,7 @@ function ClassDetailPage() {
   const { isStaff } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
-  const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
+  const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookCategory, setGradebookCategory] = useState("all");
   const [gradebookDueFrom, setGradebookDueFrom] = useState("");
   const [gradebookDueTo, setGradebookDueTo] = useState("");
@@ -198,21 +199,23 @@ function ClassDetailPage() {
       .filter((assignment) => !gradebookDueFrom || (assignment.due_date ?? "") >= gradebookDueFrom)
       .filter((assignment) => !gradebookDueTo || (assignment.due_date ?? "") <= gradebookDueTo)
       .map((assignment) => {
-        const numericGrades = grades.filter(
-          (grade) =>
-            grade.assignment_id === assignment.id && grade.points_earned != null,
-        );
         const possible = Number(assignment.points_possible);
+        const countedScores = grades
+          .filter((grade) => grade.assignment_id === assignment.id)
+          .flatMap((grade) => {
+            const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
+            if (mark?.behavior === "exclude") return [];
+            if (mark?.behavior === "zero") return [0];
+            if (mark?.behavior === "value") return [Number(mark.value ?? 0)];
+            if (grade.points_earned == null || possible <= 0) return [];
+            return [(Number(grade.points_earned) / possible) * 100];
+          });
         const average =
-          numericGrades.length > 0 && possible > 0
-            ? (numericGrades.reduce(
-                (sum, grade) => sum + Number(grade.points_earned),
-                0,
-              ) /
-                (numericGrades.length * possible)) *
-              100
+          countedScores.length > 0
+            ? countedScores.reduce((sum, percentage) => sum + percentage, 0) /
+              countedScores.length
             : null;
-        return { assignment, average, scoredCount: numericGrades.length };
+        return { assignment, average, scoredCount: countedScores.length };
       });
 
     rows.sort((left, right) => {
