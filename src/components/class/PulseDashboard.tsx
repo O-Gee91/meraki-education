@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ClipboardList, Moon, Send, Sparkles } from "lucide-react";
+import { ClipboardList, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -200,20 +200,6 @@ export function PulseDashboard({
 
   const totalMissing = missingList.reduce((sum, entry) => sum + entry.items.length, 0);
 
-  const hours = useMemo(() => {
-    const buckets = Array.from({ length: 24 }, () => 0);
-    for (const s of submissions) {
-      if (!s.submitted_at) continue;
-      const h = new Date(s.submitted_at).getHours();
-      buckets[h] = (buckets[h] ?? 0) + 1;
-    }
-    return buckets;
-  }, [submissions]);
-
-  const maxHour = Math.max(1, ...hours);
-  const lateNight = hours.slice(0, 5).reduce((a, b) => a + b, 0);
-  const totalSubs = hours.reduce((a, b) => a + b, 0);
-
   const selectedCard = cards.find((c) => c.row.student_id === selected) ?? null;
   const selectedMissing = missingList.find(
     (m) => m.row.student_id === selectedCard?.row.student_id,
@@ -361,7 +347,7 @@ export function PulseDashboard({
         )}
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div>
         <section className="panel p-5">
           <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <ClipboardList className="size-4" />
@@ -426,65 +412,6 @@ export function PulseDashboard({
           )}
         </section>
 
-        <section className="panel p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Moon className="size-4" /> {isStaff ? "Work-hour pulse" : "My work hours"}
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isStaff
-              ? "When students actually submit. Late-night spikes usually mean stress or procrastination."
-              : "The hours you tend to submit work. Steady sleep-friendly hours help you do your best."}
-          </p>
-          {totalSubs === 0 ? (
-            <p className="mt-6 text-sm text-muted-foreground">
-              {isStaff
-                ? "No online submissions yet — this fills in as students turn work in."
-                : "No online submissions yet — this fills in as you turn work in."}
-            </p>
-          ) : (
-            <>
-              <div className="mt-5 flex h-28 items-end gap-[3px]">
-                {hours.map((count, hour) => (
-                  <div
-                    key={hour}
-                    className="flex-1"
-                    title={`${hour}:00 — ${count} submission${count === 1 ? "" : "s"}`}
-                  >
-                    <div
-                      className={`w-full rounded-t ${
-                        hour < 5 ? "bg-destructive/70" : hour < 8 ? "bg-warning" : "bg-accent"
-                      }`}
-                      style={{ height: `${Math.max(count ? 6 : 2, (count / maxHour) * 100)}%` }}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
-                <span>12a</span>
-                <span>6a</span>
-                <span>12p</span>
-                <span>6p</span>
-                <span>11p</span>
-              </div>
-              {lateNight > 0 && (
-                <p className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {isStaff ? (
-                    <>
-                      {lateNight} submission{lateNight === 1 ? "" : "s"} arrived between midnight and
-                      5am — consider adjusting deadlines or checking in on workload.
-                    </>
-                  ) : (
-                    <>
-                      {lateNight} of your submissions arrived between midnight and 5am — try to finish
-                      earlier so you can rest.
-                    </>
-                  )}
-                </p>
-              )}
-            </>
-          )}
-        </section>
       </div>
     </div>
   );
