@@ -44,6 +44,7 @@ import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { RubricsTab, RubricSelect } from "@/components/class/RubricsTab";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { PulseDashboard } from "@/components/class/PulseDashboard";
+import { StudentClassReport } from "@/components/class/StudentClassReport";
 
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
@@ -501,6 +502,9 @@ function ClassDetailPage() {
             useIds={useIds}
             className={klass?.name}
             gradeLevel={klass?.grade_level ?? null}
+            assignments={assignments}
+            grades={grades}
+            setup={setup}
           />
         </TabsContent>
 
@@ -1273,6 +1277,9 @@ function RosterTab({
   useIds,
   className,
   gradeLevel,
+  assignments,
+  grades,
+  setup,
 }: {
   classId: string;
   isStaff: boolean;
@@ -1280,6 +1287,20 @@ function RosterTab({
   useIds: boolean;
   className?: string | undefined;
   gradeLevel?: number | null | undefined;
+  assignments: {
+    id: string;
+    title: string;
+    category: string;
+    points_possible: number;
+    due_date: string | null;
+  }[];
+  grades: {
+    assignment_id: string;
+    student_id: string;
+    points_earned: number | null;
+    comment: string | null;
+  }[];
+  setup: ReturnType<typeof parseGradingSetup>;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
@@ -1294,6 +1315,7 @@ function RosterTab({
   };
   const [newForm, setNewForm] = useState(blankNew);
   const [sortMode, setSortMode] = useStudentSort(`class-roster-${classId}`);
+  const [reportStudentId, setReportStudentId] = useState<string | null>(null);
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -1433,6 +1455,7 @@ function RosterTab({
       .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
       .map(([label, rows]) => ({ key: label, label, rows }));
   })();
+  const reportStudent = roster.find((row) => row.student_id === reportStudentId)?.students ?? null;
 
   return (
     <div className="mt-4">
@@ -1662,7 +1685,18 @@ function RosterTab({
                     aria-label={`Select ${r.students?.first_name ?? "student"}`}
                   />
                 )}
-                {studentLabel(r.students, useIds)}
+                 {isStaff && r.students ? (
+                   <Button
+                     type="button"
+                     variant="link"
+                     className="h-auto p-0 font-semibold"
+                     onClick={() => setReportStudentId(r.student_id)}
+                   >
+                     {studentLabel(r.students, useIds)}
+                   </Button>
+                 ) : (
+                   studentLabel(r.students, useIds)
+                 )}
               </span>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>
@@ -1692,6 +1726,19 @@ function RosterTab({
           ))
         )}
       </div>
+      <StudentClassReport
+        open={!!reportStudentId}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setReportStudentId(null);
+        }}
+        classId={classId}
+        className={className ?? "Class"}
+        student={reportStudent}
+        assignments={assignments}
+        grades={grades}
+        setup={setup}
+        displayName={studentLabel(reportStudent, useIds)}
+      />
     </div>
   );
 }

@@ -13,3 +13,5 @@
 - [x] Replace the Gradebook score grid with a simplified assignment list.
 - [x] Add category and due-date filters plus assignment-level sorting.
 - [x] Calculate and display class averages without exposing individual scores.
+- [x] Open a detailed assignment and assessment report from each staff roster name.
+- [x] Add synchronized inline scores, missing-work status, summaries, optional behavior strikes, and printing.
