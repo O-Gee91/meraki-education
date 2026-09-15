@@ -91,11 +91,19 @@ export const submitAssessment = createServerFn({ method: "POST" })
 
     const { data: assessment, error: aErr } = await context.supabase
       .from("assessments")
-      .select("id, class_id, assignment_id, published")
+      .select("id, class_id, assignment_id, published, available_from, closes_at")
       .eq("id", data.assessmentId)
       .maybeSingle();
     if (aErr) throw aErr;
     if (!assessment?.published) throw new Error("This assessment is not open");
+
+    // Availability window. Before the start time nothing can be handed in; after
+    // the end time the attempt is accepted but flagged late and left out of the
+    // gradebook until the teacher chooses to count it.
+    const now = Date.now();
+    if (assessment.available_from && now < Date.parse(assessment.available_from))
+      throw new Error("This assessment is not yet available");
+    const isLate = Boolean(assessment.closes_at && now > Date.parse(assessment.closes_at));
 
     const { data: enrollment } = await context.supabase
       .from("enrollments")
