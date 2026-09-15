@@ -15,3 +15,6 @@
 - [x] Calculate and display class averages without exposing individual scores.
 - [x] Open a detailed assignment and assessment report from each staff roster name.
 - [x] Add synchronized inline scores, missing-work status, summaries, optional behavior strikes, and printing.
+- [x] Add independent start and end times to assignments and assessments in the class time zone.
+- [x] Show "Not yet available" and "Closed" to students, auto-hand-in at the end time, and flag late work.
+- [x] Keep late work out of the grade until a teacher chooses to count it.
