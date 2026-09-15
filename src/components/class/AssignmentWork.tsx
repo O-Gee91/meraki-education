@@ -1072,6 +1072,17 @@ function StaffCollectPanel({
                                 }
                                 return <Badge variant="outline">Not collected</Badge>;
                               })()}
+                              {submission?.submitted_at &&
+                              isLateAt(
+                                Date.parse(submission.submitted_at),
+                                assignment.closes_at,
+                                assignment.due_date,
+                                timeZone,
+                              ) ? (
+                                <Badge variant="destructive" title="Handed in after the close time — score it only if you choose to count it">
+                                  Late
+                                </Badge>
+                              ) : null}
                             </span>
                           </span>
                         </Button>
