@@ -294,6 +294,7 @@ export function PulseDashboard({
         </div>
 
         {open && (
+        <>
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
           {cards.map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
