@@ -94,29 +94,42 @@ async function openFile(path: string) {
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
+type WorkAssignment = {
+  id: string;
+  title: string;
+  points_possible: number;
+  due_date: string | null;
+  description: string | null;
+  submission_mode: string;
+  rubric_id?: string | null;
+  available_from?: string | null;
+  closes_at?: string | null;
+};
+
 export function AssignmentWork({
   assignment,
   classId,
   isStaff,
   roster,
+  timeZone = DEFAULT_TIME_ZONE,
 }: {
-  assignment: {
-    id: string;
-    title: string;
-    points_possible: number;
-    due_date: string | null;
-    description: string | null;
-    submission_mode: string;
-    rubric_id?: string | null;
-  };
+  assignment: WorkAssignment;
   classId: string;
   isStaff: boolean;
   roster: Student[];
+  timeZone?: string;
 }) {
   if (isStaff) {
-    return <StaffCollectPanel assignment={assignment} roster={roster} classId={classId} />;
+    return (
+      <StaffCollectPanel
+        assignment={assignment}
+        roster={roster}
+        classId={classId}
+        timeZone={timeZone}
+      />
+    );
   }
-  return <StudentWorkPanel assignment={assignment} classId={classId} />;
+  return <StudentWorkPanel assignment={assignment} classId={classId} timeZone={timeZone} />;
 }
 
 /* ---------------- student side ---------------- */
@@ -124,17 +137,11 @@ export function AssignmentWork({
 function StudentWorkPanel({
   assignment,
   classId,
+  timeZone,
 }: {
-  assignment: {
-    id: string;
-    title: string;
-    points_possible: number;
-    due_date: string | null;
-    description: string | null;
-    submission_mode: string;
-    rubric_id?: string | null;
-  };
+  assignment: WorkAssignment;
   classId: string;
+  timeZone: string;
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
