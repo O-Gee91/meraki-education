@@ -70,11 +70,44 @@ export function AssessmentGrading({
       return (data ?? []) as unknown as SubmissionRow[];
     },
   });
-  const sortedSubmissions = sortStudents(submissions, sortMode, (row) => ({
+
+  const { data: roster = [] } = useQuery({
+    queryKey: ["assessment-roster", classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("student_id, students(first_name, last_name, grade_level)")
+        .eq("class_id", classId);
+      if (error) throw error;
+      return (data ?? []) as unknown as {
+        student_id: string;
+        students: { first_name: string; last_name: string; grade_level: number } | null;
+      }[];
+    },
+  });
+
+  const byStudent = new Map(submissions.map((s) => [s.student_id, s]));
+  const rows = roster.map((r) => ({
+    student_id: r.student_id,
+    students: r.students,
+    submission: byStudent.get(r.student_id) ?? null,
+  }));
+  // Include any submission from a student no longer on the roster.
+  for (const s of submissions) {
+    if (!roster.some((r) => r.student_id === s.student_id)) {
+      rows.push({ student_id: s.student_id, students: s.students, submission: s });
+    }
+  }
+
+  const sortedRows = sortStudents(rows, sortMode, (row) => ({
     id: row.student_id,
     first_name: row.students?.first_name ?? null,
     last_name: row.students?.last_name ?? null,
   }));
+
+  const completed = rows.filter((r) => r.submission).length;
+  const needsReview = rows.filter((r) => r.submission?.status === "needs_review").length;
+  const notStarted = rows.length - completed;
 
   return (
     <div className="space-y-3">
@@ -84,62 +117,87 @@ export function AssessmentGrading({
         </h4>
         <StudentSortControl value={sortMode} onChange={setSortMode} />
       </div>
-      {submissions.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No submissions yet. Objective questions score automatically the moment a student
-          submits.
+          No students are enrolled in this class yet.
         </p>
       ) : (
-        <ul className="space-y-2">
-          {sortedSubmissions.map((s) => {
-            const score = Number(s.auto_score) + Number(s.manual_score);
-            const pct = percent(score, Number(s.total_points));
-            return (
-              <li key={s.id} className="rounded-lg border border-border bg-secondary/30 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <div>
-                    <p className="font-medium">
-                      {s.students?.last_name}, {s.students?.first_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Submitted {new Date(s.submitted_at).toLocaleString()}
-                    </p>
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="secondary">
+              {completed} of {rows.length} completed
+            </Badge>
+            {needsReview > 0 && <Badge variant="outline">{needsReview} needs review</Badge>}
+            {notStarted > 0 && (
+              <Badge variant="outline">{notStarted} not started</Badge>
+            )}
+          </div>
+          <ul className="space-y-2">
+            {sortedRows.map((row) => {
+              const s = row.submission;
+              const score = s ? Number(s.auto_score) + Number(s.manual_score) : 0;
+              const pct = s ? percent(score, Number(s.total_points)) : 0;
+              return (
+                <li
+                  key={row.student_id}
+                  className="rounded-lg border border-border bg-secondary/30 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <div>
+                      <p className="font-medium">
+                        {row.students?.last_name}, {row.students?.first_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {s
+                          ? `Submitted ${new Date(s.submitted_at).toLocaleString()}`
+                          : "Not started — nothing submitted yet"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {s ? (
+                        <>
+                          <span className={`font-semibold ${gradeTone(pct)}`}>
+                            {score}/{s.total_points} ({pct.toFixed(0)}%)
+                          </span>
+                          {s.status === "needs_review" ? (
+                            <Badge variant="outline">Needs review</Badge>
+                          ) : (
+                            <Badge>Graded</Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setOpenId(openId === s.id ? null : s.id)}
+                          >
+                            {openId === s.id ? "Hide" : "Review"}
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Not started
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`font-semibold ${gradeTone(pct)}`}>
-                      {score}/{s.total_points} ({pct.toFixed(0)}%)
-                    </span>
-                    {s.status === "needs_review" ? (
-                      <Badge variant="outline">Needs review</Badge>
-                    ) : (
-                      <Badge>Graded</Badge>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOpenId(openId === s.id ? null : s.id)}
-                    >
-                      {openId === s.id ? "Hide" : "Review"}
-                    </Button>
-                  </div>
-                </div>
-                {openId === s.id && (
-                  <SubmissionAnswers
-                    submissionId={s.id}
-                    assessmentId={assessmentId}
-                    classId={classId}
-                    gradeLevel={s.students?.grade_level}
-                    grammarEnabled={grammarEnabled}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {s && openId === s.id && (
+                    <SubmissionAnswers
+                      submissionId={s.id}
+                      assessmentId={assessmentId}
+                      classId={classId}
+                      gradeLevel={row.students?.grade_level}
+                      grammarEnabled={grammarEnabled}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
   );
 }
+
 
 function SubmissionAnswers({
   submissionId,
