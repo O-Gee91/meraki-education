@@ -42,6 +42,12 @@ import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import {
+  CourseworkWindowFields,
+  WindowBadge,
+} from "@/components/class/CourseworkWindowFields";
+import { isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+
 
 
 type AssessmentRow = {
@@ -50,6 +56,8 @@ type AssessmentRow = {
   kind: string;
   instructions: string | null;
   due_at: string | null;
+  available_from: string | null;
+  closes_at: string | null;
   time_limit_minutes: number | null;
   published: boolean;
   grammar_check_enabled: boolean;
@@ -62,12 +70,14 @@ export function AssessmentsTab({
   assignments,
   categories,
   gradeLevel,
+  timeZone,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
   categories: string[];
   gradeLevel?: number | null;
+  timeZone: string;
 }) {
 
   const queryClient = useQueryClient();
@@ -79,7 +89,8 @@ export function AssessmentsTab({
       const { data, error } = await supabase
         .from("assessments")
         .select(
-          "id, title, kind, instructions, due_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
+          "id, title, kind, instructions, due_at, available_from, closes_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
+        )
         )
         .eq("class_id", classId)
         .order("created_at", { ascending: false });
