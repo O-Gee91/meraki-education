@@ -1074,8 +1074,6 @@ function EditAssignment({
           description: form.description.trim().slice(0, 1000) || null,
           submission_mode: form.mode,
           rubric_id: form.rubricId || null,
-          available_from: zonedInputToIso(form.availableFrom, timeZone),
-          closes_at: zonedInputToIso(form.closesAt, timeZone),
         })
         .eq("id", assignment.id);
       if (error) throw error;
