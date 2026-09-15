@@ -91,7 +91,6 @@ export function AssessmentsTab({
         .select(
           "id, title, kind, instructions, due_at, available_from, closes_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
         )
-        )
         .eq("class_id", classId)
         .order("created_at", { ascending: false });
       if (error) throw error;
