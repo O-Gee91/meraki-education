@@ -72,17 +72,16 @@ export function useIntegrityGuard(enabled: boolean) {
     if (hit) void flag("automation_global", hit);
 
     // 3. Synthetic (script-generated) clicks and keystrokes.
-    //    Whitelist: browser autofill (password managers, saved logins) fires
-    //    untrusted change/input/keydown events on form fields. On the account
-    //    settings page that is normal behaviour, not scripting, so those
-    //    events are ignored instead of earning a strike.
-    const AUTOFILL_SAFE_PATHS = ["/settings"];
+    //    Whitelist: browser and password-manager autofill (saved logins, iOS/
+    //    Android keyboard suggestions) fires untrusted change/input/keydown/
+    //    click events on form fields. That can happen on any page where a
+    //    login or form field is present, so form-field events are always
+    //    treated as autofill rather than scripting.
     const isAutofillEvent = (event: Event) => {
-      const path = window.location.pathname.replace(/\/+$/, "") || "/";
-      if (!AUTOFILL_SAFE_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return false;
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
-      return tag === "input" || tag === "select" || tag === "textarea" || tag === "form";
+      if (tag === "input" || tag === "select" || tag === "textarea" || tag === "form") return true;
+      return Boolean(target?.closest?.("form, input, select, textarea"));
     };
 
     let synthetic = 0;
