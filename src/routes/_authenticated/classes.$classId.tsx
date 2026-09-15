@@ -951,11 +951,6 @@ function AssignmentsTab({
                                 {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
                               </Badge>
                               <span>Due {formatDate(a.due_date)}</span>
-                              <WindowBadge
-                                availableFrom={a.available_from}
-                                closesAt={a.closes_at}
-                                timeZone={timeZone}
-                              />
                               <span>·</span>
                               <span>{a.points_possible} points</span>
                             </div>
@@ -966,14 +961,8 @@ function AssignmentsTab({
                               </p>
                             ) : null}
                             <div className="mt-2">
-                              {isStaff ? (
-                                <WindowSummary
-                                  availableFrom={a.available_from}
-                                  closesAt={a.closes_at}
-                                  timeZone={timeZone}
-                                />
-                              ) : null}
                               <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
+
                               <AssignmentWork
                                 assignment={a}
                                 classId={classId}
