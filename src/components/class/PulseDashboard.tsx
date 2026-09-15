@@ -255,19 +255,31 @@ export function PulseDashboard({
     <div className="mt-4 space-y-4">
       <section className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkles className="size-4 text-accent" />
-              {isStaff ? "Pulse" : "My progress"}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {isStaff
-                ? "Traffic-light view of the class. Tap a student for their standing and a one-click check-in."
-                : "Your current standing and upcoming deadlines at a glance."}
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={toggleOpen}
+            aria-expanded={open}
+            className="flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <ChevronDown
+              className={`mt-1 size-4 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
+            />
+            <span className="min-w-0">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Sparkles className="size-4 text-accent" />
+                {isStaff ? "Pulse" : "My progress"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {open
+                  ? isStaff
+                    ? "Traffic-light view of the class. Tap a student for their standing and a one-click check-in."
+                    : "Your current standing and upcoming deadlines at a glance."
+                  : "Tap to expand."}
+              </p>
+            </span>
+          </button>
           <div className="flex flex-wrap gap-2 text-xs">
-            {isStaff ? <StudentSortControl value={sortMode} onChange={setSortMode} /> : null}
+            {isStaff && open ? <StudentSortControl value={sortMode} onChange={setSortMode} /> : null}
             {(["green", "yellow", "red", "none"] as Status[]).map((s) => (
               <span
                 key={s}
@@ -281,6 +293,7 @@ export function PulseDashboard({
           </div>
         </div>
 
+        {open && (
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
           {cards.map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
