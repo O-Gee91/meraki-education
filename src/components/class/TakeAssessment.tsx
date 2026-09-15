@@ -195,6 +195,11 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
         {mySubmission.status === "needs_review" && (
           <Badge variant="outline">Written responses awaiting teacher review</Badge>
         )}
+        {mySubmission.is_late && !mySubmission.late_accepted ? (
+          <Badge variant="destructive">
+            Handed in late — your teacher decides whether it counts
+          </Badge>
+        ) : null}
       </div>
     );
   }
@@ -240,6 +245,18 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
               {isTimed ? (
                 <li>When time runs out, your work will be submitted automatically.</li>
               ) : null}
+              {closesAt && state === "open" ? (
+                <li>
+                  This closes {formatZoned(closesAt, timeZone)} — anything unfinished is
+                  handed in for you at that moment.
+                </li>
+              ) : null}
+              {state === "closed" ? (
+                <li className="text-destructive">
+                  This closed {formatZoned(closesAt, timeZone)}. You can still hand work in,
+                  but it is marked late and your teacher decides whether it counts.
+                </li>
+              ) : null}
             </ul>
           </div>
         </div>
@@ -250,7 +267,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
               toast.info(isTimed ? "Timer started — good luck!" : "Assessment mode on");
             }}
           >
-            Start assessment
+            {state === "closed" ? "Start late attempt" : "Start assessment"}
           </Button>
           <span className="text-xs text-muted-foreground">
             Click only when you are ready to begin.
