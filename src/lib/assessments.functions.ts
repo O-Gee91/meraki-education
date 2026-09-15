@@ -162,6 +162,8 @@ export const submitAssessment = createServerFn({ method: "POST" })
         manual_score: 0,
         total_points: totalPoints,
         graded_at: needsReview ? null : new Date().toISOString(),
+        is_late: isLate,
+        late_accepted: false,
       })
       .select("id")
       .single();
@@ -174,7 +176,8 @@ export const submitAssessment = createServerFn({ method: "POST" })
       if (ansErr) throw ansErr;
     }
 
-    if (assessment.assignment_id && !needsReview) {
+    // Late work does not reach the gradebook until a teacher accepts it.
+    if (assessment.assignment_id && !needsReview && !isLate) {
       await supabaseAdmin.from("grades").upsert(
         {
           assignment_id: assessment.assignment_id,
@@ -192,6 +195,7 @@ export const submitAssessment = createServerFn({ method: "POST" })
       autoScore,
       totalPoints,
       needsReview,
+      isLate,
     };
   });
 
