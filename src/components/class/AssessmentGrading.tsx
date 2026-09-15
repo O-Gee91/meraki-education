@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { proofreadEssay, scoreEssayAnswer } from "@/lib/assessments.functions";
+import {
+  proofreadEssay,
+  scoreEssayAnswer,
+  setLateAcceptance,
+} from "@/lib/assessments.functions";
 import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -41,6 +45,8 @@ type SubmissionRow = {
   manual_score: number;
   total_points: number;
   submitted_at: string;
+  is_late: boolean;
+  late_accepted: boolean;
   students: { first_name: string; last_name: string; grade_level: number } | null;
 };
 
@@ -62,7 +68,7 @@ export function AssessmentGrading({
       const { data, error } = await supabase
         .from("assessment_submissions")
         .select(
-          "id, student_id, status, auto_score, manual_score, total_points, submitted_at, students(first_name, last_name, grade_level)",
+          "id, student_id, status, auto_score, manual_score, total_points, submitted_at, is_late, late_accepted, students(first_name, last_name, grade_level)",
         )
         .eq("assessment_id", assessmentId)
         .order("submitted_at", { ascending: false });
