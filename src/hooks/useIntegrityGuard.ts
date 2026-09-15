@@ -97,10 +97,30 @@ export function useIntegrityGuard(enabled: boolean) {
 
 
     // 4. Direct eval() from the console (the app bundle never calls eval).
+    //    Whitelist: mobile in-app browsers and password-manager keyboards
+    //    (WeChat, iOS/Android WebView bridges) evaluate their own bridge
+    //    messages — e.g. keyboard-height events and autofill plumbing — in the
+    //    page. Those are the browser doing its job, not a student scripting.
+    const BROWSER_BRIDGE_HINTS = [
+      "__msg_type",
+      "__context_key",
+      "__event_id",
+      "onGetKeyboardHeight",
+      "webkit.messageHandlers",
+      "ReactNativeWebView",
+      "AutoFill",
+      "autofill",
+      "PasswordManager",
+    ];
+    const isBrowserBridgeSource = (source: unknown) =>
+      typeof source === "string" && BROWSER_BRIDGE_HINTS.some((hint) => source.includes(hint));
+
     const originalEval = window.eval;
     try {
       window.eval = function patchedEval(this: unknown, source?: string) {
-        void flag("console_execution", typeof source === "string" ? source.slice(0, 120) : undefined);
+        if (!isBrowserBridgeSource(source)) {
+          void flag("console_execution", typeof source === "string" ? source.slice(0, 120) : undefined);
+        }
         return originalEval.call(this ?? window, source as string);
       } as typeof window.eval;
     } catch {
