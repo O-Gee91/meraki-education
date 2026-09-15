@@ -41,6 +41,12 @@ import { StudentSortControl, useStudentSort } from "@/components/students/Studen
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import {
+  DEFAULT_TIME_ZONE,
+  formatZoned,
+  isLateAt,
+  windowState,
+} from "@/lib/coursework-window";
+import {
   findMark,
   markCodeFromComment,
   parseGradingSetup,
@@ -94,29 +100,42 @@ async function openFile(path: string) {
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
+type WorkAssignment = {
+  id: string;
+  title: string;
+  points_possible: number;
+  due_date: string | null;
+  description: string | null;
+  submission_mode: string;
+  rubric_id?: string | null;
+  available_from?: string | null;
+  closes_at?: string | null;
+};
+
 export function AssignmentWork({
   assignment,
   classId,
   isStaff,
   roster,
+  timeZone = DEFAULT_TIME_ZONE,
 }: {
-  assignment: {
-    id: string;
-    title: string;
-    points_possible: number;
-    due_date: string | null;
-    description: string | null;
-    submission_mode: string;
-    rubric_id?: string | null;
-  };
+  assignment: WorkAssignment;
   classId: string;
   isStaff: boolean;
   roster: Student[];
+  timeZone?: string;
 }) {
   if (isStaff) {
-    return <StaffCollectPanel assignment={assignment} roster={roster} classId={classId} />;
+    return (
+      <StaffCollectPanel
+        assignment={assignment}
+        roster={roster}
+        classId={classId}
+        timeZone={timeZone}
+      />
+    );
   }
-  return <StudentWorkPanel assignment={assignment} classId={classId} />;
+  return <StudentWorkPanel assignment={assignment} classId={classId} timeZone={timeZone} />;
 }
 
 /* ---------------- student side ---------------- */
@@ -124,17 +143,11 @@ export function AssignmentWork({
 function StudentWorkPanel({
   assignment,
   classId,
+  timeZone,
 }: {
-  assignment: {
-    id: string;
-    title: string;
-    points_possible: number;
-    due_date: string | null;
-    description: string | null;
-    submission_mode: string;
-    rubric_id?: string | null;
-  };
+  assignment: WorkAssignment;
   classId: string;
+  timeZone: string;
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -251,6 +264,28 @@ function StudentWorkPanel({
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
+  // Availability window. Before the start time nothing is shown; after the end
+  // time work can still be handed in, but it is flagged late.
+  const state = windowState(assignment.available_from, assignment.closes_at);
+  const wasLate =
+    turnedIn &&
+    isLateAt(
+      Date.parse(mine!.submitted_at),
+      assignment.closes_at,
+      assignment.due_date,
+      timeZone,
+    );
+
+  if (state === "not_yet") {
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="outline">Not yet available</Badge>
+        <span className="text-muted-foreground">
+          Opens {formatZoned(assignment.available_from, timeZone)}
+        </span>
+      </div>
+    );
+  }
 
   if (assignment.submission_mode !== "online") {
     return (
@@ -294,6 +329,12 @@ function StudentWorkPanel({
           <Circle className="h-3 w-3" /> Not started
         </Badge>
       )}
+      {wasLate ? <Badge variant="destructive">Late</Badge> : null}
+      {state === "closed" ? (
+        <Badge variant="destructive" title={`Closed ${formatZoned(assignment.closes_at, timeZone)}`}>
+          Closed
+        </Badge>
+      ) : null}
       {scored ? (
         <span className="font-medium">
           Score {String(grade?.points_earned)}/{assignment.points_possible}
@@ -317,7 +358,13 @@ function StudentWorkPanel({
       >
         <DialogTrigger asChild>
           <Button size="sm" variant={mine ? "outline" : "default"} className="h-7">
-            {turnedIn ? "View / edit work" : mine ? "Keep working" : "Start assignment"}
+            {turnedIn
+              ? "View / edit work"
+              : state === "closed"
+                ? "Hand in late"
+                : mine
+                  ? "Keep working"
+                  : "Start assignment"}
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -419,6 +466,7 @@ function StaffCollectPanel({
   assignment,
   roster,
   classId,
+  timeZone,
 }: {
   assignment: {
     id: string;
@@ -427,9 +475,12 @@ function StaffCollectPanel({
     submission_mode: string;
     due_date?: string | null;
     rubric_id?: string | null;
+    available_from?: string | null;
+    closes_at?: string | null;
   };
   roster: Student[];
   classId: string;
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1021,6 +1072,17 @@ function StaffCollectPanel({
                                 }
                                 return <Badge variant="outline">Not collected</Badge>;
                               })()}
+                              {submission?.submitted_at &&
+                              isLateAt(
+                                Date.parse(submission.submitted_at),
+                                assignment.closes_at,
+                                assignment.due_date,
+                                timeZone,
+                              ) ? (
+                                <Badge variant="destructive" title="Handed in after the close time — score it only if you choose to count it">
+                                  Late
+                                </Badge>
+                              ) : null}
                             </span>
                           </span>
                         </Button>

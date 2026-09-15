@@ -53,6 +53,12 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 
 import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { classTimeZone, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import {
+  CourseworkWindowFields,
+  WindowBadge,
+  WindowSummary,
+} from "@/components/class/CourseworkWindowFields";
 
 import {
   computeAverage,
@@ -103,7 +109,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, weights, grade_level")
+        .select("id, name, subject, period, room, term, weights, grade_level, timezone")
         .eq("id", classId)
         .maybeSingle();
       if (error) throw error;
@@ -112,6 +118,8 @@ function ClassDetailPage() {
   });
 
   const setup = parseGradingSetup(klass?.weights);
+  // All start/end times are shown in the class's own time zone.
+  const timeZone = classTimeZone(klass?.timezone);
   const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
   // Every class also gets a bonus bucket teachers can use however they like.
   const assignmentCategories = [
@@ -138,7 +146,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, available_from, closes_at",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -448,6 +456,7 @@ function ClassDetailPage() {
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
             subject={klass?.subject ?? null}
+            timeZone={timeZone}
           />
           <AssessmentsTab
             classId={classId}
@@ -455,6 +464,7 @@ function ClassDetailPage() {
             assignments={assignments}
             categories={assignmentCategories}
             gradeLevel={klass?.grade_level ?? null}
+            timeZone={timeZone}
           />
 
         </TabsContent>
@@ -537,6 +547,8 @@ type AssignmentRow = {
   description: string | null;
   submission_mode: string;
   rubric_id: string | null;
+  available_from: string | null;
+  closes_at: string | null;
 };
 
 function AssignmentsTab({
@@ -548,6 +560,7 @@ function AssignmentsTab({
   categories,
   gradeLevel,
   subject,
+  timeZone,
 }: {
   classId: string;
   isStaff: boolean;
@@ -561,6 +574,7 @@ function AssignmentsTab({
   categories: string[];
   gradeLevel?: number | null;
   subject?: string | null;
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -575,6 +589,8 @@ function AssignmentsTab({
     description: "",
     mode: "collected",
     rubricId: "",
+    availableFrom: "",
+    closesAt: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const [applyToSubject, setApplyToSubject] = useState(false);
@@ -644,6 +660,8 @@ function AssignmentsTab({
         classId,
         ...(applyToSubject ? siblingClasses.map((c) => c.id) : []),
       ];
+      if (form.availableFrom && form.closesAt && form.closesAt <= form.availableFrom)
+        throw new Error("The end time must be after the start time");
       const base = {
         title: form.title.trim().slice(0, 140),
         category: form.category,
@@ -651,6 +669,8 @@ function AssignmentsTab({
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
         submission_mode: form.mode,
+        available_from: zonedInputToIso(form.availableFrom, timeZone),
+        closes_at: zonedInputToIso(form.closesAt, timeZone),
       };
       const { error } = await supabase.from("assignments").insert(
         targets.map((cid) => ({
@@ -755,6 +775,13 @@ function AssignmentsTab({
                   onChange={(e) => setForm({ ...form, due: e.target.value })}
                 />
               </div>
+              <CourseworkWindowFields
+                idPrefix="new-assignment"
+                timeZone={timeZone}
+                availableFrom={form.availableFrom}
+                closesAt={form.closesAt}
+                onChange={(next) => setForm({ ...form, ...next })}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="mode">How is this handed in?</Label>
                 <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
@@ -924,6 +951,11 @@ function AssignmentsTab({
                                 {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
                               </Badge>
                               <span>Due {formatDate(a.due_date)}</span>
+                              <WindowBadge
+                                availableFrom={a.available_from}
+                                closesAt={a.closes_at}
+                                timeZone={timeZone}
+                              />
                               <span>·</span>
                               <span>{a.points_possible} points</span>
                             </div>
@@ -934,12 +966,20 @@ function AssignmentsTab({
                               </p>
                             ) : null}
                             <div className="mt-2">
+                              {isStaff ? (
+                                <WindowSummary
+                                  availableFrom={a.available_from}
+                                  closesAt={a.closes_at}
+                                  timeZone={timeZone}
+                                />
+                              ) : null}
                               <AssignmentStandards assignmentId={a.id} isStaff={isStaff} />
                               <AssignmentWork
                                 assignment={a}
                                 classId={classId}
                                 isStaff={isStaff}
                                 roster={students}
+                                timeZone={timeZone}
                               />
                             </div>
                           </div>
@@ -951,7 +991,7 @@ function AssignmentsTab({
                             ) : null}
                             {isStaff && (
                               <>
-                                <EditAssignment assignment={a} classId={classId} categories={categories} />
+                                <EditAssignment assignment={a} classId={classId} categories={categories} timeZone={timeZone} />
                                 <ShareResourceButton
                                   kind="assignment"
                                   id={a.id}
@@ -991,14 +1031,16 @@ function EditAssignment({
   assignment,
   classId,
   categories,
+  timeZone,
 }: {
   assignment: AssignmentRow;
   classId: string;
   categories: string[];
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const initial = () => ({
     title: assignment.title,
     category: assignment.category,
     points: String(assignment.points_possible),
@@ -1006,20 +1048,13 @@ function EditAssignment({
     description: assignment.description ?? "",
     mode: assignment.submission_mode,
     rubricId: assignment.rubric_id ?? "",
+    availableFrom: isoToZonedInput(assignment.available_from, timeZone),
+    closesAt: isoToZonedInput(assignment.closes_at, timeZone),
   });
+  const [form, setForm] = useState(initial);
 
   function openChange(next: boolean) {
-    if (next) {
-      setForm({
-        title: assignment.title,
-        category: assignment.category,
-        points: String(assignment.points_possible),
-        due: assignment.due_date ?? "",
-        description: assignment.description ?? "",
-        mode: assignment.submission_mode,
-        rubricId: assignment.rubric_id ?? "",
-      });
-    }
+    if (next) setForm(initial());
     setOpen(next);
   }
 
@@ -1039,6 +1074,8 @@ function EditAssignment({
           description: form.description.trim().slice(0, 1000) || null,
           submission_mode: form.mode,
           rubric_id: form.rubricId || null,
+          available_from: zonedInputToIso(form.availableFrom, timeZone),
+          closes_at: zonedInputToIso(form.closesAt, timeZone),
         })
         .eq("id", assignment.id);
       if (error) throw error;
@@ -1115,6 +1152,13 @@ function EditAssignment({
               onChange={(e) => setForm({ ...form, due: e.target.value })}
             />
           </div>
+          <CourseworkWindowFields
+            idPrefix={`e-window-${assignment.id}`}
+            timeZone={timeZone}
+            availableFrom={form.availableFrom}
+            closesAt={form.closesAt}
+            onChange={(next) => setForm({ ...form, ...next })}
+          />
           <div className="space-y-1.5">
             <Label htmlFor={`e-mode-${assignment.id}`}>How is this handed in?</Label>
             <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>

@@ -196,6 +196,8 @@ export type Database = {
           created_at: string
           graded_at: string | null
           id: string
+          is_late: boolean
+          late_accepted: boolean
           manual_score: number
           status: string
           student_id: string
@@ -209,6 +211,8 @@ export type Database = {
           created_at?: string
           graded_at?: string | null
           id?: string
+          is_late?: boolean
+          late_accepted?: boolean
           manual_score?: number
           status?: string
           student_id: string
@@ -222,6 +226,8 @@ export type Database = {
           created_at?: string
           graded_at?: string | null
           id?: string
+          is_late?: boolean
+          late_accepted?: boolean
           manual_score?: number
           status?: string
           student_id?: string
@@ -251,6 +257,7 @@ export type Database = {
           assignment_id: string | null
           available_from: string | null
           class_id: string
+          closes_at: string | null
           created_at: string
           created_by: string | null
           due_at: string | null
@@ -267,6 +274,7 @@ export type Database = {
           assignment_id?: string | null
           available_from?: string | null
           class_id: string
+          closes_at?: string | null
           created_at?: string
           created_by?: string | null
           due_at?: string | null
@@ -283,6 +291,7 @@ export type Database = {
           assignment_id?: string | null
           available_from?: string | null
           class_id?: string
+          closes_at?: string | null
           created_at?: string
           created_by?: string | null
           due_at?: string | null
@@ -408,8 +417,10 @@ export type Database = {
       }
       assignments: {
         Row: {
+          available_from: string | null
           category: string
           class_id: string
+          closes_at: string | null
           created_at: string
           description: string | null
           due_date: string | null
@@ -420,8 +431,10 @@ export type Database = {
           title: string
         }
         Insert: {
+          available_from?: string | null
           category?: string
           class_id: string
+          closes_at?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -432,8 +445,10 @@ export type Database = {
           title: string
         }
         Update: {
+          available_from?: string | null
           category?: string
           class_id?: string
+          closes_at?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -707,6 +722,7 @@ export type Database = {
           teacher_id: string | null
           teacher_name: string
           term: string
+          timezone: string
           weights: Json
         }
         Insert: {
@@ -720,6 +736,7 @@ export type Database = {
           teacher_id?: string | null
           teacher_name?: string
           term?: string
+          timezone?: string
           weights?: Json
         }
         Update: {
@@ -733,6 +750,7 @@ export type Database = {
           teacher_id?: string | null
           teacher_name?: string
           term?: string
+          timezone?: string
           weights?: Json
         }
         Relationships: []

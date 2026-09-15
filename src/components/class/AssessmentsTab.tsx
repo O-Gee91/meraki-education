@@ -42,6 +42,12 @@ import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import {
+  CourseworkWindowFields,
+  WindowBadge,
+} from "@/components/class/CourseworkWindowFields";
+import { isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+
 
 
 type AssessmentRow = {
@@ -50,6 +56,8 @@ type AssessmentRow = {
   kind: string;
   instructions: string | null;
   due_at: string | null;
+  available_from: string | null;
+  closes_at: string | null;
   time_limit_minutes: number | null;
   published: boolean;
   grammar_check_enabled: boolean;
@@ -62,12 +70,14 @@ export function AssessmentsTab({
   assignments,
   categories,
   gradeLevel,
+  timeZone,
 }: {
   classId: string;
   isStaff: boolean;
   assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
   categories: string[];
   gradeLevel?: number | null;
+  timeZone: string;
 }) {
 
   const queryClient = useQueryClient();
@@ -79,7 +89,7 @@ export function AssessmentsTab({
       const { data, error } = await supabase
         .from("assessments")
         .select(
-          "id, title, kind, instructions, due_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
+          "id, title, kind, instructions, due_at, available_from, closes_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
         )
         .eq("class_id", classId)
         .order("created_at", { ascending: false });
@@ -120,7 +130,12 @@ export function AssessmentsTab({
         Online quizzes, tests &amp; essays
       </h3>
       {isStaff && (
-        <NewAssessment classId={classId} assignments={assignments} categories={categories} />
+        <NewAssessment
+          classId={classId}
+          assignments={assignments}
+          categories={categories}
+          timeZone={timeZone}
+        />
       )}
 
 
@@ -153,6 +168,11 @@ export function AssessmentsTab({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>{a.due_at ? `Due ${formatDate(a.due_at.slice(0, 10))}` : "No due date"}</span>
+                    <WindowBadge
+                      availableFrom={a.available_from}
+                      closesAt={a.closes_at}
+                      timeZone={timeZone}
+                    />
                     {a.time_limit_minutes ? (
                       <Badge variant="outline" className="gap-1">
                         <Clock className="size-3" />
@@ -189,6 +209,7 @@ export function AssessmentsTab({
                         assessment={a}
                         assignments={assignments}
                         categories={categories}
+                        timeZone={timeZone}
                       />
 
                       <ShareResourceButton
@@ -341,10 +362,12 @@ function NewAssessment({
   classId,
   assignments,
   categories,
+  timeZone,
 }: {
   classId: string;
   assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
   categories: string[];
+  timeZone: string;
 }) {
 
   const queryClient = useQueryClient();
@@ -359,6 +382,8 @@ function NewAssessment({
     assignmentId: "none",
     category: categories[0] ?? "none",
     grammar: true,
+    availableFrom: "",
+    closesAt: "",
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const formDirty = form.title.trim().length > 0 || form.instructions.trim().length > 0;
@@ -382,6 +407,8 @@ function NewAssessment({
         kind: form.kind,
         instructions: form.instructions.trim().slice(0, 2000) || null,
         due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+        available_from: zonedInputToIso(form.availableFrom, timeZone),
+        closes_at: zonedInputToIso(form.closesAt, timeZone),
         time_limit_minutes: form.limit ? Number(form.limit) : null,
         assignment_id: assignmentId,
         grammar_check_enabled: form.grammar,
@@ -450,6 +477,13 @@ function NewAssessment({
               />
             </div>
           </div>
+          <CourseworkWindowFields
+            idPrefix="new-assessment"
+            timeZone={timeZone}
+            availableFrom={form.availableFrom}
+            closesAt={form.closesAt}
+            onChange={(next) => setForm({ ...form, ...next })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="a-due">Due date</Label>
@@ -540,11 +574,13 @@ function EditAssessment({
   assessment,
   assignments,
   categories,
+  timeZone,
 }: {
   classId: string;
   assessment: AssessmentRow;
   assignments: { id: string; title: string; points_possible: number; category?: string | null }[];
   categories: string[];
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -562,6 +598,8 @@ function EditAssessment({
     assignmentId: assessment.assignment_id ?? "none",
     category: currentCategory(),
     grammar: assessment.grammar_check_enabled,
+    availableFrom: isoToZonedInput(assessment.available_from, timeZone),
+    closesAt: isoToZonedInput(assessment.closes_at, timeZone),
   });
   const [form, setForm] = useState(initial);
 
@@ -588,6 +626,8 @@ function EditAssessment({
           kind: form.kind,
           instructions: form.instructions.trim().slice(0, 2000) || null,
           due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+          available_from: zonedInputToIso(form.availableFrom, timeZone),
+          closes_at: zonedInputToIso(form.closesAt, timeZone),
           time_limit_minutes: form.limit ? Number(form.limit) : null,
           assignment_id: assignmentId,
           grammar_check_enabled: form.grammar,
@@ -656,6 +696,13 @@ function EditAssessment({
               />
             </div>
           </div>
+          <CourseworkWindowFields
+            idPrefix={`e-window-${assessment.id}`}
+            timeZone={timeZone}
+            availableFrom={form.availableFrom}
+            closesAt={form.closesAt}
+            onChange={(next) => setForm({ ...form, ...next })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor={`e-due-${assessment.id}`}>Due date</Label>

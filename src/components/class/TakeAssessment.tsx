@@ -15,6 +15,12 @@ import { getAssessmentPaper, submitAssessment } from "@/lib/assessments.function
 import type { AnswerResponse } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import {
+  DEFAULT_TIME_ZONE,
+  formatZoned,
+  windowState,
+  zoneLabel,
+} from "@/lib/coursework-window";
 
 function formatTime(ms: number) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -96,7 +102,9 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
       // requested, multiple (or no) rows returned" mid-quiz.
       const { data: rows, error: err } = await supabase
         .from("assessment_submissions")
-        .select("id, status, auto_score, manual_score, total_points, submitted_at")
+        .select(
+          "id, status, auto_score, manual_score, total_points, submitted_at, is_late, late_accepted",
+        )
         .eq("assessment_id", assessmentId)
         .order("submitted_at", { ascending: false })
         .limit(1);
@@ -139,9 +147,43 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
   const urgent = remaining != null && remaining <= 60_000;
   const warning = remaining != null && remaining <= 5 * 60_000 && !urgent;
 
+  const closesAt = data?.assessment.closes_at ?? null;
+  const availableFrom = data?.assessment.available_from ?? null;
+  const timeZone = data?.timeZone ?? DEFAULT_TIME_ZONE;
+  const state = windowState(availableFrom, closesAt);
+
+  // When the end time arrives mid-paper, hand the work in exactly as it stands.
+  useEffect(() => {
+    if (!hasStarted || !closesAt || mySubmission || submit.isPending) return;
+    const end = Date.parse(closesAt);
+    if (Number.isNaN(end)) return;
+    const fire = () => {
+      toast.warning("The assessment has closed — your work is being handed in as it is.");
+      submit.mutate();
+    };
+    if (Date.now() >= end) {
+      fire();
+      return;
+    }
+    const timer = setTimeout(fire, end - Date.now());
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasStarted, closesAt, mySubmission, submit.isPending]);
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error) return <p className="text-sm text-destructive">{(error as Error).message}</p>;
   if (!data) return null;
+
+  if (state === "not_yet" && !mySubmission) {
+    return (
+      <div className="space-y-1 rounded-xl border border-border bg-card p-4 text-sm">
+        <p className="font-medium">Not yet available</p>
+        <p className="text-muted-foreground">
+          This opens {formatZoned(availableFrom, timeZone)} ({zoneLabel(timeZone)}).
+        </p>
+      </div>
+    );
+  }
 
   if (mySubmission) {
     const score = Number(mySubmission.auto_score) + Number(mySubmission.manual_score);
@@ -155,6 +197,11 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
         {mySubmission.status === "needs_review" && (
           <Badge variant="outline">Written responses awaiting teacher review</Badge>
         )}
+        {mySubmission.is_late && !mySubmission.late_accepted ? (
+          <Badge variant="destructive">
+            Handed in late — your teacher decides whether it counts
+          </Badge>
+        ) : null}
       </div>
     );
   }
@@ -200,6 +247,18 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
               {isTimed ? (
                 <li>When time runs out, your work will be submitted automatically.</li>
               ) : null}
+              {closesAt && state === "open" ? (
+                <li>
+                  This closes {formatZoned(closesAt, timeZone)} — anything unfinished is
+                  handed in for you at that moment.
+                </li>
+              ) : null}
+              {state === "closed" ? (
+                <li className="text-destructive">
+                  This closed {formatZoned(closesAt, timeZone)}. You can still hand work in,
+                  but it is marked late and your teacher decides whether it counts.
+                </li>
+              ) : null}
             </ul>
           </div>
         </div>
@@ -210,7 +269,7 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
               toast.info(isTimed ? "Timer started — good luck!" : "Assessment mode on");
             }}
           >
-            Start assessment
+            {state === "closed" ? "Start late attempt" : "Start assessment"}
           </Button>
           <span className="text-xs text-muted-foreground">
             Click only when you are ready to begin.

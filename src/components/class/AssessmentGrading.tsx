@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { proofreadEssay, scoreEssayAnswer } from "@/lib/assessments.functions";
+import {
+  proofreadEssay,
+  scoreEssayAnswer,
+  setLateAcceptance,
+} from "@/lib/assessments.functions";
 import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/assessments";
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -41,6 +45,8 @@ type SubmissionRow = {
   manual_score: number;
   total_points: number;
   submitted_at: string;
+  is_late: boolean;
+  late_accepted: boolean;
   students: { first_name: string; last_name: string; grade_level: number } | null;
 };
 
@@ -55,6 +61,24 @@ export function AssessmentGrading({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useStudentSort(`assessment-grading-${assessmentId}`);
+  const queryClient = useQueryClient();
+  const acceptLate = useServerFn(setLateAcceptance);
+  // Late attempts stay out of the gradebook until the teacher counts them.
+  const lateDecision = useMutation({
+    mutationFn: (input: { submissionId: string; accepted: boolean }) =>
+      acceptLate({ data: input }),
+    onSuccess: (result) => {
+      toast.success(
+        result.accepted
+          ? "Late work accepted — the score now counts"
+          : "Late work no longer counts toward the grade",
+      );
+      queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const { data: submissions = [] } = useQuery({
     queryKey: ["assessment-submissions", assessmentId],
@@ -62,7 +86,7 @@ export function AssessmentGrading({
       const { data, error } = await supabase
         .from("assessment_submissions")
         .select(
-          "id, student_id, status, auto_score, manual_score, total_points, submitted_at, students(first_name, last_name, grade_level)",
+          "id, student_id, status, auto_score, manual_score, total_points, submitted_at, is_late, late_accepted, students(first_name, last_name, grade_level)",
         )
         .eq("assessment_id", assessmentId)
         .order("submitted_at", { ascending: false });
@@ -164,6 +188,26 @@ export function AssessmentGrading({
                           ) : (
                             <Badge>Graded</Badge>
                           )}
+                          {s.is_late ? (
+                            <>
+                              <Badge variant={s.late_accepted ? "secondary" : "destructive"}>
+                                {s.late_accepted ? "Late — counted" : "Late — not counted"}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={lateDecision.isPending}
+                                onClick={() =>
+                                  lateDecision.mutate({
+                                    submissionId: s.id,
+                                    accepted: !s.late_accepted,
+                                  })
+                                }
+                              >
+                                {s.late_accepted ? "Don't count" : "Count this"}
+                              </Button>
+                            </>
+                          ) : null}
                           <Button
                             size="sm"
                             variant="outline"
