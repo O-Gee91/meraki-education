@@ -8,3 +8,5 @@
 - [x] Redesign the Classes coursework list as a scalable Meraki assignment ledger.
 - [x] Add category filtering, assignment search, due-date ordering, and grading progress.
 - [x] Verify the redesigned ledger on desktop and mobile without breaking assignment actions.
+- [ ] Apply the compact Meraki ledger design to the class Gradebook.
+- [ ] Verify Gradebook filtering, sorting, score editing, and responsive scrolling.
