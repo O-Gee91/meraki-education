@@ -329,6 +329,12 @@ function StudentWorkPanel({
           <Circle className="h-3 w-3" /> Not started
         </Badge>
       )}
+      {wasLate ? <Badge variant="destructive">Late</Badge> : null}
+      {state === "closed" ? (
+        <Badge variant="destructive" title={`Closed ${formatZoned(assignment.closes_at, timeZone)}`}>
+          Closed
+        </Badge>
+      ) : null}
       {scored ? (
         <span className="font-medium">
           Score {String(grade?.points_earned)}/{assignment.points_possible}
@@ -352,7 +358,13 @@ function StudentWorkPanel({
       >
         <DialogTrigger asChild>
           <Button size="sm" variant={mine ? "outline" : "default"} className="h-7">
-            {turnedIn ? "View / edit work" : mine ? "Keep working" : "Start assignment"}
+            {turnedIn
+              ? "View / edit work"
+              : state === "closed"
+                ? "Hand in late"
+                : mine
+                  ? "Keep working"
+                  : "Start assignment"}
           </Button>
         </DialogTrigger>
         <DialogContent>
