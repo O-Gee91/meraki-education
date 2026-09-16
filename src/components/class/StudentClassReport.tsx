@@ -24,6 +24,7 @@ import {
 } from "@/lib/grading";
 import { buildDocument, docHeader, escapeHtml, printHtml } from "@/lib/print-doc";
 import { formatDate } from "@/lib/school";
+import { shouldAutoFlag } from "@/lib/assignment-status";
 
 type Assignment = {
   id: string;
@@ -31,6 +32,7 @@ type Assignment = {
   category: string;
   points_possible: number;
   due_date: string | null;
+  created_at?: string | null;
 };
 
 type Grade = {
@@ -151,8 +153,23 @@ export function StudentClassReport({
       const score = grade?.points_earned == null ? null : Number(grade.points_earned);
       const dueDate = assessment?.due_at?.slice(0, 10) ?? assignment.due_date;
       const handedIn = Boolean(submission || assessmentSubmission);
-      const missing = Boolean(dueDate && dueDate < today && score == null && !mark && !handedIn);
-      const status = mark?.label ?? (score != null ? "Graded" : handedIn ? "Not completed" : missing ? "Missing" : "Not started");
+      // Only auto-flag Missing when the item existed before its due date and the
+      // grace period has passed; backdated work stays neutral ("Assigned").
+      const autoFlag = assessment
+        ? Boolean(dueDate && dueDate < today)
+        : shouldAutoFlag({ created_at: assignment.created_at, due_date: dueDate }, today);
+      const missing = Boolean(autoFlag && score == null && !mark && !handedIn);
+      const status =
+        mark?.label ??
+        (score != null
+          ? "Graded"
+          : handedIn
+            ? "Not completed"
+            : missing
+              ? "Missing"
+              : dueDate && dueDate < today
+                ? "Assigned"
+                : "Not started");
       return {
         key: assignment.id,
         assignmentId: assignment.id,
