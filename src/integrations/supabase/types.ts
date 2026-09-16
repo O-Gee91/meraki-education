@@ -519,39 +519,55 @@ export type Database = {
       }
       behavior_notes: {
         Row: {
+          assignment_id: string | null
           class_id: string | null
           created_at: string
           date: string
           id: string
           kind: string
           notes: string | null
+          reason: string | null
           recorded_by: string | null
+          scored_zero: boolean
           severity: number
           student_id: string
         }
         Insert: {
+          assignment_id?: string | null
           class_id?: string | null
           created_at?: string
           date?: string
           id?: string
           kind?: string
           notes?: string | null
+          reason?: string | null
           recorded_by?: string | null
+          scored_zero?: boolean
           severity?: number
           student_id: string
         }
         Update: {
+          assignment_id?: string | null
           class_id?: string | null
           created_at?: string
           date?: string
           id?: string
           kind?: string
           notes?: string | null
+          reason?: string | null
           recorded_by?: string | null
+          scored_zero?: boolean
           severity?: number
           student_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "behavior_notes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "behavior_notes_class_id_fkey"
             columns: ["class_id"]

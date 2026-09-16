@@ -20,9 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/school";
+import {
+  NOTE_KINDS,
+  kindLabel,
+  reasonLabel,
+  reasonsFor,
+} from "@/lib/behavior-reasons";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+
 
 export const Route = createFileRoute("/_authenticated/behavior")({
   head: () => ({
@@ -44,13 +52,12 @@ export const Route = createFileRoute("/_authenticated/behavior")({
   component: BehaviorPage,
 });
 
-const KINDS = ["positive", "concern", "incident", "strike"] as const;
-
 function kindTone(kind: string) {
   if (kind === "positive") return "default";
   if (kind === "strike") return "destructive";
   return "secondary";
 }
+
 
 function BehaviorPage() {
   const { isStaff, primaryRole } = useAuth();
@@ -92,8 +99,9 @@ function useNotes() {
       const { data, error } = await supabase
         .from("behavior_notes")
         .select(
-          "id, kind, notes, date, student_id, students(first_name, last_name, grade_level)",
+          "id, kind, reason, assignment_id, scored_zero, notes, date, student_id, students(first_name, last_name, grade_level), assignments(title)",
         )
+
         .order("date", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -104,7 +112,16 @@ function useNotes() {
 
 function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
+  const [form, setForm] = useState({
+    studentId: "",
+    kind: "positive",
+    reason: "",
+    assignmentId: "",
+    markZero: true,
+    note: "",
+    date: "",
+  });
+
   const { data: notes = [] } = useNotes();
   const [gradeFilter, setGradeFilter] = useState("all");
   const [sortMode, setSortMode] = useStudentSort("behavior-student-picker");
@@ -144,17 +161,64 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   );
 
 
+  // Assignments the flagged student is enrolled in — used for a plagiarism zero.
+  const { data: studentAssignments = [] } = useQuery({
+    queryKey: ["behavior-student-assignments", form.studentId],
+    enabled: isStaff && !!form.studentId,
+    queryFn: async () => {
+      const { data: enrolled, error: enrollError } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", form.studentId);
+      if (enrollError) throw enrollError;
+      const classIds = (enrolled ?? []).map((row) => row.class_id);
+      if (!classIds.length) return [];
+      const { data, error } = await supabase
+        .from("assignments")
+        .select("id, title, due_date, points_possible, classes(name)")
+        .in("class_id", classIds)
+        .order("due_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const reasonOptions = reasonsFor(form.kind);
+  const needsAssignment = form.kind === "strike" && form.reason === "plagiarism";
+
   const create = useMutation({
     mutationFn: async () => {
       if (!form.studentId) throw new Error("Pick a student");
+      if (reasonOptions.length && !form.reason) throw new Error("Pick a reason");
       if (form.note.trim().length < 4) throw new Error("Add a short note");
+      if (needsAssignment && form.markZero && !form.assignmentId) {
+        throw new Error("Pick the assignment to mark zero");
+      }
+      const zeroed = Boolean(needsAssignment && form.markZero && form.assignmentId);
       const { error } = await supabase.from("behavior_notes").insert({
         student_id: form.studentId,
         kind: form.kind,
+        reason: form.reason || null,
+        assignment_id: needsAssignment && form.assignmentId ? form.assignmentId : null,
+        scored_zero: zeroed,
         notes: form.note.trim().slice(0, 1000),
         date: form.date || new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
+      if (zeroed) {
+        // Same upsert shape the gradebook uses, so the 0 shows everywhere.
+        const { error: gradeError } = await supabase.from("grades").upsert(
+          {
+            assignment_id: form.assignmentId,
+            student_id: form.studentId,
+            points_earned: 0,
+            comment: "Plagiarism — scored zero",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "assignment_id,student_id" },
+        );
+        if (gradeError) throw gradeError;
+      }
       return form.kind;
     },
     onSuccess: (kind) => {
@@ -163,13 +227,23 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
           ? "Strike logged — every third strike schedules detention and notifies the family"
           : "Note logged",
       );
-      setForm({ studentId: "", kind: form.kind, note: "", date: "" });
+      setForm({
+        studentId: "",
+        kind: form.kind,
+        reason: "",
+        assignmentId: "",
+        markZero: true,
+        note: "",
+        date: "",
+      });
       queryClient.invalidateQueries({ queryKey: ["behavior"] });
       queryClient.invalidateQueries({ queryKey: ["detentions"] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <div className="mt-4 grid gap-6 lg:grid-cols-3">
@@ -203,19 +277,86 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="kind">Type</Label>
-              <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v })}>
+              <Select
+                value={form.kind}
+                onValueChange={(v) =>
+                  setForm({ ...form, kind: v, reason: "", assignmentId: "" })
+                }
+              >
                 <SelectTrigger id="kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KINDS.map((k) => (
+                  {NOTE_KINDS.map((k) => (
                     <SelectItem key={k} value={k}>
-                      {k === "strike" ? "strike (counts toward detention)" : k}
+                      {k === "strike" ? "Strike (counts toward detention)" : kindLabel(k)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {reasonOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="reason">
+                  {form.kind === "strike" ? "Reason" : "Concern type"}
+                </Label>
+                <Select
+                  value={form.reason}
+                  onValueChange={(v) => setForm({ ...form, reason: v, assignmentId: "" })}
+                >
+                  <SelectTrigger id="reason">
+                    <SelectValue placeholder="Choose a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasonOptions.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.reason === "other" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Describe what happened in the note below.
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {needsAssignment && (
+              <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
+                <Label htmlFor="plagiarism-assignment">Affected assignment</Label>
+                <Select
+                  value={form.assignmentId}
+                  onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                >
+                  <SelectTrigger id="plagiarism-assignment">
+                    <SelectValue
+                      placeholder={
+                        form.studentId ? "Choose an assignment" : "Pick a student first"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {studentAssignments.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.title}
+                        {a.classes?.name ? ` · ${a.classes.name}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.markZero}
+                    onCheckedChange={(checked) =>
+                      setForm({ ...form, markZero: checked === true })
+                    }
+                  />
+                  Mark this assignment zero in the gradebook
+                </label>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
               <Input
@@ -279,20 +420,38 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
 type NoteRecord = {
   id: string;
   kind: string;
+  reason?: string | null;
+  assignment_id?: string | null;
+  scored_zero?: boolean | null;
   notes: string | null;
   date: string;
   student_id: string;
   students: { first_name: string; last_name: string; grade_level?: number | null } | null;
+  assignments?: { title: string } | null;
 };
+
+/** e.g. "Strike — Plagiarism — Essay 2 (0)" */
+function noteHeadline(note: NoteRecord) {
+  const parts = [kindLabel(note.kind)];
+  const reason = reasonLabel(note.kind, note.reason);
+  if (reason) parts.push(reason);
+  if (note.assignments?.title) {
+    parts.push(`${note.assignments.title}${note.scored_zero ? " (0)" : ""}`);
+  }
+  return parts.join(" — ");
+}
 
 function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     kind: note.kind,
+    reason: note.reason ?? "",
     date: note.date,
     notes: note.notes ?? "",
   });
+  const draftReasons = reasonsFor(draft.kind);
+
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["behavior"] });
@@ -302,13 +461,16 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   const save = useMutation({
     mutationFn: async () => {
       if (draft.notes.trim().length < 4) throw new Error("Add a short note");
+      if (draftReasons.length && !draft.reason) throw new Error("Pick a reason");
       const { error } = await supabase
         .from("behavior_notes")
         .update({
           kind: draft.kind,
+          reason: draft.reason || null,
           date: draft.date,
           notes: draft.notes.trim().slice(0, 1000),
         })
+
         .eq("id", note.id);
       if (error) throw error;
     },
@@ -336,18 +498,35 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
     return (
       <article className="space-y-3 p-4">
         <div className="flex flex-wrap gap-3">
-          <Select value={draft.kind} onValueChange={(kind) => setDraft({ ...draft, kind })}>
+          <Select
+            value={draft.kind}
+            onValueChange={(kind) => setDraft({ ...draft, kind, reason: "" })}
+          >
             <SelectTrigger className="w-56">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {KINDS.map((k) => (
+              {NOTE_KINDS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {k}
+                  {kindLabel(k)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {draftReasons.length > 0 && (
+            <Select value={draft.reason} onValueChange={(reason) => setDraft({ ...draft, reason })}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Choose a reason" />
+              </SelectTrigger>
+              <SelectContent>
+                {draftReasons.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Input
             type="date"
             className="w-40"
@@ -355,6 +534,7 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
           />
         </div>
+
         <Textarea
           value={draft.notes}
           maxLength={1000}
@@ -375,7 +555,7 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   return (
     <article className="p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={kindTone(note.kind)}>{note.kind}</Badge>
+        <Badge variant={kindTone(note.kind)}>{noteHeadline(note)}</Badge>
         <span className="text-sm font-medium">
           {note.students?.last_name}, {note.students?.first_name}
         </span>
@@ -410,20 +590,31 @@ function StrikeTracker() {
   const { data: notes = [] } = useNotes();
 
   const rows = useMemo(() => {
-    const map = new Map<string, { name: string; strikes: number; last: string }>();
+    const map = new Map<
+      string,
+      { name: string; strikes: number; last: string; reasons: string[] }
+    >();
     for (const n of notes) {
       if (n.kind !== "strike") continue;
       const name = `${n.students?.last_name ?? "Student"}, ${n.students?.first_name ?? ""}`;
+      const reason = reasonLabel(n.kind, n.reason);
       const current = map.get(n.student_id);
       if (current) {
         current.strikes += 1;
         if (n.date > current.last) current.last = n.date;
+        if (reason && !current.reasons.includes(reason)) current.reasons.push(reason);
       } else {
-        map.set(n.student_id, { name, strikes: 1, last: n.date });
+        map.set(n.student_id, {
+          name,
+          strikes: 1,
+          last: n.date,
+          reasons: reason ? [reason] : [],
+        });
       }
     }
     return [...map.values()].sort((a, b) => b.strikes - a.strikes);
   }, [notes]);
+
 
   return (
     <div className="panel mt-4 p-5">
@@ -453,7 +644,9 @@ function StrikeTracker() {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {inCycle}/3 in current cycle · {r.strikes} total · last {formatDate(r.last)}
+                  {r.reasons.length ? ` · ${r.reasons.join(", ")}` : ""}
                 </span>
+
                 {inCycle === 3 ? (
                   <Badge variant="destructive" className="ml-auto">
                     Detention required
