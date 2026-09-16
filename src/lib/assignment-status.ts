@@ -38,7 +38,7 @@ function addDays(dateKey: string, days: number): string {
  * grace period after the due date has elapsed.
  */
 export function shouldAutoFlag(
-  assignment: { created_at?: string | null; due_date?: string | null },
+  assignment: { created_at?: string | null | undefined; due_date?: string | null | undefined },
   today: string = todayKey(),
   graceDays: number = AUTO_FLAG_GRACE_DAYS,
 ): boolean {
