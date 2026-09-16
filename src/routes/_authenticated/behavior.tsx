@@ -277,19 +277,86 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="kind">Type</Label>
-              <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v })}>
+              <Select
+                value={form.kind}
+                onValueChange={(v) =>
+                  setForm({ ...form, kind: v, reason: "", assignmentId: "" })
+                }
+              >
                 <SelectTrigger id="kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KINDS.map((k) => (
+                  {NOTE_KINDS.map((k) => (
                     <SelectItem key={k} value={k}>
-                      {k === "strike" ? "strike (counts toward detention)" : k}
+                      {k === "strike" ? "Strike (counts toward detention)" : kindLabel(k)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {reasonOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="reason">
+                  {form.kind === "strike" ? "Reason" : "Concern type"}
+                </Label>
+                <Select
+                  value={form.reason}
+                  onValueChange={(v) => setForm({ ...form, reason: v, assignmentId: "" })}
+                >
+                  <SelectTrigger id="reason">
+                    <SelectValue placeholder="Choose a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasonOptions.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.reason === "other" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Describe what happened in the note below.
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {needsAssignment && (
+              <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
+                <Label htmlFor="plagiarism-assignment">Affected assignment</Label>
+                <Select
+                  value={form.assignmentId}
+                  onValueChange={(v) => setForm({ ...form, assignmentId: v })}
+                >
+                  <SelectTrigger id="plagiarism-assignment">
+                    <SelectValue
+                      placeholder={
+                        form.studentId ? "Choose an assignment" : "Pick a student first"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {studentAssignments.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.title}
+                        {a.classes?.name ? ` · ${a.classes.name}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.markZero}
+                    onCheckedChange={(checked) =>
+                      setForm({ ...form, markZero: checked === true })
+                    }
+                  />
+                  Mark this assignment zero in the gradebook
+                </label>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
               <Input
