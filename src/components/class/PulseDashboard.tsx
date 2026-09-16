@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+import { shouldAutoFlag } from "@/lib/assignment-status";
 
 type RosterRow = {
   id: string;
@@ -29,6 +30,7 @@ type AssignmentRow = {
   category: string;
   points_possible: number;
   due_date: string | null;
+  created_at?: string | null;
 };
 
 type GradeRow = {
@@ -163,6 +165,8 @@ export function PulseDashboard({
   });
 
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
+    // Backdated assignments are never auto-flagged.
+    if (!shouldAutoFlag(assignment, todayKey)) return false;
     const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
     if (g?.points_earned != null) return false;
     return !submissions.some(
