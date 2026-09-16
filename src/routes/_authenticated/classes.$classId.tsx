@@ -542,6 +542,7 @@ type AssignmentRow = {
   description: string | null;
   submission_mode: string;
   rubric_id: string | null;
+  created_at?: string | null;
 };
 
 function AssignmentsTab({
