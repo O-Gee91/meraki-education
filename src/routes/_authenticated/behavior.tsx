@@ -498,18 +498,35 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
     return (
       <article className="space-y-3 p-4">
         <div className="flex flex-wrap gap-3">
-          <Select value={draft.kind} onValueChange={(kind) => setDraft({ ...draft, kind })}>
+          <Select
+            value={draft.kind}
+            onValueChange={(kind) => setDraft({ ...draft, kind, reason: "" })}
+          >
             <SelectTrigger className="w-56">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {KINDS.map((k) => (
+              {NOTE_KINDS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {k}
+                  {kindLabel(k)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {draftReasons.length > 0 && (
+            <Select value={draft.reason} onValueChange={(reason) => setDraft({ ...draft, reason })}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Choose a reason" />
+              </SelectTrigger>
+              <SelectContent>
+                {draftReasons.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Input
             type="date"
             className="w-40"
@@ -517,6 +534,7 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
           />
         </div>
+
         <Textarea
           value={draft.notes}
           maxLength={1000}
