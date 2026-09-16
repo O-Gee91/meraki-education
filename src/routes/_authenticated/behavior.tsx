@@ -555,7 +555,7 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   return (
     <article className="p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={kindTone(note.kind)}>{note.kind}</Badge>
+        <Badge variant={kindTone(note.kind)}>{noteHeadline(note)}</Badge>
         <span className="text-sm font-medium">
           {note.students?.last_name}, {note.students?.first_name}
         </span>
