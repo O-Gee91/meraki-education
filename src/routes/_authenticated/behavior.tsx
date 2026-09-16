@@ -461,13 +461,16 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   const save = useMutation({
     mutationFn: async () => {
       if (draft.notes.trim().length < 4) throw new Error("Add a short note");
+      if (draftReasons.length && !draft.reason) throw new Error("Pick a reason");
       const { error } = await supabase
         .from("behavior_notes")
         .update({
           kind: draft.kind,
+          reason: draft.reason || null,
           date: draft.date,
           notes: draft.notes.trim().slice(0, 1000),
         })
+
         .eq("id", note.id);
       if (error) throw error;
     },
