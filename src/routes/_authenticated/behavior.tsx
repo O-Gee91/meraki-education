@@ -161,17 +161,64 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   );
 
 
+  // Assignments the flagged student is enrolled in — used for a plagiarism zero.
+  const { data: studentAssignments = [] } = useQuery({
+    queryKey: ["behavior-student-assignments", form.studentId],
+    enabled: isStaff && !!form.studentId,
+    queryFn: async () => {
+      const { data: enrolled, error: enrollError } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", form.studentId);
+      if (enrollError) throw enrollError;
+      const classIds = (enrolled ?? []).map((row) => row.class_id);
+      if (!classIds.length) return [];
+      const { data, error } = await supabase
+        .from("assignments")
+        .select("id, title, due_date, points_possible, classes(name)")
+        .in("class_id", classIds)
+        .order("due_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const reasonOptions = reasonsFor(form.kind);
+  const needsAssignment = form.kind === "strike" && form.reason === "plagiarism";
+
   const create = useMutation({
     mutationFn: async () => {
       if (!form.studentId) throw new Error("Pick a student");
+      if (reasonOptions.length && !form.reason) throw new Error("Pick a reason");
       if (form.note.trim().length < 4) throw new Error("Add a short note");
+      if (needsAssignment && form.markZero && !form.assignmentId) {
+        throw new Error("Pick the assignment to mark zero");
+      }
+      const zeroed = Boolean(needsAssignment && form.markZero && form.assignmentId);
       const { error } = await supabase.from("behavior_notes").insert({
         student_id: form.studentId,
         kind: form.kind,
+        reason: form.reason || null,
+        assignment_id: needsAssignment && form.assignmentId ? form.assignmentId : null,
+        scored_zero: zeroed,
         notes: form.note.trim().slice(0, 1000),
         date: form.date || new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
+      if (zeroed) {
+        // Same upsert shape the gradebook uses, so the 0 shows everywhere.
+        const { error: gradeError } = await supabase.from("grades").upsert(
+          {
+            assignment_id: form.assignmentId,
+            student_id: form.studentId,
+            points_earned: 0,
+            comment: "Plagiarism — scored zero",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "assignment_id,student_id" },
+        );
+        if (gradeError) throw gradeError;
+      }
       return form.kind;
     },
     onSuccess: (kind) => {
@@ -180,13 +227,23 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
           ? "Strike logged — every third strike schedules detention and notifies the family"
           : "Note logged",
       );
-      setForm({ studentId: "", kind: form.kind, note: "", date: "" });
+      setForm({
+        studentId: "",
+        kind: form.kind,
+        reason: "",
+        assignmentId: "",
+        markZero: true,
+        note: "",
+        date: "",
+      });
       queryClient.invalidateQueries({ queryKey: ["behavior"] });
       queryClient.invalidateQueries({ queryKey: ["detentions"] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <div className="mt-4 grid gap-6 lg:grid-cols-3">
