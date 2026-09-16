@@ -41,6 +41,7 @@ import { StudentSortControl, useStudentSort } from "@/components/students/Studen
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { DEFAULT_TIME_ZONE, isLateAt } from "@/lib/coursework-window";
+import { shouldAutoFlag } from "@/lib/assignment-status";
 import {
   findMark,
   markCodeFromComment,
@@ -103,6 +104,7 @@ type WorkAssignment = {
   description: string | null;
   submission_mode: string;
   rubric_id?: string | null;
+  created_at?: string | null;
 };
 
 export function AssignmentWork({
@@ -260,7 +262,9 @@ function StudentWorkPanel({
   // Assignments have no availability window — lateness is measured against the
   // due date only.
   const wasLate =
-    turnedIn && isLateAt(Date.parse(mine!.submitted_at), null, assignment.due_date, timeZone);
+    turnedIn &&
+    shouldAutoFlag(assignment, undefined, 0) &&
+    isLateAt(Date.parse(mine!.submitted_at), null, assignment.due_date, timeZone);
 
 
   if (assignment.submission_mode !== "online") {
@@ -441,6 +445,7 @@ function StaffCollectPanel({
     submission_mode: string;
     due_date?: string | null;
     rubric_id?: string | null;
+    created_at?: string | null;
   };
   roster: Student[];
   classId: string;
@@ -1028,15 +1033,22 @@ function StaffCollectPanel({
                                 if (submission?.status === "draft")
                                   return <Badge variant="outline">In progress</Badge>;
                                 if (online && assignment.due_date) {
-                                  return assignment.due_date < new Date().toISOString().slice(0, 10) ? (
-                                    <Badge variant="destructive">Missing</Badge>
-                                  ) : (
-                                    <Badge variant="outline">Not due yet</Badge>
+                                  // Backdated assignments stay neutral until the
+                                  // teacher records a status themselves.
+                                  if (shouldAutoFlag(assignment))
+                                    return <Badge variant="destructive">Missing</Badge>;
+                                  return (
+                                    <Badge variant="outline">
+                                      {assignment.due_date < new Date().toISOString().slice(0, 10)
+                                        ? "Assigned"
+                                        : "Not due yet"}
+                                    </Badge>
                                   );
                                 }
                                 return <Badge variant="outline">Not collected</Badge>;
                               })()}
                               {submission?.submitted_at &&
+                              shouldAutoFlag(assignment, undefined, 0) &&
                               isLateAt(
                                 Date.parse(submission.submitted_at),
                                 null,
