@@ -420,20 +420,38 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
 type NoteRecord = {
   id: string;
   kind: string;
+  reason?: string | null;
+  assignment_id?: string | null;
+  scored_zero?: boolean | null;
   notes: string | null;
   date: string;
   student_id: string;
   students: { first_name: string; last_name: string; grade_level?: number | null } | null;
+  assignments?: { title: string } | null;
 };
+
+/** e.g. "Strike — Plagiarism — Essay 2 (0)" */
+function noteHeadline(note: NoteRecord) {
+  const parts = [kindLabel(note.kind)];
+  const reason = reasonLabel(note.kind, note.reason);
+  if (reason) parts.push(reason);
+  if (note.assignments?.title) {
+    parts.push(`${note.assignments.title}${note.scored_zero ? " (0)" : ""}`);
+  }
+  return parts.join(" — ");
+}
 
 function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     kind: note.kind,
+    reason: note.reason ?? "",
     date: note.date,
     notes: note.notes ?? "",
   });
+  const draftReasons = reasonsFor(draft.kind);
+
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["behavior"] });
