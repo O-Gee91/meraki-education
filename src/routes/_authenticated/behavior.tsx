@@ -99,8 +99,9 @@ function useNotes() {
       const { data, error } = await supabase
         .from("behavior_notes")
         .select(
-          "id, kind, notes, date, student_id, students(first_name, last_name, grade_level)",
+          "id, kind, reason, assignment_id, scored_zero, notes, date, student_id, students(first_name, last_name, grade_level), assignments(title)",
         )
+
         .order("date", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -111,7 +112,16 @@ function useNotes() {
 
 function BehaviorLog({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ studentId: "", kind: "positive", note: "", date: "" });
+  const [form, setForm] = useState({
+    studentId: "",
+    kind: "positive",
+    reason: "",
+    assignmentId: "",
+    markZero: true,
+    note: "",
+    date: "",
+  });
+
   const { data: notes = [] } = useNotes();
   const [gradeFilter, setGradeFilter] = useState("all");
   const [sortMode, setSortMode] = useStudentSort("behavior-student-picker");
