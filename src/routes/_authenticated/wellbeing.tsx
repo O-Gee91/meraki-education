@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
@@ -69,9 +69,6 @@ function WellbeingPage() {
   const [studentId, setStudentId] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [sortMode, setSortMode] = useStudentSort("wellbeing-students");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editMood, setEditMood] = useState("3");
-  const [editNote, setEditNote] = useState("");
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
