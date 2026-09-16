@@ -590,20 +590,31 @@ function StrikeTracker() {
   const { data: notes = [] } = useNotes();
 
   const rows = useMemo(() => {
-    const map = new Map<string, { name: string; strikes: number; last: string }>();
+    const map = new Map<
+      string,
+      { name: string; strikes: number; last: string; reasons: string[] }
+    >();
     for (const n of notes) {
       if (n.kind !== "strike") continue;
       const name = `${n.students?.last_name ?? "Student"}, ${n.students?.first_name ?? ""}`;
+      const reason = reasonLabel(n.kind, n.reason);
       const current = map.get(n.student_id);
       if (current) {
         current.strikes += 1;
         if (n.date > current.last) current.last = n.date;
+        if (reason && !current.reasons.includes(reason)) current.reasons.push(reason);
       } else {
-        map.set(n.student_id, { name, strikes: 1, last: n.date });
+        map.set(n.student_id, {
+          name,
+          strikes: 1,
+          last: n.date,
+          reasons: reason ? [reason] : [],
+        });
       }
     }
     return [...map.values()].sort((a, b) => b.strikes - a.strikes);
   }, [notes]);
+
 
   return (
     <div className="panel mt-4 p-5">
