@@ -142,34 +142,6 @@ function WellbeingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateCheckin = useMutation({
-    mutationFn: async (input: { id: string; mood: number; note: string }) => {
-      const { error } = await supabase
-        .from("checkins")
-        .update({ mood: input.mood, note: input.note.trim() || null })
-        .eq("id", input.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setEditingId(null);
-      toast.success("Check-in updated");
-      queryClient.invalidateQueries({ queryKey: ["checkins"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deleteCheckin = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("checkins").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Check-in deleted");
-      queryClient.invalidateQueries({ queryKey: ["checkins"] });
-      queryClient.invalidateQueries({ queryKey: ["checkin-staff-notes"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const addStaffNote = useMutation({
     mutationFn: async (input: { id: string; value: string }) => {
