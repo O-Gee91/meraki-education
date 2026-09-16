@@ -20,9 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/school";
+import {
+  NOTE_KINDS,
+  kindLabel,
+  reasonLabel,
+  reasonsFor,
+} from "@/lib/behavior-reasons";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+
 
 export const Route = createFileRoute("/_authenticated/behavior")({
   head: () => ({
@@ -44,13 +52,12 @@ export const Route = createFileRoute("/_authenticated/behavior")({
   component: BehaviorPage,
 });
 
-const KINDS = ["positive", "concern", "incident", "strike"] as const;
-
 function kindTone(kind: string) {
   if (kind === "positive") return "default";
   if (kind === "strike") return "destructive";
   return "secondary";
 }
+
 
 function BehaviorPage() {
   const { isStaff, primaryRole } = useAuth();
