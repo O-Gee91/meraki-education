@@ -314,10 +314,77 @@ function WellbeingPage() {
                       <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
                       <span className="text-xs text-muted-foreground">{mood?.label}</span>
                     </div>
-                    {c.note ? <p className="mt-1 text-sm text-muted-foreground">{c.note}</p> : null}
+                    {editingId === c.id ? (
+                      <div className="mt-2 space-y-2 rounded-md border border-border p-3">
+                        <div className="grid grid-cols-5 gap-2">
+                          {MOODS.map((m) => (
+                            <button
+                              key={m.value}
+                              onClick={() => setEditMood(String(m.value))}
+                              className={
+                                "rounded-md border px-2 py-2 text-center text-xs transition-colors " +
+                                (editMood === String(m.value)
+                                  ? "border-accent bg-accent/10"
+                                  : "border-border hover:bg-secondary/60")
+                              }
+                            >
+                              <span className="block text-base">{m.emoji}</span>
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                        <Textarea
+                          value={editNote}
+                          onChange={(e) => setEditNote(e.target.value)}
+                          rows={3}
+                          placeholder="Comment (optional)"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={updateCheckin.isPending}
+                            onClick={() =>
+                              updateCheckin.mutate({
+                                id: c.id,
+                                mood: Number(editMood),
+                                note: editNote,
+                              })
+                            }
+                          >
+                            Save changes
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : c.note ? (
+                      <p className="mt-1 text-sm text-muted-foreground">{c.note}</p>
+                    ) : null}
                     {isStaff ? (
                       <>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {editingId === c.id ? null : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(c.id);
+                                  setEditMood(String(c.mood));
+                                  setEditNote(c.note ?? "");
+                                }}
+                              >
+                                Edit check-in
+                              </Button>
+                              <ConfirmDeleteButton
+                                label="Delete"
+                                title="Delete this check-in?"
+                                description="The check-in and any staff follow-up note will be removed."
+                                onConfirm={() => deleteCheckin.mutate(c.id)}
+                              />
+                            </>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             Suggested: {STRATEGIES[Number(c.mood)]}
                           </p>
