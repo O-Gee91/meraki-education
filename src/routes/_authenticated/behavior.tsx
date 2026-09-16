@@ -644,7 +644,9 @@ function StrikeTracker() {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {inCycle}/3 in current cycle · {r.strikes} total · last {formatDate(r.last)}
+                  {r.reasons.length ? ` · ${r.reasons.join(", ")}` : ""}
                 </span>
+
                 {inCycle === 3 ? (
                   <Badge variant="destructive" className="ml-auto">
                     Detention required
