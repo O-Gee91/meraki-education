@@ -86,6 +86,27 @@ export function AssessmentsTab({
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // Closed assessments nobody handed in are scored 0 automatically; teachers can
+  // still type any score over the top of it.
+  const autoZero = useServerFn(applyMissedAssessmentZeros);
+  const zeroedOnce = useRef(false);
+  useEffect(() => {
+    if (!isStaff || zeroedOnce.current) return;
+    zeroedOnce.current = true;
+    autoZero({ data: { classId } })
+      .then((result) => {
+        if (result.zeroed > 0) {
+          queryClient.invalidateQueries({ queryKey: ["grades"] });
+          queryClient.invalidateQueries({ queryKey: ["assignment-grades"] });
+        }
+      })
+      .catch(() => {
+        /* scoring can be retried on the next visit */
+      });
+  }, [isStaff, classId, autoZero, queryClient]);
+
+
+
   const { data: assessments = [] } = useQuery({
     queryKey: ["assessments", classId],
     queryFn: async () => {
