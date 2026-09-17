@@ -153,8 +153,9 @@ export function AssessmentGrading({
             </Badge>
             {needsReview > 0 && <Badge variant="outline">{needsReview} needs review</Badge>}
             {notStarted > 0 && (
-              <Badge variant="outline">{notStarted} not started</Badge>
+              <Badge variant="outline">{notStarted} not completed — scored 0</Badge>
             )}
+
           </div>
           <ul className="space-y-2">
             {sortedRows.map((row) => {
