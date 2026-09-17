@@ -219,10 +219,9 @@ export function AssessmentGrading({
                           </Button>
                         </>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Not started
-                        </Badge>
+                        <Badge variant="destructive">Not completed — 0</Badge>
                       )}
+
                     </div>
                   </div>
                   {s && openId === s.id && (
