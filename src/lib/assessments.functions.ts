@@ -466,7 +466,7 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
-    if (!isStaff) return { zeroed: 0 };
+    if (!isStaff) return { zeroed: 0, synced: 0 };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -481,14 +481,14 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       const end = a.closes_at ?? a.due_at;
       return end != null && Date.parse(end) < now;
     });
-    if (closed.length === 0) return { zeroed: 0 };
+    if (closed.length === 0) return { zeroed: 0, synced: 0 };
 
     const { data: roster } = await supabaseAdmin
       .from("enrollments")
       .select("student_id")
       .eq("class_id", data.classId);
     const studentIds = (roster ?? []).map((r) => r.student_id);
-    if (studentIds.length === 0) return { zeroed: 0 };
+    if (studentIds.length === 0) return { zeroed: 0, synced: 0 };
 
     let zeroed = 0;
     for (const assessment of closed) {
