@@ -520,5 +520,50 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       if (!error) zeroed += targets.length;
     }
 
-    return { zeroed };
+    // Repair pass: graded attempts that never reached the gradebook (for
+    // example the gradebook column was created after grading) get pushed in.
+    // Teacher-entered grades are left untouched.
+    const AUTO_COMMENTS = new Set(["Assessment graded", "Not completed — automatic zero"]);
+    let synced = 0;
+    for (const assessment of assessments ?? []) {
+      if (!assessment.assignment_id) continue;
+      const assignmentId = assessment.assignment_id;
+      const { data: subs } = await supabaseAdmin
+        .from("assessment_submissions")
+        .select("student_id, status, auto_score, manual_score, is_late, late_accepted")
+        .eq("assessment_id", assessment.id)
+        .eq("status", "graded");
+      const countable = (subs ?? []).filter((s) => !s.is_late || s.late_accepted);
+      if (countable.length === 0) continue;
+
+      const { data: existing } = await supabaseAdmin
+        .from("grades")
+        .select("student_id, points_earned, comment")
+        .eq("assignment_id", assignmentId);
+      const byStudent = new Map((existing ?? []).map((g) => [g.student_id, g]));
+
+      const rows = countable
+        .map((s) => ({
+          assignment_id: assignmentId,
+          student_id: s.student_id,
+          points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
+          comment: "Assessment graded",
+          updated_at: new Date().toISOString(),
+        }))
+        .filter((row) => {
+          const current = byStudent.get(row.student_id);
+          if (!current) return true;
+          if (!AUTO_COMMENTS.has(current.comment ?? "")) return false;
+          return Number(current.points_earned ?? -1) !== row.points_earned;
+        });
+      if (rows.length === 0) continue;
+
+      const { error } = await supabaseAdmin
+        .from("grades")
+        .upsert(rows, { onConflict: "assignment_id,student_id" });
+      if (!error) synced += rows.length;
+    }
+
+    return { zeroed, synced };
   });
+
