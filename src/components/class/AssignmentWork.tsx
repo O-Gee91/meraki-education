@@ -491,6 +491,28 @@ function StaffCollectPanel({
     },
   });
 
+  // Online assessments record their hand-ins separately, so count those too or
+  // the ledger reports 0 turned in for finished quizzes and tests.
+  const { data: assessmentTurnedIn = 0 } = useQuery({
+    queryKey: ["assessment-turnins", assignment.id],
+    queryFn: async () => {
+      const { data: linked, error } = await supabase
+        .from("assessments")
+        .select("id")
+        .eq("assignment_id", assignment.id);
+      if (error) throw error;
+      const ids = (linked ?? []).map((a) => a.id);
+      if (ids.length === 0) return 0;
+      const { data: subs, error: sErr } = await supabase
+        .from("assessment_submissions")
+        .select("student_id")
+        .in("assessment_id", ids);
+      if (sErr) throw sErr;
+      return new Set((subs ?? []).map((s) => s.student_id)).size;
+    },
+  });
+
+
   const check = useMutation({
     mutationFn: async (input: { studentId: string; collected: boolean }) => {
       const existing = submissions.find((s) => s.student_id === input.studentId);
@@ -660,7 +682,11 @@ function StaffCollectPanel({
   });
 
 
-  const turnedIn = submissions.filter((s) => s.status !== "draft").length;
+  const turnedIn = Math.max(
+    submissions.filter((s) => s.status !== "draft").length,
+    assessmentTurnedIn,
+  );
+
 
   // One click marks every student who hasn't handed anything in as collected.
   // Scored/returned students are already collected by definition and are skipped.
