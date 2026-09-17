@@ -682,7 +682,11 @@ function StaffCollectPanel({
   });
 
 
-  const turnedIn = submissions.filter((s) => s.status !== "draft").length;
+  const turnedIn = Math.max(
+    submissions.filter((s) => s.status !== "draft").length,
+    assessmentTurnedIn,
+  );
+
 
   // One click marks every student who hasn't handed anything in as collected.
   // Scored/returned students are already collected by definition and are skipped.
