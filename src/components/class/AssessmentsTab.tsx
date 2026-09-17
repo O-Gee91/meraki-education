@@ -340,7 +340,9 @@ async function resolveGradebookColumn(opts: {
   if (opts.assignmentId !== "none") {
     const { error } = await supabase
       .from("assignments")
-      .update({ category: opts.category })
+      // Assessments are always completed online, so the column never offers "Collect all".
+      .update({ category: opts.category, submission_mode: "online" })
+
       .eq("id", opts.assignmentId);
     if (error) throw error;
     return opts.assignmentId;
