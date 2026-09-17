@@ -174,7 +174,8 @@ export function AssessmentGrading({
                       <p className="text-xs text-muted-foreground">
                         {s
                           ? `Submitted ${new Date(s.submitted_at).toLocaleString()}`
-                          : "Not started — nothing submitted yet"}
+                          : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
+
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
