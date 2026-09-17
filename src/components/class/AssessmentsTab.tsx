@@ -95,10 +95,11 @@ export function AssessmentsTab({
     zeroedOnce.current = true;
     autoZero({ data: { classId } })
       .then((result) => {
-        if (result.zeroed > 0) {
+        if (result.zeroed > 0 || result.synced > 0) {
           queryClient.invalidateQueries({ queryKey: ["grades"] });
           queryClient.invalidateQueries({ queryKey: ["assignment-grades"] });
         }
+
       })
       .catch(() => {
         /* scoring can be retried on the next visit */
