@@ -153,8 +153,9 @@ export function AssessmentGrading({
             </Badge>
             {needsReview > 0 && <Badge variant="outline">{needsReview} needs review</Badge>}
             {notStarted > 0 && (
-              <Badge variant="outline">{notStarted} not started</Badge>
+              <Badge variant="outline">{notStarted} not completed — scored 0</Badge>
             )}
+
           </div>
           <ul className="space-y-2">
             {sortedRows.map((row) => {
@@ -174,7 +175,8 @@ export function AssessmentGrading({
                       <p className="text-xs text-muted-foreground">
                         {s
                           ? `Submitted ${new Date(s.submitted_at).toLocaleString()}`
-                          : "Not started — nothing submitted yet"}
+                          : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
+
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -217,10 +219,9 @@ export function AssessmentGrading({
                           </Button>
                         </>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Not started
-                        </Badge>
+                        <Badge variant="destructive">Not completed — 0</Badge>
                       )}
+
                     </div>
                   </div>
                   {s && openId === s.id && (

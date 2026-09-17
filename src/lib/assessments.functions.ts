@@ -453,3 +453,72 @@ export const proofreadEssay = createServerFn({ method: "POST" })
 
     return review;
   });
+
+/**
+ * Assessments that have closed (or passed their due date) score a 0 for every
+ * enrolled student who never handed anything in. Existing grades are never
+ * touched, so a teacher's override always wins.
+ */
+export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ classId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isStaff } = await context.supabase.rpc("is_staff");
+    if (!isStaff) return { zeroed: 0 };
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: assessments } = await supabaseAdmin
+      .from("assessments")
+      .select("id, assignment_id, published, due_at, closes_at")
+      .eq("class_id", data.classId);
+
+    const now = Date.now();
+    const closed = (assessments ?? []).filter((a) => {
+      if (!a.published || !a.assignment_id) return false;
+      const end = a.closes_at ?? a.due_at;
+      return end != null && Date.parse(end) < now;
+    });
+    if (closed.length === 0) return { zeroed: 0 };
+
+    const { data: roster } = await supabaseAdmin
+      .from("enrollments")
+      .select("student_id")
+      .eq("class_id", data.classId);
+    const studentIds = (roster ?? []).map((r) => r.student_id);
+    if (studentIds.length === 0) return { zeroed: 0 };
+
+    let zeroed = 0;
+    for (const assessment of closed) {
+      const assignmentId = assessment.assignment_id!;
+      const { data: subs } = await supabaseAdmin
+        .from("assessment_submissions")
+        .select("student_id")
+        .eq("assessment_id", assessment.id);
+      const submitted = new Set((subs ?? []).map((s) => s.student_id));
+
+      const { data: existing } = await supabaseAdmin
+        .from("grades")
+        .select("student_id")
+        .eq("assignment_id", assignmentId);
+      const graded = new Set((existing ?? []).map((g) => g.student_id));
+
+      const targets = studentIds.filter((id) => !submitted.has(id) && !graded.has(id));
+      if (targets.length === 0) continue;
+
+      const { error } = await supabaseAdmin.from("grades").insert(
+        targets.map((student_id) => ({
+          assignment_id: assignmentId,
+          student_id,
+          points_earned: 0,
+          comment: "Not completed — automatic zero",
+          updated_at: new Date().toISOString(),
+        })),
+      );
+      if (!error) zeroed += targets.length;
+    }
+
+    return { zeroed };
+  });
