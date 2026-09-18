@@ -89,7 +89,17 @@ type EventRow = {
   audience: string;
   audiences: Audience[] | null;
   class_id: string | null;
+  class_ids: string[] | null;
+  grade_level: number | null;
   color: string;
+};
+
+type ClassOption = {
+  id: string;
+  name: string;
+  grade_level: number | null;
+  teacher_id: string | null;
+  teacher_name: string;
 };
 
 
@@ -147,7 +157,7 @@ function formatTime(value?: string | null) {
 }
 
 export function SchoolCalendar() {
-  const { isStaff, isAdmin, user } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
