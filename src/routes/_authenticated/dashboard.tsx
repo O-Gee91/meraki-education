@@ -265,6 +265,12 @@ function DashboardPage() {
         {isStaff ? (
           <Stat icon={CalendarCheck} label="Term" value={classes[0]?.term ?? "—"} />
         ) : (
+          <>
+          <Stat
+            icon={CalendarCheck}
+            label="Recent attendance"
+            value={`${attendance.length} days logged`}
+          />
           <Stat
             icon={MessageSquareText}
             label="Teacher feedback"
