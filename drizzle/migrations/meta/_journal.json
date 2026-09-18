@@ -8,6 +8,13 @@
       "when": 1789690983058,
       "tag": "0000_create_grade_reset_log",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789707430235,
+      "tag": "0001_calendar_event_targeting",
+      "breakpoints": true
     }
   ]
 }
