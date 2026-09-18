@@ -196,7 +196,9 @@ export function AssessmentGrading({
                       <p className="text-xs text-muted-foreground">
                         {s
                           ? `Submitted ${new Date(s.submitted_at).toLocaleString()}`
-                          : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
+                          : reopened.has(row.student_id)
+                            ? "Given another chance — the 0 was cleared and they can still complete this"
+                            : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
 
                       </p>
                     </div>
@@ -240,7 +242,13 @@ export function AssessmentGrading({
                           </Button>
                         </>
                       ) : (
-                        <Badge variant="destructive">Not completed — 0</Badge>
+                        <Badge
+                          variant={reopened.has(row.student_id) ? "secondary" : "destructive"}
+                        >
+                          {reopened.has(row.student_id)
+                            ? "Another chance — not yet completed"
+                            : "Not completed — 0"}
+                        </Badge>
                       )}
 
                     </div>
