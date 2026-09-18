@@ -193,7 +193,7 @@ function DashboardPage() {
       classId: a.class_id,
       className: a.classes?.name ?? "—",
     })),
-    ...upcomingAssessments.map((a) => ({
+    ...scopedAssessments.map((a) => ({
       id: `assessment-${a.id}`,
       title: a.title,
       type: `Assessment · ${a.kind.replace("_", " ")}`,
