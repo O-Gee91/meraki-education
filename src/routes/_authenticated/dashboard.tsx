@@ -115,21 +115,35 @@ function DashboardPage() {
     },
   });
 
-  const { data: upcomingEvents = [] } = useQuery({
+  const { data: upcomingEventsRaw = [] } = useQuery({
     queryKey: ["staff-upcoming-events", today],
     enabled: isStaff,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calendar_events")
-        .select("id, title, description, event_date, start_time, end_time, location, category, color")
+        .select("id, title, description, event_date, start_time, end_time, location, category, color, class_id, class_ids, grade_level")
         .gte("event_date", today)
         .order("event_date")
         .order("start_time")
-        .limit(8);
+        .limit(30);
       if (error) throw error;
       return data;
     },
   });
+
+  // Teacher mode: only events aimed at their own classes or grade levels.
+  const teacherGrades = classIds
+    ? new Set(classes.map((c) => (c as { grade_level?: number | null }).grade_level).filter((g): g is number => g != null))
+    : null;
+  const upcomingEvents = (classIds
+    ? upcomingEventsRaw.filter((e) => {
+        if (e.class_id && classIds.has(e.class_id)) return true;
+        if (e.class_ids?.some((id) => classIds.has(id))) return true;
+        if (e.grade_level != null && teacherGrades?.has(e.grade_level)) return true;
+        return !e.class_id && (!e.class_ids || e.class_ids.length === 0) && e.grade_level == null;
+      })
+    : upcomingEventsRaw
+  ).slice(0, 8);
 
   const { data: upcomingAssignments = [] } = useQuery({
     queryKey: ["upcoming-assignments", today],
