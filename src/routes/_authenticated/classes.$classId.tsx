@@ -56,6 +56,7 @@ import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
 import { StudentImport } from "@/components/students/StudentImport";
 import { ClassLogins } from "@/components/students/ClassLogins";
+import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 
 import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -1422,7 +1423,9 @@ function RosterTab({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, first_name, last_name, grade_level, student_number")
+        .select(
+          "id, first_name, last_name, grade_level, student_number, user_id, guardian_user_id",
+        )
         .order("last_name");
       if (error) throw error;
       return data;
@@ -1673,6 +1676,9 @@ function RosterTab({
           <ClassLogins fixedClassId={classId} triggerLabel="Print logins (whole class)" />
         </div>
       )}
+
+      {isStaff ? <UnlinkedAccounts students={students} classId={classId} /> : null}
+
 
       {isStaff && roster.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
