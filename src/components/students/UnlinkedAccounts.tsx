@@ -134,7 +134,7 @@ export function UnlinkedAccounts({
                 </div>
               ) : null}
               <Button onClick={() => attach.mutate(a)} disabled={attach.isPending}>
-                Add to roster
+                {classId ? "Add to this class" : "Add to roster"}
               </Button>
             </li>
           );
