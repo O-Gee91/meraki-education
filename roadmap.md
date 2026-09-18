@@ -18,3 +18,5 @@
 - [x] Add independent start and end times to assignments and assessments in the class time zone.
 - [x] Show "Not yet available" and "Closed" to students, auto-hand-in at the end time, and flag late work.
 - [x] Keep late work out of the grade until a teacher chooses to count it.
+
+- [ ] Simplify the grading workspace roster and detail layout.
