@@ -246,7 +246,7 @@ export function SchoolCalendar() {
       const { data, error } = await supabase
         .from("calendar_events")
         .select(
-          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id",
+          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id, class_ids, grade_level",
         )
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
@@ -659,27 +659,78 @@ export function SchoolCalendar() {
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="cal-scope">Who is this for</Label>
-                    <Select
-                      value={form.class_id || "school"}
-                      onValueChange={(v) => setForm({ ...form, class_id: v === "school" ? "" : v })}
-                    >
-                      <SelectTrigger id="cal-scope">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isAdmin && <SelectItem value="school">Whole school</SelectItem>}
-                        {myClasses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
+                    <Label>Who is this for</Label>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          aria-pressed={form.grade_level == null && form.class_ids.length === 0}
+                          onClick={() => setForm({ ...form, grade_level: null, class_ids: [] })}
+                          className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                            form.grade_level == null && form.class_ids.length === 0
+                              ? "border-accent bg-accent/10 font-medium"
+                              : "border-border text-muted-foreground hover:border-accent/50"
+                          }`}
+                        >
+                          Whole school
+                        </button>
+                      )}
+                      {myGrades.map((g) => {
+                        const active = form.grade_level === g;
+                        return (
+                          <button
+                            key={`grade-${g}`}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setForm({ ...form, grade_level: g, class_ids: [] })}
+                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                              active
+                                ? "border-accent bg-accent/10 font-medium"
+                                : "border-border text-muted-foreground hover:border-accent/50"
+                            }`}
+                          >
+                            All of Grade {g}
+                          </button>
+                        );
+                      })}
+                      {myClasses.map((c) => {
+                        const active = form.class_ids.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setForm((prev) => {
+                                const next = prev.class_ids.includes(c.id)
+                                  ? prev.class_ids.filter((id) => id !== c.id)
+                                  : [...prev.class_ids, c.id];
+                                return {
+                                  ...prev,
+                                  class_ids: next,
+                                  grade_level: next.length ? null : prev.grade_level,
+                                };
+                              })
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                              active
+                                ? "border-accent bg-accent/10 font-medium"
+                                : "border-border text-muted-foreground hover:border-accent/50"
+                            }`}
+                          >
                             {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {form.class_id
-                        ? "Only this class and their families will see it."
-                        : "Everyone at the school will see it."}
+                      {form.grade_level != null
+                        ? `Every Grade ${form.grade_level} class and their families will see it.`
+                        : form.class_ids.length
+                          ? "Only the selected classes and their families will see it."
+                          : isAdmin
+                            ? "Everyone at the school will see it."
+                            : "Pick your grade level or one or more of your classes."}
                     </p>
                   </div>
                   <div>
