@@ -20,6 +20,8 @@ export type LinkInput = {
   first_name?: string | null;
   last_name?: string | null;
   student_number?: string | null;
+  /** Enroll the linked student into this class straight away. */
+  class_id?: string | null;
 };
 
 function splitName(fullName: string) {
