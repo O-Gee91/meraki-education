@@ -98,7 +98,7 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { isStaff, teacherMode, user, profile } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -127,7 +127,7 @@ function ClassDetailPage() {
 
   // Classes this staff member can hop between via the title switcher.
   const { data: switcherClasses = [] } = useQuery({
-    queryKey: ["class-switcher", user?.id, profile?.full_name, teacherMode],
+    queryKey: ["class-switcher", user?.id, profile?.full_name, isAdmin],
     enabled: isStaff && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -135,7 +135,8 @@ function ClassDetailPage() {
         .select("id, name, period, term, teacher_id, teacher_name")
         .order("name");
       if (error) throw error;
-      if (!teacherMode) return data ?? [];
+      // Admin mode sees every class; everyone else only their own.
+      if (isAdmin) return data ?? [];
       const myName = (profile?.full_name ?? "").trim().toLowerCase();
       return (data ?? []).filter(
         (c) =>
