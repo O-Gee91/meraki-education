@@ -674,7 +674,14 @@ function EditAssessment({
       if (error) throw error;
       await syncColumnPoints(assessment.id);
 
-      if (reopen.reopen && assignmentId) {
+      // Pushing the due date or close time later automatically gives students
+      // another chance, so nobody stays stuck on an automatic 0.
+      const before = initial();
+      const movedLater =
+        (Boolean(form.due) && (!before.due || form.due > before.due)) ||
+        (Boolean(form.closesAt) &&
+          (!before.closesAt || form.closesAt > before.closesAt));
+      if (movedLater && assignmentId) {
         return reopenWork({
           data: { assignmentId, scope: reopen.scope, notify: reopen.notify },
         });
