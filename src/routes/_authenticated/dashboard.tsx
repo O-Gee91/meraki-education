@@ -283,6 +283,7 @@ function DashboardPage() {
             }
             tone={unreadFeedback > 0 ? "text-accent" : undefined}
           />
+          </>
         )}
       </div>
 
