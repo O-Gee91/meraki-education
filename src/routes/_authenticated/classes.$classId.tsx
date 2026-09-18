@@ -98,7 +98,7 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { isStaff } = useAuth();
+  const { isStaff, teacherMode, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -122,6 +122,26 @@ function ClassDetailPage() {
         .maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Classes this staff member can hop between via the title switcher.
+  const { data: switcherClasses = [] } = useQuery({
+    queryKey: ["class-switcher", user?.id, profile?.full_name, teacherMode],
+    enabled: isStaff && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, name, period, term, teacher_id, teacher_name")
+        .order("name");
+      if (error) throw error;
+      if (!teacherMode) return data ?? [];
+      const myName = (profile?.full_name ?? "").trim().toLowerCase();
+      return (data ?? []).filter(
+        (c) =>
+          c.teacher_id === user!.id ||
+          (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+      );
     },
   });
 
