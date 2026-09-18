@@ -54,6 +54,13 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 import { formatDate } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { classTimeZone } from "@/lib/coursework-window";
+import {
+  REOPEN_DEFAULTS,
+  ReopenOptions,
+  type ReopenSettings,
+} from "@/components/class/ReopenOptions";
+import { reopenCoursework } from "@/lib/coursework-reopen.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   computeAverage,
@@ -1137,6 +1144,11 @@ function EditAssignment({
               onChange={(e) => setForm({ ...form, due: e.target.value })}
             />
           </div>
+          <ReopenOptions
+            idPrefix={`e-reopen-${assignment.id}`}
+            value={reopen}
+            onChange={setReopen}
+          />
           <div className="space-y-1.5">
             <Label htmlFor={`e-mode-${assignment.id}`}>How is this handed in?</Label>
             <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
