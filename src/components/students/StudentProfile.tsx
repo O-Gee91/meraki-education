@@ -42,6 +42,7 @@ export function StudentProfile({
   const queryClient = useQueryClient();
   const { isStaff } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [showGuardian, setShowGuardian] = useState(false);
   const [form, setForm] = useState({
     first: "",
     last: "",
@@ -253,12 +254,59 @@ export function StudentProfile({
               <Badge variant={student.user_id ? "default" : "secondary"}>
                 Student {student.user_id ? "✓" : "—"}
               </Badge>
-              <Badge variant={student.guardian_user_id ? "default" : "secondary"}>
-                Guardian {student.guardian_user_id ? "✓" : "—"}
-              </Badge>
+              <button
+                type="button"
+                onClick={() => setShowGuardian((v) => !v)}
+                aria-expanded={showGuardian}
+                title="View guardian details"
+              >
+                <Badge
+                  variant={student.guardian_user_id ? "default" : "secondary"}
+                  className="cursor-pointer"
+                >
+                  Guardian {student.guardian_user_id ? "✓" : "—"}
+                </Badge>
+              </button>
             </dd>
           </div>
         </dl>
+
+        {showGuardian ? (
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="mb-2 text-sm font-semibold">Guardian details</h3>
+            <p className="text-sm">
+              <span className="text-muted-foreground">Email: </span>
+              <span className="break-all font-medium">{student.guardian_email ?? "—"}</span>
+            </p>
+            {!student.guardian_user_id ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No guardian account linked yet, so there is no sign-in history.
+              </p>
+            ) : guardianLogins === undefined ? (
+              <p className="mt-2 text-sm text-muted-foreground">Loading sign-in history…</p>
+            ) : guardianLogins.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                This guardian has not signed in yet.
+              </p>
+            ) : (
+              <div className="mt-2">
+                <p className="mb-1 text-xs text-muted-foreground">
+                  Last sign-in: {new Date(guardianLogins[0]!.signed_in_at).toLocaleString()} ·{" "}
+                  {guardianLogins.length} recorded sign-in
+                  {guardianLogins.length === 1 ? "" : "s"}
+                </p>
+                <ul className="divide-y divide-border rounded-md border border-border bg-background text-sm">
+                  {guardianLogins.map((l) => (
+                    <li key={l.id} className="px-3 py-1.5">
+                      {new Date(l.signed_in_at).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : null}
+
 
         <div>
           <h3 className="mb-2 text-sm font-semibold">Login activity</h3>
