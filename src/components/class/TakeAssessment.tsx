@@ -202,6 +202,10 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
             Handed in late — your teacher decides whether it counts
           </Badge>
         ) : null}
+        <AnswerFeedback
+          submissionId={mySubmission.id}
+          questions={data.questions.map((q) => ({ id: q.id, position: q.position, prompt: q.prompt }))}
+        />
       </div>
     );
   }
