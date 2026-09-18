@@ -293,6 +293,12 @@ function StudentWorkPanel({
             Score {String(grade?.points_earned)}/{assignment.points_possible}
           </span>
         ) : null}
+        {gradeComment || mine?.teacher_note ? (
+          <p className="w-full rounded-md border border-accent/40 bg-accent/5 p-2 text-xs">
+            <span className="font-medium">Teacher feedback: </span>
+            {gradeComment || mine?.teacher_note}
+          </p>
+        ) : null}
       </div>
     );
   }
