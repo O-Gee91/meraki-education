@@ -175,7 +175,8 @@ export function SchoolCalendar() {
     end_time: "",
     location: "",
     event_date: "",
-    class_id: "" as string,
+    grade_level: null as number | null,
+    class_ids: [] as string[],
   };
   const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
@@ -200,24 +201,41 @@ export function SchoolCalendar() {
     }
   }, [isCollapsed]);
 
-  const { data: myClasses = [] } = useQuery({
+  const { data: allClasses = [] } = useQuery({
     queryKey: ["calendar-scope-classes", user?.id],
     enabled: isStaff,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name")
+        .select("id, name, grade_level, teacher_id, teacher_name")
         .order("name");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as ClassOption[];
     },
   });
 
-  // An admin posting as a teacher should default to their own class, not the school.
+  // Teachers can only target the grades and classes they actually teach;
+  // admins may reach the whole school.
+  const myName = (profile?.full_name ?? "").trim().toLowerCase();
+  const myClasses = isAdmin
+    ? allClasses
+    : allClasses.filter(
+        (c) =>
+          c.teacher_id === user?.id ||
+          (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+      );
+  const myGrades = [...new Set(myClasses.map((c) => c.grade_level).filter((g): g is number => g != null))].sort(
+    (a, b) => a - b,
+  );
+  const classNameById = new Map(allClasses.map((c) => [c.id, c.name]));
+
+  // A teacher's events default to their whole grade level.
   useEffect(() => {
-    if (editingId || isAdmin || !myClasses.length) return;
-    setForm((prev) => (prev.class_id ? prev : { ...prev, class_id: myClasses[0]!.id }));
-  }, [editingId, isAdmin, myClasses]);
+    if (editingId || isAdmin || !myGrades.length) return;
+    setForm((prev) =>
+      prev.grade_level != null || prev.class_ids.length ? prev : { ...prev, grade_level: myGrades[0]! },
+    );
+  }, [editingId, isAdmin, myGrades]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
