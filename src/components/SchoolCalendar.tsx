@@ -291,6 +291,20 @@ export function SchoolCalendar() {
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
       if (form.audiences.length === 0) throw new Error("Pick at least one audience");
+      // Teachers must aim at their own grade or their own classes — never
+      // another grade, never the whole school.
+      if (!isAdmin) {
+        if (form.grade_level == null && form.class_ids.length === 0) {
+          throw new Error("Pick your grade level or at least one of your classes");
+        }
+        if (form.grade_level != null && !myGrades.includes(form.grade_level)) {
+          throw new Error("You can only share with the grade level you teach");
+        }
+        const ownIds = new Set(myClasses.map((c) => c.id));
+        if (form.class_ids.some((id) => !ownIds.has(id))) {
+          throw new Error("You can only share with classes you teach");
+        }
+      }
       const audiences = form.audiences.includes("everyone")
         ? (["everyone"] as Audience[])
         : form.audiences;
@@ -305,7 +319,9 @@ export function SchoolCalendar() {
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         location: form.location.trim() || null,
-        class_id: form.class_id || null,
+        grade_level: form.grade_level,
+        class_ids: form.class_ids.length ? form.class_ids : null,
+        class_id: form.class_ids[0] ?? null,
       };
       if (editingId) {
         const { error } = await supabase
@@ -346,7 +362,8 @@ export function SchoolCalendar() {
       end_time: e.end_time?.slice(0, 5) ?? "",
       location: e.location ?? "",
       event_date: e.event_date,
-      class_id: e.class_id ?? "",
+      grade_level: e.grade_level,
+      class_ids: e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [],
     });
   };
 
