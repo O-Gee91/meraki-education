@@ -54,6 +54,7 @@ export function StudentProfile({
 
   useEffect(() => {
     setEditing(false);
+    setShowGuardian(false);
     if (!student) return;
     setForm({
       first: student.first_name ?? "",
@@ -120,6 +121,21 @@ export function StudentProfile({
         .eq("user_id", student!.user_id!)
         .order("signed_in_at", { ascending: false })
         .limit(6);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: guardianLogins } = useQuery({
+    queryKey: ["student-profile-guardian-logins", student?.guardian_user_id],
+    enabled: open && showGuardian && !!student?.guardian_user_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("login_events")
+        .select("id, signed_in_at")
+        .eq("user_id", student!.guardian_user_id!)
+        .order("signed_in_at", { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data;
     },
