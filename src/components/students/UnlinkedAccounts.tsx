@@ -26,7 +26,13 @@ type StudentOption = {
 
 const NEW_RECORD = "__new__";
 
-export function UnlinkedAccounts({ students }: { students: StudentOption[] }) {
+export function UnlinkedAccounts({
+  students,
+  classId,
+}: {
+  students: StudentOption[];
+  classId?: string;
+}) {
   const queryClient = useQueryClient();
   const fetchUnlinked = useServerFn(getUnlinkedAccounts);
   const link = useServerFn(linkSelfRegisteredAccount);
@@ -52,13 +58,15 @@ export function UnlinkedAccounts({ students }: { students: StudentOption[] }) {
           role: account.role,
           student_id: target === NEW_RECORD ? null : target,
           grade_level: target === NEW_RECORD ? Number(grades[account.user_id] ?? "7") : null,
+          class_id: classId ?? null,
         },
       });
     },
     onSuccess: () => {
-      toast.success("Account linked to the roster");
+      toast.success(classId ? "Account added to this class" : "Account linked to the roster");
       queryClient.invalidateQueries({ queryKey: ["unlinked-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -71,8 +79,10 @@ export function UnlinkedAccounts({ students }: { students: StudentOption[] }) {
         Self-registered accounts waiting to be added ({accounts.length})
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        These people created their own login but aren't on the roster yet. Link each one to a student
-        record so they appear in classes, attendance and reporting.
+        These people created their own login but aren't on the roster yet.{" "}
+        {classId
+          ? "Link each one to a student record to add them to this class."
+          : "Link each one to a student record so they appear in classes, attendance and reporting."}
       </p>
       <ul className="mt-4 space-y-3">
         {accounts.map((a) => {
