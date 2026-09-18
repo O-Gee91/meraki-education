@@ -439,3 +439,62 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
     </div>
   );
 }
+
+/**
+ * Written feedback the teacher left on individual answers. Row-level security
+ * limits these rows to the student's own attempt (and their guardian).
+ */
+function AnswerFeedback({
+  submissionId,
+  questions,
+}: {
+  submissionId: string;
+  questions: { id: string; position: number; prompt: string }[];
+}) {
+  const { data: answers = [] } = useQuery({
+    queryKey: ["my-answer-feedback", submissionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assessment_answers")
+        .select("id, question_id, feedback, points_awarded")
+        .eq("submission_id", submissionId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const withFeedback = answers.filter((a) => (a.feedback ?? "").trim().length > 0);
+  if (withFeedback.length === 0) return null;
+
+  const promptOf = (questionId: string) => questions.find((q) => q.id === questionId);
+
+  return (
+    <div className="mt-3 space-y-2 rounded-xl border border-accent/40 bg-accent/5 p-3">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <MessageSquareText className="size-4 text-accent" />
+        Feedback from your teacher
+      </p>
+      <ul className="space-y-2">
+        {withFeedback
+          .slice()
+          .sort(
+            (a, b) =>
+              (promptOf(a.question_id)?.position ?? 0) - (promptOf(b.question_id)?.position ?? 0),
+          )
+          .map((a) => {
+            const q = promptOf(a.question_id);
+            return (
+              <li key={a.id} className="rounded-md bg-card/70 p-2 text-xs">
+                <p className="font-medium">
+                  {q ? `Question ${q.position}` : "Question"}
+                  {a.points_awarded != null ? ` · ${a.points_awarded} point(s)` : ""}
+                </p>
+                {q ? <p className="mt-0.5 italic text-muted-foreground">{q.prompt}</p> : null}
+                <p className="mt-1 whitespace-pre-wrap text-sm">{a.feedback}</p>
+              </li>
+            );
+          })}
+      </ul>
+    </div>
+  );
+}
