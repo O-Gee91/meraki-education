@@ -256,6 +256,10 @@ function StudentWorkPanel({
   });
 
   const scored = grade?.points_earned != null;
+  // Teachers type feedback into the score comment; "MARK:xx" is the internal
+  // code for special marks and must never be shown as a message.
+  const gradeComment =
+    grade?.comment && !markCodeFromComment(grade.comment) ? grade.comment.trim() : "";
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
