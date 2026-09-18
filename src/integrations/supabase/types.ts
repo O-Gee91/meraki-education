@@ -1070,6 +1070,77 @@ export type Database = {
           },
         ]
       }
+      grade_reset_log: {
+        Row: {
+          assessment_id: string | null
+          assignment_id: string | null
+          class_id: string | null
+          created_at: string
+          id: string
+          previous_comment: string | null
+          previous_points: number | null
+          reason: string
+          reopened_until: string | null
+          reset_by: string | null
+          student_id: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          assignment_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          previous_comment?: string | null
+          previous_points?: number | null
+          reason?: string
+          reopened_until?: string | null
+          reset_by?: string | null
+          student_id: string
+        }
+        Update: {
+          assessment_id?: string | null
+          assignment_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          previous_comment?: string | null
+          previous_points?: number | null
+          reason?: string
+          reopened_until?: string | null
+          reset_by?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_reset_log_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_reset_log_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_reset_log_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_reset_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grades: {
         Row: {
           assignment_id: string
