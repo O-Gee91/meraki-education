@@ -836,11 +836,22 @@ export function SchoolCalendar() {
                           <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
                           {(() => {
                             const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
-                            if (list.length === 1 && list[0] === "everyone") return null;
+                            const targeted =
+                              e.grade_level != null || (e.class_ids?.length ?? 0) > 0 || e.class_id;
+                            if (list.length === 1 && list[0] === "everyone" && !targeted) return null;
+                            const ids = e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [];
+                            const names = ids
+                              .map((id) => classNameById.get(id))
+                              .filter((n): n is string => !!n);
+                            const parts: string[] = [];
+                            if (e.grade_level != null) parts.push(`Grade ${e.grade_level}`);
+                            if (names.length) parts.push(names.join(", "));
+                            if (!(list.length === 1 && list[0] === "everyone")) {
+                              parts.push(list.map((a) => audienceLabel(a).toLowerCase()).join(", "));
+                            }
                             return (
                               <p className="text-xs text-muted-foreground">
-                                Visible to{" "}
-                                {list.map((a) => audienceLabel(a).toLowerCase()).join(", ")}
+                                Visible to {parts.join(" · ")}
                               </p>
                             );
                           })()}
