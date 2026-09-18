@@ -806,6 +806,14 @@ function EditAssessment({
             </Select>
           </div>
 
+          <ReopenOptions
+            idPrefix={`e-reopen-${assessment.id}`}
+            value={reopen}
+            onChange={setReopen}
+          />
+
+
+
           <div className="space-y-1.5">
             <Label htmlFor={`e-instr-${assessment.id}`}>Instructions</Label>
             <Textarea
