@@ -105,7 +105,7 @@ export function AppShell({
   actions,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string | undefined;
   actions?: ReactNode | undefined;
   children: ReactNode;
