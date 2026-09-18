@@ -148,7 +148,8 @@ export function AssessmentGrading({
 
   const completed = rows.filter((r) => r.submission).length;
   const needsReview = rows.filter((r) => r.submission?.status === "needs_review").length;
-  const notStarted = rows.length - completed;
+  const reopenedCount = rows.filter((r) => !r.submission && reopened.has(r.student_id)).length;
+  const notStarted = rows.length - completed - reopenedCount;
 
   return (
     <div className="space-y-3">
@@ -171,6 +172,9 @@ export function AssessmentGrading({
             {needsReview > 0 && <Badge variant="outline">{needsReview} needs review</Badge>}
             {notStarted > 0 && (
               <Badge variant="outline">{notStarted} not completed — scored 0</Badge>
+            )}
+            {reopenedCount > 0 && (
+              <Badge variant="outline">{reopenedCount} given another chance</Badge>
             )}
 
           </div>
