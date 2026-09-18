@@ -50,7 +50,7 @@ function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term")
+        .select("id, name, subject, period, room, term, grade_level")
         .order("period");
       if (error) throw error;
       return data;
