@@ -89,7 +89,17 @@ type EventRow = {
   audience: string;
   audiences: Audience[] | null;
   class_id: string | null;
+  class_ids: string[] | null;
+  grade_level: number | null;
   color: string;
+};
+
+type ClassOption = {
+  id: string;
+  name: string;
+  grade_level: number | null;
+  teacher_id: string | null;
+  teacher_name: string;
 };
 
 
@@ -147,7 +157,7 @@ function formatTime(value?: string | null) {
 }
 
 export function SchoolCalendar() {
-  const { isStaff, isAdmin, user } = useAuth();
+  const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -165,7 +175,8 @@ export function SchoolCalendar() {
     end_time: "",
     location: "",
     event_date: "",
-    class_id: "" as string,
+    grade_level: null as number | null,
+    class_ids: [] as string[],
   };
   const [form, setForm] = useState(emptyForm);
   const [colorFilter, setColorFilter] = useState<string[]>([]);
@@ -190,24 +201,41 @@ export function SchoolCalendar() {
     }
   }, [isCollapsed]);
 
-  const { data: myClasses = [] } = useQuery({
+  const { data: allClasses = [] } = useQuery({
     queryKey: ["calendar-scope-classes", user?.id],
     enabled: isStaff,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name")
+        .select("id, name, grade_level, teacher_id, teacher_name")
         .order("name");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as ClassOption[];
     },
   });
 
-  // An admin posting as a teacher should default to their own class, not the school.
+  // Teachers can only target the grades and classes they actually teach;
+  // admins may reach the whole school.
+  const myName = (profile?.full_name ?? "").trim().toLowerCase();
+  const myClasses = isAdmin
+    ? allClasses
+    : allClasses.filter(
+        (c) =>
+          c.teacher_id === user?.id ||
+          (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+      );
+  const myGrades = [...new Set(myClasses.map((c) => c.grade_level).filter((g): g is number => g != null))].sort(
+    (a, b) => a - b,
+  );
+  const classNameById = new Map(allClasses.map((c) => [c.id, c.name]));
+
+  // A teacher's events default to their whole grade level.
   useEffect(() => {
-    if (editingId || isAdmin || !myClasses.length) return;
-    setForm((prev) => (prev.class_id ? prev : { ...prev, class_id: myClasses[0]!.id }));
-  }, [editingId, isAdmin, myClasses]);
+    if (editingId || isAdmin || !myGrades.length) return;
+    setForm((prev) =>
+      prev.grade_level != null || prev.class_ids.length ? prev : { ...prev, grade_level: myGrades[0]! },
+    );
+  }, [editingId, isAdmin, myGrades]);
 
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
@@ -218,7 +246,7 @@ export function SchoolCalendar() {
       const { data, error } = await supabase
         .from("calendar_events")
         .select(
-          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id",
+          "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id, class_ids, grade_level",
         )
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
@@ -263,6 +291,20 @@ export function SchoolCalendar() {
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Give the event a title");
       if (form.audiences.length === 0) throw new Error("Pick at least one audience");
+      // Teachers must aim at their own grade or their own classes — never
+      // another grade, never the whole school.
+      if (!isAdmin) {
+        if (form.grade_level == null && form.class_ids.length === 0) {
+          throw new Error("Pick your grade level or at least one of your classes");
+        }
+        if (form.grade_level != null && !myGrades.includes(form.grade_level)) {
+          throw new Error("You can only share with the grade level you teach");
+        }
+        const ownIds = new Set(myClasses.map((c) => c.id));
+        if (form.class_ids.some((id) => !ownIds.has(id))) {
+          throw new Error("You can only share with classes you teach");
+        }
+      }
       const audiences = form.audiences.includes("everyone")
         ? (["everyone"] as Audience[])
         : form.audiences;
@@ -277,7 +319,9 @@ export function SchoolCalendar() {
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         location: form.location.trim() || null,
-        class_id: form.class_id || null,
+        grade_level: form.grade_level,
+        class_ids: form.class_ids.length ? form.class_ids : null,
+        class_id: form.class_ids[0] ?? null,
       };
       if (editingId) {
         const { error } = await supabase
@@ -318,7 +362,8 @@ export function SchoolCalendar() {
       end_time: e.end_time?.slice(0, 5) ?? "",
       location: e.location ?? "",
       event_date: e.event_date,
-      class_id: e.class_id ?? "",
+      grade_level: e.grade_level,
+      class_ids: e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [],
     });
   };
 
@@ -614,27 +659,78 @@ export function SchoolCalendar() {
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="cal-scope">Who is this for</Label>
-                    <Select
-                      value={form.class_id || "school"}
-                      onValueChange={(v) => setForm({ ...form, class_id: v === "school" ? "" : v })}
-                    >
-                      <SelectTrigger id="cal-scope">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isAdmin && <SelectItem value="school">Whole school</SelectItem>}
-                        {myClasses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
+                    <Label>Who is this for</Label>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          aria-pressed={form.grade_level == null && form.class_ids.length === 0}
+                          onClick={() => setForm({ ...form, grade_level: null, class_ids: [] })}
+                          className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                            form.grade_level == null && form.class_ids.length === 0
+                              ? "border-accent bg-accent/10 font-medium"
+                              : "border-border text-muted-foreground hover:border-accent/50"
+                          }`}
+                        >
+                          Whole school
+                        </button>
+                      )}
+                      {myGrades.map((g) => {
+                        const active = form.grade_level === g;
+                        return (
+                          <button
+                            key={`grade-${g}`}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setForm({ ...form, grade_level: g, class_ids: [] })}
+                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                              active
+                                ? "border-accent bg-accent/10 font-medium"
+                                : "border-border text-muted-foreground hover:border-accent/50"
+                            }`}
+                          >
+                            All of Grade {g}
+                          </button>
+                        );
+                      })}
+                      {myClasses.map((c) => {
+                        const active = form.class_ids.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setForm((prev) => {
+                                const next = prev.class_ids.includes(c.id)
+                                  ? prev.class_ids.filter((id) => id !== c.id)
+                                  : [...prev.class_ids, c.id];
+                                return {
+                                  ...prev,
+                                  class_ids: next,
+                                  grade_level: next.length ? null : prev.grade_level,
+                                };
+                              })
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                              active
+                                ? "border-accent bg-accent/10 font-medium"
+                                : "border-border text-muted-foreground hover:border-accent/50"
+                            }`}
+                          >
                             {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {form.class_id
-                        ? "Only this class and their families will see it."
-                        : "Everyone at the school will see it."}
+                      {form.grade_level != null
+                        ? `Every Grade ${form.grade_level} class and their families will see it.`
+                        : form.class_ids.length
+                          ? "Only the selected classes and their families will see it."
+                          : isAdmin
+                            ? "Everyone at the school will see it."
+                            : "Pick your grade level or one or more of your classes."}
                     </p>
                   </div>
                   <div>
@@ -740,11 +836,22 @@ export function SchoolCalendar() {
                           <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
                           {(() => {
                             const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
-                            if (list.length === 1 && list[0] === "everyone") return null;
+                            const targeted =
+                              e.grade_level != null || (e.class_ids?.length ?? 0) > 0 || e.class_id;
+                            if (list.length === 1 && list[0] === "everyone" && !targeted) return null;
+                            const ids = e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [];
+                            const names = ids
+                              .map((id) => classNameById.get(id))
+                              .filter((n): n is string => !!n);
+                            const parts: string[] = [];
+                            if (e.grade_level != null) parts.push(`Grade ${e.grade_level}`);
+                            if (names.length) parts.push(names.join(", "));
+                            if (!(list.length === 1 && list[0] === "everyone")) {
+                              parts.push(list.map((a) => audienceLabel(a).toLowerCase()).join(", "));
+                            }
                             return (
                               <p className="text-xs text-muted-foreground">
-                                Visible to{" "}
-                                {list.map((a) => audienceLabel(a).toLowerCase()).join(", ")}
+                                Visible to {parts.join(" · ")}
                               </p>
                             );
                           })()}

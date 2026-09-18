@@ -590,12 +590,14 @@ export type Database = {
           audiences: Database["public"]["Enums"]["post_audience"][]
           category: string
           class_id: string | null
+          class_ids: string[] | null
           color: string
           created_at: string
           created_by: string | null
           description: string | null
           end_time: string | null
           event_date: string
+          grade_level: number | null
           id: string
           location: string | null
           start_time: string | null
@@ -607,12 +609,14 @@ export type Database = {
           audiences?: Database["public"]["Enums"]["post_audience"][]
           category?: string
           class_id?: string | null
+          class_ids?: string[] | null
           color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_time?: string | null
           event_date: string
+          grade_level?: number | null
           id?: string
           location?: string | null
           start_time?: string | null
@@ -624,12 +628,14 @@ export type Database = {
           audiences?: Database["public"]["Enums"]["post_audience"][]
           category?: string
           class_id?: string | null
+          class_ids?: string[] | null
           color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_time?: string | null
           event_date?: string
+          grade_level?: number | null
           id?: string
           location?: string | null
           start_time?: string | null
@@ -2139,6 +2145,7 @@ export type Database = {
         Returns: boolean
       }
       can_view_class: { Args: { _class_id: string }; Returns: boolean }
+      can_view_grade: { Args: { _grade: number }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
       has_role: {
