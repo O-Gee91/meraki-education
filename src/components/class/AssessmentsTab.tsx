@@ -50,6 +50,12 @@ import {
   WindowBadge,
 } from "@/components/class/CourseworkWindowFields";
 import { isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import {
+  REOPEN_DEFAULTS,
+  ReopenOptions,
+  type ReopenSettings,
+} from "@/components/class/ReopenOptions";
+import { reopenCoursework } from "@/lib/coursework-reopen.functions";
 
 
 
@@ -629,9 +635,14 @@ function EditAssessment({
     closesAt: isoToZonedInput(assessment.closes_at, timeZone),
   });
   const [form, setForm] = useState(initial);
+  const [reopen, setReopen] = useState<ReopenSettings>(REOPEN_DEFAULTS);
+  const reopenWork = useServerFn(reopenCoursework);
 
   function openChange(next: boolean) {
-    if (next) setForm(initial());
+    if (next) {
+      setForm(initial());
+      setReopen(REOPEN_DEFAULTS);
+    }
     setOpen(next);
   }
 
@@ -662,12 +673,25 @@ function EditAssessment({
         .eq("id", assessment.id);
       if (error) throw error;
       await syncColumnPoints(assessment.id);
+
+      if (reopen.reopen && assignmentId) {
+        return reopenWork({
+          data: { assignmentId, scope: reopen.scope, notify: reopen.notify },
+        });
+      }
+      return null;
     },
-    onSuccess: () => {
-      toast.success("Assessment updated");
+    onSuccess: (result) => {
+      toast.success(
+        result && result.reopened > 0
+          ? `Assessment updated — reopened for ${result.reopened} student${result.reopened === 1 ? "" : "s"}`
+          : "Assessment updated",
+      );
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["assessments", classId] });
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-grades"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -781,6 +805,14 @@ function EditAssessment({
               </SelectContent>
             </Select>
           </div>
+
+          <ReopenOptions
+            idPrefix={`e-reopen-${assessment.id}`}
+            value={reopen}
+            onChange={setReopen}
+          />
+
+
 
           <div className="space-y-1.5">
             <Label htmlFor={`e-instr-${assessment.id}`}>Instructions</Label>

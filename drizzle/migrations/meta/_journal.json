@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789690983058,
+      "tag": "0000_create_grade_reset_log",
+      "breakpoints": true
+    }
+  ]
+}

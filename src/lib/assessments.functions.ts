@@ -504,7 +504,21 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
         .eq("assignment_id", assignmentId);
       const graded = new Set((existing ?? []).map((g) => g.student_id));
 
-      const targets = studentIds.filter((id) => !submitted.has(id) && !graded.has(id));
+      // Students the teacher reopened get a fresh chance, not another zero,
+      // until their reopened window has passed.
+      const { data: resets } = await supabaseAdmin
+        .from("grade_reset_log")
+        .select("student_id, reopened_until")
+        .eq("assignment_id", assignmentId);
+      const reopened = new Set(
+        (resets ?? [])
+          .filter((r) => !r.reopened_until || Date.parse(r.reopened_until) > now)
+          .map((r) => r.student_id),
+      );
+
+      const targets = studentIds.filter(
+        (id) => !submitted.has(id) && !graded.has(id) && !reopened.has(id),
+      );
       if (targets.length === 0) continue;
 
       const { error } = await supabaseAdmin.from("grades").insert(
