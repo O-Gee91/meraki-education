@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Circle,
   Download,
+  MessageSquareText,
   Paperclip,
   Search,
   Users,
@@ -256,6 +257,10 @@ function StudentWorkPanel({
   });
 
   const scored = grade?.points_earned != null;
+  // Teachers type feedback into the score comment; "MARK:xx" is the internal
+  // code for special marks and must never be shown as a message.
+  const gradeComment =
+    grade?.comment && !markCodeFromComment(grade.comment) ? grade.comment.trim() : "";
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
@@ -289,6 +294,12 @@ function StudentWorkPanel({
             Score {String(grade?.points_earned)}/{assignment.points_possible}
           </span>
         ) : null}
+        {gradeComment || mine?.teacher_note ? (
+          <p className="w-full rounded-md border border-accent/40 bg-accent/5 p-2 text-xs">
+            <span className="font-medium">Teacher feedback: </span>
+            {gradeComment || mine?.teacher_note}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -310,6 +321,11 @@ function StudentWorkPanel({
         </Badge>
       )}
       {wasLate ? <Badge variant="destructive">Late</Badge> : null}
+      {gradeComment || mine?.teacher_note ? (
+        <Badge className="gap-1 bg-accent text-accent-foreground hover:bg-accent">
+          <MessageSquareText className="h-3 w-3" /> Feedback
+        </Badge>
+      ) : null}
       {scored ? (
         <span className="font-medium">
           Score {String(grade?.points_earned)}/{assignment.points_possible}
@@ -396,6 +412,12 @@ function StudentWorkPanel({
                 </button>
               ) : null}
             </div>
+            {gradeComment ? (
+              <p className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
+                <span className="font-medium">Comment with your score: </span>
+                {gradeComment}
+              </p>
+            ) : null}
             {mine?.teacher_note ? (
               <p className="rounded-md bg-secondary/50 p-3 text-sm">
                 <span className="font-medium">Teacher feedback: </span>

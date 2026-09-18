@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
+import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { HeroProfilePanel } from "@/components/HeroProfilePanel";
+import { FeedbackInbox, useMyFeedback, useUnreadFeedback } from "@/components/FeedbackInbox";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,6 +101,10 @@ function DashboardPage() {
       return data;
     },
   });
+
+  // Students and guardians get a visible count of new teacher comments.
+  const { data: feedback = [] } = useMyFeedback(!isStaff);
+  const { unread: unreadFeedback } = useUnreadFeedback(feedback);
 
   const { data: attendance = [] } = useQuery({
     queryKey: ["my-attendance"],
@@ -257,11 +262,29 @@ function DashboardPage() {
           label="Announcements"
           value={String(announcements.length)}
         />
-        <Stat
-          icon={CalendarCheck}
-          label={isStaff ? "Term" : "Recent attendance"}
-          value={isStaff ? (classes[0]?.term ?? "—") : `${attendance.length} days logged`}
-        />
+        {isStaff ? (
+          <Stat icon={CalendarCheck} label="Term" value={classes[0]?.term ?? "—"} />
+        ) : (
+          <>
+          <Stat
+            icon={CalendarCheck}
+            label="Recent attendance"
+            value={`${attendance.length} days logged`}
+          />
+          <Stat
+            icon={MessageSquareText}
+            label="Teacher feedback"
+            value={
+              unreadFeedback > 0
+                ? `${unreadFeedback} new`
+                : feedback.length
+                  ? `${feedback.length} comments`
+                  : "—"
+            }
+            tone={unreadFeedback > 0 ? "text-accent" : undefined}
+          />
+          </>
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -391,6 +414,8 @@ function DashboardPage() {
 
       <SchoolCalendar />
 
+
+      {!isStaff && <FeedbackInbox />}
 
       {!isStaff && (
         <section className="panel mt-6 p-5">
