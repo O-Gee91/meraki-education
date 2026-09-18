@@ -699,6 +699,8 @@ function EditAssessment({
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-grades"] });
+      queryClient.invalidateQueries({ queryKey: ["assessment-reopened", assessment.id] });
+      queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessment.id] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -1080,6 +1080,7 @@ function EditAssignment({
       queryClient.invalidateQueries({ queryKey: ["grades", classId] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["assessment-reopened"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
