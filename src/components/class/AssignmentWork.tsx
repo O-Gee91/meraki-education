@@ -935,8 +935,8 @@ function StaffCollectPanel({
             </div>
           </header>
 
-          <div className="shrink-0 space-y-3 border-b border-border bg-secondary/30 px-4 py-3 lg:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="shrink-0 border-b border-border bg-background">
+            <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 lg:px-6">
               <BulkFillBar
                 classId={classId}
                 pointsPossible={Number(assignment.points_possible)}
@@ -953,7 +953,7 @@ function StaffCollectPanel({
               />
               <QuickScoreEditButton classId={classId} />
             </div>
-            <div className="grid gap-2 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto_auto] md:items-center">
+            <div className="grid gap-2 border-t border-border bg-secondary/30 px-4 py-3 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto_auto] md:items-center lg:px-6">
               <div className="relative min-w-0">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -1001,10 +1001,10 @@ function StaffCollectPanel({
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(28rem,0.9fr)_minmax(30rem,1.1fr)]">
-            <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r border-border lg:flex`}>
-              <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                <p className="text-sm font-semibold">Student roster</p>
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
+            <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r-2 border-border bg-secondary/20 lg:flex`}>
+              <div className="flex items-center justify-between border-b border-border bg-background px-5 py-3">
+                <p className="text-sm font-bold">Student roster</p>
                 <p className="text-xs text-muted-foreground">{visibleRoster.length} shown</p>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto" role="listbox" aria-label="Students">
@@ -1022,8 +1022,10 @@ function StaffCollectPanel({
                     return (
                       <div
                         key={student.id}
-                        className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-3 py-3 transition-colors ${
-                          isActive ? "bg-primary/10" : index % 2 ? "bg-secondary/20" : "bg-background"
+                        className={`grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border border-l-4 px-4 py-3 transition-colors ${
+                          isActive
+                            ? "border-l-primary bg-primary/10"
+                            : `border-l-transparent ${index % 2 ? "bg-secondary/20" : "bg-background"}`
                         } hover:bg-secondary/50`}
                       >
                         <Checkbox
@@ -1043,35 +1045,32 @@ function StaffCollectPanel({
                           onClick={() => selectStudent(student.id, true)}
                         >
                           <span className="min-w-0">
-                            <span className="block truncate text-base font-semibold">
+                            <span className="block truncate text-lg font-bold leading-tight">
                               {student.last_name}, {student.first_name}
                             </span>
-                            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="mt-1.5 flex min-h-5 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                               {(() => {
                                 const online = assignment.submission_mode === "online";
                                 const handedInLabel = online ? "Turned in" : "Collected";
                                 if (collected)
                                   return (
-                                    <Badge variant="secondary">
-                                      {shownScore ? `${handedInLabel} (scored)` : handedInLabel}
-                                    </Badge>
+                                    <span className="inline-flex items-center gap-1">
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                                      {shownScore ? `${handedInLabel} · scored` : handedInLabel}
+                                    </span>
                                   );
                                 if (submission?.status === "draft")
-                                  return <Badge variant="outline">In progress</Badge>;
+                                  return <span>In progress</span>;
                                 if (online && assignment.due_date) {
                                   // Backdated assignments stay neutral until the
                                   // teacher records a status themselves.
                                   if (shouldAutoFlag(assignment))
-                                    return <Badge variant="destructive">Missing</Badge>;
-                                  return (
-                                    <Badge variant="outline">
-                                      {assignment.due_date < new Date().toISOString().slice(0, 10)
-                                        ? "Assigned"
-                                        : "Not due yet"}
-                                    </Badge>
-                                  );
+                                    return <span className="font-medium text-destructive">Missing</span>;
+                                  return assignment.due_date < new Date().toISOString().slice(0, 10)
+                                    ? <span>Assigned</span>
+                                    : <span>Not due yet</span>;
                                 }
-                                return <Badge variant="outline">Not collected</Badge>;
+                                return <span>Not collected</span>;
                               })()}
                               {submission?.submitted_at &&
                               shouldAutoFlag(assignment, undefined, 0) &&
@@ -1081,18 +1080,17 @@ function StaffCollectPanel({
                                 assignment.due_date,
                                 timeZone,
                               ) ? (
-                                <Badge variant="destructive" title="Handed in after the due date — score it only if you choose to count it">
-
-                                  Late
-                                </Badge>
+                                <span className="font-medium text-destructive" title="Handed in after the due date — score it only if you choose to count it">
+                                  · Late
+                                </span>
                               ) : null}
                             </span>
                           </span>
                         </Button>
-                        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                        <div className="flex items-center">
                           <Input
                             key={shownScore}
-                            className="h-10 w-24 text-base"
+                            className="h-10 w-20 text-center text-base font-semibold"
                             placeholder={`/${assignment.points_possible}`}
                             defaultValue={shownScore}
                             aria-label={`Score for ${student.first_name} ${student.last_name}`}
@@ -1103,15 +1101,6 @@ function StaffCollectPanel({
                               score.mutate({ studentId: student.id, value: event.target.value });
                             }}
                           />
-                          <div className="hidden xl:block">
-                            <QuickScoreBar
-                              classId={classId}
-                              pointsPossible={Number(assignment.points_possible)}
-                              editable={false}
-                              label=""
-                              onPick={(value) => score.mutate({ studentId: student.id, value })}
-                            />
-                          </div>
                         </div>
                       </div>
                     );
@@ -1148,8 +1137,8 @@ function StaffCollectPanel({
                       </Button>
                     </div>
                   </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-6">
-                    <div className="space-y-5">
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-8">
+                    <div className="mx-auto max-w-4xl space-y-6">
                       <div className="grid gap-4 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="space-y-2">
                           <Label htmlFor={`detail-score-${activeStudent.id}`} className="text-sm">Score</Label>
@@ -1181,12 +1170,15 @@ function StaffCollectPanel({
                         ) : null}
                       </div>
 
-                      <QuickScoreBar
-                        classId={classId}
-                        pointsPossible={Number(assignment.points_possible)}
-                        editable={false}
-                        onPick={(value) => score.mutate({ studentId: activeStudent.id, value })}
-                      />
+                      <div className="border-b border-border pb-5">
+                        <QuickScoreBar
+                          classId={classId}
+                          pointsPossible={Number(assignment.points_possible)}
+                          editable={false}
+                          label="Quick grade"
+                          onPick={(value) => score.mutate({ studentId: activeStudent.id, value })}
+                        />
+                      </div>
 
                       <div className="space-y-2">
                         <h4 className="text-sm font-semibold uppercase text-muted-foreground">Submission</h4>
@@ -1274,7 +1266,7 @@ function BulkFillBar({
   const quick = setup?.quickScores ?? [];
 
   return (
-    <div className="space-y-2 border-t border-border pt-2">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 text-xs font-medium">
           <Users className="h-3.5 w-3.5" />{" "}
