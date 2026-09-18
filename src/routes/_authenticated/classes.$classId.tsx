@@ -50,6 +50,7 @@ import { SharedLibrary } from "@/components/class/SharedLibrary";
 import { RubricsTab, RubricSelect } from "@/components/class/RubricsTab";
 import { DiscussionBoard } from "@/components/class/DiscussionBoard";
 import { PulseDashboard } from "@/components/class/PulseDashboard";
+import { FeedbackInbox } from "@/components/FeedbackInbox";
 import { StudentClassReport } from "@/components/class/StudentClassReport";
 
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
@@ -384,6 +385,7 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
+          {!isStaff && <FeedbackInbox classId={classId} />}
           <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
