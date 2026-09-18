@@ -293,7 +293,41 @@ function ClassDetailPage() {
 
   return (
     <AppShell
-      title={klass?.name ?? "Class"}
+      title={
+        isStaff && switcherClasses.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md px-1 -mx-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Switch class"
+              >
+                {klass?.name ?? "Class"}
+                <ChevronsUpDown className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {switcherClasses.map((c) => (
+                <DropdownMenuItem key={c.id} asChild>
+                  <Link
+                    to="/classes/$classId"
+                    params={{ classId: c.id }}
+                    className={c.id === classId ? "font-semibold" : undefined}
+                  >
+                    {c.name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {c.period ? `Period ${c.period} · ` : ""}
+                      {c.term}
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          (klass?.name ?? "Class")
+        )
+      }
       description={
         klass
           ? isStaff
