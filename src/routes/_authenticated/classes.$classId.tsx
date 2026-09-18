@@ -1021,9 +1021,14 @@ function EditAssignment({
     rubricId: assignment.rubric_id ?? "",
   });
   const [form, setForm] = useState(initial);
+  const [reopen, setReopen] = useState<ReopenSettings>(REOPEN_DEFAULTS);
+  const reopenWork = useServerFn(reopenCoursework);
 
   function openChange(next: boolean) {
-    if (next) setForm(initial());
+    if (next) {
+      setForm(initial());
+      setReopen(REOPEN_DEFAULTS);
+    }
     setOpen(next);
   }
 
@@ -1046,12 +1051,25 @@ function EditAssignment({
         })
         .eq("id", assignment.id);
       if (error) throw error;
+
+      if (reopen.reopen) {
+        return reopenWork({
+          data: { assignmentId: assignment.id, scope: reopen.scope, notify: reopen.notify },
+        });
+      }
+      return null;
     },
-    onSuccess: () => {
-      toast.success("Assignment updated");
+    onSuccess: (result) => {
+      toast.success(
+        result && result.reopened > 0
+          ? `Assignment updated — reopened for ${result.reopened} student${result.reopened === 1 ? "" : "s"}`
+          : "Assignment updated",
+      );
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
       queryClient.invalidateQueries({ queryKey: ["grades", classId] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
