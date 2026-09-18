@@ -415,6 +415,8 @@ function DashboardPage() {
       <SchoolCalendar />
 
 
+      {!isStaff && <FeedbackInbox />}
+
       {!isStaff && (
         <section className="panel mt-6 p-5">
           <h2 className="text-lg font-semibold">Recent scores</h2>
