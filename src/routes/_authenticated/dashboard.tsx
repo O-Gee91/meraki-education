@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
+import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
@@ -262,11 +262,22 @@ function DashboardPage() {
           label="Announcements"
           value={String(announcements.length)}
         />
-        <Stat
-          icon={CalendarCheck}
-          label={isStaff ? "Term" : "Recent attendance"}
-          value={isStaff ? (classes[0]?.term ?? "—") : `${attendance.length} days logged`}
-        />
+        {isStaff ? (
+          <Stat icon={CalendarCheck} label="Term" value={classes[0]?.term ?? "—"} />
+        ) : (
+          <Stat
+            icon={MessageSquareText}
+            label="Teacher feedback"
+            value={
+              unreadFeedback > 0
+                ? `${unreadFeedback} new`
+                : feedback.length
+                  ? `${feedback.length} comments`
+                  : "—"
+            }
+            tone={unreadFeedback > 0 ? "text-accent" : undefined}
+          />
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
