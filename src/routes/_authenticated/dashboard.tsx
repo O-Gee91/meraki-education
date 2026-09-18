@@ -176,8 +176,16 @@ function DashboardPage() {
     },
   });
 
+  // Teacher mode: only work from their own classes.
+  const scopedAssignments = classIds
+    ? upcomingAssignments.filter((a) => classIds.has(a.class_id))
+    : upcomingAssignments;
+  const scopedAssessments = classIds
+    ? upcomingAssessments.filter((a) => classIds.has(a.class_id))
+    : upcomingAssessments;
+
   const upcoming = [
-    ...upcomingAssignments.map((a) => ({
+    ...scopedAssignments.map((a) => ({
       id: `assignment-${a.id}`,
       title: a.title,
       type: a.category ? `Assignment · ${a.category}` : "Assignment",
