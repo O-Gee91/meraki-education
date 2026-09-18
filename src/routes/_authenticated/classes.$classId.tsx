@@ -1059,7 +1059,10 @@ function EditAssignment({
         .eq("id", assignment.id);
       if (error) throw error;
 
-      if (reopen.reopen) {
+      // Pushing the due date later automatically gives students another chance.
+      const wasDue = assignment.due_date ?? "";
+      const movedLater = Boolean(form.due) && (!wasDue || form.due > wasDue);
+      if (movedLater) {
         return reopenWork({
           data: { assignmentId: assignment.id, scope: reopen.scope, notify: reopen.notify },
         });
@@ -1077,6 +1080,7 @@ function EditAssignment({
       queryClient.invalidateQueries({ queryKey: ["grades", classId] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["assessment-reopened"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

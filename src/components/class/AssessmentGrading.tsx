@@ -110,6 +110,23 @@ export function AssessmentGrading({
     },
   });
 
+  // Students the teacher gave another chance are not "0" any more.
+  const { data: reopenedIds = [] } = useQuery({
+    queryKey: ["assessment-reopened", assessmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("grade_reset_log")
+        .select("student_id, reopened_until")
+        .eq("assessment_id", assessmentId);
+      if (error) throw error;
+      const now = Date.now();
+      return (data ?? [])
+        .filter((r) => !r.reopened_until || Date.parse(r.reopened_until) > now)
+        .map((r) => r.student_id);
+    },
+  });
+  const reopened = new Set(reopenedIds);
+
   const byStudent = new Map(submissions.map((s) => [s.student_id, s]));
   const rows = roster.map((r) => ({
     student_id: r.student_id,
@@ -131,7 +148,8 @@ export function AssessmentGrading({
 
   const completed = rows.filter((r) => r.submission).length;
   const needsReview = rows.filter((r) => r.submission?.status === "needs_review").length;
-  const notStarted = rows.length - completed;
+  const reopenedCount = rows.filter((r) => !r.submission && reopened.has(r.student_id)).length;
+  const notStarted = rows.length - completed - reopenedCount;
 
   return (
     <div className="space-y-3">
@@ -155,6 +173,9 @@ export function AssessmentGrading({
             {notStarted > 0 && (
               <Badge variant="outline">{notStarted} not completed — scored 0</Badge>
             )}
+            {reopenedCount > 0 && (
+              <Badge variant="outline">{reopenedCount} given another chance</Badge>
+            )}
 
           </div>
           <ul className="space-y-2">
@@ -175,7 +196,9 @@ export function AssessmentGrading({
                       <p className="text-xs text-muted-foreground">
                         {s
                           ? `Submitted ${new Date(s.submitted_at).toLocaleString()}`
-                          : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
+                          : reopened.has(row.student_id)
+                            ? "Given another chance — the 0 was cleared and they can still complete this"
+                            : "Not completed — scored 0 (teachers can change the score in the gradebook)"}
 
                       </p>
                     </div>
@@ -219,7 +242,13 @@ export function AssessmentGrading({
                           </Button>
                         </>
                       ) : (
-                        <Badge variant="destructive">Not completed — 0</Badge>
+                        <Badge
+                          variant={reopened.has(row.student_id) ? "secondary" : "destructive"}
+                        >
+                          {reopened.has(row.student_id)
+                            ? "Another chance — not yet completed"
+                            : "Not completed — 0"}
+                        </Badge>
                       )}
 
                     </div>
