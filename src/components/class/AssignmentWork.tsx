@@ -396,6 +396,12 @@ function StudentWorkPanel({
                 </button>
               ) : null}
             </div>
+            {gradeComment ? (
+              <p className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
+                <span className="font-medium">Comment with your score: </span>
+                {gradeComment}
+              </p>
+            ) : null}
             {mine?.teacher_note ? (
               <p className="rounded-md bg-secondary/50 p-3 text-sm">
                 <span className="font-medium">Teacher feedback: </span>
