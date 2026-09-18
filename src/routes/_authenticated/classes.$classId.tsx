@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { ChevronsUpDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 
@@ -92,7 +98,7 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { isStaff } = useAuth();
+  const { isStaff, teacherMode, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -116,6 +122,26 @@ function ClassDetailPage() {
         .maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Classes this staff member can hop between via the title switcher.
+  const { data: switcherClasses = [] } = useQuery({
+    queryKey: ["class-switcher", user?.id, profile?.full_name, teacherMode],
+    enabled: isStaff && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, name, period, term, teacher_id, teacher_name")
+        .order("name");
+      if (error) throw error;
+      if (!teacherMode) return data ?? [];
+      const myName = (profile?.full_name ?? "").trim().toLowerCase();
+      return (data ?? []).filter(
+        (c) =>
+          c.teacher_id === user!.id ||
+          (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
+      );
     },
   });
 
@@ -267,7 +293,41 @@ function ClassDetailPage() {
 
   return (
     <AppShell
-      title={klass?.name ?? "Class"}
+      title={
+        isStaff && switcherClasses.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md px-1 -mx-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Switch class"
+              >
+                {klass?.name ?? "Class"}
+                <ChevronsUpDown className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {switcherClasses.map((c) => (
+                <DropdownMenuItem key={c.id} asChild>
+                  <Link
+                    to="/classes/$classId"
+                    params={{ classId: c.id }}
+                    className={c.id === classId ? "font-semibold" : undefined}
+                  >
+                    {c.name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {c.period ? `Period ${c.period} · ` : ""}
+                      {c.term}
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          (klass?.name ?? "Class")
+        )
+      }
       description={
         klass
           ? isStaff
