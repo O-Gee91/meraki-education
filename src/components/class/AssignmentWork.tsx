@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Circle,
   Download,
+  MessageSquareText,
   Paperclip,
   Search,
   Users,
