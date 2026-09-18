@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { HeroProfilePanel } from "@/components/HeroProfilePanel";
+import { FeedbackInbox, useMyFeedback, useUnreadFeedback } from "@/components/FeedbackInbox";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,6 +101,10 @@ function DashboardPage() {
       return data;
     },
   });
+
+  // Students and guardians get a visible count of new teacher comments.
+  const { data: feedback = [] } = useMyFeedback(!isStaff);
+  const { unread: unreadFeedback } = useUnreadFeedback(feedback);
 
   const { data: attendance = [] } = useQuery({
     queryKey: ["my-attendance"],
