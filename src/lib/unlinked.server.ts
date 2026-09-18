@@ -20,6 +20,8 @@ export type LinkInput = {
   first_name?: string | null;
   last_name?: string | null;
   student_number?: string | null;
+  /** Enroll the linked student into this class straight away. */
+  class_id?: string | null;
 };
 
 function splitName(fullName: string) {
@@ -99,6 +101,8 @@ export async function linkAccountToStudent(
   if (profileError) throw new Error(profileError.message);
   if (!profile) throw new Error("Account not found");
 
+  let studentId: string;
+
   if (input.student_id) {
     const patch =
       input.role === "student"
@@ -112,31 +116,49 @@ export async function linkAccountToStudent(
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Student record not found");
-    return { student_id: data.id };
+    studentId = data.id;
+  } else {
+    if (input.role === "parent")
+      throw new Error("Choose the student record this guardian should be linked to");
+
+    const grade = Number(input.grade_level);
+    if (!Number.isFinite(grade) || grade < 1 || grade > 12)
+      throw new Error("Enter a grade level between 1 and 12");
+
+    const fallback = splitName(profile.full_name);
+    const first = (input.first_name ?? "").trim() || fallback.first;
+    const last = (input.last_name ?? "").trim() || fallback.last;
+
+    const { data, error } = await admin
+      .from("students")
+      .insert({
+        first_name: first.slice(0, 60),
+        last_name: last.slice(0, 60),
+        grade_level: grade,
+        student_number: (input.student_number ?? "").trim().slice(0, 20) || null,
+        user_id: input.user_id,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    studentId = data.id;
   }
 
-  if (input.role === "parent")
-    throw new Error("Choose the student record this guardian should be linked to");
+  // Adding from a class roster: enroll straight away (guardians follow their student).
+  if (input.class_id && input.role === "student") {
+    const { data: existing } = await admin
+      .from("enrollments")
+      .select("id")
+      .eq("class_id", input.class_id)
+      .eq("student_id", studentId)
+      .maybeSingle();
+    if (!existing) {
+      const { error } = await admin
+        .from("enrollments")
+        .insert({ class_id: input.class_id, student_id: studentId });
+      if (error) throw new Error(error.message);
+    }
+  }
 
-  const grade = Number(input.grade_level);
-  if (!Number.isFinite(grade) || grade < 1 || grade > 12)
-    throw new Error("Enter a grade level between 1 and 12");
-
-  const fallback = splitName(profile.full_name);
-  const first = (input.first_name ?? "").trim() || fallback.first;
-  const last = (input.last_name ?? "").trim() || fallback.last;
-
-  const { data, error } = await admin
-    .from("students")
-    .insert({
-      first_name: first.slice(0, 60),
-      last_name: last.slice(0, 60),
-      grade_level: grade,
-      student_number: (input.student_number ?? "").trim().slice(0, 20) || null,
-      user_id: input.user_id,
-    })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return { student_id: data.id };
+  return { student_id: studentId };
 }

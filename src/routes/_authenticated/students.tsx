@@ -295,7 +295,7 @@ function StudentsPage() {
           </>
         ) : null}
       </div>
-      {isAdmin ? <UnlinkedAccounts students={students} /> : null}
+      {isStaff ? <UnlinkedAccounts students={students} /> : null}
       <div className="panel mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
