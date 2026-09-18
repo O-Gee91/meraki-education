@@ -47,10 +47,26 @@ export const reopenCoursework = createServerFn({ method: "POST" })
       .eq("assignment_id", assignment.id)
       .maybeSingle();
 
-    const reopenedUntil =
-      assessment?.closes_at ??
-      assessment?.due_at ??
-      (assignment.due_date ? `${assignment.due_date}T23:59:00Z` : null);
+    // The reopened window runs to the latest date on the coursework. If every
+    // date is already in the past the window stays open until the teacher
+    // closes it, otherwise the automatic zeros would come straight back.
+    const now = Date.now();
+    const candidates = [
+      assessment?.closes_at ?? null,
+      assessment?.due_at ?? null,
+      assignment.due_date ? `${assignment.due_date}T23:59:00Z` : null,
+    ].filter((d): d is string => Boolean(d) && Date.parse(d!) > now);
+    const reopenedUntil = candidates.length
+      ? candidates.reduce((a, b) => (Date.parse(a) > Date.parse(b) ? a : b))
+      : null;
+
+    // A close time that has already passed would still lock students out.
+    if (assessment?.closes_at && Date.parse(assessment.closes_at) <= now) {
+      await supabaseAdmin
+        .from("assessments")
+        .update({ closes_at: reopenedUntil })
+        .eq("id", assessment.id);
+    }
 
     const { data: grades } = await supabaseAdmin
       .from("grades")
