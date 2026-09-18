@@ -110,6 +110,23 @@ export function AssessmentGrading({
     },
   });
 
+  // Students the teacher gave another chance are not "0" any more.
+  const { data: reopenedIds = [] } = useQuery({
+    queryKey: ["assessment-reopened", assessmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("grade_reset_log")
+        .select("student_id, reopened_until")
+        .eq("assessment_id", assessmentId);
+      if (error) throw error;
+      const now = Date.now();
+      return (data ?? [])
+        .filter((r) => !r.reopened_until || Date.parse(r.reopened_until) > now)
+        .map((r) => r.student_id);
+    },
+  });
+  const reopened = new Set(reopenedIds);
+
   const byStudent = new Map(submissions.map((s) => [s.student_id, s]));
   const rows = roster.map((r) => ({
     student_id: r.student_id,
