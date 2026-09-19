@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isAutoGradeComment } from "@/lib/grading";
 
 export type FeedbackItem = {
   id: string;
