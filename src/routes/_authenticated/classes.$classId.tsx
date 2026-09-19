@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronsUpDown, Search } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,8 +72,8 @@ import { useServerFn } from "@tanstack/react-start";
 
 import {
   computeAverage,
-  findMark,
   isExtraCredit,
+  letterFor,
   markCodeFromComment,
   parseGradingSetup,
   EXTRA_CREDIT_CATEGORY,
@@ -103,7 +103,9 @@ function ClassDetailPage() {
   const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
-  const [gradebookSort] = useStudentSort(`class-gradebook-${classId}`);
+  const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
+  const [gradebookSearch, setGradebookSearch] = useState("");
+  const [gradebookReportStudentId, setGradebookReportStudentId] = useState<string | null>(null);
   const [gradebookCategory, setGradebookCategory] = useState("all");
   const [gradebookDueFrom, setGradebookDueFrom] = useState("");
   const [gradebookDueTo, setGradebookDueTo] = useState("");
@@ -170,6 +172,16 @@ function ClassDetailPage() {
     },
   });
   const gradebookRoster = sortStudents(roster, gradebookSort, (row) => row.students);
+  const visibleGradebookRoster = gradebookRoster.filter((row) => {
+    const query = gradebookSearch.trim().toLocaleLowerCase();
+    if (!query) return true;
+    const student = row.students;
+    return [student?.first_name, student?.last_name, student?.student_number]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(query);
+  });
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["assignments", classId],
@@ -241,15 +253,13 @@ function ClassDetailPage() {
       .map((assignment) => {
         const possible = Number(assignment.points_possible);
         const countedScores = grades
-          .filter((grade) => grade.assignment_id === assignment.id)
-          .flatMap((grade) => {
-            const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
-            if (mark?.behavior === "exclude") return [];
-            if (mark?.behavior === "zero") return [0];
-            if (mark?.behavior === "value") return [Number(mark.value ?? 0)];
-            if (grade.points_earned == null || possible <= 0) return [];
-            return [(Number(grade.points_earned) / possible) * 100];
-          });
+          .filter(
+            (grade) =>
+              grade.assignment_id === assignment.id &&
+              grade.points_earned != null &&
+              possible > 0,
+          )
+          .map((grade) => (Number(grade.points_earned) / possible) * 100);
         const average =
           countedScores.length > 0
             ? countedScores.reduce((sum, percentage) => sum + percentage, 0) /
@@ -397,13 +407,30 @@ function ClassDetailPage() {
               <div>
                 <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
                   <div className="flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-semibold">Assignment overview</h2>
+                     <div>
+                      <h2 className="text-lg font-semibold">{isStaff ? "Class gradebook" : "My gradebook"}</h2>
                       <p className="text-sm text-muted-foreground">
-                        {gradebookRows.length} of {assignments.length} assignments
+                        {isStaff ? `${roster.length} ${roster.length === 1 ? "student" : "students"} · ` : ""}{gradebookRows.length} of {assignments.length} assignments
                       </p>
                     </div>
-                    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-5">
+                    {isStaff && <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
+                      <div className="space-y-1 lg:col-span-2">
+                        <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="gradebook-search"
+                            value={gradebookSearch}
+                            onChange={(event) => setGradebookSearch(event.target.value)}
+                            placeholder="Name or student ID"
+                            className="pl-8"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1 lg:col-span-2">
+                        <Label className="text-xs">Student order</Label>
+                        <StudentSortControl value={gradebookSort} onChange={setGradebookSort} className="w-full" />
+                      </div>
                       <div className="space-y-1">
                         <Label htmlFor="gradebook-category" className="text-xs">Category</Label>
                         <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
@@ -456,60 +483,126 @@ function ClassDetailPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 </header>
 
-                {gradebookRows.length === 0 ? (
+                 {gradebookRows.length === 0 ? (
                   <p className="p-8 text-center text-sm text-muted-foreground">
                     No assignments match these filters.
                   </p>
+                 ) : visibleGradebookRoster.length === 0 ? (
+                   <p className="p-8 text-center text-sm text-muted-foreground">
+                     No students match that search.
+                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[42rem] text-sm">
-                      <thead className="bg-secondary text-left text-xs uppercase text-muted-foreground">
+                   <div className="max-h-[68vh] overflow-auto">
+                     <table className="w-full min-w-max border-collapse text-sm">
+                       <thead className="sticky top-0 z-20 bg-secondary text-xs uppercase text-muted-foreground shadow-[0_1px_0_var(--border)]">
                         <tr>
-                          <th className="px-4 py-3 font-semibold">Assignment name</th>
-                          <th className="px-4 py-3 font-semibold">Category</th>
-                          <th className="px-4 py-3 font-semibold">Due date</th>
-                          <th className="px-4 py-3 text-right font-semibold">Class average</th>
+                           {isStaff && <th className="sticky left-0 z-30 min-w-52 border-r border-border bg-secondary px-4 py-3 text-left font-semibold">Student</th>}
+                           <th className="min-w-28 border-r border-border bg-accent/10 px-4 py-3 text-center font-semibold text-accent">Current grade</th>
+                           <th className="min-w-24 border-r border-border px-3 py-3 text-center font-semibold">Missing</th>
+                           {gradebookRows.map(({ assignment, average }) => (
+                             <th key={assignment.id} className="w-28 min-w-28 border-r border-border px-3 py-3 text-center font-semibold normal-case">
+                               <span className="block max-w-24 truncate text-foreground" title={assignment.title}>{assignment.title}</span>
+                               <span className="mt-1 block font-normal text-muted-foreground">
+                                 {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(0)}% avg`}
+                               </span>
+                             </th>
+                           ))}
                         </tr>
                       </thead>
-                      <tbody>
-                        {gradebookRows.map(({ assignment, average, scoredCount }, rowIndex) => (
-                          <tr key={assignment.id} className={rowIndex % 2 === 0 ? "bg-card" : "bg-secondary/20"}>
-                            <td className="border-t border-border px-4 py-4 font-semibold text-foreground">
-                              {assignment.title}
-                            </td>
-                            <td className="border-t border-border px-4 py-4">
-                              <Badge variant="secondary">{assignment.category}</Badge>
-                            </td>
-                            <td className="border-t border-border px-4 py-4 text-muted-foreground">
-                              {assignment.due_date ? formatDate(assignment.due_date) : "No due date"}
-                            </td>
-                            <td className="border-t border-border px-4 py-4 text-right">
-                              {average == null ? (
-                                <span className="text-muted-foreground">Not graded</span>
-                              ) : (
-                                <div>
-                                  <span className="text-base font-semibold tabular-nums text-foreground">
-                                    {average.toFixed(1)}%
-                                  </span>
-                                  <p className="text-xs text-muted-foreground">
-                                    {scoredCount} {scoredCount === 1 ? "score" : "scores"}
-                                  </p>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                       <tbody className="divide-y divide-border">
+                         {visibleGradebookRoster.map((row, rowIndex) => {
+                           const average = studentAverage(row.student_id);
+                           const missingCount = gradebookRows.filter(({ assignment }) => {
+                             const grade = gradeFor(row.student_id, assignment.id);
+                             const code = markCodeFromComment(grade?.comment);
+                             return code === "M";
+                           }).length;
+                           return (
+                             <tr key={row.id} className={rowIndex % 2 === 0 ? "bg-card hover:bg-secondary/30" : "bg-secondary/15 hover:bg-secondary/35"}>
+                               {isStaff && <td className="sticky left-0 z-10 border-r border-border bg-inherit px-4 py-3">
+                                 <Button
+                                   type="button"
+                                   variant="link"
+                                   className="h-auto justify-start p-0 text-left font-semibold text-foreground"
+                                   onClick={() => setGradebookReportStudentId(row.student_id)}
+                                 >
+                                   {studentLabel(row.students, useIds)}
+                                 </Button>
+                                 {!useIds && row.students?.student_number && (
+                                   <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
+                                 )}
+                               </td>}
+                               <td className="border-r border-border bg-accent/5 px-4 py-3 text-center">
+                                 {average == null ? (
+                                   <span className="text-muted-foreground">—</span>
+                                 ) : (
+                                   <div className="inline-flex items-baseline gap-1.5">
+                                     <span className={`text-base font-bold tabular-nums ${average >= 80 ? "text-success" : average >= 70 ? "text-warning" : "text-destructive"}`}>
+                                       {average.toFixed(1)}%
+                                     </span>
+                                     <span className="text-xs font-semibold text-muted-foreground">{letterFor(average, setup.scale)}</span>
+                                   </div>
+                                 )}
+                               </td>
+                               <td className="border-r border-border px-3 py-3 text-center">
+                                 {missingCount > 0 ? (
+                                   <span className="inline-flex items-center gap-1 font-semibold text-destructive"><AlertCircle className="size-3.5" />{missingCount}</span>
+                                 ) : (
+                                   <span className="text-muted-foreground">—</span>
+                                 )}
+                               </td>
+                               {gradebookRows.map(({ assignment }) => {
+                                 const grade = gradeFor(row.student_id, assignment.id);
+                                 const markCode = markCodeFromComment(grade?.comment);
+                                 return (
+                                   <td key={assignment.id} className="border-r border-border px-3 py-3 text-center tabular-nums">
+                                     {markCode ? (
+                                       <Badge variant={markCode === "M" ? "destructive" : "secondary"}>{markCode}</Badge>
+                                     ) : grade?.points_earned == null ? (
+                                       <span className="text-muted-foreground">—</span>
+                                     ) : (
+                                       <span className="font-medium text-foreground">{Number(grade.points_earned).toLocaleString()}</span>
+                                     )}
+                                   </td>
+                                 );
+                               })}
+                             </tr>
+                           );
+                         })}
                       </tbody>
                     </table>
                   </div>
                 )}
+                 <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">
+                   <div className="flex flex-wrap gap-4">
+                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-success" />80%+ proficient</span>
+                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />70–79% approaching</span>
+                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-destructive" />Below 70% needs support</span>
+                   </div>
+                   {isStaff && <span>Click a student name for the full report.</span>}
+                 </footer>
               </div>
             )}
           </section>
+           {isStaff && (
+             <StudentClassReport
+               open={!!gradebookReportStudentId}
+               onOpenChange={(open) => {
+                 if (!open) setGradebookReportStudentId(null);
+               }}
+               classId={classId}
+               className={klass?.name ?? "Class"}
+               student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
+               assignments={assignments}
+               grades={grades}
+               setup={setup}
+               displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
+             />
+           )}
         </TabsContent>
 
         <TabsContent value="coursework">
