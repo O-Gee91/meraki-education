@@ -66,9 +66,9 @@ export const listMyFeedback = createServerFn({ method: "GET" })
 
     for (const g of grades ?? []) {
       const comment = (g.comment ?? "").trim();
-      // "MARK:xx" is the internal code for special marks (Excused, Missing …),
-      // not something a student should read as a message.
-      if (!comment || comment.startsWith("MARK:")) continue;
+      // Internal notes the system writes for itself ("MARK:xx" special marks,
+      // auto-zeroes, graded-assessment sync) are not teacher feedback.
+      if (!comment || isAutoGradeComment(comment)) continue;
       const ref = classOf(g.assignments as WorkRef);
       items.push({
         id: `grade-${g.id}`,
