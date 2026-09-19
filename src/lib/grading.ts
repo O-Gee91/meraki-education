@@ -112,6 +112,21 @@ export function markCodeFromComment(comment?: string | null) {
   return match?.[1] ? match[1].toUpperCase() : null;
 }
 
+/**
+ * Comments the system writes for itself (auto-zeroes, graded-assessment sync).
+ * They must never be shown to students as teacher feedback.
+ */
+const AUTO_GRADE_COMMENTS = new Set([
+  "Assessment graded",
+  "Not completed — automatic zero",
+]);
+
+export function isAutoGradeComment(comment?: string | null) {
+  const text = (comment ?? "").trim();
+  if (!text) return false;
+  return AUTO_GRADE_COMMENTS.has(text) || !!markCodeFromComment(text);
+}
+
 export function findMark(code: string | null, marks: SpecialMark[]) {
   if (!code) return null;
   return marks.find((m) => m.code.toUpperCase() === code.toUpperCase()) ?? null;
