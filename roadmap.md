@@ -20,3 +20,5 @@
 - [x] Keep late work out of the grade until a teacher chooses to count it.
 
 - [x] Simplify the grading workspace roster and detail layout.
+- [x] Replace the assignment-only Gradebook with a student-first grade matrix.
+- [x] Show current grades, missing counts, assignment scores, search, sorting, and direct report access.
