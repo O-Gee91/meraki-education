@@ -407,13 +407,13 @@ function ClassDetailPage() {
               <div>
                 <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
                   <div className="flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-semibold">Class gradebook</h2>
+                     <div>
+                      <h2 className="text-lg font-semibold">{isStaff ? "Class gradebook" : "My gradebook"}</h2>
                       <p className="text-sm text-muted-foreground">
-                        {roster.length} {roster.length === 1 ? "student" : "students"} · {gradebookRows.length} of {assignments.length} assignments
+                        {isStaff ? `${roster.length} ${roster.length === 1 ? "student" : "students"} · ` : ""}{gradebookRows.length} of {assignments.length} assignments
                       </p>
                     </div>
-                    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
+                    {isStaff && <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
                       <div className="space-y-1 lg:col-span-2">
                         <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
                         <div className="relative">
@@ -483,7 +483,7 @@ function ClassDetailPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 </header>
 
@@ -500,7 +500,7 @@ function ClassDetailPage() {
                      <table className="w-full min-w-max border-collapse text-sm">
                        <thead className="sticky top-0 z-20 bg-secondary text-xs uppercase text-muted-foreground shadow-[0_1px_0_var(--border)]">
                         <tr>
-                           <th className="sticky left-0 z-30 min-w-52 border-r border-border bg-secondary px-4 py-3 text-left font-semibold">Student</th>
+                           {isStaff && <th className="sticky left-0 z-30 min-w-52 border-r border-border bg-secondary px-4 py-3 text-left font-semibold">Student</th>}
                            <th className="min-w-28 border-r border-border bg-accent/10 px-4 py-3 text-center font-semibold text-accent">Current grade</th>
                            <th className="min-w-24 border-r border-border px-3 py-3 text-center font-semibold">Missing</th>
                            {gradebookRows.map(({ assignment, average }) => (
@@ -523,7 +523,7 @@ function ClassDetailPage() {
                            }).length;
                            return (
                              <tr key={row.id} className={rowIndex % 2 === 0 ? "bg-card hover:bg-secondary/30" : "bg-secondary/15 hover:bg-secondary/35"}>
-                               <td className="sticky left-0 z-10 border-r border-border bg-inherit px-4 py-3">
+                               {isStaff && <td className="sticky left-0 z-10 border-r border-border bg-inherit px-4 py-3">
                                  <Button
                                    type="button"
                                    variant="link"
@@ -535,7 +535,7 @@ function ClassDetailPage() {
                                  {!useIds && row.students?.student_number && (
                                    <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
                                  )}
-                               </td>
+                               </td>}
                                <td className="border-r border-border bg-accent/5 px-4 py-3 text-center">
                                  {average == null ? (
                                    <span className="text-muted-foreground">—</span>
@@ -583,7 +583,7 @@ function ClassDetailPage() {
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />70–79% approaching</span>
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-destructive" />Below 70% needs support</span>
                    </div>
-                   <span>Click a student name for the full report.</span>
+                   {isStaff && <span>Click a student name for the full report.</span>}
                  </footer>
               </div>
             )}
