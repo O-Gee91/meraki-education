@@ -45,6 +45,7 @@ import { DEFAULT_TIME_ZONE, isLateAt } from "@/lib/coursework-window";
 import { shouldAutoFlag } from "@/lib/assignment-status";
 import {
   findMark,
+  isAutoGradeComment,
   markCodeFromComment,
   parseGradingSetup,
   quickScoreCellValue,
