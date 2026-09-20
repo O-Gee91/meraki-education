@@ -467,11 +467,11 @@ function NewAssessment({
       <DialogTrigger asChild>
         <Button size="sm">New assessment</Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="border-b border-border px-5 py-4 pr-12 sm:px-6">
           <DialogTitle>New assessment</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="min-h-0 space-y-3 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
           <div className="space-y-1.5">
             <Label htmlFor="a-title">Title</Label>
             <Input
@@ -481,7 +481,7 @@ function NewAssessment({
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="a-kind">Type</Label>
               <Select
@@ -517,7 +517,7 @@ function NewAssessment({
             closesAt={form.closesAt}
             onChange={(next) => setForm({ ...form, ...next })}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="a-due">Due date</Label>
               <Input
@@ -590,7 +590,7 @@ function NewAssessment({
             Enable AI grammar proofing for written responses
           </label>
         </div>
-        <DialogFooter className="sm:justify-between">
+        <DialogFooter className="shrink-0 gap-3 border-t border-border bg-background px-5 py-4 sm:justify-between sm:px-6">
           <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
             Create
@@ -713,11 +713,11 @@ function EditAssessment({
           Edit
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="border-b border-border px-5 py-4 pr-12 sm:px-6">
           <DialogTitle>Edit assessment</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="min-h-0 space-y-3 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
           <div className="space-y-1.5">
             <Label htmlFor={`e-title-${assessment.id}`}>Title</Label>
             <Input
@@ -727,7 +727,7 @@ function EditAssessment({
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor={`e-kind-${assessment.id}`}>Type</Label>
               <Select
@@ -763,7 +763,7 @@ function EditAssessment({
             closesAt={form.closesAt}
             onChange={(next) => setForm({ ...form, ...next })}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor={`e-due-${assessment.id}`}>Due date</Label>
               <Input
@@ -840,7 +840,7 @@ function EditAssessment({
             Enable AI grammar proofing for written responses
           </label>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t border-border bg-background px-5 py-4 sm:px-6">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             Save changes
           </Button>
