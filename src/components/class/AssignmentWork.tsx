@@ -841,17 +841,19 @@ function StaffCollectPanel({
       next ? Array.from(new Set([...prev, studentId])) : prev.filter((id) => id !== studentId),
     );
 
-  // Bulk action: hand the selected collected work back to students.
+  // Bulk action: hand the selected collected work back to students. Students
+  // with nothing collected yet are simply skipped.
   const returnSelected = useMutation({
     mutationFn: async () => {
-      if (selected.length === 0) throw new Error("Select some collected work first");
+      const targets = selected.filter((id) => collectedInView.includes(id) || isCollected(id));
+      if (targets.length === 0) throw new Error("Select some collected work first");
       const { error } = await supabase
         .from("assignment_submissions")
         .update({ status: "returned" })
         .eq("assignment_id", assignment.id)
-        .in("student_id", selected);
+        .in("student_id", targets);
       if (error) throw error;
-      return selected.length;
+      return targets.length;
     },
     onSuccess: (count) => {
       toast.success(`Returned ${count} student${count === 1 ? "" : "s"}`);
