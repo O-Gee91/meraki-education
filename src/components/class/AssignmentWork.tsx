@@ -10,6 +10,7 @@ import {
   Download,
   MessageSquareText,
   Paperclip,
+  RotateCcw,
   Search,
   Users,
 } from "lucide-react";
@@ -540,6 +541,20 @@ function StaffCollectPanel({
     mutationFn: async (input: { studentId: string; collected: boolean }) => {
       const existing = submissions.find((s) => s.student_id === input.studentId);
       if (existing) {
+        if (!input.collected && existing.status === "collected") {
+          const hasStudentWork = Boolean(
+            existing.body?.trim() || existing.file_upload_id || existing.teacher_note?.trim(),
+          );
+          const query = hasStudentWork
+            ? supabase
+                .from("assignment_submissions")
+                .update({ status: "submitted" })
+                .eq("id", existing.id)
+            : supabase.from("assignment_submissions").delete().eq("id", existing.id);
+          const { error } = await query;
+          if (error) throw error;
+          return;
+        }
         const { error } = await supabase
           .from("assignment_submissions")
           .update({ status: input.collected ? "collected" : "submitted" })
@@ -897,6 +912,55 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Reverse an accidental collection without touching scores or real student work.
+  // Empty rows created by "Mark collected" are removed; rows containing work or
+  // teacher notes return to their prior submitted state.
+  const uncollectSelected = useMutation({
+    mutationFn: async () => {
+      const targets = selected.filter((id) => {
+        const submission = submissions.find((row) => row.student_id === id);
+        const grade = grades.find((row) => row.student_id === id);
+        return submission?.status === "collected" && grade?.points_earned == null;
+      });
+      if (targets.length === 0) {
+        throw new Error("Select collected, unscored students first");
+      }
+
+      const emptyIds: string[] = [];
+      const submittedIds: string[] = [];
+      for (const studentId of targets) {
+        const submission = submissions.find((row) => row.student_id === studentId);
+        if (!submission) continue;
+        const hasStudentWork = Boolean(
+          submission.body?.trim() || submission.file_upload_id || submission.teacher_note?.trim(),
+        );
+        if (hasStudentWork) submittedIds.push(submission.id);
+        else emptyIds.push(submission.id);
+      }
+
+      if (submittedIds.length) {
+        const { error } = await supabase
+          .from("assignment_submissions")
+          .update({ status: "submitted" })
+          .in("id", submittedIds);
+        if (error) throw error;
+      }
+      if (emptyIds.length) {
+        const { error } = await supabase
+          .from("assignment_submissions")
+          .delete()
+          .in("id", emptyIds);
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Unmarked ${count} student${count === 1 ? "" : "s"} as collected`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
 
   const scoredCount = roster.filter((student) => {
@@ -1048,6 +1112,15 @@ function StaffCollectPanel({
                   onClick={() => collectSelected.mutate()}
                 >
                   Mark collected
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={selected.length === 0 || uncollectSelected.isPending}
+                  onClick={() => uncollectSelected.mutate()}
+                >
+                  <RotateCcw className="mr-1.5 h-4 w-4" />
+                  Unmark collected
                 </Button>
                 <Button
 
@@ -1229,7 +1302,7 @@ function StaffCollectPanel({
                           <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
                             <Checkbox
                               checked={isCollected(activeStudent.id)}
-                              disabled={activeGrade?.points_earned != null}
+                              disabled={activeGrade?.points_earned != null || check.isPending}
                               onCheckedChange={(value) => check.mutate({ studentId: activeStudent.id, collected: value === true })}
                             />
                             {activeGrade?.points_earned != null ? "Collected (scored)" : "Collected"}
