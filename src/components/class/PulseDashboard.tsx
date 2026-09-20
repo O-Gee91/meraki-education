@@ -380,15 +380,32 @@ export function PulseDashboard({
 
       <div>
         <section className="panel p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <ClipboardList className="size-4" />
-            {isStaff ? "Missing work tracker" : "My missing work"}
-          </h3>
+          <button
+            type="button"
+            onClick={() => setMissingOpen((v) => !v)}
+            aria-expanded={missingOpen}
+            className="flex w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <ClipboardList className="size-4 shrink-0" />
+              {isStaff ? "Missing work tracker" : "My missing work"}
+              {!missingOpen && totalMissing > 0 && (
+                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium normal-case text-destructive">
+                  {totalMissing}
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${missingOpen ? "" : "-rotate-90"}`}
+            />
+          </button>
+          {missingOpen && (
           <p className="mt-1 text-xs text-muted-foreground">
             {isStaff
               ? "Past-due assignments with no score and no hand-in yet."
               : "Your past-due assignments that still need to be turned in."}
           </p>
+          )}
 
           {totalMissing === 0 ? (
             <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-success">
