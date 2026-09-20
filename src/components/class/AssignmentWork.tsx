@@ -992,20 +992,17 @@ function StaffCollectPanel({
                 />
               </div>
               <StudentSortControl value={sortMode} onChange={setSortMode} className="w-44" />
-              <label
-                className="flex min-h-10 items-center gap-2 text-sm font-semibold"
-                title={collectedInView.length === 0 ? "No collected assignments." : undefined}
-              >
+              <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
                 <Checkbox
                   className="h-5 w-5"
                   checked={masterState}
-                  disabled={collectedInView.length === 0}
+                  disabled={idsInView.length === 0}
                   onCheckedChange={(value) => toggleMaster(value === true)}
                 />
-                Select all collected
+                Select all students
               </label>
               <span className="text-sm text-muted-foreground">
-                {selected.length} selected of {collectedInView.length} shown
+                {selected.length} selected of {idsInView.length} shown
               </span>
               <div className="flex items-center gap-2">
                 <Button
