@@ -22,3 +22,4 @@
 - [x] Simplify the grading workspace roster and detail layout.
 - [x] Replace the assignment-only Gradebook with a student-first grade matrix.
 - [x] Show current grades, missing counts, assignment scores, search, sorting, and direct report access.
+- [x] Keep teacher assessment forms within the viewport with scrollable fields and fixed save actions.
