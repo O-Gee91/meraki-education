@@ -862,6 +862,43 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Bulk action: mark every selected student as collected, creating a
+  // submission row for anyone who has nothing handed in yet.
+  const collectSelected = useMutation({
+    mutationFn: async () => {
+      const targets = selected.filter((id) => !isCollected(id));
+      if (targets.length === 0) throw new Error("Selected students are already collected");
+      const withSub = targets.filter((id) => submissions.some((x) => x.student_id === id));
+      const withoutSub = targets.filter((id) => !submissions.some((x) => x.student_id === id));
+      if (withSub.length) {
+        const { error } = await supabase
+          .from("assignment_submissions")
+          .update({ status: "collected" })
+          .eq("assignment_id", assignment.id)
+          .in("student_id", withSub);
+        if (error) throw error;
+      }
+      if (withoutSub.length) {
+        const { error } = await supabase.from("assignment_submissions").insert(
+          withoutSub.map((id) => ({
+            assignment_id: assignment.id,
+            student_id: id,
+            status: "collected",
+          })),
+        );
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Marked ${count} student${count === 1 ? "" : "s"} collected`);
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
+
   const scoredCount = roster.filter((student) => {
     const grade = grades.find((row) => row.student_id === student.id);
     return cellText(grade) !== "";
@@ -1006,6 +1043,14 @@ function StaffCollectPanel({
               </span>
               <div className="flex items-center gap-2">
                 <Button
+                  size="sm"
+                  disabled={selected.length === 0 || collectSelected.isPending}
+                  onClick={() => collectSelected.mutate()}
+                >
+                  Mark collected
+                </Button>
+                <Button
+
                   size="sm"
                   variant="outline"
                   disabled={selected.length === 0 || returnSelected.isPending}
