@@ -24,3 +24,4 @@
 - [x] Show current grades, missing counts, assignment scores, search, sorting, and direct report access.
 - [x] Keep teacher assessment forms within the viewport with scrollable fields and fixed save actions.
 - [x] Let teachers reverse an accidental collected status without removing scores or submitted work.
+- [x] Let grade-level teachers respond to Well-being entries and show named responses to students.

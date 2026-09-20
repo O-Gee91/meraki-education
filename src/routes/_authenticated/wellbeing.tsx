@@ -61,8 +61,8 @@ const STRATEGIES: Record<number, string> = {
 };
 
 function WellbeingPage() {
-  const { isStaff } = useAuth();
-  const { studentIds } = useTeacherScope();
+  const { isStaff, user } = useAuth();
+  const { gradeLevels } = useTeacherScope();
   const queryClient = useQueryClient();
   const [mood, setMood] = useState("3");
   const [note, setNote] = useState("");
@@ -97,30 +97,50 @@ function WellbeingPage() {
     },
   });
 
-  // Working as a teacher shows only the check-ins of their own students.
+  // Working as a teacher shows every student in a grade they teach, so the
+  // whole grade-level team can respond when support is needed.
   const students = sortStudents(
-    studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+    gradeLevels ? allStudents.filter((s) => gradeLevels.has(s.grade_level)) : allStudents,
     sortMode,
   );
-  const checkins = studentIds
-    ? allCheckins.filter((c) => studentIds.has(c.student_id))
+  const visibleStudentIds = gradeLevels ? new Set(students.map((student) => student.id)) : null;
+  const checkins = visibleStudentIds
+    ? allCheckins.filter((c) => visibleStudentIds.has(c.student_id))
     : allCheckins;
 
 
   const { data: staffNotes = [] } = useQuery({
     queryKey: ["checkin-staff-notes"],
-    enabled: isStaff,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checkin_staff_notes")
-        .select("checkin_id, note");
+        .select("checkin_id, note, created_by");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const responderIds = Array.from(
+    new Set(staffNotes.flatMap((staffNote) => staffNote.created_by ? [staffNote.created_by] : [])),
+  );
+  const { data: responderProfiles = [] } = useQuery({
+    queryKey: ["wellbeing-responders", responderIds],
+    enabled: responderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", responderIds);
       if (error) throw error;
       return data;
     },
   });
 
   const staffNoteFor = (checkinId: string) =>
-    staffNotes.find((n) => n.checkin_id === checkinId)?.note ?? "";
+    staffNotes.find((staffNote) => staffNote.checkin_id === checkinId);
+
+  const responderNameFor = (createdBy: string | null) =>
+    responderProfiles.find((profile) => profile.id === createdBy)?.full_name || "Meraki staff";
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
 
@@ -145,6 +165,7 @@ function WellbeingPage() {
 
   const addStaffNote = useMutation({
     mutationFn: async (input: { id: string; value: string }) => {
+      if (!user) throw new Error("Please sign in again");
       const value = input.value.trim();
       if (!value) {
         const { error } = await supabase
@@ -156,7 +177,10 @@ function WellbeingPage() {
       }
       const { error } = await supabase
         .from("checkin_staff_notes")
-        .upsert({ checkin_id: input.id, note: value }, { onConflict: "checkin_id" });
+        .upsert(
+          { checkin_id: input.id, note: value, created_by: user.id },
+          { onConflict: "checkin_id" },
+        );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -275,6 +299,7 @@ function WellbeingPage() {
             <ul className="mt-4 divide-y divide-border">
               {checkins.map((c) => {
                 const mood = MOODS.find((m) => m.value === Number(c.mood));
+                const response = staffNoteFor(c.id);
                 return (
                   <li key={c.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-3">
@@ -296,19 +321,23 @@ function WellbeingPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              const value = window.prompt("Follow-up note", staffNoteFor(c.id));
+                              const value = window.prompt("Follow-up note", response?.note ?? "");
                               if (value != null) addStaffNote.mutate({ id: c.id, value });
                             }}
                           >
-                            {staffNoteFor(c.id) ? "Edit follow-up" : "Add follow-up"}
+                            {response ? "Edit follow-up" : "Add follow-up"}
                           </Button>
                         </div>
-                        {staffNoteFor(c.id) ? (
-                          <p className="mt-1 rounded-md bg-secondary/60 p-2 text-xs">
-                            Staff-only follow-up: {staffNoteFor(c.id)}
-                          </p>
-                        ) : null}
                       </>
+                    ) : null}
+                    {response ? (
+                      <div className="mt-2 rounded-md border border-border bg-secondary/60 p-3">
+                        <p className="text-xs font-semibold text-foreground">Teacher response</p>
+                        <p className="mt-1 text-sm text-foreground">{response.note}</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Responded by {responderNameFor(response.created_by)}
+                        </p>
+                      </div>
                     ) : null}
                   </li>
                 );
