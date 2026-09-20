@@ -19,7 +19,7 @@ export function useTeacherScope() {
     queryFn: async () => {
       const { data: classes, error } = await supabase
         .from("classes")
-        .select("id, teacher_id, teacher_name");
+        .select("id, teacher_id, teacher_name, grade_level");
       if (error) throw error;
 
       const name = (profile?.full_name ?? "").trim().toLowerCase();
@@ -30,7 +30,15 @@ export function useTeacherScope() {
       );
       const classIds = new Set(mine.map((c) => c.id));
 
-      if (classIds.size === 0) return { classIds, studentIds: new Set<string>() };
+      const gradeLevels = new Set(
+        mine.flatMap((schoolClass) =>
+          schoolClass.grade_level == null ? [] : [schoolClass.grade_level],
+        ),
+      );
+
+      if (classIds.size === 0) {
+        return { classIds, studentIds: new Set<string>(), gradeLevels };
+      }
 
       const { data: enrollments, error: eErr } = await supabase
         .from("enrollments")
@@ -41,6 +49,7 @@ export function useTeacherScope() {
       return {
         classIds,
         studentIds: new Set((enrollments ?? []).map((e) => e.student_id)),
+        gradeLevels,
       };
     },
   });
@@ -53,6 +62,8 @@ export function useTeacherScope() {
     classIds: active ? data!.classIds : null,
     /** Student ids in scope, or null when nothing should be filtered. */
     studentIds: active ? data!.studentIds : null,
+    /** Grade levels taught, or null when nothing should be filtered. */
+    gradeLevels: active ? data!.gradeLevels : null,
     /** True once teacher-mode scoping data is ready. */
     scoped: active,
   };
