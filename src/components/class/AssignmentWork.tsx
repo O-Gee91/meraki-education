@@ -1054,9 +1054,7 @@ function StaffCollectPanel({
                       >
                         <Checkbox
                           checked={selected.includes(student.id)}
-                          disabled={!collected}
                           aria-label={`Select ${student.first_name} ${student.last_name}`}
-                          title={collected ? undefined : "Only collected work can be selected"}
                           onCheckedChange={(value) => toggleRow(student.id, value === true)}
                         />
                         <Button
