@@ -457,7 +457,7 @@ export function PulseDashboard({
                 ))}
               </div>
             </div>
-          )}
+          ))}
         </section>
 
       </div>
