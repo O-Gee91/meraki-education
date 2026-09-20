@@ -816,11 +816,13 @@ function StaffCollectPanel({
     setActiveStudentId(next.id);
     rowRefs.current[next.id]?.scrollIntoView({ block: "nearest" });
   };
-  // The master checkbox applies to the currently filtered set only.
+  // The master checkbox applies to the currently filtered set only. Every shown
+  // student can be selected, whether or not their work is already collected.
+  const idsInView = visibleRoster.map((s) => s.id);
   const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
-  const selectedInView = collectedInView.filter((id) => selected.includes(id));
+  const selectedInView = idsInView.filter((id) => selected.includes(id));
   const masterState: boolean | "indeterminate" =
-    collectedInView.length > 0 && selectedInView.length === collectedInView.length
+    idsInView.length > 0 && selectedInView.length === idsInView.length
       ? true
       : selectedInView.length > 0
         ? "indeterminate"
@@ -829,8 +831,8 @@ function StaffCollectPanel({
   const toggleMaster = (next: boolean) => {
     setSelected((prev) =>
       next
-        ? Array.from(new Set([...prev, ...collectedInView]))
-        : prev.filter((id) => !collectedInView.includes(id)),
+        ? Array.from(new Set([...prev, ...idsInView]))
+        : prev.filter((id) => !idsInView.includes(id)),
     );
   };
 
