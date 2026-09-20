@@ -102,6 +102,8 @@ export function PulseDashboard({
 }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useStudentSort(`pulse-${classId}`);
+  const [open, setOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   useEffect(() => {
     if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
