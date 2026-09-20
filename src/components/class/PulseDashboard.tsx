@@ -407,7 +407,7 @@ export function PulseDashboard({
           </p>
           )}
 
-          {totalMissing === 0 ? (
+          {missingOpen && (totalMissing === 0 ? (
             <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-success">
               {isStaff
                 ? "No missing work — everyone in this class is caught up."
