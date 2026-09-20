@@ -816,11 +816,13 @@ function StaffCollectPanel({
     setActiveStudentId(next.id);
     rowRefs.current[next.id]?.scrollIntoView({ block: "nearest" });
   };
-  // The master checkbox applies to the currently filtered set only.
+  // The master checkbox applies to the currently filtered set only. Every shown
+  // student can be selected, whether or not their work is already collected.
+  const idsInView = visibleRoster.map((s) => s.id);
   const collectedInView = visibleRoster.filter((s) => isCollected(s.id)).map((s) => s.id);
-  const selectedInView = collectedInView.filter((id) => selected.includes(id));
+  const selectedInView = idsInView.filter((id) => selected.includes(id));
   const masterState: boolean | "indeterminate" =
-    collectedInView.length > 0 && selectedInView.length === collectedInView.length
+    idsInView.length > 0 && selectedInView.length === idsInView.length
       ? true
       : selectedInView.length > 0
         ? "indeterminate"
@@ -829,8 +831,8 @@ function StaffCollectPanel({
   const toggleMaster = (next: boolean) => {
     setSelected((prev) =>
       next
-        ? Array.from(new Set([...prev, ...collectedInView]))
-        : prev.filter((id) => !collectedInView.includes(id)),
+        ? Array.from(new Set([...prev, ...idsInView]))
+        : prev.filter((id) => !idsInView.includes(id)),
     );
   };
 
@@ -839,17 +841,19 @@ function StaffCollectPanel({
       next ? Array.from(new Set([...prev, studentId])) : prev.filter((id) => id !== studentId),
     );
 
-  // Bulk action: hand the selected collected work back to students.
+  // Bulk action: hand the selected collected work back to students. Students
+  // with nothing collected yet are simply skipped.
   const returnSelected = useMutation({
     mutationFn: async () => {
-      if (selected.length === 0) throw new Error("Select some collected work first");
+      const targets = selected.filter((id) => collectedInView.includes(id) || isCollected(id));
+      if (targets.length === 0) throw new Error("Select some collected work first");
       const { error } = await supabase
         .from("assignment_submissions")
         .update({ status: "returned" })
         .eq("assignment_id", assignment.id)
-        .in("student_id", selected);
+        .in("student_id", targets);
       if (error) throw error;
-      return selected.length;
+      return targets.length;
     },
     onSuccess: (count) => {
       toast.success(`Returned ${count} student${count === 1 ? "" : "s"}`);
@@ -988,20 +992,17 @@ function StaffCollectPanel({
                 />
               </div>
               <StudentSortControl value={sortMode} onChange={setSortMode} className="w-44" />
-              <label
-                className="flex min-h-10 items-center gap-2 text-sm font-semibold"
-                title={collectedInView.length === 0 ? "No collected assignments." : undefined}
-              >
+              <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
                 <Checkbox
                   className="h-5 w-5"
                   checked={masterState}
-                  disabled={collectedInView.length === 0}
+                  disabled={idsInView.length === 0}
                   onCheckedChange={(value) => toggleMaster(value === true)}
                 />
-                Select all collected
+                Select all students
               </label>
               <span className="text-sm text-muted-foreground">
-                {selected.length} selected of {collectedInView.length} shown
+                {selected.length} selected of {idsInView.length} shown
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -1053,9 +1054,7 @@ function StaffCollectPanel({
                       >
                         <Checkbox
                           checked={selected.includes(student.id)}
-                          disabled={!collected}
                           aria-label={`Select ${student.first_name} ${student.last_name}`}
-                          title={collected ? undefined : "Only collected work can be selected"}
                           onCheckedChange={(value) => toggleRow(student.id, value === true)}
                         />
                         <Button
