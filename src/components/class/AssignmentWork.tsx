@@ -1044,6 +1044,14 @@ function StaffCollectPanel({
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
+                  disabled={selected.length === 0 || collectSelected.isPending}
+                  onClick={() => collectSelected.mutate()}
+                >
+                  Mark collected
+                </Button>
+                <Button
+
+                  size="sm"
                   variant="outline"
                   disabled={selected.length === 0 || returnSelected.isPending}
                   onClick={() => returnSelected.mutate()}
