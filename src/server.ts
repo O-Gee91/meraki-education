@@ -46,9 +46,18 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 const SUPABASE_ORIGIN = process.env['VITE_SUPABASE_URL'] ?? "https://*.supabase.co";
 
+// The Lovable editor previews the site inside an iframe, so those origins have
+// to stay framable. The live school site must not be framable by anyone else,
+// which is what clickjacking protection depends on.
+const PREVIEW_FRAME_ANCESTORS = "'self' https://*.lovable.app https://*.lovable.dev";
+
+function isPreviewHost(host: string): boolean {
+  return host.endsWith(".lovable.app") || host.endsWith(".lovable.dev") || host.startsWith("localhost");
+}
+
 // Content-Security-Policy is only meaningful on HTML documents; adding it to
 // static assets or JSON API responses has no effect.
-function buildCsp(): string {
+function buildCsp(frameAncestors: string): string {
   return [
     "default-src 'self'",
     // The theme pre-paint script is inline; the bundler also emits inline module
