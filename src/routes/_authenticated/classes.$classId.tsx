@@ -72,6 +72,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import {
   computeAverage,
+  findMark,
   isExtraCredit,
   letterFor,
   markCodeFromComment,
