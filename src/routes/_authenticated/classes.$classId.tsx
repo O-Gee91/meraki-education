@@ -314,6 +314,7 @@ function ClassDetailPage() {
     gradebookDueFrom,
     gradebookDueTo,
     gradebookSortDirection,
+    setup,
   ]);
 
   return (
