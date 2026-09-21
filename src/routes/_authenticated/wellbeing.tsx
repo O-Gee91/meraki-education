@@ -64,7 +64,7 @@ const STRATEGIES: Record<number, string> = {
 
 function WellbeingPage() {
   const { isStaff, user } = useAuth();
-  const { gradeLevels } = useTeacherScope();
+  const { gradeLevels, teacherMode } = useTeacherScope();
   const queryClient = useQueryClient();
   const fetchWellbeingFeed = useServerFn(listWellbeingFeed);
   const [mood, setMood] = useState("3");
@@ -106,8 +106,11 @@ function WellbeingPage() {
     isError: checkinsFailed,
     refetch: retryCheckins,
   } = useQuery({
-    queryKey: ["checkins", "wellbeing-feed", filterDate],
-    queryFn: () => fetchWellbeingFeed({ data: filterDate ? { date: filterDate } : {} }),
+    queryKey: ["checkins", "wellbeing-feed", filterDate, teacherMode],
+    queryFn: () => fetchWellbeingFeed({
+      data: filterDate ? { date: filterDate, teacherMode } : { teacherMode },
+    }),
+    retry: false,
   });
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
