@@ -142,7 +142,8 @@ function WellbeingPage() {
         const { error } = await supabase
           .from("checkin_staff_notes")
           .delete()
-          .eq("checkin_id", input.id);
+          .eq("checkin_id", input.id)
+          .eq("created_by", user.id);
         if (error) throw error;
         return;
       }
@@ -150,7 +151,7 @@ function WellbeingPage() {
         .from("checkin_staff_notes")
         .upsert(
           { checkin_id: input.id, note: value, created_by: user.id },
-          { onConflict: "checkin_id" },
+          { onConflict: "checkin_id,created_by" },
         );
       if (error) throw error;
     },
