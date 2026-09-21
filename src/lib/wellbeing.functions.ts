@@ -119,27 +119,29 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
     const studentsById = new Map(
       (students ?? []).map((student) => [student.id, `${student.first_name} ${student.last_name}`]),
     );
-    const notesByCheckin = new Map((staffNotes ?? []).map((staffNote) => [staffNote.checkin_id, staffNote]));
+    const responsesByCheckin = new Map<string, WellbeingResponse[]>();
+    for (const staffNote of staffNotes ?? []) {
+      const list = responsesByCheckin.get(staffNote.checkin_id) ?? [];
+      list.push({
+        id: staffNote.id,
+        note: staffNote.note,
+        createdBy: staffNote.created_by,
+        responderName: staffNote.created_by
+          ? (responderNames.get(staffNote.created_by) ?? "Meraki staff")
+          : "Meraki staff",
+        createdAt: staffNote.created_at,
+      });
+      responsesByCheckin.set(staffNote.checkin_id, list);
+    }
 
-    return checkins.map((checkin): WellbeingFeedItem => {
-      const response = notesByCheckin.get(checkin.id);
-      return {
-        id: checkin.id,
-        studentId: checkin.student_id,
-        studentName: studentsById.get(checkin.student_id) ?? "Student",
-        mood: Number(checkin.mood),
-        note: checkin.note,
-        date: checkin.date,
-        createdAt: checkin.created_at,
-        response: response
-          ? {
-              note: response.note,
-              createdBy: response.created_by,
-              responderName: response.created_by
-                ? (responderNames.get(response.created_by) ?? "Meraki staff")
-                : "Meraki staff",
-            }
-          : null,
-      };
-    });
+    return checkins.map((checkin): WellbeingFeedItem => ({
+      id: checkin.id,
+      studentId: checkin.student_id,
+      studentName: studentsById.get(checkin.student_id) ?? "Student",
+      mood: Number(checkin.mood),
+      note: checkin.note,
+      date: checkin.date,
+      createdAt: checkin.created_at,
+      responses: responsesByCheckin.get(checkin.id) ?? [],
+    }));
   });
