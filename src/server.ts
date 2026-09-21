@@ -70,7 +70,7 @@ function buildCsp(frameAncestors: string): string {
     `connect-src 'self' blob: data: ${SUPABASE_ORIGIN} https://*.supabase.co wss://*.supabase.co https://ai.gateway.lovable.dev https://connector-gateway.lovable.dev https://*.lovable.app https://*.lovable.dev https://*.tinybird.co https://api.tinybird.co`,
     "worker-src 'self' blob:",
     "frame-src 'self' blob:",
-    "frame-ancestors 'self' https://*.lovable.app https://*.lovable.dev",
+    `frame-ancestors ${frameAncestors}`,
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
