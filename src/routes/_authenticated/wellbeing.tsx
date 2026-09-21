@@ -298,22 +298,34 @@ function WellbeingPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              const value = window.prompt("Follow-up note", response?.note ?? "");
+                              const value = window.prompt(
+                                "Your response to this student",
+                                myResponse?.note ?? "",
+                              );
                               if (value != null) addStaffNote.mutate({ id: c.id, value });
                             }}
                           >
-                           {response ? "Edit follow-up" : "Add follow-up"}
+                           {myResponse ? "Edit my response" : "Add my response"}
                           </Button>
                         </div>
                       </>
                     ) : null}
-                    {response ? (
-                      <div className="mt-2 rounded-md border border-border bg-secondary/60 p-3">
-                        <p className="text-xs font-semibold text-foreground">Teacher response</p>
-                        <p className="mt-1 text-sm text-foreground">{response.note}</p>
-                        <p className="mt-1.5 text-xs text-muted-foreground">
-                           Responded by {response.responderName}
-                        </p>
+                    {responses.length > 0 ? (
+                      <div className="mt-2 space-y-2">
+                        {responses.map((r) => (
+                          <div
+                            key={r.id}
+                            className="rounded-md border border-border bg-secondary/60 p-3"
+                          >
+                            <p className="text-xs font-semibold text-foreground">
+                              Teacher response{r.createdBy === user?.id ? " (you)" : ""}
+                            </p>
+                            <p className="mt-1 text-sm text-foreground">{r.note}</p>
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              Responded by {r.responderName} · {formatDate(r.createdAt)}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     ) : null}
                   </li>
