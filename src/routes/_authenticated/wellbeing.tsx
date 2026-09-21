@@ -98,12 +98,21 @@ function WellbeingPage() {
   });
 
   // Working as a teacher shows every student in a grade they teach, so the
-  // whole grade-level team can respond when support is needed.
+  // whole grade-level team can respond when support is needed. Classes without
+  // a grade level still show their own roster, so nobody sees an empty page.
+  const { studentIds } = useTeacherScope();
+  const scoped = !!gradeLevels || !!studentIds;
   const students = sortStudents(
-    gradeLevels ? allStudents.filter((s) => gradeLevels.has(s.grade_level)) : allStudents,
+    scoped
+      ? allStudents.filter(
+          (s) =>
+            (!!gradeLevels && s.grade_level != null && gradeLevels.has(s.grade_level)) ||
+            (!!studentIds && studentIds.has(s.id)),
+        )
+      : allStudents,
     sortMode,
   );
-  const visibleStudentIds = gradeLevels ? new Set(students.map((student) => student.id)) : null;
+  const visibleStudentIds = scoped ? new Set(students.map((student) => student.id)) : null;
   const checkins = visibleStudentIds
     ? allCheckins.filter((c) => visibleStudentIds.has(c.student_id))
     : allCheckins;
