@@ -1,6 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type WellbeingResponse = {
+  id: string;
+  note: string;
+  createdBy: string | null;
+  responderName: string;
+  createdAt: string;
+};
+
 export type WellbeingFeedItem = {
   id: string;
   studentId: string;
@@ -9,11 +17,7 @@ export type WellbeingFeedItem = {
   note: string | null;
   date: string;
   createdAt: string;
-  response: {
-    note: string;
-    createdBy: string | null;
-    responderName: string;
-  } | null;
+  responses: WellbeingResponse[];
 };
 
 export const listWellbeingFeed = createServerFn({ method: "GET" })
