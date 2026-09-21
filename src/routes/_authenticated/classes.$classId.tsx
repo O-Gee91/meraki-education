@@ -72,6 +72,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import {
   computeAverage,
+  findMark,
   isExtraCredit,
   letterFor,
   markCodeFromComment,
@@ -252,14 +253,25 @@ function ClassDetailPage() {
       .filter((assignment) => !gradebookDueTo || (assignment.due_date ?? "") <= gradebookDueTo)
       .map((assignment) => {
         const possible = Number(assignment.points_possible);
-        const countedScores = grades
-          .filter(
-            (grade) =>
-              grade.assignment_id === assignment.id &&
-              grade.points_earned != null &&
-              possible > 0,
-          )
-          .map((grade) => (Number(grade.points_earned) / possible) * 100);
+        // Honour special marks the same way each student's average does:
+        // "M" (missing) counts as zero, excused work is excluded entirely.
+        const countedScores = possible > 0
+          ? grades.flatMap((grade) => {
+              if (grade.assignment_id !== assignment.id) return [];
+              const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
+              let earned: number | null =
+                grade.points_earned == null ? null : Number(grade.points_earned);
+              if (mark) {
+                if (mark.behavior === "exclude") return [];
+                if (mark.behavior === "zero") earned = 0;
+                if (mark.behavior === "value") {
+                  earned = (Number(mark.value ?? 0) / 100) * possible;
+                }
+              }
+              if (earned == null) return [];
+              return [(earned / possible) * 100];
+            })
+          : [];
         const average =
           countedScores.length > 0
             ? countedScores.reduce((sum, percentage) => sum + percentage, 0) /
@@ -302,6 +314,7 @@ function ClassDetailPage() {
     gradebookDueFrom,
     gradebookDueTo,
     gradebookSortDirection,
+    setup,
   ]);
 
   return (
