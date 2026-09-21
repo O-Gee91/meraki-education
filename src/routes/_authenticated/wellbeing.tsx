@@ -100,8 +100,6 @@ function WellbeingPage() {
       : allStudents,
     sortMode,
   );
-  const visibleStudentIds = scoped ? students.map((student) => student.id) : null;
-
   const {
     data: checkins = [],
     isLoading: checkinsLoading,
@@ -109,7 +107,7 @@ function WellbeingPage() {
     refetch: retryCheckins,
   } = useQuery({
     queryKey: ["checkins", "wellbeing-feed", filterDate],
-    queryFn: () => fetchWellbeingFeed({ data: { date: filterDate || undefined } }),
+    queryFn: () => fetchWellbeingFeed({ data: filterDate ? { date: filterDate } : {} }),
   });
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
@@ -155,7 +153,7 @@ function WellbeingPage() {
     },
     onSuccess: () => {
       toast.success("Follow-up saved");
-      queryClient.invalidateQueries({ queryKey: ["checkin-staff-notes"] });
+      queryClient.invalidateQueries({ queryKey: ["checkins"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
