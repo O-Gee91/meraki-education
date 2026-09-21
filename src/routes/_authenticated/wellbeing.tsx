@@ -275,7 +275,8 @@ function WellbeingPage() {
             <ul className="mt-4 divide-y divide-border">
               {checkins.map((c) => {
                 const mood = MOODS.find((m) => m.value === Number(c.mood));
-                const response = c.response;
+                const responses = c.responses;
+                const myResponse = responses.find((r) => r.createdBy && r.createdBy === user?.id);
                 return (
                   <li key={c.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-3">
