@@ -78,22 +78,36 @@ function buildCsp(frameAncestors: string): string {
   ].join("; ");
 }
 
-function withSecurityHeaders(response: Response): Response {
+function withSecurityHeaders(response: Response, request: Request): Response {
   const headers = new Headers(response.headers);
   const contentType = headers.get("content-type") ?? "";
 
+  let host = "";
+  try {
+    host = new URL(request.url).hostname;
+  } catch {
+    host = "";
+  }
+  const preview = isPreviewHost(host);
+
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  headers.set("X-Frame-Options", "SAMEORIGIN");
+  headers.set("X-Frame-Options", preview ? "SAMEORIGIN" : "DENY");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set(
     "Strict-Transport-Security",
     "max-age=31536000; includeSubDomains; preload",
   );
+  // Nothing useful comes from telling a scanner which stack serves the page.
+  headers.delete("X-Powered-By");
+  headers.delete("Server");
 
   if (contentType.includes("text/html")) {
-    headers.set("Content-Security-Policy", buildCsp());
+    headers.set(
+      "Content-Security-Policy",
+      buildCsp(preview ? PREVIEW_FRAME_ANCESTORS : "'self'"),
+    );
   }
 
   return new Response(response.body, {
