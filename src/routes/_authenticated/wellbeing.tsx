@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { HeartPulse } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -23,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+import { listWellbeingFeed } from "@/lib/wellbeing.functions";
 
 export const Route = createFileRoute("/_authenticated/wellbeing")({
   head: () => ({
@@ -64,6 +66,7 @@ function WellbeingPage() {
   const { isStaff, user } = useAuth();
   const { gradeLevels } = useTeacherScope();
   const queryClient = useQueryClient();
+  const fetchWellbeingFeed = useServerFn(listWellbeingFeed);
   const [mood, setMood] = useState("3");
   const [note, setNote] = useState("");
   const [studentId, setStudentId] = useState("");
@@ -99,61 +102,15 @@ function WellbeingPage() {
   );
   const visibleStudentIds = scoped ? students.map((student) => student.id) : null;
 
-  // The check-ins have to be narrowed in the query itself: fetching only the
-  // newest rows school-wide and filtering afterwards hid every older entry
-  // belonging to this teacher's own students.
-  const { data: checkins = [] } = useQuery({
-    queryKey: ["checkins", filterDate, visibleStudentIds ? [...visibleStudentIds].sort() : null],
-    enabled: !scoped || !!visibleStudentIds,
-    queryFn: async () => {
-      if (visibleStudentIds && visibleStudentIds.length === 0) return [];
-      let q = supabase
-        .from("checkins")
-        .select("id, student_id, mood, note, date, created_at")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (filterDate) q = q.eq("date", filterDate);
-      if (visibleStudentIds) q = q.in("student_id", visibleStudentIds);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
-    },
+  const {
+    data: checkins = [],
+    isLoading: checkinsLoading,
+    isError: checkinsFailed,
+    refetch: retryCheckins,
+  } = useQuery({
+    queryKey: ["checkins", "wellbeing-feed", filterDate],
+    queryFn: () => fetchWellbeingFeed({ data: { date: filterDate || undefined } }),
   });
-
-
-
-  const { data: staffNotes = [] } = useQuery({
-    queryKey: ["checkin-staff-notes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checkin_staff_notes")
-        .select("checkin_id, note, created_by");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const responderIds = Array.from(
-    new Set(staffNotes.flatMap((staffNote) => staffNote.created_by ? [staffNote.created_by] : [])),
-  );
-  const { data: responderProfiles = [] } = useQuery({
-    queryKey: ["wellbeing-responders", responderIds],
-    enabled: responderIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", responderIds);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const staffNoteFor = (checkinId: string) =>
-    staffNotes.find((staffNote) => staffNote.checkin_id === checkinId);
-
-  const responderNameFor = (createdBy: string | null) =>
-    responderProfiles.find((profile) => profile.id === createdBy)?.full_name || "Meraki staff";
 
   const target = isStaff ? studentId : (students[0]?.id ?? "");
 
@@ -202,11 +159,6 @@ function WellbeingPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  const nameFor = (id: string) => {
-    const s = students.find((x) => x.id === id);
-    return s ? `${s.first_name} ${s.last_name}` : "Student";
-  };
 
   const average =
     checkins.length > 0
@@ -306,18 +258,27 @@ function WellbeingPage() {
               </Button>
             )}
           </div>
-          {checkins.length === 0 ? (
+          {checkinsLoading ? (
+            <p className="mt-3 text-sm text-muted-foreground">Loading check-ins…</p>
+          ) : checkinsFailed ? (
+            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+              <p className="text-sm text-foreground">We couldn’t load the Well-being updates.</p>
+              <Button className="mt-2" size="sm" variant="outline" onClick={() => retryCheckins()}>
+                Try again
+              </Button>
+            </div>
+          ) : checkins.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No check-ins recorded yet.</p>
           ) : (
             <ul className="mt-4 divide-y divide-border">
               {checkins.map((c) => {
                 const mood = MOODS.find((m) => m.value === Number(c.mood));
-                const response = staffNoteFor(c.id);
+                const response = c.response;
                 return (
                   <li key={c.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="text-lg">{mood?.emoji ?? "😐"}</span>
-                      <p className="text-sm font-medium">{nameFor(c.student_id)}</p>
+                      <p className="text-sm font-medium">{c.studentName}</p>
                       <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
                       <span className="text-xs text-muted-foreground">{mood?.label}</span>
                     </div>
@@ -338,7 +299,7 @@ function WellbeingPage() {
                               if (value != null) addStaffNote.mutate({ id: c.id, value });
                             }}
                           >
-                            {response ? "Edit follow-up" : "Add follow-up"}
+                           {response ? "Edit follow-up" : "Add follow-up"}
                           </Button>
                         </div>
                       </>
@@ -348,7 +309,7 @@ function WellbeingPage() {
                         <p className="text-xs font-semibold text-foreground">Teacher response</p>
                         <p className="mt-1 text-sm text-foreground">{response.note}</p>
                         <p className="mt-1.5 text-xs text-muted-foreground">
-                          Responded by {responderNameFor(response.created_by)}
+                           Responded by {response.responderName}
                         </p>
                       </div>
                     ) : null}
