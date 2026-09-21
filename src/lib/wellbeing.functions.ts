@@ -98,8 +98,9 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
     const checkinIds = checkins.map((checkin) => checkin.id);
     const { data: staffNotes, error: staffNotesError } = await supabaseAdmin
       .from("checkin_staff_notes")
-      .select("checkin_id, note, created_by")
-      .in("checkin_id", checkinIds);
+      .select("id, checkin_id, note, created_by, created_at")
+      .in("checkin_id", checkinIds)
+      .order("created_at", { ascending: true });
     if (staffNotesError) throw new Error(`Could not load teacher responses: ${staffNotesError.message}`);
 
     const responderIds = Array.from(
