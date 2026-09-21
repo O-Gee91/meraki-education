@@ -82,21 +82,6 @@ function WellbeingPage() {
     },
   });
 
-  const { data: allCheckins = [] } = useQuery({
-    queryKey: ["checkins", filterDate],
-    queryFn: async () => {
-      let q = supabase
-        .from("checkins")
-        .select("id, student_id, mood, note, date, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (filterDate) q = q.eq("date", filterDate);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
-    },
-  });
-
   // Working as a teacher shows every student in a grade they teach, so the
   // whole grade-level team can respond when support is needed. Classes without
   // a grade level still show their own roster, so nobody sees an empty page.
@@ -112,10 +97,29 @@ function WellbeingPage() {
       : allStudents,
     sortMode,
   );
-  const visibleStudentIds = scoped ? new Set(students.map((student) => student.id)) : null;
-  const checkins = visibleStudentIds
-    ? allCheckins.filter((c) => visibleStudentIds.has(c.student_id))
-    : allCheckins;
+  const visibleStudentIds = scoped ? students.map((student) => student.id) : null;
+
+  // The check-ins have to be narrowed in the query itself: fetching only the
+  // newest rows school-wide and filtering afterwards hid every older entry
+  // belonging to this teacher's own students.
+  const { data: checkins = [] } = useQuery({
+    queryKey: ["checkins", filterDate, visibleStudentIds ? [...visibleStudentIds].sort() : null],
+    enabled: !scoped || !!visibleStudentIds,
+    queryFn: async () => {
+      if (visibleStudentIds && visibleStudentIds.length === 0) return [];
+      let q = supabase
+        .from("checkins")
+        .select("id, student_id, mood, note, date, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (filterDate) q = q.eq("date", filterDate);
+      if (visibleStudentIds) q = q.in("student_id", visibleStudentIds);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
 
 
   const { data: staffNotes = [] } = useQuery({
