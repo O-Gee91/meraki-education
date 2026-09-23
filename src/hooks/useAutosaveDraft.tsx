@@ -29,9 +29,11 @@ export function useAutosaveDraft<T>(
   const [state, setState] = useState<DraftState>("idle");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const first = useRef(true);
+  const latestKey = useRef(key);
   const latestValue = useRef(value);
   const latestDirty = useRef(dirty);
   const cleared = useRef(false);
+  latestKey.current = key;
   latestValue.current = value;
   latestDirty.current = dirty;
 
@@ -45,7 +47,7 @@ export function useAutosaveDraft<T>(
   useEffect(() => {
     if (!enabled) return;
     return () => {
-      if (!latestDirty.current || cleared.current) return;
+      if (latestKey.current !== key || !latestDirty.current || cleared.current) return;
       try {
         window.localStorage.setItem(PREFIX + key, JSON.stringify(latestValue.current));
       } catch {
