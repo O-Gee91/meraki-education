@@ -848,6 +848,12 @@ function StaffCollectPanel({
 
   const moveActive = (step: -1 | 1) => {
     if (visibleRoster.length === 0) return;
+    // Keyboard navigation skips the input's blur event, so flush a typed score
+    // before leaving the student instead of dropping it silently.
+    if (pendingScore) {
+      score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+      setPendingScore(null);
+    }
     const nextIndex = Math.min(
       visibleRoster.length - 1,
       Math.max(0, (activeIndex < 0 ? 0 : activeIndex) + step),
