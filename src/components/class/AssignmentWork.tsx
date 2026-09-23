@@ -600,7 +600,11 @@ function StaffCollectPanel({
             ? `Enter a number or a mark code (${marks.map((m) => m.code).join(", ")})`
             : "Enter a valid score",
         );
-      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
+      // A written comment must survive a score change: only a special mark
+      // replaces the comment, and a number simply clears a previous mark.
+      const previous = grades.find((g) => g.student_id === input.studentId)?.comment ?? null;
+      const keptComment = markCodeFromComment(previous) ? null : previous;
+      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
@@ -669,12 +673,17 @@ function StaffCollectPanel({
 
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const stamp = new Date().toISOString();
+      const keepComment = (studentId: string) => {
+        if (markComment) return markComment;
+        const previous = grades.find((g) => g.student_id === studentId)?.comment ?? null;
+        return markCodeFromComment(previous) ? null : previous;
+      };
       const { error } = await supabase.from("grades").upsert(
         targets.map((s) => ({
           assignment_id: assignment.id,
           student_id: s.id,
           points_earned: points,
-          comment: markComment,
+          comment: keepComment(s.id),
           updated_at: stamp,
         })),
         { onConflict: "assignment_id,student_id" },
