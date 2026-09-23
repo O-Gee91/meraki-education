@@ -2,6 +2,23 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
+import { isAutoGradeComment } from "@/lib/grading";
+
+async function preservedGradeComment(
+  supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  assignmentId: string,
+  studentId: string,
+  fallback: string,
+) {
+  const { data } = await supabaseAdmin
+    .from("grades")
+    .select("comment")
+    .eq("assignment_id", assignmentId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  const current = data?.comment?.trim();
+  return current && !isAutoGradeComment(current) ? current : fallback;
+}
 
 const ResponseSchema = z.object({
   choice: z.number().int().min(0).max(50).optional(),
@@ -178,12 +195,18 @@ export const submitAssessment = createServerFn({ method: "POST" })
 
     // Late work does not reach the gradebook until a teacher accepts it.
     if (assessment.assignment_id && !needsReview && !isLate) {
+      const comment = await preservedGradeComment(
+        supabaseAdmin,
+        assessment.assignment_id,
+        student.id,
+        "Auto-graded assessment",
+      );
       await supabaseAdmin.from("grades").upsert(
         {
           assignment_id: assessment.assignment_id,
           student_id: student.id,
           points_earned: autoScore,
-          comment: "Auto-graded assessment",
+          comment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -279,12 +302,18 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
         .eq("id", submission.assessment_id)
         .maybeSingle();
       if (assessment?.assignment_id) {
+        const comment = await preservedGradeComment(
+          supabaseAdmin,
+          assessment.assignment_id,
+          submission.student_id,
+          "Assessment graded",
+        );
         await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
             points_earned: Number(submission.auto_score) + manual,
-            comment: "Assessment graded",
+            comment,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "assignment_id,student_id" },
@@ -327,12 +356,18 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
 
     if (data.accepted) {
       if (submission.status === "graded") {
+        const comment = await preservedGradeComment(
+          supabaseAdmin,
+          assessment.assignment_id,
+          submission.student_id,
+          "Late assessment accepted",
+        );
         await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
             points_earned: Number(submission.auto_score) + Number(submission.manual_score),
-            comment: "Late assessment accepted",
+            comment,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "assignment_id,student_id" },

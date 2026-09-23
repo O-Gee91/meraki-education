@@ -69,7 +69,11 @@ export function ProofreadEditor({
     null,
   );
   const [markId, setMarkId] = useState<string>("");
-  const [comment, setComment] = useState("");
+  const annotationKey = `annotation-comment:${submissionId}`;
+  const [comment, setComment] = useState(() => readDraft<string>(annotationKey) ?? "");
+  const annotationDraft = useAutosaveDraft(annotationKey, comment, {
+    dirty: comment.trim().length > 0,
+  });
   const noteKey = `teacher-note:${submissionId}`;
   const [note, setNote] = useState(
     () => readDraft<string>(`teacher-note:${submissionId}`) ?? teacherNote ?? "",
@@ -113,6 +117,7 @@ export function ProofreadEditor({
       toast.success("Mark added");
       setSelection(null);
       setComment("");
+      annotationDraft.clear();
       setMarkId("");
       window.getSelection()?.removeAllRanges();
       queryClient.invalidateQueries({ queryKey: ["submission-annotations", submissionId] });
@@ -215,6 +220,11 @@ export function ProofreadEditor({
             </Button>
           ) : null}
         </div>
+        <DraftStatus
+          state={annotationDraft.state}
+          savedAt={annotationDraft.savedAt}
+          dirty={comment.trim().length > 0}
+        />
       </div>
 
       {annotations.length > 0 ? (

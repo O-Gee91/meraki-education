@@ -117,7 +117,9 @@ export function markCodeFromComment(comment?: string | null) {
  * They must never be shown to students as teacher feedback.
  */
 const AUTO_GRADE_COMMENTS = new Set([
+  "Auto-graded assessment",
   "Assessment graded",
+  "Late assessment accepted",
   "Not completed — automatic zero",
 ]);
 

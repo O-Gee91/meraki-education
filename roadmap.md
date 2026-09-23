@@ -26,3 +26,4 @@
 - [x] Let teachers reverse an accidental collected status without removing scores or submitted work.
 - [x] Let grade-level teachers respond to Well-being entries and show named responses to students.
 - [x] Restore current and historical Well-being updates with consistent access-aware loading and visible errors.
+- [x] Prevent teacher comments from being reset or overwritten while grading.

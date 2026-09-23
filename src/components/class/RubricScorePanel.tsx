@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ import {
   type RubricSelections,
 } from "@/lib/rubrics";
 import { cn } from "@/lib/utils";
+import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export function RubricScorePanel({
   assignmentId,
@@ -36,8 +37,11 @@ export function RubricScorePanel({
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const draftKey = `rubric-comment:${assignmentId}:${studentId}`;
+  const restoredDraft = useRef(readDraft<string>(draftKey));
+  const commentEdited = useRef(restoredDraft.current != null);
   const [selections, setSelections] = useState<RubricSelections>({});
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState(restoredDraft.current ?? "");
 
   const { data: rubric } = useQuery({
     queryKey: ["rubric", rubricId],
@@ -68,8 +72,14 @@ export function RubricScorePanel({
 
   useEffect(() => {
     setSelections(parseSelections(existing?.selections));
-    setComment(existing?.comment ?? "");
+    if (!commentEdited.current) setComment(existing?.comment ?? "");
   }, [existing]);
+
+  const commentDirty = comment.trim() !== (existing?.comment ?? "").trim();
+  const commentDraft = useAutosaveDraft(draftKey, comment, {
+    enabled: !readOnly,
+    dirty: commentDirty,
+  });
 
   const criteria = parseCriteria(rubric?.criteria);
   const max = rubric ? Number(rubric.total_points) || rubricTotal(criteria) : 0;
@@ -94,20 +104,29 @@ export function RubricScorePanel({
       );
       if (error) throw error;
 
+      const gradeRow: {
+        assignment_id: string;
+        student_id: string;
+        points_earned: number;
+        updated_at: string;
+        comment?: string;
+      } = {
+        assignment_id: assignmentId,
+        student_id: studentId,
+        points_earned: scaled,
+        updated_at: stamp,
+      };
+      if (comment.trim()) gradeRow.comment = comment.trim();
       const { error: gradeErr } = await supabase.from("grades").upsert(
-        {
-          assignment_id: assignmentId,
-          student_id: studentId,
-          points_earned: scaled,
-          comment: comment.trim() || null,
-          updated_at: stamp,
-        },
+        gradeRow,
         { onConflict: "assignment_id,student_id" },
       );
       if (gradeErr) throw gradeErr;
     },
     onSuccess: () => {
       toast.success("Rubric score saved");
+      commentEdited.current = false;
+      commentDraft.clear();
       queryClient.invalidateQueries({ queryKey: ["rubric-score", assignmentId, studentId] });
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignmentId] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
@@ -233,16 +252,25 @@ export function RubricScorePanel({
             placeholder="Comment for this student (optional)"
             value={comment}
             maxLength={2000}
-            onChange={(e) => setComment(e.target.value)}
+            onChange={(e) => {
+              commentEdited.current = true;
+              setComment(e.target.value);
+            }}
           />
-          <Button
-            size="sm"
-            className="mt-2"
-            disabled={save.isPending}
-            onClick={() => save.mutate()}
-          >
-            {save.isPending ? "Saving…" : "Save rubric score"}
-          </Button>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <Button
+              size="sm"
+              disabled={save.isPending}
+              onClick={() => save.mutate()}
+            >
+              {save.isPending ? "Saving…" : "Save rubric score"}
+            </Button>
+            <DraftStatus
+              state={commentDraft.state}
+              savedAt={commentDraft.savedAt}
+              dirty={commentDirty}
+            />
+          </div>
         </>
       )}
     </div>

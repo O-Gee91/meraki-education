@@ -1422,6 +1422,7 @@ function StaffCollectPanel({
 
                       {assignment.rubric_id ? (
                         <RubricScorePanel
+                          key={`${assignment.id}:${activeStudent.id}`}
                           assignmentId={assignment.id}
                           rubricId={assignment.rubric_id}
                           studentId={activeStudent.id}
