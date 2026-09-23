@@ -571,7 +571,6 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
     // Repair pass: graded attempts that never reached the gradebook (for
     // example the gradebook column was created after grading) get pushed in.
     // Teacher-entered grades are left untouched.
-    const AUTO_COMMENTS = new Set(["Assessment graded", "Not completed — automatic zero"]);
     let synced = 0;
     for (const assessment of assessments ?? []) {
       if (!assessment.assignment_id) continue;
@@ -591,17 +590,23 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       const byStudent = new Map((existing ?? []).map((g) => [g.student_id, g]));
 
       const rows = countable
-        .map((s) => ({
-          assignment_id: assignmentId,
-          student_id: s.student_id,
-          points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
-          comment: "Assessment graded",
-          updated_at: new Date().toISOString(),
-        }))
+        .map((s) => {
+          const current = byStudent.get(s.student_id);
+          return {
+            assignment_id: assignmentId,
+            student_id: s.student_id,
+            points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
+            comment:
+              current?.comment && !isAutoGradeComment(current.comment)
+                ? current.comment
+                : "Assessment graded",
+            updated_at: new Date().toISOString(),
+          };
+        })
         .filter((row) => {
           const current = byStudent.get(row.student_id);
           if (!current) return true;
-          if (!AUTO_COMMENTS.has(current.comment ?? "")) return false;
+          if (!isAutoGradeComment(current.comment)) return false;
           return Number(current.points_earned ?? -1) !== row.points_earned;
         });
       if (rows.length === 0) continue;
