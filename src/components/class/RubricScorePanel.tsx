@@ -109,14 +109,14 @@ export function RubricScorePanel({
         student_id: string;
         points_earned: number;
         updated_at: string;
-        comment?: string;
+        comment?: string | null;
       } = {
         assignment_id: assignmentId,
         student_id: studentId,
         points_earned: scaled,
         updated_at: stamp,
       };
-      if (comment.trim()) gradeRow.comment = comment.trim();
+      if (comment.trim() || existing?.comment) gradeRow.comment = comment.trim() || null;
       const { error: gradeErr } = await supabase.from("grades").upsert(
         gradeRow,
         { onConflict: "assignment_id,student_id" },

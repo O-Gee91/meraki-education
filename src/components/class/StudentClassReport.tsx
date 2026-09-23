@@ -269,10 +269,14 @@ export function StudentClassReport({
         throw new Error("Enter a valid score or special mark");
       }
       if (input.assignmentId) {
-        const previous = grades.find(
-          (grade) =>
-            grade.assignment_id === input.assignmentId && grade.student_id === student.id,
-        )?.comment ?? null;
+        const { data: latestGrade, error: latestGradeError } = await supabase
+          .from("grades")
+          .select("comment")
+          .eq("assignment_id", input.assignmentId)
+          .eq("student_id", student.id)
+          .maybeSingle();
+        if (latestGradeError) throw latestGradeError;
+        const previous = latestGrade?.comment ?? null;
         const keptComment = markCodeFromComment(previous) ? null : previous;
         const { error } = await supabase.from("grades").upsert(
           {

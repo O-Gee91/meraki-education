@@ -29,6 +29,22 @@ export function useAutosaveDraft<T>(
   const [state, setState] = useState<DraftState>("idle");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const first = useRef(true);
+  const latestValue = useRef(value);
+  latestValue.current = value;
+
+  // A quick close can happen before the debounce finishes. Flush the latest
+  // value on unmount so changing students or closing a grading view cannot
+  // discard the last few keystrokes.
+  useEffect(() => {
+    if (!enabled) return;
+    return () => {
+      try {
+        window.localStorage.setItem(PREFIX + key, JSON.stringify(latestValue.current));
+      } catch {
+        /* ignore */
+      }
+    };
+  }, [key, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
