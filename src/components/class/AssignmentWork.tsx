@@ -600,7 +600,11 @@ function StaffCollectPanel({
             ? `Enter a number or a mark code (${marks.map((m) => m.code).join(", ")})`
             : "Enter a valid score",
         );
-      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
+      // A written comment must survive a score change: only a special mark
+      // replaces the comment, and a number simply clears a previous mark.
+      const previous = grades.find((g) => g.student_id === input.studentId)?.comment ?? null;
+      const keptComment = markCodeFromComment(previous) ? null : previous;
+      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
