@@ -1042,9 +1042,53 @@ function StaffCollectPanel({
             Collect all
           </Button>
         )}
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Score not saved yet</AlertDialogTitle>
+            <AlertDialogDescription>
+              You typed a score for{" "}
+              {(() => {
+                const student = roster.find((row) => row.id === pendingScore?.studentId);
+                return student ? `${student.first_name} ${student.last_name}` : "this student";
+              })()}{" "}
+              that hasn't been saved. What would you like to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep grading</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPendingScore(null);
+                setConfirmClose(false);
+                setOpen(false);
+                setShowMobileDetail(false);
+              }}
+            >
+              Close without saving
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingScore) score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+                setPendingScore(null);
+                setConfirmClose(false);
+                setOpen(false);
+                setShowMobileDetail(false);
+              }}
+            >
+              Save score & close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog
         open={open}
         onOpenChange={(next) => {
+          if (!next && pendingScore) {
+            setConfirmClose(true);
+            return;
+          }
           setOpen(next);
           if (!next) setShowMobileDetail(false);
         }}
@@ -1316,6 +1360,14 @@ function StaffCollectPanel({
                               placeholder={`/${assignment.points_possible}`}
                               defaultValue={cellText(activeGrade)}
                               onKeyDown={saveOnEnter(activeStudent.id, cellText(activeGrade))}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setPendingScore(
+                                  value === cellText(activeGrade)
+                                    ? null
+                                    : { studentId: activeStudent.id, value },
+                                );
+                              }}
                               onBlur={(event) => {
                                 if (event.target.value === cellText(activeGrade)) return;
                                 score.mutate({ studentId: activeStudent.id, value: event.target.value });
