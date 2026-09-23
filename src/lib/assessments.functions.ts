@@ -2,6 +2,23 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
+import { isAutoGradeComment } from "@/lib/grading";
+
+async function preservedGradeComment(
+  supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  assignmentId: string,
+  studentId: string,
+  fallback: string,
+) {
+  const { data } = await supabaseAdmin
+    .from("grades")
+    .select("comment")
+    .eq("assignment_id", assignmentId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  const current = data?.comment?.trim();
+  return current && !isAutoGradeComment(current) ? current : fallback;
+}
 
 const ResponseSchema = z.object({
   choice: z.number().int().min(0).max(50).optional(),
@@ -178,12 +195,18 @@ export const submitAssessment = createServerFn({ method: "POST" })
 
     // Late work does not reach the gradebook until a teacher accepts it.
     if (assessment.assignment_id && !needsReview && !isLate) {
+      const comment = await preservedGradeComment(
+        supabaseAdmin,
+        assessment.assignment_id,
+        student.id,
+        "Auto-graded assessment",
+      );
       await supabaseAdmin.from("grades").upsert(
         {
           assignment_id: assessment.assignment_id,
           student_id: student.id,
           points_earned: autoScore,
-          comment: "Auto-graded assessment",
+          comment,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -279,12 +302,18 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
         .eq("id", submission.assessment_id)
         .maybeSingle();
       if (assessment?.assignment_id) {
+        const comment = await preservedGradeComment(
+          supabaseAdmin,
+          assessment.assignment_id,
+          submission.student_id,
+          "Assessment graded",
+        );
         await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
             points_earned: Number(submission.auto_score) + manual,
-            comment: "Assessment graded",
+            comment,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "assignment_id,student_id" },
@@ -327,12 +356,18 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
 
     if (data.accepted) {
       if (submission.status === "graded") {
+        const comment = await preservedGradeComment(
+          supabaseAdmin,
+          assessment.assignment_id,
+          submission.student_id,
+          "Late assessment accepted",
+        );
         await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
             points_earned: Number(submission.auto_score) + Number(submission.manual_score),
-            comment: "Late assessment accepted",
+            comment,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "assignment_id,student_id" },
@@ -536,7 +571,6 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
     // Repair pass: graded attempts that never reached the gradebook (for
     // example the gradebook column was created after grading) get pushed in.
     // Teacher-entered grades are left untouched.
-    const AUTO_COMMENTS = new Set(["Assessment graded", "Not completed — automatic zero"]);
     let synced = 0;
     for (const assessment of assessments ?? []) {
       if (!assessment.assignment_id) continue;
@@ -556,17 +590,23 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       const byStudent = new Map((existing ?? []).map((g) => [g.student_id, g]));
 
       const rows = countable
-        .map((s) => ({
-          assignment_id: assignmentId,
-          student_id: s.student_id,
-          points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
-          comment: "Assessment graded",
-          updated_at: new Date().toISOString(),
-        }))
+        .map((s) => {
+          const current = byStudent.get(s.student_id);
+          return {
+            assignment_id: assignmentId,
+            student_id: s.student_id,
+            points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
+            comment:
+              current?.comment && !isAutoGradeComment(current.comment)
+                ? current.comment
+                : "Assessment graded",
+            updated_at: new Date().toISOString(),
+          };
+        })
         .filter((row) => {
           const current = byStudent.get(row.student_id);
           if (!current) return true;
-          if (!AUTO_COMMENTS.has(current.comment ?? "")) return false;
+          if (!isAutoGradeComment(current.comment)) return false;
           return Number(current.points_earned ?? -1) !== row.points_earned;
         });
       if (rows.length === 0) continue;

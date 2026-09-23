@@ -616,7 +616,14 @@ function StaffCollectPanel({
         );
       // A written comment must survive a score change: only a special mark
       // replaces the comment, and a number simply clears a previous mark.
-      const previous = grades.find((g) => g.student_id === input.studentId)?.comment ?? null;
+      const { data: latestGrade, error: latestGradeError } = await supabase
+        .from("grades")
+        .select("comment")
+        .eq("assignment_id", assignment.id)
+        .eq("student_id", input.studentId)
+        .maybeSingle();
+      if (latestGradeError) throw latestGradeError;
+      const previous = latestGrade?.comment ?? null;
       const keptComment = markCodeFromComment(previous) ? null : previous;
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
       const { error } = await supabase.from("grades").upsert(
@@ -690,9 +697,19 @@ function StaffCollectPanel({
 
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
       const stamp = new Date().toISOString();
+      const targetIds = targets.map((student) => student.id);
+      const { data: latestGrades, error: latestGradesError } = await supabase
+        .from("grades")
+        .select("student_id, comment")
+        .eq("assignment_id", assignment.id)
+        .in("student_id", targetIds);
+      if (latestGradesError) throw latestGradesError;
+      const latestComments = new Map(
+        (latestGrades ?? []).map((grade) => [grade.student_id, grade.comment]),
+      );
       const keepComment = (studentId: string) => {
         if (markComment) return markComment;
-        const previous = grades.find((g) => g.student_id === studentId)?.comment ?? null;
+        const previous = latestComments.get(studentId) ?? null;
         return markCodeFromComment(previous) ? null : previous;
       };
       const { error } = await supabase.from("grades").upsert(
@@ -1422,6 +1439,7 @@ function StaffCollectPanel({
 
                       {assignment.rubric_id ? (
                         <RubricScorePanel
+                          key={`${assignment.id}:${activeStudent.id}`}
                           assignmentId={assignment.id}
                           rubricId={assignment.rubric_id}
                           studentId={activeStudent.id}
