@@ -36,6 +36,13 @@
       "when": 1790032131687,
       "tag": "0004_grant_has_role_execute_and_scope_calendar_select",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790122823848,
+      "tag": "0005_scope_proofread_marks_select_to_staff",
+      "breakpoints": true
     }
   ]
 }
