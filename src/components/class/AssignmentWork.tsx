@@ -21,6 +21,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogClose,
   DialogContent,
@@ -485,6 +495,10 @@ function StaffCollectPanel({
   const [sortMode, setSortMode] = useStudentSort(`assignment-grading-${classId}`);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+  // A score typed into the detail panel but not yet confirmed (blur/Enter) is
+  // tracked here so closing the window can't silently discard it.
+  const [pendingScore, setPendingScore] = useState<{ studentId: string; value: string } | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
@@ -635,8 +649,11 @@ function StaffCollectPanel({
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success("Score saved");
+      setPendingScore((current) =>
+        current && current.studentId === variables.studentId ? null : current,
+      );
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
@@ -831,6 +848,12 @@ function StaffCollectPanel({
 
   const moveActive = (step: -1 | 1) => {
     if (visibleRoster.length === 0) return;
+    // Keyboard navigation skips the input's blur event, so flush a typed score
+    // before leaving the student instead of dropping it silently.
+    if (pendingScore) {
+      score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+      setPendingScore(null);
+    }
     const nextIndex = Math.min(
       visibleRoster.length - 1,
       Math.max(0, (activeIndex < 0 ? 0 : activeIndex) + step),
@@ -1025,9 +1048,53 @@ function StaffCollectPanel({
             Collect all
           </Button>
         )}
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Score not saved yet</AlertDialogTitle>
+            <AlertDialogDescription>
+              You typed a score for{" "}
+              {(() => {
+                const student = roster.find((row) => row.id === pendingScore?.studentId);
+                return student ? `${student.first_name} ${student.last_name}` : "this student";
+              })()}{" "}
+              that hasn't been saved. What would you like to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep grading</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPendingScore(null);
+                setConfirmClose(false);
+                setOpen(false);
+                setShowMobileDetail(false);
+              }}
+            >
+              Close without saving
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingScore) score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+                setPendingScore(null);
+                setConfirmClose(false);
+                setOpen(false);
+                setShowMobileDetail(false);
+              }}
+            >
+              Save score & close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog
         open={open}
         onOpenChange={(next) => {
+          if (!next && pendingScore) {
+            setConfirmClose(true);
+            return;
+          }
           setOpen(next);
           if (!next) setShowMobileDetail(false);
         }}
@@ -1299,6 +1366,14 @@ function StaffCollectPanel({
                               placeholder={`/${assignment.points_possible}`}
                               defaultValue={cellText(activeGrade)}
                               onKeyDown={saveOnEnter(activeStudent.id, cellText(activeGrade))}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setPendingScore(
+                                  value === cellText(activeGrade)
+                                    ? null
+                                    : { studentId: activeStudent.id, value },
+                                );
+                              }}
                               onBlur={(event) => {
                                 if (event.target.value === cellText(activeGrade)) return;
                                 score.mutate({ studentId: activeStudent.id, value: event.target.value });
