@@ -21,6 +21,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogClose,
   DialogContent,
@@ -485,6 +495,10 @@ function StaffCollectPanel({
   const [sortMode, setSortMode] = useStudentSort(`assignment-grading-${classId}`);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+  // A score typed into the detail panel but not yet confirmed (blur/Enter) is
+  // tracked here so closing the window can't silently discard it.
+  const [pendingScore, setPendingScore] = useState<{ studentId: string; value: string } | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
 
@@ -635,8 +649,11 @@ function StaffCollectPanel({
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success("Score saved");
+      setPendingScore((current) =>
+        current && current.studentId === variables.studentId ? null : current,
+      );
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
