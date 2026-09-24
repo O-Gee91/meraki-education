@@ -1080,9 +1080,26 @@ function StaffCollectPanel({
             ? "Other — scored by teacher"
             : "Collected in class"}
       </Badge>
-      <span className="text-muted-foreground">
-        {turnedIn}/{roster.length} turned in
-      </span>
+      {assignment.submission_mode === "collected" ? (
+        <>
+          <WorkStateBadge
+            state="graded"
+            label={`${roster.filter((s) => workState(s.id) === "graded").length} graded`}
+          />
+          <WorkStateBadge
+            state="collected"
+            label={`${roster.filter((s) => workState(s.id) === "collected").length} collected`}
+          />
+          <WorkStateBadge
+            state="none"
+            label={`${roster.filter((s) => workState(s.id) === "none").length} not collected`}
+          />
+        </>
+      ) : (
+        <span className="text-muted-foreground">
+          {turnedIn}/{roster.length} turned in
+        </span>
+      )}
       {assignment.submission_mode === "collected" &&
         roster.length > 0 &&
         collectedCount < roster.length && (
