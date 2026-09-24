@@ -16,6 +16,7 @@ import { MoveStudentsButton } from "@/components/class/MoveStudentsButton";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CourseworkAverages } from "@/components/class/CourseworkAverages";
 import {
   Dialog,
   DialogContent,
@@ -619,6 +620,13 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="coursework">
+          <CourseworkAverages
+            assignments={assignments}
+            grades={grades}
+            setup={setup}
+            isStaff={isStaff}
+            studentIds={roster.map((r) => r.student_id)}
+          />
           <AssignmentsTab
             classId={classId}
             isStaff={isStaff}
