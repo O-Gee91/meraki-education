@@ -817,31 +817,30 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const collectedCount =
-    assignment.submission_mode === "collected"
-      ? roster.filter((s) => {
-          const sub = submissions.find((x) => x.student_id === s.id);
-          const g = grades.find((x) => x.student_id === s.id);
-          return (
-            g?.points_earned != null ||
-            sub?.status === "collected" ||
-            sub?.status === "returned" ||
-            sub?.status === "submitted"
-          );
-        }).length
-      : 0;
-
-  /* ---- bulk selection of collected work ---- */
-  const isCollected = (studentId: string) => {
+  /*
+   * Three distinct states, derived only from what was explicitly recorded:
+   *  - "graded":    a score or special mark exists
+   *  - "collected": the teacher marked it collected (or, for online work, the
+   *                 student turned it in) but it has not been graded yet
+   *  - "none":      nothing recorded — never inferred or defaulted
+   */
+  const workState = (studentId: string): "graded" | "collected" | "none" => {
     const sub = submissions.find((x) => x.student_id === studentId);
     const g = grades.find((x) => x.student_id === studentId);
-    return (
-      g?.points_earned != null ||
-      sub?.status === "collected" ||
-      sub?.status === "returned" ||
-      sub?.status === "submitted"
-    );
+    if (g && (g.points_earned != null || markCodeFromComment(g.comment))) return "graded";
+    if (!sub) return "none";
+    if (sub.status === "collected") return "collected";
+    if (assignment.submission_mode === "online") {
+      const hasWork = Boolean(sub.body?.trim() || sub.file_upload_id);
+      if ((sub.status === "submitted" || sub.status === "returned") && hasWork) return "collected";
+    }
+    return "none";
   };
+
+  const collectedCount = roster.filter((s) => workState(s.id) !== "none").length;
+
+  /* ---- bulk selection of collected work ---- */
+  const isCollected = (studentId: string) => workState(studentId) !== "none";
 
   const term = search.trim().toLowerCase();
   const filteredRoster = term
