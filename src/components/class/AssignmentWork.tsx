@@ -773,46 +773,77 @@ function StaffCollectPanel({
   // Scored/returned students are already collected by definition and are skipped.
   const collectAll = useMutation({
     mutationFn: async () => {
-      const isDone = (studentId: string) => {
-        const sub = submissions.find((x) => x.student_id === studentId);
-        const g = grades.find((x) => x.student_id === studentId);
-        return (
-          g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
-        );
-      };
-      const targets = roster.filter((s) => !isDone(s.id));
+      const targets = roster.filter((s) => workState(s.id) === "none");
       if (targets.length === 0) throw new Error("Everyone is already collected");
 
-      const withSub = targets.filter((s) => submissions.some((x) => x.student_id === s.id));
+      const withSub = targets
+        .map((s) => submissions.find((x) => x.student_id === s.id))
+        .filter((x): x is SubmissionRow => Boolean(x));
       const withoutSub = targets.filter(
         (s) => !submissions.some((x) => x.student_id === s.id),
       );
+      // Remember prior statuses so the bulk action can be undone exactly.
+      const previous = withSub.map((x) => ({ id: x.id, status: x.status }));
+      let insertedIds: string[] = [];
       if (withSub.length) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("assignment_submissions")
           .update({ status: "collected" })
-          .eq("assignment_id", assignment.id)
-          .in(
-            "student_id",
-            withSub.map((s) => s.id),
-          );
+          .in("id", withSub.map((x) => x.id))
+          .select("id");
         if (error) throw error;
+        if ((data ?? []).length !== withSub.length)
+          throw new Error("Some students could not be marked collected — check you teach this class");
       }
       if (withoutSub.length) {
-        const { error } = await supabase.from("assignment_submissions").insert(
-          withoutSub.map((s) => ({
-            assignment_id: assignment.id,
-            student_id: s.id,
-            status: "collected",
-          })),
-        );
+        const { data, error } = await supabase
+          .from("assignment_submissions")
+          .insert(
+            withoutSub.map((s) => ({
+              assignment_id: assignment.id,
+              student_id: s.id,
+              status: "collected",
+            })),
+          )
+          .select("id");
         if (error) throw error;
+        insertedIds = (data ?? []).map((r) => r.id);
       }
-      return targets.length;
+      return { count: targets.length, previous, insertedIds };
     },
-    onSuccess: (count) => {
-      toast.success(`Collected ${count} student${count === 1 ? "" : "s"}`);
+    onSuccess: ({ count, previous, insertedIds }) => {
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+      toast.success(`Collected ${count} student${count === 1 ? "" : "s"}`, {
+        duration: 10000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              if (insertedIds.length) {
+                const { error } = await supabase
+                  .from("assignment_submissions")
+                  .delete()
+                  .in("id", insertedIds)
+                  .eq("status", "collected");
+                if (error) throw error;
+              }
+              for (const row of previous) {
+                const { error } = await supabase
+                  .from("assignment_submissions")
+                  .update({ status: row.status })
+                  .eq("id", row.id)
+                  .eq("status", "collected");
+                if (error) throw error;
+              }
+              toast.success("Collect all undone");
+            } catch (e) {
+              toast.error((e as Error).message);
+            } finally {
+              queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+            }
+          },
+        },
+      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
