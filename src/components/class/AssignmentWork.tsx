@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Circle,
   Download,
+  Inbox,
   MessageSquareText,
   Paperclip,
   RotateCcw,
@@ -773,75 +774,105 @@ function StaffCollectPanel({
   // Scored/returned students are already collected by definition and are skipped.
   const collectAll = useMutation({
     mutationFn: async () => {
-      const isDone = (studentId: string) => {
-        const sub = submissions.find((x) => x.student_id === studentId);
-        const g = grades.find((x) => x.student_id === studentId);
-        return (
-          g?.points_earned != null || sub?.status === "collected" || sub?.status === "returned"
-        );
-      };
-      const targets = roster.filter((s) => !isDone(s.id));
+      const targets = roster.filter((s) => workState(s.id) === "none");
       if (targets.length === 0) throw new Error("Everyone is already collected");
 
-      const withSub = targets.filter((s) => submissions.some((x) => x.student_id === s.id));
+      const withSub = targets
+        .map((s) => submissions.find((x) => x.student_id === s.id))
+        .filter((x): x is SubmissionRow => Boolean(x));
       const withoutSub = targets.filter(
         (s) => !submissions.some((x) => x.student_id === s.id),
       );
+      // Remember prior statuses so the bulk action can be undone exactly.
+      const previous = withSub.map((x) => ({ id: x.id, status: x.status }));
+      let insertedIds: string[] = [];
       if (withSub.length) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("assignment_submissions")
           .update({ status: "collected" })
-          .eq("assignment_id", assignment.id)
-          .in(
-            "student_id",
-            withSub.map((s) => s.id),
-          );
+          .in("id", withSub.map((x) => x.id))
+          .select("id");
         if (error) throw error;
+        if ((data ?? []).length !== withSub.length)
+          throw new Error("Some students could not be marked collected — check you teach this class");
       }
       if (withoutSub.length) {
-        const { error } = await supabase.from("assignment_submissions").insert(
-          withoutSub.map((s) => ({
-            assignment_id: assignment.id,
-            student_id: s.id,
-            status: "collected",
-          })),
-        );
+        const { data, error } = await supabase
+          .from("assignment_submissions")
+          .insert(
+            withoutSub.map((s) => ({
+              assignment_id: assignment.id,
+              student_id: s.id,
+              status: "collected",
+            })),
+          )
+          .select("id");
         if (error) throw error;
+        insertedIds = (data ?? []).map((r) => r.id);
       }
-      return targets.length;
+      return { count: targets.length, previous, insertedIds };
     },
-    onSuccess: (count) => {
-      toast.success(`Collected ${count} student${count === 1 ? "" : "s"}`);
+    onSuccess: ({ count, previous, insertedIds }) => {
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+      toast.success(`Collected ${count} student${count === 1 ? "" : "s"}`, {
+        duration: 10000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              if (insertedIds.length) {
+                const { error } = await supabase
+                  .from("assignment_submissions")
+                  .delete()
+                  .in("id", insertedIds)
+                  .eq("status", "collected");
+                if (error) throw error;
+              }
+              for (const row of previous) {
+                const { error } = await supabase
+                  .from("assignment_submissions")
+                  .update({ status: row.status })
+                  .eq("id", row.id)
+                  .eq("status", "collected");
+                if (error) throw error;
+              }
+              toast.success("Collect all undone");
+            } catch (e) {
+              toast.error((e as Error).message);
+            } finally {
+              queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+            }
+          },
+        },
+      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const collectedCount =
-    assignment.submission_mode === "collected"
-      ? roster.filter((s) => {
-          const sub = submissions.find((x) => x.student_id === s.id);
-          const g = grades.find((x) => x.student_id === s.id);
-          return (
-            g?.points_earned != null ||
-            sub?.status === "collected" ||
-            sub?.status === "returned" ||
-            sub?.status === "submitted"
-          );
-        }).length
-      : 0;
-
-  /* ---- bulk selection of collected work ---- */
-  const isCollected = (studentId: string) => {
+  /*
+   * Three distinct states, derived only from what was explicitly recorded:
+   *  - "graded":    a score or special mark exists
+   *  - "collected": the teacher marked it collected (or, for online work, the
+   *                 student turned it in) but it has not been graded yet
+   *  - "none":      nothing recorded — never inferred or defaulted
+   */
+  const workState = (studentId: string): "graded" | "collected" | "none" => {
     const sub = submissions.find((x) => x.student_id === studentId);
     const g = grades.find((x) => x.student_id === studentId);
-    return (
-      g?.points_earned != null ||
-      sub?.status === "collected" ||
-      sub?.status === "returned" ||
-      sub?.status === "submitted"
-    );
+    if (g && (g.points_earned != null || markCodeFromComment(g.comment))) return "graded";
+    if (!sub) return "none";
+    if (sub.status === "collected") return "collected";
+    if (assignment.submission_mode === "online") {
+      const hasWork = Boolean(sub.body?.trim() || sub.file_upload_id);
+      if ((sub.status === "submitted" || sub.status === "returned") && hasWork) return "collected";
+    }
+    return "none";
   };
+
+  const collectedCount = roster.filter((s) => workState(s.id) !== "none").length;
+
+  /* ---- bulk selection of collected work ---- */
+  const isCollected = (studentId: string) => workState(studentId) !== "none";
 
   const term = search.trim().toLowerCase();
   const filteredRoster = term
@@ -1049,9 +1080,26 @@ function StaffCollectPanel({
             ? "Other — scored by teacher"
             : "Collected in class"}
       </Badge>
-      <span className="text-muted-foreground">
-        {turnedIn}/{roster.length} turned in
-      </span>
+      {assignment.submission_mode === "collected" ? (
+        <>
+          <WorkStateBadge
+            state="graded"
+            label={`${roster.filter((s) => workState(s.id) === "graded").length} graded`}
+          />
+          <WorkStateBadge
+            state="collected"
+            label={`${roster.filter((s) => workState(s.id) === "collected").length} collected`}
+          />
+          <WorkStateBadge
+            state="none"
+            label={`${roster.filter((s) => workState(s.id) === "none").length} not collected`}
+          />
+        </>
+      ) : (
+        <span className="text-muted-foreground">
+          {turnedIn}/{roster.length} turned in
+        </span>
+      )}
       {assignment.submission_mode === "collected" &&
         roster.length > 0 &&
         collectedCount < roster.length && (
@@ -1285,13 +1333,13 @@ function StaffCollectPanel({
                               {(() => {
                                 const online = assignment.submission_mode === "online";
                                 const handedInLabel = online ? "Turned in" : "Collected";
-                                if (collected)
-                                  return (
-                                    <span className="inline-flex items-center gap-1">
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                                      {shownScore ? `${handedInLabel} · scored` : handedInLabel}
-                                    </span>
-                                  );
+                                const state = workState(student.id);
+                                if (state === "graded")
+                                  return <WorkStateBadge state="graded" />;
+                                if (state === "collected")
+                                  return <WorkStateBadge state="collected" label={`${handedInLabel} · not graded`} />;
+                                if (!online && submission?.status !== "draft")
+                                  return <WorkStateBadge state="none" />;
                                 if (submission?.status === "draft")
                                   return <span>In progress</span>;
                                 if (online && assignment.due_date) {
@@ -1562,5 +1610,35 @@ function BulkFillBar({
         </label>
       </div>
     </div>
+  );
+}
+
+/** Distinct, label-plus-icon status pill: Not collected / Collected / Graded. */
+function WorkStateBadge({
+  state,
+  label,
+}: {
+  state: "graded" | "collected" | "none";
+  label?: string;
+}) {
+  if (state === "graded")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden />
+        {label ?? "Graded"}
+      </span>
+    );
+  if (state === "collected")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium text-foreground">
+        <Inbox className="h-3.5 w-3.5 text-primary" aria-hidden />
+        {label ?? "Collected · not graded"}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-muted-foreground">
+      <Circle className="h-3.5 w-3.5" aria-hidden />
+      {label ?? "Not collected"}
+    </span>
   );
 }
