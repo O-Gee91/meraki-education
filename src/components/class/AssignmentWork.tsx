@@ -1594,3 +1594,33 @@ function BulkFillBar({
     </div>
   );
 }
+
+/** Distinct, label-plus-icon status pill: Not collected / Collected / Graded. */
+function WorkStateBadge({
+  state,
+  label,
+}: {
+  state: "graded" | "collected" | "none";
+  label?: string;
+}) {
+  if (state === "graded")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden />
+        {label ?? "Graded"}
+      </span>
+    );
+  if (state === "collected")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium text-foreground">
+        <Inbox className="h-3.5 w-3.5 text-primary" aria-hidden />
+        {label ?? "Collected · not graded"}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-muted-foreground">
+      <Circle className="h-3.5 w-3.5" aria-hidden />
+      {label ?? "Not collected"}
+    </span>
+  );
+}
