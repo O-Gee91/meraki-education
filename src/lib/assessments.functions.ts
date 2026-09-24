@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
-import { isAutoGradeComment } from "@/lib/grading";
+import { isSystemGradeComment } from "@/lib/grading";
 
 async function preservedGradeComment(
   supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
@@ -17,7 +17,7 @@ async function preservedGradeComment(
     .eq("student_id", studentId)
     .maybeSingle();
   const current = data?.comment?.trim();
-  return current && !isAutoGradeComment(current) ? current : fallback;
+  return current && !isSystemGradeComment(current) ? current : fallback;
 }
 
 const ResponseSchema = z.object({
@@ -597,7 +597,7 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
             student_id: s.student_id,
             points_earned: Number(s.auto_score ?? 0) + Number(s.manual_score ?? 0),
             comment:
-              current?.comment && !isAutoGradeComment(current.comment)
+              current?.comment && !isSystemGradeComment(current.comment)
                 ? current.comment
                 : "Assessment graded",
             updated_at: new Date().toISOString(),
@@ -606,7 +606,7 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
         .filter((row) => {
           const current = byStudent.get(row.student_id);
           if (!current) return true;
-          if (!isAutoGradeComment(current.comment)) return false;
+          if (!isSystemGradeComment(current.comment)) return false;
           return Number(current.points_earned ?? -1) !== row.points_earned;
         });
       if (rows.length === 0) continue;

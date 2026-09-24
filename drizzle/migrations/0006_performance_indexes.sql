@@ -1,0 +1,14 @@
+CREATE INDEX IF NOT EXISTS grades_student_idx ON public.grades (student_id);
+CREATE INDEX IF NOT EXISTS enrollments_student_idx ON public.enrollments (student_id);
+CREATE INDEX IF NOT EXISTS assignments_class_idx ON public.assignments (class_id);
+CREATE INDEX IF NOT EXISTS checkins_student_created_idx ON public.checkins (student_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS checkins_date_idx ON public.checkins (date);
+CREATE INDEX IF NOT EXISTS students_user_idx ON public.students (user_id);
+CREATE INDEX IF NOT EXISTS students_guardian_idx ON public.students (guardian_user_id);
+CREATE INDEX IF NOT EXISTS students_grade_idx ON public.students (grade_level);
+CREATE INDEX IF NOT EXISTS classes_teacher_idx ON public.classes (teacher_id);
+CREATE INDEX IF NOT EXISTS classes_grade_idx ON public.classes (grade_level);
+CREATE INDEX IF NOT EXISTS report_cards_class_idx ON public.report_cards (class_id);
+CREATE INDEX IF NOT EXISTS attendance_student_idx ON public.attendance (student_id);
+CREATE INDEX IF NOT EXISTS rubric_scores_student_idx ON public.rubric_scores (student_id);
+CREATE INDEX IF NOT EXISTS user_roles_user_role_idx ON public.user_roles (user_id, role);

@@ -129,6 +129,14 @@ export function isAutoGradeComment(comment?: string | null) {
   return AUTO_GRADE_COMMENTS.has(text) || !!markCodeFromComment(text);
 }
 
+/**
+ * True only for notes the system itself wrote. Teacher special marks (MARK:EX etc.)
+ * are NOT system notes — background syncs must never overwrite them.
+ */
+export function isSystemGradeComment(comment?: string | null) {
+  return AUTO_GRADE_COMMENTS.has((comment ?? "").trim());
+}
+
 export function findMark(code: string | null, marks: SpecialMark[]) {
   if (!code) return null;
   return marks.find((m) => m.code.toUpperCase() === code.toUpperCase()) ?? null;
