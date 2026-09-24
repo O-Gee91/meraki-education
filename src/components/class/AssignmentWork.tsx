@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Circle,
   Download,
+  Inbox,
   MessageSquareText,
   Paperclip,
   RotateCcw,
