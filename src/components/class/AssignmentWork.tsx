@@ -1315,13 +1315,13 @@ function StaffCollectPanel({
                               {(() => {
                                 const online = assignment.submission_mode === "online";
                                 const handedInLabel = online ? "Turned in" : "Collected";
-                                if (collected)
-                                  return (
-                                    <span className="inline-flex items-center gap-1">
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                                      {shownScore ? `${handedInLabel} · scored` : handedInLabel}
-                                    </span>
-                                  );
+                                const state = workState(student.id);
+                                if (state === "graded")
+                                  return <WorkStateBadge state="graded" />;
+                                if (state === "collected")
+                                  return <WorkStateBadge state="collected" label={`${handedInLabel} · not graded`} />;
+                                if (!online && submission?.status !== "draft")
+                                  return <WorkStateBadge state="none" />;
                                 if (submission?.status === "draft")
                                   return <span>In progress</span>;
                                 if (online && assignment.due_date) {
