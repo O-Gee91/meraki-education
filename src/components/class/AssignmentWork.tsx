@@ -13,6 +13,7 @@ import {
   Paperclip,
   RotateCcw,
   Search,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -856,9 +857,10 @@ function StaffCollectPanel({
    *                 student turned it in) but it has not been graded yet
    *  - "none":      nothing recorded — never inferred or defaulted
    */
-  const workState = (studentId: string): "graded" | "collected" | "none" => {
+  const workState = (studentId: string): "graded" | "missing" | "collected" | "none" => {
     const sub = submissions.find((x) => x.student_id === studentId);
     const g = grades.find((x) => x.student_id === studentId);
+    if (markCodeFromComment(g?.comment) === "M") return "missing";
     if (g && (g.points_earned != null || markCodeFromComment(g.comment))) return "graded";
     if (!sub) return "none";
     if (sub.status === "collected") return "collected";
@@ -1045,7 +1047,7 @@ function StaffCollectPanel({
 
   const scoredCount = roster.filter((student) => {
     const grade = grades.find((row) => row.student_id === student.id);
-    return cellText(grade) !== "";
+    return cellText(grade) !== "" && markCodeFromComment(grade?.comment) !== "M";
   }).length;
   const progressCollectedCount = roster.filter((student) => isCollected(student.id)).length;
   const activeSubmission = activeStudent
@@ -1086,6 +1088,12 @@ function StaffCollectPanel({
             state="graded"
             label={`${roster.filter((s) => workState(s.id) === "graded").length} graded`}
           />
+          {roster.some((s) => workState(s.id) === "missing") ? (
+            <WorkStateBadge
+              state="missing"
+              label={`${roster.filter((s) => workState(s.id) === "missing").length} missing`}
+            />
+          ) : null}
           <WorkStateBadge
             state="collected"
             label={`${roster.filter((s) => workState(s.id) === "collected").length} collected`}
@@ -1334,6 +1342,8 @@ function StaffCollectPanel({
                                 const online = assignment.submission_mode === "online";
                                 const handedInLabel = online ? "Turned in" : "Collected";
                                 const state = workState(student.id);
+                                if (state === "missing")
+                                  return <WorkStateBadge state="missing" label={`${handedInLabel} · Missing`} />;
                                 if (state === "graded")
                                   return <WorkStateBadge state="graded" />;
                                 if (state === "collected")
@@ -1454,7 +1464,11 @@ function StaffCollectPanel({
                               disabled={activeGrade?.points_earned != null || check.isPending}
                               onCheckedChange={(value) => check.mutate({ studentId: activeStudent.id, collected: value === true })}
                             />
-                            {activeGrade?.points_earned != null ? "Collected (scored)" : "Collected"}
+                            {markCodeFromComment(activeGrade?.comment) === "M"
+                              ? "Collected (Missing)"
+                              : activeGrade?.points_earned != null
+                                ? "Collected (scored)"
+                                : "Collected"}
                           </label>
                         ) : null}
                       </div>
@@ -1613,12 +1627,12 @@ function BulkFillBar({
   );
 }
 
-/** Distinct, label-plus-icon status pill: Not collected / Collected / Graded. */
+/** Distinct, label-plus-icon status pill: Not collected / Collected / Missing / Graded. */
 function WorkStateBadge({
   state,
   label,
 }: {
-  state: "graded" | "collected" | "none";
+  state: "graded" | "missing" | "collected" | "none";
   label?: string;
 }) {
   if (state === "graded")
@@ -1626,6 +1640,13 @@ function WorkStateBadge({
       <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 font-medium text-foreground">
         <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden />
         {label ?? "Graded"}
+      </span>
+    );
+  if (state === "missing")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-warning/60 bg-warning/20 px-2 py-0.5 font-medium text-foreground">
+        <TriangleAlert className="h-3.5 w-3.5 text-warning-foreground" aria-hidden />
+        {label ?? "Missing"}
       </span>
     );
   if (state === "collected")
