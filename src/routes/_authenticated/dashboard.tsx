@@ -12,7 +12,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, letterGrade, gradeTone, percent } from "@/lib/school";
+import { formatDate, gradeTone, percent } from "@/lib/school";
+import {
+  computeAverage,
+  DEFAULT_SCALE,
+  letterFor,
+  markCodeFromComment,
+  parseGradingSetup,
+} from "@/lib/grading";
 
 const EVENT_DOT_COLORS: Record<string, string> = {
   red: "bg-destructive",
@@ -51,7 +58,7 @@ function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, grade_level")
+        .select("id, name, subject, period, room, term, grade_level, weights")
         .order("period");
       if (error) throw error;
       return data;
@@ -94,9 +101,10 @@ function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, points_earned, assignments(title, points_possible, due_date, class_id)")
+        .select(
+          "id, points_earned, comment, updated_at, assignments(id, title, category, points_possible, due_date, class_id)",
+        )
         .order("updated_at", { ascending: false })
-        .limit(10);
       if (error) throw error;
       return data;
     },
@@ -224,12 +232,27 @@ function DashboardPage() {
 
 
   const graded = grades.filter((g) => g.points_earned != null && g.assignments);
-  const totalEarned = graded.reduce((sum, g) => sum + Number(g.points_earned ?? 0), 0);
-  const totalPossible = graded.reduce(
-    (sum, g) => sum + Number(g.assignments?.points_possible ?? 0),
-    0,
-  );
-  const overall = percent(totalEarned, totalPossible);
+  const recentGrades = graded.slice(0, 10);
+  const classAverages = classes.flatMap((klass) => {
+    const setup = parseGradingSetup(klass.weights);
+    const average = computeAverage(
+      grades
+        .filter((grade) => grade.assignments?.class_id === klass.id)
+        .map((grade) => ({
+          category: grade.assignments?.category ?? "Homework",
+          pointsPossible: Number(grade.assignments?.points_possible ?? 0),
+          pointsEarned:
+            grade.points_earned == null ? null : Number(grade.points_earned),
+          markCode: markCodeFromComment(grade.comment),
+        })),
+      setup,
+    );
+    return average == null ? [] : [{ average, scale: setup.scale }];
+  });
+  const overall = classAverages.length
+    ? classAverages.reduce((sum, item) => sum + item.average, 0) / classAverages.length
+    : null;
+  const overallScale = classAverages.length === 1 ? classAverages[0]?.scale ?? DEFAULT_SCALE : DEFAULT_SCALE;
 
   return (
     <AppShell
@@ -253,8 +276,8 @@ function DashboardPage() {
           <Stat
             icon={CalendarCheck}
             label="Overall grade"
-            value={totalPossible ? `${overall.toFixed(1)}% ${letterGrade(overall)}` : "—"}
-            tone={totalPossible ? gradeTone(overall) : undefined}
+            value={overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
+            tone={overall == null ? undefined : gradeTone(overall)}
           />
         )}
         <Stat
@@ -420,7 +443,7 @@ function DashboardPage() {
       {!isStaff && (
         <section className="panel mt-6 p-5">
           <h2 className="text-lg font-semibold">Recent scores</h2>
-          {graded.length === 0 ? (
+          {recentGrades.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
           ) : (
             <table className="mt-4 w-full text-sm">
@@ -432,7 +455,7 @@ function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {graded.map((g) => {
+                {recentGrades.map((g) => {
                   const possible = Number(g.assignments?.points_possible ?? 0);
                   const pct = percent(Number(g.points_earned ?? 0), possible);
                   return (
