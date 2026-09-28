@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Student-facing overall grades must use `computeAverage` with each class's grading setup; this keeps weighting, special marks, and extra credit consistent across views.

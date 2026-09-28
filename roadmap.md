@@ -27,3 +27,5 @@
 - [x] Let grade-level teachers respond to Well-being entries and show named responses to students.
 - [x] Restore current and historical Well-being updates with consistent access-aware loading and visible errors.
 - [x] Prevent teacher comments from being reset or overwritten while grading.
+- [x] Calm the Gradebook presentation in teacher and student views.
+- [x] Use the shared grading rules for the student Overview average.

@@ -410,7 +410,7 @@ function ClassDetailPage() {
             studentAverage={studentAverage}
           />
           {!isStaff && <FeedbackInbox classId={classId} />}
-          <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
+          <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
                 {isStaff
@@ -419,7 +419,7 @@ function ClassDetailPage() {
               </p>
             ) : (
               <div>
-                <header className="border-b border-border bg-card/95 p-4 backdrop-blur">
+                <header className="border-b border-border/60 bg-card p-4">
                   <div className="flex flex-wrap items-end justify-between gap-4">
                      <div>
                       <h2 className="text-lg font-semibold">{isStaff ? "Class gradebook" : "My gradebook"}</h2>
@@ -510,15 +510,15 @@ function ClassDetailPage() {
                      No students match that search.
                    </p>
                 ) : (
-                   <div className="max-h-[68vh] overflow-auto">
+                     <div className="max-h-[68vh] overflow-auto">
                      <table className="w-full min-w-max border-collapse text-sm">
-                       <thead className="sticky top-0 z-20 bg-secondary text-xs uppercase text-muted-foreground shadow-[0_1px_0_var(--border)]">
+                       <thead className="sticky top-0 z-20 border-b border-border/60 bg-muted/50 text-xs uppercase text-muted-foreground">
                         <tr>
-                           {isStaff && <th className="sticky left-0 z-30 min-w-52 border-r border-border bg-secondary px-4 py-3 text-left font-semibold">Student</th>}
-                           <th className="min-w-28 border-r border-border bg-accent/10 px-4 py-3 text-center font-semibold text-accent">Current grade</th>
-                           <th className="min-w-24 border-r border-border px-3 py-3 text-center font-semibold">Missing</th>
+                            {isStaff && <th className="sticky left-0 z-30 min-w-52 border-r border-border/60 bg-muted/50 px-4 py-3 text-left font-semibold">Student</th>}
+                            <th className="min-w-28 border-r border-border/60 bg-muted/30 px-4 py-3 text-center font-semibold text-foreground">Current grade</th>
+                            <th className="min-w-24 border-r border-border/60 px-3 py-3 text-center font-semibold">Missing</th>
                            {gradebookRows.map(({ assignment, average }) => (
-                             <th key={assignment.id} className="w-28 min-w-28 border-r border-border px-3 py-3 text-center font-semibold normal-case">
+                              <th key={assignment.id} className="w-28 min-w-28 border-r border-border/60 px-3 py-3 text-center font-semibold normal-case">
                                <span className="block max-w-24 truncate text-foreground" title={assignment.title}>{assignment.title}</span>
                                <span className="mt-1 block font-normal text-muted-foreground">
                                  {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(0)}% avg`}
@@ -536,8 +536,8 @@ function ClassDetailPage() {
                              return code === "M";
                            }).length;
                            return (
-                             <tr key={row.id} className={rowIndex % 2 === 0 ? "bg-card hover:bg-secondary/30" : "bg-secondary/15 hover:bg-secondary/35"}>
-                               {isStaff && <td className="sticky left-0 z-10 border-r border-border bg-inherit px-4 py-3">
+                              <tr key={row.id} className={rowIndex % 2 === 0 ? "bg-card hover:bg-muted/25" : "bg-muted/10 hover:bg-muted/25"}>
+                                {isStaff && <td className="sticky left-0 z-10 border-r border-border/60 bg-inherit px-4 py-3">
                                  <Button
                                    type="button"
                                    variant="link"
@@ -550,21 +550,22 @@ function ClassDetailPage() {
                                    <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
                                  )}
                                </td>}
-                               <td className="border-r border-border bg-accent/5 px-4 py-3 text-center">
+                                <td className="border-r border-border/60 bg-muted/15 px-4 py-3 text-center">
                                  {average == null ? (
                                    <span className="text-muted-foreground">—</span>
                                  ) : (
-                                   <div className="inline-flex items-baseline gap-1.5">
-                                     <span className={`text-base font-bold tabular-nums ${average >= 80 ? "text-success" : average >= 70 ? "text-warning" : "text-destructive"}`}>
+                                    <div className="inline-flex items-center gap-2">
+                                      <span className={`size-1.5 shrink-0 rounded-full ${average >= 80 ? "bg-success" : average >= 70 ? "bg-warning" : "bg-destructive"}`} aria-hidden />
+                                      <span className="font-semibold tabular-nums text-foreground">
                                        {average.toFixed(1)}%
                                      </span>
                                      <span className="text-xs font-semibold text-muted-foreground">{letterFor(average, setup.scale)}</span>
                                    </div>
                                  )}
                                </td>
-                               <td className="border-r border-border px-3 py-3 text-center">
+                                <td className="border-r border-border/60 px-3 py-3 text-center">
                                  {missingCount > 0 ? (
-                                   <span className="inline-flex items-center gap-1 font-semibold text-destructive"><AlertCircle className="size-3.5" />{missingCount}</span>
+                                    <span className="inline-flex items-center gap-1 font-medium text-destructive"><AlertCircle className="size-3.5" />{missingCount}</span>
                                  ) : (
                                    <span className="text-muted-foreground">—</span>
                                  )}
@@ -573,9 +574,9 @@ function ClassDetailPage() {
                                  const grade = gradeFor(row.student_id, assignment.id);
                                  const markCode = markCodeFromComment(grade?.comment);
                                  return (
-                                   <td key={assignment.id} className="border-r border-border px-3 py-3 text-center tabular-nums">
+                                    <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
                                      {markCode ? (
-                                       <Badge variant={markCode === "M" ? "destructive" : "secondary"}>{markCode}</Badge>
+                                        <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
                                      ) : grade?.points_earned == null ? (
                                        <span className="text-muted-foreground">—</span>
                                      ) : (
@@ -591,7 +592,7 @@ function ClassDetailPage() {
                     </table>
                   </div>
                 )}
-                 <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">
+                  <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
                    <div className="flex flex-wrap gap-4">
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-success" />80%+ proficient</span>
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />70–79% approaching</span>
