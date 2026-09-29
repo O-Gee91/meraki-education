@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronsUpDown, Search } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,6 +61,7 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 
 import { formatDate } from "@/lib/school";
+import { buildDocument, docHeader, escapeHtml, printHtml } from "@/lib/print-doc";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { classTimeZone } from "@/lib/coursework-window";
 import {
