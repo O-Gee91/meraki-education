@@ -478,6 +478,11 @@ function ClassDetailPage() {
                         {isStaff ? `${roster.length} ${roster.length === 1 ? "student" : "students"} · ` : ""}{gradebookRows.length} of {assignments.length} assignments
                       </p>
                     </div>
+                    {isStaff && (
+                      <Button type="button" variant="outline" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0}>
+                        <Printer className="size-4" /> Print gradebook
+                      </Button>
+                    )}
                     {isStaff && <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
                       <div className="space-y-1 lg:col-span-2">
                         <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
