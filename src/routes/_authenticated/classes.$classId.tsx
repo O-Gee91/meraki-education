@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronsUpDown, Search } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,6 +61,7 @@ import { ClassLogins } from "@/components/students/ClassLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 
 import { formatDate } from "@/lib/school";
+import { buildDocument, docHeader, escapeHtml, printHtml } from "@/lib/print-doc";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { classTimeZone } from "@/lib/coursework-window";
 import {
@@ -318,6 +319,56 @@ function ClassDetailPage() {
     setup,
   ]);
 
+  function printGradebook() {
+    const headerCells = gradebookRows
+      .map(
+        ({ assignment, average }) =>
+          `<th>${escapeHtml(assignment.title)}<br /><span class="muted">${Number(
+            assignment.points_possible,
+          )} pts${average == null ? "" : ` · ${average.toFixed(0)}% avg`}</span></th>`,
+      )
+      .join("");
+    const bodyRows = visibleGradebookRoster
+      .map((row) => {
+        const average = studentAverage(row.student_id);
+        const missingCount = gradebookRows.filter(({ assignment }) => {
+          const grade = gradeFor(row.student_id, assignment.id);
+          return markCodeFromComment(grade?.comment) === "M";
+        }).length;
+        const cells = gradebookRows
+          .map(({ assignment }) => {
+            const grade = gradeFor(row.student_id, assignment.id);
+            const markCode = markCodeFromComment(grade?.comment);
+            if (markCode) return `<td class="num">${escapeHtml(markCode)}</td>`;
+            if (grade?.points_earned == null) return `<td class="num muted">—</td>`;
+            return `<td class="num">${Number(grade.points_earned).toLocaleString()}</td>`;
+          })
+          .join("");
+        return `<tr><td>${escapeHtml(studentLabel(row.students, useIds))}${
+          !useIds && row.students?.student_number
+            ? `<br /><span class="muted">ID ${escapeHtml(row.students.student_number)}</span>`
+            : ""
+        }</td><td class="num">${
+          average == null
+            ? "—"
+            : `${average.toFixed(1)}% (${escapeHtml(letterFor(average, setup.scale))})`
+        }</td><td class="num">${missingCount > 0 ? missingCount : "—"}</td>${cells}</tr>`;
+      })
+      .join("");
+    const html = buildDocument(
+      `Gradebook — ${klass?.name ?? "Class"}`,
+      `${docHeader("Class gradebook", [
+        klass ? `${klass.name}${klass.subject ? ` · ${klass.subject}` : ""}` : "Class",
+        klass?.term ?? "",
+        `${visibleGradebookRoster.length} students · ${gradebookRows.length} assignments`,
+      ])}
+      <table><tr><th>Student</th><th>Current grade</th><th>Missing</th>${headerCells}</tr>
+      ${bodyRows || `<tr><td colspan="${gradebookRows.length + 3}" class="muted">No students match.</td></tr>`}</table>
+      <p class="muted">M = missing · blank = not yet graded. Current grade follows the class grading setup.</p>`,
+    );
+    printHtml(html);
+  }
+
   return (
     <AppShell
       title={
@@ -427,6 +478,11 @@ function ClassDetailPage() {
                         {isStaff ? `${roster.length} ${roster.length === 1 ? "student" : "students"} · ` : ""}{gradebookRows.length} of {assignments.length} assignments
                       </p>
                     </div>
+                    {isStaff && (
+                      <Button type="button" variant="outline" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0}>
+                        <Printer className="size-4" /> Print gradebook
+                      </Button>
+                    )}
                     {isStaff && <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
                       <div className="space-y-1 lg:col-span-2">
                         <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
