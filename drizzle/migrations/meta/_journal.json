@@ -50,6 +50,13 @@
       "when": 1790209060805,
       "tag": "0006_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790726638210,
+      "tag": "0007_class_report_indexes",
+      "breakpoints": true
     }
   ]
 }
