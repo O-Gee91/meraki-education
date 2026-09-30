@@ -586,14 +586,49 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
 }
 
 
+type StrikeRow = {
+  studentId: string;
+  name: string;
+  grade: number | null;
+  strikes: number;
+  last: string;
+  reasons: string[];
+};
+
+function StrikeRowItem({ row }: { row: StrikeRow }) {
+  const inCycle = row.strikes % 3 === 0 ? 3 : row.strikes % 3;
+  return (
+    <li className="flex flex-wrap items-center gap-3 py-3">
+      <span className="text-sm font-medium">{row.name}</span>
+      <span className="flex gap-1">
+        {[1, 2, 3].map((i) => (
+          <span
+            key={i}
+            className={
+              "h-2.5 w-6 rounded-full " + (i <= inCycle ? "bg-destructive" : "bg-secondary")
+            }
+          />
+        ))}
+      </span>
+      <span className="text-xs text-muted-foreground">
+        {inCycle}/3 in current cycle · {row.strikes} total · last {formatDate(row.last)}
+        {row.reasons.length ? ` · ${row.reasons.join(", ")}` : ""}
+      </span>
+      {inCycle === 3 ? (
+        <Badge variant="destructive" className="ml-auto">
+          Detention required
+        </Badge>
+      ) : null}
+    </li>
+  );
+}
+
 function StrikeTracker() {
   const { data: notes = [] } = useNotes();
+  const [gradeFilter, setGradeFilter] = useState("all");
 
   const rows = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; strikes: number; last: string; reasons: string[] }
-    >();
+    const map = new Map<string, StrikeRow>();
     for (const n of notes) {
       if (n.kind !== "strike") continue;
       const name = `${n.students?.last_name ?? "Student"}, ${n.students?.first_name ?? ""}`;
@@ -605,7 +640,9 @@ function StrikeTracker() {
         if (reason && !current.reasons.includes(reason)) current.reasons.push(reason);
       } else {
         map.set(n.student_id, {
+          studentId: n.student_id,
           name,
+          grade: n.students?.grade_level ?? null,
           strikes: 1,
           last: n.date,
           reasons: reason ? [reason] : [],
@@ -615,46 +652,86 @@ function StrikeTracker() {
     return [...map.values()].sort((a, b) => b.strikes - a.strikes);
   }, [notes]);
 
+  const grades = useMemo(
+    () =>
+      [...new Set(rows.map((r) => r.grade).filter((g): g is number => g != null))].sort(
+        (a, b) => a - b,
+      ),
+    [rows],
+  );
+
+  const visibleRows = useMemo(
+    () =>
+      gradeFilter === "all" ? rows : rows.filter((r) => String(r.grade ?? "none") === gradeFilter),
+    [rows, gradeFilter],
+  );
+
+  // When no single grade is chosen, group the roster under one heading per grade.
+  const groups = useMemo(() => {
+    const keys = [...grades.map((g) => String(g))];
+    if (visibleRows.some((r) => r.grade == null)) keys.push("none");
+    return keys
+      .map((key) => ({
+        key,
+        label: key === "none" ? "No grade set" : `Grade ${key}`,
+        items: visibleRows.filter((r) => String(r.grade ?? "none") === key),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [grades, visibleRows]);
 
   return (
     <div className="panel mt-4 p-5">
-      <h2 className="text-sm font-semibold">Three-strike tracker</h2>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Strikes reset in cycles of three — reaching the third strike schedules detention.
-      </p>
-      {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No strikes on record. </p>
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Three-strike tracker</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Strikes reset in cycles of three — reaching the third strike schedules detention.
+          </p>
+        </div>
+        <Select value={gradeFilter} onValueChange={setGradeFilter}>
+          <SelectTrigger className="ml-auto w-40" aria-label="Filter strikes by grade">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All grades</SelectItem>
+            {grades.map((g) => (
+              <SelectItem key={g} value={String(g)}>
+                Grade {g}
+              </SelectItem>
+            ))}
+            {rows.some((r) => r.grade == null) ? (
+              <SelectItem value="none">No grade set</SelectItem>
+            ) : null}
+          </SelectContent>
+        </Select>
+      </div>
+      {visibleRows.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          {rows.length === 0 ? "No strikes on record." : "No strikes for this grade."}
+        </p>
+      ) : gradeFilter === "all" ? (
+        <div className="mt-4 space-y-5">
+          {groups.map((group) => (
+            <section key={group.key}>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </h3>
+                <Badge variant="secondary">{group.items.length}</Badge>
+              </div>
+              <ul className="mt-1 divide-y divide-border">
+                {group.items.map((r) => (
+                  <StrikeRowItem key={r.studentId} row={r} />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       ) : (
         <ul className="mt-4 divide-y divide-border">
-          {rows.map((r) => {
-            const inCycle = r.strikes % 3 === 0 ? 3 : r.strikes % 3;
-            return (
-              <li key={r.name} className="flex flex-wrap items-center gap-3 py-3">
-                <span className="text-sm font-medium">{r.name}</span>
-                <span className="flex gap-1">
-                  {[1, 2, 3].map((i) => (
-                    <span
-                      key={i}
-                      className={
-                        "h-2.5 w-6 rounded-full " +
-                        (i <= inCycle ? "bg-destructive" : "bg-secondary")
-                      }
-                    />
-                  ))}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {inCycle}/3 in current cycle · {r.strikes} total · last {formatDate(r.last)}
-                  {r.reasons.length ? ` · ${r.reasons.join(", ")}` : ""}
-                </span>
-
-                {inCycle === 3 ? (
-                  <Badge variant="destructive" className="ml-auto">
-                    Detention required
-                  </Badge>
-                ) : null}
-              </li>
-            );
-          })}
+          {visibleRows.map((r) => (
+            <StrikeRowItem key={r.studentId} row={r} />
+          ))}
         </ul>
       )}
     </div>
