@@ -185,32 +185,37 @@ export function FileLibrary({
         toast.error(`${file.name} is larger than 50 MB`);
         continue;
       }
-      const path = `${classId ?? "school"}/${user.id}/${crypto.randomUUID()}-${safeName(file.name)}`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { contentType: file.type || "application/octet-stream" });
-      if (upErr) {
-        toast.error(`${file.name}: ${upErr.message}`);
-        continue;
+      // Each class gets its own frozen copy: later edits or deletions of one
+      // copy never affect the copies shared with other classes.
+      let fileOk = true;
+      for (const cid of targets) {
+        const path = `${cid ?? "school"}/${user.id}/${crypto.randomUUID()}-${safeName(file.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, { contentType: file.type || "application/octet-stream" });
+        if (upErr) {
+          toast.error(`${file.name}: ${upErr.message}`);
+          fileOk = false;
+          continue;
+        }
+        const { error } = await supabase.from("file_uploads").insert({
+          title: file.name.slice(0, 160),
+          file_name: file.name.slice(0, 160),
+          mime_type: file.type || null,
+          size_bytes: file.size,
+          storage_path: path,
+          audience: isStaff ? audience : "everyone",
+          uploaded_by: user.id,
+          class_id: cid,
+          student_id: studentId ?? null,
+        });
+        if (error) {
+          await supabase.storage.from(BUCKET).remove([path]);
+          toast.error(`${file.name}: ${error.message}`);
+          fileOk = false;
+        }
       }
-      const rows = targets.map((cid) => ({
-        title: file.name.slice(0, 160),
-        file_name: file.name.slice(0, 160),
-        mime_type: file.type || null,
-        size_bytes: file.size,
-        storage_path: path,
-        audience: isStaff ? audience : "everyone",
-        uploaded_by: user.id,
-        class_id: cid,
-        student_id: studentId ?? null,
-      }));
-      const { error } = await supabase.from("file_uploads").insert(rows);
-      if (error) {
-        await supabase.storage.from(BUCKET).remove([path]);
-        toast.error(`${file.name}: ${error.message}`);
-        continue;
-      }
-      ok += 1;
+      if (fileOk) ok += 1;
     }
     setBusy(false);
     if (inputRef.current) inputRef.current.value = "";
