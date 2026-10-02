@@ -57,6 +57,13 @@
       "when": 1790726638210,
       "tag": "0007_class_report_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790912431151,
+      "tag": "0008_tighten_applications_standards_allow_shared_files",
+      "breakpoints": true
     }
   ]
 }
