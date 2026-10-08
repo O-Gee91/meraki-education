@@ -77,6 +77,11 @@ type SubmissionRow = {
   status: string;
   teacher_note: string | null;
   submitted_at: string;
+  is_late: boolean;
+  late_override_by: string | null;
+  late_override_at: string | null;
+  late_override_reason: string | null;
+  late_penalty_override_pct: number | null;
   file_uploads: { id: string; file_name: string; storage_path: string } | null;
 };
 
@@ -93,7 +98,7 @@ function useSubmissions(assignmentId: string) {
       const { data, error } = await supabase
         .from("assignment_submissions")
         .select(
-          "id, assignment_id, student_id, body, file_upload_id, status, teacher_note, submitted_at, file_uploads(id, file_name, storage_path)",
+          "id, assignment_id, student_id, body, file_upload_id, status, teacher_note, submitted_at, is_late, late_override_by, late_override_at, late_override_reason, late_penalty_override_pct, file_uploads(id, file_name, storage_path)",
         )
         .eq("assignment_id", assignmentId);
       if (error) throw error;
