@@ -361,6 +361,11 @@ export type Database = {
           created_at: string
           file_upload_id: string | null
           id: string
+          is_late: boolean
+          late_override_at: string | null
+          late_override_by: string | null
+          late_override_reason: string | null
+          late_penalty_override_pct: number | null
           status: string
           student_id: string
           submitted_at: string
@@ -373,6 +378,11 @@ export type Database = {
           created_at?: string
           file_upload_id?: string | null
           id?: string
+          is_late?: boolean
+          late_override_at?: string | null
+          late_override_by?: string | null
+          late_override_reason?: string | null
+          late_penalty_override_pct?: number | null
           status?: string
           student_id: string
           submitted_at?: string
@@ -385,6 +395,11 @@ export type Database = {
           created_at?: string
           file_upload_id?: string | null
           id?: string
+          is_late?: boolean
+          late_override_at?: string | null
+          late_override_by?: string | null
+          late_override_reason?: string | null
+          late_penalty_override_pct?: number | null
           status?: string
           student_id?: string
           submitted_at?: string
@@ -1428,6 +1443,47 @@ export type Database = {
         }
         Relationships: []
       }
+      override_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          new_value: boolean
+          old_value: boolean
+          penalty_override_pct: number | null
+          reason: string | null
+          submission_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_value: boolean
+          old_value: boolean
+          penalty_override_pct?: number | null
+          reason?: string | null
+          submission_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_value?: boolean
+          old_value?: boolean
+          penalty_override_pct?: number | null
+          reason?: string | null
+          submission_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "override_audit_log_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_votes: {
         Row: {
           created_at: string
@@ -2158,12 +2214,25 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_school_staff_email: { Args: { _email: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      override_late_status: {
+        Args: {
+          _on_time: boolean
+          _penalty_pct: number
+          _reason: string
+          _submission_id: string
+        }
+        Returns: undefined
+      }
       poll_results: {
         Args: { _poll_id: string }
         Returns: {
           option_index: number
           votes: number
         }[]
+      }
+      submission_is_late: {
+        Args: { _assignment_id: string; _submitted_at: string }
+        Returns: boolean
       }
       teaches_class: { Args: { _class_id: string }; Returns: boolean }
       teaches_grade: { Args: { _grade: number }; Returns: boolean }
