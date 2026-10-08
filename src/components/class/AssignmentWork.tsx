@@ -51,6 +51,7 @@ import {
   useClassGradingSetup,
 } from "@/components/class/QuickScoreBar";
 import { RubricScorePanel } from "@/components/class/RubricScorePanel";
+import { LateOverrideControl } from "@/components/class/LateOverride";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -77,6 +78,11 @@ type SubmissionRow = {
   status: string;
   teacher_note: string | null;
   submitted_at: string;
+  is_late: boolean;
+  late_override_by: string | null;
+  late_override_at: string | null;
+  late_override_reason: string | null;
+  late_penalty_override_pct: number | null;
   file_uploads: { id: string; file_name: string; storage_path: string } | null;
 };
 
@@ -93,7 +99,7 @@ function useSubmissions(assignmentId: string) {
       const { data, error } = await supabase
         .from("assignment_submissions")
         .select(
-          "id, assignment_id, student_id, body, file_upload_id, status, teacher_note, submitted_at, file_uploads(id, file_name, storage_path)",
+          "id, assignment_id, student_id, body, file_upload_id, status, teacher_note, submitted_at, is_late, late_override_by, late_override_at, late_override_reason, late_penalty_override_pct, file_uploads(id, file_name, storage_path)",
         )
         .eq("assignment_id", assignmentId);
       if (error) throw error;
@@ -1363,17 +1369,12 @@ function StaffCollectPanel({
                                 }
                                 return <span>Not collected</span>;
                               })()}
-                              {submission?.submitted_at &&
-                              shouldAutoFlag(assignment, undefined, 0) &&
-                              isLateAt(
-                                Date.parse(submission.submitted_at),
-                                null,
-                                assignment.due_date,
-                                timeZone,
-                              ) ? (
-                                <span className="font-medium text-destructive" title="Handed in after the due date — score it only if you choose to count it">
+                              {submission?.is_late ? (
+                                <span className="font-medium text-destructive" title="Handed in after the due date">
                                   · Late
                                 </span>
+                              ) : submission?.late_override_at ? (
+                                <span className="text-muted-foreground" title="Late status overridden by a teacher">· On time (overridden)</span>
                               ) : null}
                             </span>
                           </span>
@@ -1430,6 +1431,9 @@ function StaffCollectPanel({
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-8">
                     <div className="mx-auto max-w-4xl space-y-6">
+                      {activeSubmission ? (
+                        <LateOverrideControl submission={activeSubmission} assignmentId={assignment.id} />
+                      ) : null}
                       <div className="grid gap-4 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="space-y-2">
                           <Label htmlFor={`detail-score-${activeStudent.id}`} className="text-sm">Score</Label>
