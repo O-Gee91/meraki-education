@@ -71,6 +71,13 @@
       "when": 1791445043107,
       "tag": "0009_late_status_override",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791445136146,
+      "tag": "0010_late_only_online_work",
+      "breakpoints": true
     }
   ]
 }
