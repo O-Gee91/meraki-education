@@ -51,7 +51,7 @@ import {
   useClassGradingSetup,
 } from "@/components/class/QuickScoreBar";
 import { RubricScorePanel } from "@/components/class/RubricScorePanel";
-import { LateOverrideControl } from "@/components/class/LateOverride";
+import { LateOverrideControl, LateOverrideBadge } from "@/components/class/LateOverride";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -284,12 +284,9 @@ function StudentWorkPanel({
   const turnedIn =
     mine != null && (mine.status === "submitted" || mine.status === "collected" || mine.status === "returned");
   const inProgress = mine != null && mine.status === "draft";
-  // Assignments have no availability window — lateness is measured against the
-  // due date only.
-  const wasLate =
-    turnedIn &&
-    shouldAutoFlag(assignment, undefined, 0) &&
-    isLateAt(Date.parse(mine!.submitted_at), null, assignment.due_date, timeZone);
+  // Lateness is decided by the database (and any teacher override) — never
+  // recomputed in the browser, or a teacher's "on time" override wouldn't show.
+  const wasLate = turnedIn && Boolean(mine?.is_late);
 
 
   if (assignment.submission_mode !== "online") {
