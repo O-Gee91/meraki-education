@@ -338,6 +338,7 @@ function StudentWorkPanel({
         </Badge>
       )}
       {wasLate ? <Badge variant="destructive">Late</Badge> : null}
+      {mine ? <LateOverrideBadge submission={mine} /> : null}
       {gradeComment || mine?.teacher_note ? (
         <Badge className="gap-1 bg-accent text-accent-foreground hover:bg-accent">
           <MessageSquareText className="h-3 w-3" /> Feedback
