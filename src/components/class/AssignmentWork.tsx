@@ -55,7 +55,7 @@ import { LateOverrideControl, LateOverrideBadge } from "@/components/class/LateO
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
-import { DEFAULT_TIME_ZONE, isLateAt } from "@/lib/coursework-window";
+import { DEFAULT_TIME_ZONE } from "@/lib/coursework-window";
 import { shouldAutoFlag } from "@/lib/assignment-status";
 import {
   findMark,
