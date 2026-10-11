@@ -18,13 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -40,6 +33,8 @@ export const Route = createFileRoute("/auth")({
         property: "og:description",
         content: "Teacher, student, guardian and admin access to the Meraki Education school platform.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
@@ -75,7 +70,7 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("educator");
+  const [role] = useState("educator");
   const [busy, setBusy] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [staffNote, setStaffNote] = useState("");
@@ -177,29 +172,24 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <div className="surface-deep hidden w-2/5 flex-col justify-between p-10 lg:flex">
-        <Link to="/" className="flex items-center gap-2">
-          <GraduationCap className="size-6" />
-          <span className="font-display text-lg font-semibold">Meraki Education</span>
-        </Link>
-        <div>
-          <h2 className="text-3xl font-semibold leading-tight">
-            The whole school day, in one place.
-          </h2>
-          <p className="mt-4 max-w-sm text-sm text-current/85">
-            Grades, roll, behavior notes, family messages and reporting — for teachers,
-            students, guardians and admins.
-          </p>
+    <div className="min-h-dvh bg-background">
+      <header className="border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-5">
+          <Link to="/" className="inline-flex items-center gap-2 text-foreground">
+            <GraduationCap className="size-6 text-primary" />
+            <span className="font-display text-lg font-semibold">Meraki Education</span>
+          </Link>
         </div>
-        <p className="text-xs text-current/70">{"\n"}</p>
-      </div>
+      </header>
 
-      <div className="flex w-full items-center justify-center px-6 py-12 lg:w-3/5">
-        <div className="w-full max-w-md">
+      <main className="mx-auto w-full max-w-xl px-6 py-10 sm:py-12">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-normal">Welcome to Meraki</h1>
+        </div>
+        <div className="min-w-0">
           {pendingApproval ? (
             <div className="panel p-6 text-center">
-              <h1 className="text-xl font-semibold">Waiting for administrator approval</h1>
+              <h2 className="text-xl font-semibold tracking-normal">Waiting for administrator approval</h2>
               <p className="mt-3 text-sm text-muted-foreground">
                 Your account was created, but staff access from an email outside the approved
                 school domains has to be approved by a school administrator. You will be able to
@@ -211,7 +201,7 @@ function AuthPage() {
             </div>
           ) : pendingConfirm ? (
             <div className="panel p-6 text-center">
-              <h1 className="text-xl font-semibold">Check your email</h1>
+              <h2 className="text-xl font-semibold tracking-normal">Check your email</h2>
               <p className="mt-3 text-sm text-muted-foreground">
                 Your account needs confirmation before you can sign in. Ask a school administrator
                 if you need help.
@@ -222,7 +212,7 @@ function AuthPage() {
             </div>
           ) : (
             <Tabs defaultValue="signin">
-              <TabsList className="w-full">
+              <TabsList className="h-11 w-full">
                 <TabsTrigger className="flex-1" value="signin">
                   Sign in
                 </TabsTrigger>
@@ -232,29 +222,24 @@ function AuthPage() {
               </TabsList>
 
               <TabsContent value="signin">
-                <form onSubmit={signIn} className="panel mt-4 space-y-4 p-6">
+                <form onSubmit={signIn} className="mt-6 space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="identifier">Username</Label>
+                    <Label htmlFor="identifier">Username or email</Label>
                     <Input
                       id="identifier"
+                      className="h-11 bg-card"
                       autoComplete="username"
                       value={identifier}
                       maxLength={255}
                       placeholder="ava.chen"
                       onChange={(e) => setIdentifier(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Forgot your password?{" "}
-                      <Link to="/forgot-password" className="text-primary underline-offset-4 hover:underline">
-                        Reset it by email
-                      </Link>{" "}
-                      or ask your teacher or a school administrator.
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
+                      className="h-11 bg-card"
                       type="password"
                       autoComplete="current-password"
                       value={password}
@@ -262,47 +247,36 @@ function AuthPage() {
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={busy}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                    <span>Need help? Ask your teacher or school administrator.</span>
+                    <Link to="/forgot-password" className="font-medium text-primary underline-offset-4 hover:underline">
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <Button type="submit" className="h-11 w-full" disabled={busy}>
                     {busy ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup">
-                <form onSubmit={signUp} className="panel mt-4 space-y-4 p-6">
+                <form onSubmit={signUp} className="mt-6 grid gap-5 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full name</Label>
                     <Input
                       id="name"
+                      className="h-11 bg-card"
+                      autoComplete="name"
                       value={fullName}
                       maxLength={100}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="role">I am a…</Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger id="role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="educator">Educator</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Only educators can create an account here. Students and guardians receive
-                      their login details from their school. Use a school email on an ssbs, ssbs2
-                      or ssbs3 domain and teacher access is granted automatically once you confirm
-                      it. Another email domain is allowed, but a school administrator must approve
-                      it first.
-                    </p>
-
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
                     <Input
                       id="signup-username"
+                      className="h-11 bg-card"
                       autoComplete="username"
                       value={username}
                       maxLength={30}
@@ -315,6 +289,7 @@ function AuthPage() {
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
+                      className="h-11 bg-card"
                       type="email"
                       autoComplete="email"
                       value={identifier}
@@ -326,26 +301,24 @@ function AuthPage() {
                     </p>
                   </div>
                   {!SCHOOL_STAFF_EMAIL_RE.test(identifier.trim().toLowerCase()) ? (
-                    <div className="space-y-2">
+                    <div className="order-1 space-y-2 sm:col-span-2">
                       <Label htmlFor="staff-note">Why do you need staff access?</Label>
                       <Textarea
                         id="staff-note"
+                        className="bg-card"
                         value={staffNote}
                         maxLength={500}
                         rows={3}
                         placeholder="e.g. Grade 7 English teacher, starting this term — approved by Ms. Chen"
                         onChange={(e) => setStaffNote(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Your email is not on an approved school domain, so an administrator will
-                        review this request before teacher access is granted.
-                      </p>
                     </div>
                   ) : null}
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
                     <Input
                       id="signup-password"
+                      className="h-11 bg-card"
                       type="password"
                       autoComplete="new-password"
                       value={password}
@@ -353,7 +326,11 @@ function AuthPage() {
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={busy}>
+                  <p className="order-2 text-xs leading-relaxed text-muted-foreground sm:col-span-2">
+                    Educator accounts only. Students and guardians receive logins from school.
+                    Confirm an ssbs, ssbs2 or ssbs3 email for teacher access; other emails need administrator approval.
+                  </p>
+                  <Button type="submit" className="order-3 h-11 w-full sm:col-span-2" disabled={busy}>
                     {busy ? "Creating account…" : "Create account"}
                   </Button>
                 </form>
@@ -361,7 +338,7 @@ function AuthPage() {
             </Tabs>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
