@@ -1,5 +1,12 @@
 # Roadmap
 
+## Desktop UI checkup
+- [ ] Inventory and rank desktop layout/clutter issues for every content page.
+- [ ] Fix and show /auth; wait for review before the next page.
+- [ ] Fix and show landing page after /auth review.
+- [ ] Fix and show dashboard after landing review.
+- [ ] Fix remaining pages individually, showing each before continuing.
+
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
 - [x] Add four persistent per-view sorting choices.
 - [x] Apply sorting to directories, class rosters, gradebooks, grading, attendance, reports, pickers, Pulse, printing, and login generation.
