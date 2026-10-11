@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Student-facing overall grades must use `computeAverage` with each class's grading setup; this keeps weighting, special marks, and extra credit consistent across views.
+- Keep desktop UI audits in `desktop-ui-audit.md` and track page review gates in `roadmap.md`; this preserves the requested one-page-at-a-time review sequence.
