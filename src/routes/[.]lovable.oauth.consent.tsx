@@ -99,13 +99,13 @@ function Consent() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="panel w-full max-w-md p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-background px-6 py-12">
+      <div className="w-full max-w-md min-w-0 [overflow-wrap:anywhere]">
         <div className="flex items-center gap-2 text-muted-foreground">
-          <GraduationCap className="size-5" />
+          <GraduationCap aria-hidden="true" className="size-5 shrink-0 text-primary" />
           <span className="font-display text-sm font-semibold">Meraki Education</span>
         </div>
-        <h1 className="mt-6 text-xl font-semibold">Connect {clientName} to your account</h1>
+        <h1 className="mt-6 text-2xl font-semibold">Connect {clientName} to your account</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           {clientName} will be able to read and act on Meraki Education data as you — the same
           classes, assignments, announcements and calendar you can already see. You can revoke
@@ -117,14 +117,14 @@ function Consent() {
           </p>
         ) : null}
         <div className="mt-6 flex gap-3">
-          <Button disabled={busy} onClick={() => decide(true)} className="flex-1">
+          <Button disabled={busy} onClick={() => decide(true)} className="h-11 flex-1">
             {busy ? "Working…" : "Approve"}
           </Button>
           <Button
             disabled={busy}
             variant="outline"
             onClick={() => decide(false)}
-            className="flex-1"
+            className="h-11 flex-1"
           >
             Deny
           </Button>
