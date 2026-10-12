@@ -30,7 +30,7 @@
 - [x] Receive Files review before proceeding to Settings.
 - [x] Fix and show Settings: aligned account form, quieter sign-in history and consistent section spacing.
 - [x] Receive Settings review before proceeding to Forgot password.
-- [ ] Fix and show Forgot password: align with approved sign-in layout and quiet recovery states.
+- [x] Fix and show Forgot password: align with approved sign-in layout and quiet recovery states.
 - [ ] Receive Forgot password review before proceeding to Reset password.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
