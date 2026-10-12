@@ -927,16 +927,23 @@ function AssignmentsTab({
         targets.map((cid) => ({
           ...base,
           class_id: cid,
+          status,
           // A rubric belongs to one class, so only the original class keeps it.
           rubric_id: cid === classId ? form.rubricId || null : null,
         })),
       );
       if (error) throw error;
-      return targets.length;
+      return { count: targets.length, status };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ count, status }) => {
       toast.success(
-        count > 1 ? `Assignment added to ${count} classes` : "Assignment added",
+        status === "draft"
+          ? count > 1
+            ? `Draft saved to ${count} classes — students can't see it yet`
+            : "Draft saved — students can't see it yet"
+          : count > 1
+            ? `Assignment published to ${count} classes`
+            : "Assignment published",
       );
       setOpen(false);
       setForm(blank);
@@ -1077,11 +1084,20 @@ function AssignmentsTab({
                 </div>
               ) : null}
             </div>
-            <DialogFooter className="sm:justify-between">
+            <DialogFooter className="gap-2 sm:justify-between">
               <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
-              <Button onClick={() => create.mutate()} disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Add assignment"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => create.mutate("draft")}
+                  disabled={create.isPending}
+                >
+                  Save as draft
+                </Button>
+                <Button onClick={() => create.mutate("published")} disabled={create.isPending}>
+                  {create.isPending ? "Saving…" : "Publish"}
+                </Button>
+              </div>
             </DialogFooter>
 
           </DialogContent>
