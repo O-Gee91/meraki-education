@@ -12,4 +12,5 @@
 - Student-facing overall grades must use `computeAverage` with each class's grading setup; this keeps weighting, special marks, and extra credit consistent across views.
 - Keep desktop UI audits in `desktop-ui-audit.md` and track page review gates in `roadmap.md`; this preserves the requested one-page-at-a-time review sequence.
 - Apply reviewed desktop shell presentation through the opt-in AppShell desktopReview prop; this keeps unrevised pages unchanged until their review gate.
+- Scope Community conversation presentation through ClassFeed's opt-in desktopReview prop; this preserves the previously reviewed class feed presentation.
 - Paginate class gradebook assignment columns independently of the filtered data set; this prevents horizontal scrolling while keeping averages, missing counts and printing based on all filtered assignments.

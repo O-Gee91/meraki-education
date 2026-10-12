@@ -19,7 +19,9 @@
 - [x] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
 - [x] Receive Well-being review before proceeding to Messages.
 - [x] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
-- [ ] Receive Messages review before proceeding to Community.
+- [x] Receive Messages review before proceeding to Community.
+- [x] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
+- [ ] Receive Community review before proceeding to People & roles.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
