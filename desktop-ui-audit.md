@@ -19,8 +19,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and approved |
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and approved |
 | Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and approved |
-| Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and shown; awaiting review |
-| Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Awaiting review |
+| Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and approved |
+| Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and shown; awaiting review |
 | Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Awaiting review |
 | Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and multi-class upload controls; keep one primary upload action. | Awaiting review |
 | Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being and Messages approved. Community updated and shown; wait for Joe's review before changing People & roles.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages and Community approved. People & roles updated and shown; wait for Joe's review before changing Classes.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -180,3 +180,17 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being an
 - DOM-only long-group-name stress checks passed at all desktop widths without changing stored text. Inspected default, selected-conversation and creation-draft screenshots at 1280×1800. No runtime errors; preview build OK.
 - Populated school news, posts/replies, student/guardian views and save/write paths are source-reviewed only; not verified against real populated data. Safari/macOS rendering remains unverified.
 - No data queries, membership permissions, audience rules or draft-storage logic changed. People & roles has not been started.
+
+## People & roles ranked issues and fixes
+1. High — The page stretched to 1664px on wide desktop, separating account identities from access controls. Opted into the reviewed 1152px shell, with fixed action tracks on wide desktop and controls beneath identities at narrower widths. Full names, usernames and emails wrap instead of truncating.
+2. High — Four bordered role buttons per account produced a dense wall of controls across 720 accounts. Replaced their presentation with aligned, quiet pressed-state buttons, subtle selected backgrounds and check icons. Accessible labels and Grant/Remove titles distinguish active roles without relying on color. Existing immediate role updates and disabled-pending behavior are unchanged.
+3. Medium — Six counted filter buttons competed with search on a separate line. Combined labeled search and a single Access selector into an aligned toolbar, retaining every filter and its count, with a separate live result count.
+4. Low — Floating request/directory cards, repeated eligibility copy and duplicate role switchers added clutter. Replaced panels with quiet section dividers, removed redundant explanatory copy from the reviewed request presentation and retained visible requests with Approve as teacher as the only primary action. Reset password and Decline remain secondary.
+
+### People & roles verification
+- Real signed-in administrator account: 720 saved accounts and one pending educator request load. Teacher filter returns 14 accounts; empty search, clear search and return to Everyone pass. Saved teacher access has aria-pressed=true.
+- No horizontal page overflow at 1024/1440/1920px; main width caps at 1152px. DOM-only long-name stress also passes at those widths, without storing test text.
+- Opened a real account's password-reset dialog, typed an unsaved username draft and canceled without generating a password. Reload restores the original 720-account count. No role/request mutations were sent; no passwords generated.
+- Inspected populated default, Teacher-filtered and password-dialog screenshots at 1280×1800. No browser runtime errors; latest preview build OK.
+- Role grants/removals, approvals/declines and password generation are intentionally unexercised in this presentation-only review. Non-admin branch is source-reviewed only; Safari/macOS rendering remains unverified.
+- No queries, access rules, mutations or stored records changed. Classes has not been started.

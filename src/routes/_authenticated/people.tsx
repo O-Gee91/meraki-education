@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ResetAccess } from "@/components/students/ResetAccess";
 import { StaffRequests } from "@/components/people/StaffRequests";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/people")({
   head: () => ({
@@ -25,12 +28,17 @@ export const Route = createFileRoute("/_authenticated/people")({
         property: "og:description",
         content: "Manage who can teach, administer and view records in your school.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PeoplePage,
 });
 
 const ROLES: Role[] = ["admin", "teacher", "student", "parent"];
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin", teacher: "Teacher", student: "Student", parent: "Guardian",
+};
 
 type Filter = Role | "all" | "unassigned";
 
@@ -98,7 +106,7 @@ function PeoplePage() {
 
   if (!isAdmin) {
     return (
-      <AppShell title="People & roles" description="Administrator access required.">
+      <AppShell title="People & roles" description="Administrator access required." desktopReview>
         <p className="text-sm text-muted-foreground">
           Only school administrators can manage roles. Ask your admin for access.
         </p>
@@ -129,34 +137,40 @@ function PeoplePage() {
     <AppShell
       title="People & roles"
       description="Grant teaching, guardian or administrator access to accounts."
+      desktopReview
     >
-      <StaffRequests enabled={isAdmin} />
+      <StaffRequests enabled={isAdmin} desktopReview />
 
-      <div className="panel mt-5 p-5">
-        <Input
-          placeholder="Search by name, username or email"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {FILTERS.map((f) => (
-            <Button
-              key={f.value}
-              size="sm"
-              variant={filter === f.value ? "default" : "outline"}
-              onClick={() => setFilter(f.value)}
-            >
-              {f.label}
-              <Badge variant="secondary" className="ml-2">
-                {counts[f.value] ?? 0}
-              </Badge>
-            </Button>
-          ))}
+      <section className="mt-6 min-w-0 border-t border-border pt-5" aria-labelledby="accounts-heading">
+        <h2 id="accounts-heading" className="text-base font-semibold">Accounts</h2>
+        <div className="mt-4 grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_15rem]">
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="people-search">Search accounts</Label>
+            <Input
+              id="people-search"
+              placeholder="Search by name, username or email"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="people-filter">Access</Label>
+            <Select value={filter} onValueChange={(value) => {
+              const selected = FILTERS.find((f) => f.value === value);
+              if (selected) setFilter(selected.value);
+            }}>
+              <SelectTrigger id="people-filter"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label} ({counts[f.value] ?? 0})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-
-
+        <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
+          {isLoading ? "Loading accounts…" : `${filtered.length} of ${people.length} accounts`}
+        </p>
         <div className="mt-5 divide-y divide-border">
           {isLoading ? (
             <p className="py-6 text-sm text-muted-foreground">Loading accounts…</p>
@@ -166,20 +180,21 @@ function PeoplePage() {
             filtered.map((p) => (
               <div
                 key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-4"
+                className="grid min-w-0 items-center gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-6"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 truncate text-sm font-semibold">
-                    <span className="truncate">{p.full_name || "Unnamed"}</span>
+                <div className="min-w-0 [overflow-wrap:anywhere]">
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                    <span>{p.full_name || "Unnamed"}</span>
                     {p.id === user?.id ? <Badge variant="secondary">you</Badge> : null}
                   </div>
 
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {p.username ? `${p.username} · ` : ""}
                     {p.email ?? "no email on file"}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid min-w-0 grid-cols-1 items-center gap-2 sm:grid-cols-[7.5rem_minmax(0,1fr)]">
+                  <div>
                   {p.id === user?.id ? null : (
                     <ResetAccess
                       userId={p.id}
@@ -189,28 +204,36 @@ function PeoplePage() {
                       onDone={() => queryClient.invalidateQueries({ queryKey: ["people"] })}
                     />
                   )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1" role="group" aria-label={`Access for ${p.full_name || p.username || "Unnamed account"}`}>
                   {ROLES.map((role) => {
                     const has = p.roles.includes(role);
                     return (
                       <Button
                         key={role}
                         size="sm"
-                        variant={has ? "default" : "outline"}
+                        variant="ghost"
+                        aria-pressed={has}
+                        aria-label={`${ROLE_LABELS[role]} access`}
+                        title={`${has ? "Remove" : "Grant"} ${ROLE_LABELS[role].toLowerCase()} access`}
+                        className="min-w-0 gap-1 px-1 text-xs text-muted-foreground aria-pressed:bg-secondary aria-pressed:text-foreground"
                         disabled={toggleRole.isPending}
                         onClick={() =>
                           toggleRole.mutate({ userId: p.id, role, has })
                         }
                       >
-                        {role}
+                        <Check className={`size-3 shrink-0 ${has ? "" : "invisible"}`} aria-hidden="true" />
+                        {ROLE_LABELS[role]}
                       </Button>
                     );
                   })}
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
-      </div>
+      </section>
     </AppShell>
   );
 }
