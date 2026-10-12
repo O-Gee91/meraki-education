@@ -8,7 +8,7 @@
 - [x] Receive landing page review before changing dashboard.
 - [x] Fix and show dashboard after landing review.
 - [x] Receive dashboard review before changing remaining pages.
-- [ ] Fix and show the class page (highest-impact remaining page).
+- [x] Fix and show the class page (highest-impact remaining page).
 - [ ] Receive class-page review before proceeding.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
