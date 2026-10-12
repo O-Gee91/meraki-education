@@ -33,8 +33,9 @@
 - [x] Fix and show Forgot password: align with approved sign-in layout and quiet recovery states.
 - [x] Receive Forgot password review before proceeding to Reset password.
 - [x] Fix and show Reset password: align with approved sign-in layout and quiet recovery states.
-- [ ] Receive Reset password review before proceeding to remaining pages.
-- [ ] Fix remaining pages individually, showing each before continuing.
+- [x] Receive Reset password review before proceeding to remaining pages.
+- [x] Fix and show Connect app approval: brand-header error state, safe name wrapping, 44px actions.
+- [ ] Receive Connect app approval review; that completes the ranked page inventory.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
 - [x] Add four persistent per-view sorting choices.
