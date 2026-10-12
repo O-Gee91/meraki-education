@@ -168,7 +168,7 @@ function WellbeingPage() {
       : null;
 
   return (
-    <AppShell
+    <AppShell desktopReview
       title={isStaff ? "Well-being" : "How I'm doing"}
       description={
         isStaff
@@ -286,7 +286,7 @@ function WellbeingPage() {
                       <span className="text-xs text-muted-foreground">{mood?.label}</span>
                     </div>
                     {c.note ? (
-                      <p className="mt-1 text-sm text-muted-foreground">{c.note}</p>
+                      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{c.note}</p>
                     ) : null}
                     {isStaff ? (
                       <>
@@ -320,7 +320,7 @@ function WellbeingPage() {
                             <p className="text-xs font-semibold text-foreground">
                               Teacher response{r.createdBy === user?.id ? " (you)" : ""}
                             </p>
-                            <p className="mt-1 text-sm text-foreground">{r.note}</p>
+                            <p className="mt-1 max-w-2xl text-sm text-foreground">{r.note}</p>
                             <p className="mt-1.5 text-xs text-muted-foreground">
                               Responded by {r.responderName} · {formatDate(r.createdAt)}
                             </p>
