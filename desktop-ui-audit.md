@@ -10,11 +10,11 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 ## Ranked page inventory
 | Impact | Page | Layout and clutter findings | Planned presentation fix | Status |
 | --- | --- | --- | --- | --- |
-| High | /classes/$classId | Unbounded shared content width; many tabs/actions and wide grade matrices risk desktop scrolling. Coursework summaries compete with the ledger. | Bound the shell, wrap navigation cleanly, separate filters and paginate gradebook columns without losing scores. | Initial fixes shown; awaiting review; staff dialogs unverified |
+| High | /classes/$classId | Unbounded shared content width; many tabs/actions and wide grade matrices risk desktop scrolling. Coursework summaries compete with the ledger. | Bound the shell, wrap navigation cleanly, separate filters and paginate gradebook columns without losing scores. | Fixed and approved; staff dialogs unverified |
 | High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Fixed and approved |
 | Medium | /auth | Promotional panel consumes 40% of the display; form starts at different heights as tabs change; registration is 760px tall, with a single-choice role menu and long eligibility copy. No explicit page heading in the normal form. | Bounded, top-aligned forms; clear heading; compact paired registration fields, concise eligibility text, one primary submit action. | Fixed and approved |
 | Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
-| Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded directory and consolidated secondary tools; verify long names and full rosters. | Awaiting review |
+| Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and shown; awaiting review; staff-only controls unverified |
 | Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize selected report mode, group secondary actions. | Awaiting review |
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Awaiting review |
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing and dashboard approved. Class page updated and shown; wait for Joe's class-page review before changing any remaining page.
+Auth, landing, dashboard and class page approved. Students updated and shown; wait for Joe's Students review before changing Reports.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -89,3 +89,18 @@ Auth, landing and dashboard approved. Class page updated and shown; wait for Joe
 - Preview build OK; final populated screenshot inspected at 1280×1800.
 - Staff filter layout, full roster, grading dialogs and print behavior were source-reviewed only; available requesting-user session is student-only. Staff visual verification remains open, not claimed complete.
 - Safari/macOS rendering remains unverified; no next page started.
+
+## Students ranked issues and fixes
+1. High — Seven detail/action columns crowded identities and account details, especially with editable IDs and long emails. Combined grade/graduating class and account/guardian details into four fixed-width detail columns, with separate staff selection/actions; long names/emails wrap and ID inputs fit their column.
+2. Medium — Directory/header stretched on wide monitors, distancing names from actions. Opted Students into the approved max-w-6xl desktopReview shell.
+3. Medium — Import, class logins and account creation competed with the main action. Kept Add student as the primary header action; moved secondary management tools into a keyboard-accessible, default-collapsed Directory tools disclosure. Waiting-account management follows the directory.
+4. Low — Floating panel shadow, uppercase headings and strong grade bands added visual noise. Removed the directory card treatment, softened group bands and aligned search, sorting and result count; reserved a stable selection toolbar area. Student names are now keyboard-accessible profile buttons; destructive row actions use named trash icons.
+
+### Students verification
+- Available requesting-user session remains student-only: the direct Students page renders one real saved student; no staff session selected without permission.
+- At 1024/1440/1920px, no horizontal page or directory-table overflow. Table width caps at 1104px on large screens.
+- Search returns the existing student and the empty result state; clicking the saved student's name opens their profile.
+- Directory tools expand/collapse; spreadsheet import and Add student dialogs open and close without changing records.
+- Final screenshot inspected at 1280×1800; preview build OK.
+- Populated staff rosters, admin tools, bulk removal and ID editing are source-reviewed only, not authenticated end-to-end verified. Long-name/email wrapping is source-reviewed, not tested against real long-name records.
+- Safari/macOS-specific rendering remains unverified. Reports has not been changed.

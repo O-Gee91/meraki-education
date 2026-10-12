@@ -25,6 +25,7 @@ import { graduatingClassLabel } from "@/lib/academic";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+import { ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
@@ -32,6 +33,8 @@ export const Route = createFileRoute("/_authenticated/students")({
       { title: "Students — Meraki Education" },
       { name: "description", content: "Student directory with grade level and guardian contact." },
       { property: "og:title", content: "Students — Meraki Education" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content: "Student directory with grade level and guardian contact.",
@@ -193,16 +196,14 @@ function StudentsPage() {
 
   return (
     <AppShell
+      desktopReview
       title="Students"
-      description="The school directory used across gradebook, attendance and reporting."
+      description={teacherMode ? "Your class directory" : "School directory"}
       actions={
         <div className="flex flex-wrap gap-2">
-          {isAdmin ? <ClassLogins /> : null}
-          {isAdmin ? <CreateAccount /> : null}
-          <StudentImport />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button>Add student</Button>
+              <Button><Plus className="size-4" />Add student</Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -270,14 +271,31 @@ function StudentsPage() {
         </div>
       }
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
         <Input
+          aria-label="Search students"
           placeholder="Search by name or student ID"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="max-w-sm"
+          className="pl-9"
         />
+        </div>
         <StudentSortControl value={sortMode} onChange={setSortMode} />
+        <span className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? "student" : "students"}</span>
+      </div>
+      <details className="group border-b border-border py-3">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-sm text-sm font-medium text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" />Directory tools
+        </summary>
+        <div className="flex flex-wrap items-center gap-2 pt-3">
+          <StudentImport />
+          {isAdmin ? <ClassLogins /> : null}
+          {isAdmin ? <CreateAccount /> : null}
+        </div>
+      </details>
+      <div className="flex min-h-12 flex-wrap items-center gap-2 py-2" aria-live="polite">
         {isStaff && selected.length > 0 ? (
           <>
             <span className="text-sm text-muted-foreground">{selected.length} selected</span>
@@ -295,13 +313,20 @@ function StudentsPage() {
           </>
         ) : null}
       </div>
-      {isStaff ? <UnlinkedAccounts students={students} /> : null}
-      <div className="panel mt-4 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+      <div>
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            {isStaff ? <col className="w-[5%]" /> : null}
+            <col className={isStaff ? "w-[26%]" : "w-[30%]"} />
+            <col className="w-[18%]" />
+            <col className="w-[17%]" />
+            <col className={isStaff ? "w-[26%]" : "w-[35%]"} />
+            {isStaff ? <col className="w-[8%]" /> : null}
+          </colgroup>
+          <thead className="border-b border-border text-left text-xs text-muted-foreground">
             <tr>
               {isStaff ? (
-                <th className="px-4 py-3">
+                <th className="px-2 py-3">
                   <input
                     type="checkbox"
                     aria-label="Select all students"
@@ -311,27 +336,25 @@ function StudentsPage() {
                 </th>
               ) : null}
               <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Grade</th>
-              <th className="px-4 py-3">Graduating class</th>
+              <th className="px-4 py-3">Year group</th>
               <th className="px-4 py-3">Student ID</th>
-              <th className="px-4 py-3">Guardian email</th>
-              <th className="px-4 py-3">Accounts</th>
-              {isStaff ? <th className="px-4 py-3" /> : null}
+              <th className="px-4 py-3">Accounts &amp; guardian</th>
+              {isStaff ? <th className="px-2 py-3"><span className="sr-only">Actions</span></th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={isStaff ? 8 : 6} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6 text-muted-foreground">
                   No students found.
                 </td>
               </tr>
             ) : (
               groups.flatMap((group) => [
-                <tr key={`grade-${group.grade}`} className="bg-secondary/60">
+                <tr key={`grade-${group.grade}`} className="bg-secondary/30">
                   <td
-                    colSpan={isStaff ? 8 : 6}
-                    className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    colSpan={isStaff ? 6 : 4}
+                    className="px-4 py-2 text-xs font-medium text-muted-foreground"
                   >
                     Grade {group.grade} · {group.students.length}{" "}
                     {group.students.length === 1 ? "student" : "students"}
@@ -344,7 +367,7 @@ function StudentsPage() {
                   onClick={() => setProfileStudent(s)}
                 >
                   {isStaff ? (
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         aria-label={`Select ${s.first_name} ${s.last_name}`}
@@ -353,14 +376,15 @@ function StudentsPage() {
                       />
                     </td>
                   ) : null}
-                  <td className="px-4 py-3 font-medium">
+                  <td className="break-words px-4 py-3 font-medium">
+                    <Button variant="ghost" className="h-auto max-w-full justify-start whitespace-normal p-0 text-left hover:bg-transparent" onClick={(e) => { e.stopPropagation(); setProfileStudent(s); }}>
                     {s.last_name}, {s.first_name}
+                    </Button>
                     {s.chinese_name ? (
-                      <span className="ml-2 text-muted-foreground">{s.chinese_name}</span>
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">{s.chinese_name}</span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3">{s.grade_level}</td>
-                  <td className="px-4 py-3">{graduatingClassLabel(s.grade_level)}</td>
+                  <td className="break-words px-4 py-3">Grade {s.grade_level}<span className="mt-1 block text-xs text-muted-foreground">{graduatingClassLabel(s.grade_level)}</span></td>
                   <td
                     className="px-4 py-3 text-muted-foreground"
                     onClick={(e) => e.stopPropagation()}
@@ -368,7 +392,8 @@ function StudentsPage() {
                     {isStaff ? (
                       <Input
                         key={s.student_number ?? ""}
-                        className="h-8 w-28"
+                        aria-label={`Student ID for ${s.first_name} ${s.last_name}`}
+                        className="h-8 w-full max-w-28"
                         placeholder="Add ID"
                         maxLength={20}
                         defaultValue={s.student_number ?? ""}
@@ -381,27 +406,29 @@ function StudentsPage() {
                       (s.student_number ?? "—")
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.guardian_email ?? "—"}</td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex flex-wrap items-center gap-2">
+                  <td className="break-words px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col items-start gap-1.5">
                       <span className="text-xs text-muted-foreground">
                         {s.user_id ? "Student ✓" : "No student login"}
                         {" · "}
                         {s.guardian_user_id ? "Guardian ✓" : "No guardian login"}
                       </span>
+                      <span className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{s.guardian_email ?? "No guardian email"}</span>
                       {isAdmin ? <CreateLogins student={s} /> : null}
                     </div>
                   </td>
                   {isStaff ? (
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        aria-label={`Remove ${s.first_name} ${s.last_name}`}
+                        title="Remove student"
                         className="text-destructive"
                         disabled={removeStudents.isPending}
                         onClick={() => confirmRemove([s.id])}
                       >
-                        Remove
+                        <Trash2 className="size-4" />
                       </Button>
                     </td>
                   ) : null}
@@ -412,6 +439,7 @@ function StudentsPage() {
           </tbody>
         </table>
       </div>
+      {isStaff ? <UnlinkedAccounts students={students} /> : null}
       <StudentProfile
         student={profileStudent}
         open={!!profileStudent}

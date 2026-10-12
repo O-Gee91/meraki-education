@@ -9,7 +9,9 @@
 - [x] Fix and show dashboard after landing review.
 - [x] Receive dashboard review before changing remaining pages.
 - [x] Fix and show the class page (highest-impact remaining page).
-- [ ] Receive class-page review before proceeding.
+- [x] Receive class-page review before proceeding.
+- [x] Fix and show Students, the next medium-impact page in the ranked inventory.
+- [ ] Receive Students review before proceeding to Reports.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
