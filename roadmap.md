@@ -24,7 +24,7 @@
 - [x] Receive Community review before proceeding to People & roles.
 - [x] Fix and show People & roles: bounded account list, aligned role controls and quieter access requests.
 - [x] Receive People & roles review before proceeding to Classes.
-- [ ] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
+- [x] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
 - [ ] Receive Classes review before proceeding to Files.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

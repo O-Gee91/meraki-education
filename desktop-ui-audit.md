@@ -20,8 +20,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and approved |
 | Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and approved |
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and approved |
-| Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and shown; awaiting review |
-| Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Awaiting review |
+| Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and approved |
+| Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Fixed and shown; awaiting review |
 | Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and multi-class upload controls; keep one primary upload action. | Awaiting review |
 | Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Awaiting review |
 | Low | /forgot-password | Existing bounded form and one main action; styling/position differ from updated auth. | Align with approved auth pattern; preserve reset behavior. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages and Community approved. People & roles updated and shown; wait for Joe's review before changing Classes.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community and People & roles approved. Classes updated and shown; wait for Joe's review before changing Files.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -194,3 +194,17 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - Inspected populated default, Teacher-filtered and password-dialog screenshots at 1280×1800. No browser runtime errors; latest preview build OK.
 - Role grants/removals, approvals/declines and password generation are intentionally unexercised in this presentation-only review. Non-admin branch is source-reviewed only; Safari/macOS rendering remains unverified.
 - No queries, access rules, mutations or stored records changed. Classes has not been started.
+
+## Classes ranked issues and fixes
+1. Medium — Unbounded desktop width stretched the page to 1664px and cards to 528px, separating the grade filter from the main action. Opted into the reviewed 1152px shell; removed duplicate desktop role controls and aligned the grade filter/result count beneath a quiet divider. New class remains the sole primary page action.
+2. Medium — Three columns at 1024px squeezed cards to 229px, wrapping longer class names and unevenly sizing cards. Use two columns at narrower desktop widths, three from xl, full-height links and safe wrapping. Cards now measure 350px at 1024px and about 355px on wide desktop.
+3. Low — Uppercase period/term/grade lines preceded names and repeated each group's grade; floating shadows and strong teacher text added visual noise. Names now lead; repeated grade metadata is removed, secondary metadata uses quieter text, and repeated cards retain a restrained border without floating shadows. Edit icons remain visible, with named controls and titles.
+4. Low — The seven-field create/edit form was a tall single column (about 627px). Paired secondary fields reduce it to 566px, while the name/teacher fields remain full-width. Bounded dialog height, a scrollable field area and separate title/save regions keep controls reachable without changing form validation or save behavior.
+
+### Classes verification
+- Real signed-in administrator session loads 18 saved class cards; Grade 8 returns nine, Grade 6 shows the existing empty state, All grades restores 18. Teacher mode loads the requesting user's two saved classes.
+- No horizontal page overflow in Admin or Teacher mode at 1024/1440/1920px. Main width caps at 1152px; DOM-only long-name stress passes at all three widths without storing text.
+- A saved class card opens its actual detail page. New class and an existing Edit class dialog open with expected values; a temporary class-name draft was canceled, not saved. Reload restores all 18 original cards; no class mutations sent.
+- Inspected populated Admin/Teacher, create-dialog and edit-dialog screenshots at 1280×1800. No browser runtime errors; preview build OK.
+- Student/guardian presentation and empty enrollment state are source-reviewed only. Class creation, editing saves and post-creation roster import intentionally unexercised in this presentation-only audit. Safari/macOS and short-height dialog rendering remain unverified.
+- No queries, teacher scope, grade filters, permissions, validation or stored records changed. Files has not been started.
