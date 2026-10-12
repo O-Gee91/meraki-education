@@ -1263,6 +1263,15 @@ function AssignmentsTab({
                             ) : null}
                             {isStaff && (
                               <>
+                                {a.status === "draft" ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => publishAssignment.mutate(a.id)}
+                                    disabled={publishAssignment.isPending}
+                                  >
+                                    Publish
+                                  </Button>
+                                ) : null}
                                 <EditAssignment assignment={a} classId={classId} categories={categories} timeZone={timeZone} />
                                 <ShareResourceButton
                                   kind="assignment"
