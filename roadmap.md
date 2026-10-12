@@ -10,7 +10,7 @@
 - [x] Receive dashboard review before changing remaining pages.
 - [x] Fix and show the class page (highest-impact remaining page).
 - [x] Receive class-page review before proceeding.
-- [ ] Fix and show Students, the next medium-impact page in the ranked inventory.
+- [x] Fix and show Students, the next medium-impact page in the ranked inventory.
 - [ ] Receive Students review before proceeding to Reports.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
