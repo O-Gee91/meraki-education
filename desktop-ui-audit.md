@@ -11,9 +11,9 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Impact | Page | Layout and clutter findings | Planned presentation fix | Status |
 | --- | --- | --- | --- | --- |
 | High | /classes/$classId | Unbounded shared content width; many tabs/actions and wide grade matrices risk desktop scrolling. Coursework summaries compete with the ledger. | Check each tab and grading/report dialog; constrain sections, consolidate tools and devise a no-horizontal-scroll gradebook layout without losing scores. | Awaiting earlier page reviews |
-| High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Third page |
+| High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Fixed; awaiting review |
 | Medium | /auth | Promotional panel consumes 40% of the display; form starts at different heights as tabs change; registration is 760px tall, with a single-choice role menu and long eligibility copy. No explicit page heading in the normal form. | Bounded, top-aligned forms; clear heading; compact paired registration fields, concise eligibility text, one primary submit action. | Fixed and approved |
-| Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed; awaiting review |
+| Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
 | Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded directory and consolidated secondary tools; verify long names and full rosters. | Awaiting review |
 | Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize selected report mode, group secondary actions. | Awaiting review |
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth approved. Landing updated and shown in light/dark screenshots; wait for Joe's landing review before changing dashboard, then other pages individually.
+Auth and landing approved. Dashboard updated and shown; wait for Joe's dashboard review before changing any remaining page.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -58,3 +58,18 @@ Auth approved. Landing updated and shown in light/dark screenshots; wait for Joe
 - Next section heading remains visible within all tested first viewports.
 - Details expand/collapse and sign-in navigates to /auth; image loads, no runtime errors, preview build OK.
 - No dashboard or authenticated page presentation was changed.
+
+## Dashboard ranked issues and fixes
+1. High — Upcoming work appeared below hero details, summary tiles and classes/news. Moved due dates directly below the summary; feedback and scores now precede the calendar and hero details.
+2. High — Unbounded desktop header/content stretched on large monitors. Dashboard opts into a shared max-w-6xl header/content alignment; other pages do not opt in yet.
+3. Medium — Five student summary cards overflowed a four-column grid into an uneven second row. Replaced them with an unframed summary strip, five columns on wide desktop and wrapping at narrower widths.
+4. Medium — Repeated section cards, role switchers and scope labels added clutter. Classes, announcements, due dates and scores now use quiet dividers; staff keep only the sidebar role switcher on desktop, with the header switcher retained below the sidebar breakpoint.
+5. Low — Long class names and score-table titles could squeeze adjacent details. Class rows wrap; the recent-score table uses stable column tracks with wrapping titles.
+
+### Dashboard verification
+- Real signed-in student account: two classes, 56.4% overall grade, attendance, feedback and recent scores render; grade calculations unchanged.
+- No desktop horizontal overflow at 1024/1440/1920px; due-date heading moved from y=719/655/655 to y=366/222/222.
+- Updated dashboard screenshot inspected at 1280×1800.
+- Calendar collapse/expand and class navigation passed in the signed-in dashboard; preview build reports OK.
+- Staff layout changes reviewed in source only: the available requesting-user account is student-only. No other account was selected without permission.
+- Safari/macOS-specific rendering remains unverified. No remaining page has been started.

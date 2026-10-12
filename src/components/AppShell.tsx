@@ -104,11 +104,13 @@ export function AppShell({
   description,
   actions,
   children,
+  desktopReview = false,
 }: {
   title: ReactNode;
   description?: string | undefined;
   actions?: ReactNode | undefined;
   children: ReactNode;
+  desktopReview?: boolean;
 }) {
   const { profile, primaryRole, user, canSwitchRole } = useAuth();
   const navigate = useNavigate();
@@ -188,7 +190,9 @@ export function AppShell({
               </p>
               <div className="mt-1.5 flex rounded-md bg-sidebar/70 p-0.5">
                 {(["admin", "teacher"] as const).map((role) => (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     key={role}
                     type="button"
                     onClick={() => switchRole(role)}
@@ -201,7 +205,7 @@ export function AppShell({
                     )}
                   >
                     {role === "admin" ? "Admin" : "Teacher"}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <p className="mt-1.5 text-[11px] leading-snug text-sidebar-foreground/60">
@@ -229,30 +233,33 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-5">
-          <div>
-            <h1 className="text-2xl font-semibold">{title}</h1>
+        <header className="border-b border-border bg-card">
+          <div className={cn("flex flex-wrap items-center justify-between gap-4 px-6 py-5", desktopReview && "mx-auto w-full max-w-6xl")}>
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-semibold">{title}</h1>
             {description ? (
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             ) : null}
             {canSwitchRole ? (
-              <p className="mt-1 text-xs font-medium text-muted-foreground">
+              <p className={cn("mt-1 text-xs font-medium text-muted-foreground", desktopReview && "lg:hidden")}>
                 {primaryRole === "admin"
                   ? "Admin mode · whole school in scope"
                   : "Teacher mode · your classes only"}
               </p>
             ) : null}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {actions}
             {canSwitchRole ? (
-              <div className="flex items-center gap-2">
+              <div className={cn("flex items-center gap-2", desktopReview && "lg:hidden")}>
                 <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
                   Working as
                 </span>
                 <div className="flex rounded-md border border-border p-0.5">
                   {(["admin", "teacher"] as const).map((role) => (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       key={role}
                       type="button"
                       onClick={() => switchRole(role)}
@@ -265,7 +272,7 @@ export function AppShell({
                       )}
                     >
                       {role === "admin" ? "Admin" : "Teacher"}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -277,6 +284,7 @@ export function AppShell({
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={signOut}>
               Sign out
             </Button>
+          </div>
           </div>
         </header>
 
@@ -297,7 +305,7 @@ export function AppShell({
           ))}
         </nav>
 
-        <main className="flex-1 px-6 py-6">{children}</main>
+        <main className={cn("flex-1 px-6 py-6", desktopReview && "mx-auto w-full max-w-6xl")}>{children}</main>
       </div>
     </div>
   );

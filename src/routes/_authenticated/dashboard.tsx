@@ -38,6 +38,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
         name: "description",
         content: "Your classes, grades, attendance and school announcements at a glance.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Overview — Meraki Education" },
       {
         property: "og:description",
@@ -256,6 +258,7 @@ function DashboardPage() {
 
   return (
     <AppShell
+      desktopReview
       title={`Welcome${profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`}
       description={
         isStaff
@@ -265,9 +268,7 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {!isStaff && <HeroProfilePanel />}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "xl:grid-cols-5"}`}>
 
         <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
         {isStaff ? (
@@ -310,8 +311,45 @@ function DashboardPage() {
         )}
       </div>
 
+      <section className="mt-6 border-b border-border pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Upcoming due dates</h2>
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Assignments &amp; assessments
+          </span>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nothing due right now — you&apos;re all caught up.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border">
+            {upcoming.map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <Link
+                    to="/classes/$classId"
+                    params={{ classId: item.classId }}
+                    className="break-words text-sm font-medium hover:text-accent"
+                  >
+                    {item.title}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {item.className} · {item.type}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold">{daysUntil(item.due)}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(item.due)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <section className="panel p-5 lg:col-span-2">
+        <section className="min-w-0 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Classes</h2>
             <Link to="/classes" className="text-sm text-accent hover:underline">
@@ -336,9 +374,9 @@ function DashboardPage() {
                   key={c.id}
                   to="/classes/$classId"
                   params={{ classId: c.id }}
-                  className="flex items-center justify-between py-3 text-sm hover:text-accent"
+                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm hover:text-accent"
                 >
-                  <span className="font-medium">{c.name}</span>
+                  <span className="min-w-0 break-words font-medium">{c.name}</span>
                   <span className="text-muted-foreground">
                     {c.subject ?? "—"} · Period {c.period ?? "—"} · {c.room ?? "no room"}
                   </span>
@@ -348,7 +386,7 @@ function DashboardPage() {
           </div>
         </section>
 
-        <section className="panel p-5">
+        <section className="min-w-0 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
           <h2 className="text-lg font-semibold">Announcements</h2>
           <div className="mt-4 space-y-4">
             {announcements.length === 0 ? (
@@ -357,7 +395,7 @@ function DashboardPage() {
               announcements.map((a) => (
                 <article key={a.id}>
                   <h3 className="text-sm font-semibold">{a.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{a.body}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
                 </article>
               ))
@@ -397,59 +435,23 @@ function DashboardPage() {
         </section>
       </div>
 
-      <section className="panel mt-6 p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Upcoming due dates</h2>
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Assignments &amp; assessments
-          </span>
-        </div>
-        {upcoming.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Nothing due right now — you&apos;re all caught up.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-border">
-            {upcoming.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <Link
-                    to="/classes/$classId"
-                    params={{ classId: item.classId }}
-                    className="text-sm font-medium hover:text-accent"
-                  >
-                    {item.title}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {item.className} · {item.type}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-semibold">{daysUntil(item.due)}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(item.due)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
 
-      <SchoolCalendar />
+
 
 
       {!isStaff && <FeedbackInbox />}
 
       {!isStaff && (
-        <section className="panel mt-6 p-5">
+        <section className="mt-6 border-t border-border pt-6">
           <h2 className="text-lg font-semibold">Recent scores</h2>
           {recentGrades.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
           ) : (
-            <table className="mt-4 w-full text-sm">
+            <table className="mt-4 w-full table-fixed text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="pb-2">Assignment</th>
+                  <th className="w-1/2 pb-2">Assignment</th>
                   <th className="pb-2">Due</th>
                   <th className="pb-2 text-right">Score</th>
                 </tr>
@@ -460,11 +462,11 @@ function DashboardPage() {
                   const pct = percent(Number(g.points_earned ?? 0), possible);
                   return (
                     <tr key={g.id}>
-                      <td className="py-2 font-medium">{g.assignments?.title}</td>
-                      <td className="py-2 text-muted-foreground">
+                      <td className="break-words py-3 pr-3 font-medium">{g.assignments?.title}</td>
+                      <td className="py-3 pr-3 text-muted-foreground">
                         {formatDate(g.assignments?.due_date)}
                       </td>
-                      <td className={`py-2 text-right font-semibold ${gradeTone(pct)}`}>
+                      <td className={`py-3 text-right font-medium ${gradeTone(pct)}`}>
                         {g.points_earned}/{possible} · {pct.toFixed(0)}%
                       </td>
                     </tr>
@@ -475,6 +477,9 @@ function DashboardPage() {
           )}
         </section>
       )}
+
+      <SchoolCalendar />
+      {!isStaff && <div className="mt-6"><HeroProfilePanel /></div>}
 
       {primaryRole === "parent" && (
         <p className="mt-6 text-sm text-muted-foreground">
@@ -543,12 +548,12 @@ function Stat({
   tone?: string | undefined;
 }) {
   return (
-    <div className="panel p-4">
+    <div className="min-w-0">
       <div className="flex items-center gap-2 text-muted-foreground">
         <Icon className="size-4" />
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <p className={`mt-2 text-2xl font-semibold ${tone ?? ""}`}>{value}</p>
+      <p className={`mt-2 break-words text-xl font-semibold ${tone ?? ""}`}>{value}</p>
     </div>
   );
 }
