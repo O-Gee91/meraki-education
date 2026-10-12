@@ -21,7 +21,6 @@ import { Route as AuthenticatedAssignmentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedBehaviorRouteImport } from './routes/_authenticated/behavior'
 import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedFeedbackLoopPreviewRouteImport } from './routes/_authenticated/feedback-loop-preview'
 import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/files'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
@@ -99,12 +98,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedFeedbackLoopPreviewRoute =
-  AuthenticatedFeedbackLoopPreviewRouteImport.update({
-    id: '/feedback-loop-preview',
-    path: '/feedback-loop-preview',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedFilesRoute = AuthenticatedFilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -192,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/behavior': typeof AuthenticatedBehaviorRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/feedback-loop-preview': typeof AuthenticatedFeedbackLoopPreviewRoute
   '/files': typeof AuthenticatedFilesRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
@@ -220,7 +212,6 @@ export interface FileRoutesByTo {
   '/behavior': typeof AuthenticatedBehaviorRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/feedback-loop-preview': typeof AuthenticatedFeedbackLoopPreviewRoute
   '/files': typeof AuthenticatedFilesRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
@@ -250,7 +241,6 @@ export interface FileRoutesById {
   '/_authenticated/behavior': typeof AuthenticatedBehaviorRoute
   '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/feedback-loop-preview': typeof AuthenticatedFeedbackLoopPreviewRoute
   '/_authenticated/files': typeof AuthenticatedFilesRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
@@ -280,7 +270,6 @@ export interface FileRouteTypes {
     | '/behavior'
     | '/community'
     | '/dashboard'
-    | '/feedback-loop-preview'
     | '/files'
     | '/messages'
     | '/people'
@@ -308,7 +297,6 @@ export interface FileRouteTypes {
     | '/behavior'
     | '/community'
     | '/dashboard'
-    | '/feedback-loop-preview'
     | '/files'
     | '/messages'
     | '/people'
@@ -337,7 +325,6 @@ export interface FileRouteTypes {
     | '/_authenticated/behavior'
     | '/_authenticated/community'
     | '/_authenticated/dashboard'
-    | '/_authenticated/feedback-loop-preview'
     | '/_authenticated/files'
     | '/_authenticated/messages'
     | '/_authenticated/people'
@@ -456,13 +443,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/feedback-loop-preview': {
-      id: '/_authenticated/feedback-loop-preview'
-      path: '/feedback-loop-preview'
-      fullPath: '/feedback-loop-preview'
-      preLoaderRoute: typeof AuthenticatedFeedbackLoopPreviewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/files': {
       id: '/_authenticated/files'
       path: '/files'
@@ -569,7 +549,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBehaviorRoute: typeof AuthenticatedBehaviorRoute
   AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedFeedbackLoopPreviewRoute: typeof AuthenticatedFeedbackLoopPreviewRoute
   AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
@@ -586,7 +565,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBehaviorRoute: AuthenticatedBehaviorRoute,
   AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedFeedbackLoopPreviewRoute: AuthenticatedFeedbackLoopPreviewRoute,
   AuthenticatedFilesRoute: AuthenticatedFilesRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
