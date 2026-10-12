@@ -1,17 +1,19 @@
 # Roadmap
 
 ## Assignment & Feedback Loop (approved by Joe Doyle 2026-10-12, spec: Build_a_complete_Assignment_Feedback_Loop)
-- [ ] DB migration: assignments.status (draft/published), grades.is_draft/posted_at/posted_by, grade_changes audit table + RLS (student/guardian see posted only)
-- [ ] Teacher: New Assignment dialog — Save as Draft / Publish
-- [ ] Teacher: Grade Submissions panel — Save Draft / Post Grade, GradeChange on every post
-- [ ] Gradebook: amber draft dot on cells, History popover from grade_changes
-- [ ] Gradebook: unsubmitted counts as 0 only after teacher posts grades for that assignment
-- [ ] Student: /assignments hub (All / Due Soon / Missing / Graded filters) + detail view
-- [ ] Student: Missing Work summary card on dashboard
-- [ ] Guardian: read-only assignments view with status chips and posted score/feedback
-- [ ] Delete assignment preserves grade_changes history
-- [ ] Remove temporary "Open preview" button + /feedback-loop-preview route once real flow verified
-- [ ] Verify end-to-end with real sessions (teacher, student, guardian)
+- [x] DB migration: assignments.status (draft/published), grades.is_draft/posted_at/posted_by, grade_changes audit table + RLS (student/guardian see posted only)
+- [x] Teacher: New Assignment dialog — Save as Draft / Publish
+- [x] Teacher: Grade Submissions panel — Save Draft / Post Grade, GradeChange on every post
+- [x] Gradebook: amber draft dot on cells, History popover from grade_changes
+- [x] Gradebook: unsubmitted counts as 0 only after teacher posts grades for that assignment
+- [x] Student: /assignments hub (All / Due Soon / Missing / Graded filters) + detail view
+- [x] Student: Missing Work summary card on dashboard
+- [x] Guardian: read-only assignments view with status chips and posted score/feedback
+- [x] Delete assignment preserves grade_changes history (ON DELETE SET NULL + title snapshot)
+- [x] Remove temporary "Open preview" button + /feedback-loop-preview route once real flow verified
+- [x] Verify end-to-end: draft→publish, draft grade→post, audit rows, build clean (2026-10-12)
+- [ ] Guardian multi-child: /assignments currently uses first linked child — add child selector
+- [ ] Verify student/guardian RLS with a real student session (preview session is staff)
 
 ## Deferred / open
 - Email delivery for password resets (DNS for merakieducation.com — user deferred)
