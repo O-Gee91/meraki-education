@@ -49,10 +49,25 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   },
   component: Consent,
   errorComponent: ({ error }) => (
-    <main className="mx-auto max-w-md p-10 text-sm">
-      Could not load this authorization request:{" "}
-      {String((error as Error)?.message ?? error)}
-    </main>
+    <div className="min-h-dvh bg-background">
+      <header className="border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-5">
+          <span className="inline-flex min-w-0 items-center gap-2 text-foreground">
+            <GraduationCap aria-hidden="true" className="size-6 shrink-0 text-primary" />
+            <span className="font-display text-lg font-semibold">Meraki Education</span>
+          </span>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-xl px-6 py-10 sm:py-12">
+        <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
+          <h1 className="text-2xl font-semibold">Connection request unavailable</h1>
+          <p className="text-sm text-muted-foreground">
+            Could not load this authorization request:{" "}
+            {String((error as Error)?.message ?? error)}
+          </p>
+        </div>
+      </main>
+    </div>
   ),
 });
 
