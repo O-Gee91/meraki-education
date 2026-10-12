@@ -22,8 +22,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and approved |
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and approved |
 | Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Fixed and approved |
-| Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and upload controls; keep one primary upload action. | Fixed and shown; awaiting review |
-| Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Awaiting review |
+| Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and upload controls; keep one primary upload action. | Fixed and approved |
+| Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Fixed and shown; awaiting review |
 | Low | /forgot-password | Existing bounded form and one main action; styling/position differ from updated auth. | Align with approved auth pattern; preserve reset behavior. | Awaiting review |
 | Low | /reset-password | Existing bounded form; success/expired states need consistency checks. | Align recovery form/states with approved auth pattern. | Awaiting review |
 | Low | /.lovable/oauth/consent | Bounded approval dialog already has one primary and one secondary action; long app names may wrap poorly. | Verify long-name/error-state wrapping, preserve approval semantics. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community, People & roles and Classes approved. Files updated and shown; wait for Joe's review before changing Settings.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community, People & roles, Classes and Files approved. Settings updated and shown; wait for Joe's review before changing Forgot password.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -223,3 +223,16 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - Inspected populated Admin, Teacher and delete-dialog screenshots at 1280×1800. No runtime errors; preview build OK.
 - School-wide presentation is opt-in through FileLibrary desktopReview; class file views, multi-class selection, file storage/snapshot behavior, permissions, queries and mutations are unchanged.
 - Student/guardian presentation, empty-state rendering, upload completion and delete confirmation are source-reviewed only. Safari/macOS rendering remains unverified. Settings has not been started.
+
+## Settings ranked issues and fixes
+1. Medium — Password and history panels touched with no section gap; all ten sign-ins sat beneath the form despite unused desktop space. Added consistent section spacing and a two-column layout from xl, stacking below that breakpoint. All ten existing entries remain visible.
+2. Low — The header stretched to 1664px while content stayed narrow, and desktop role controls appeared twice. Opted into the approved 1152px AppShell desktopReview alignment; input/form width stays capped at 512px.
+3. Low — Floating panels and a second border around history added clutter. Replaced them with unframed sections and one quiet section divider; Update password remains the only primary action.
+4. Low — Password length guidance appeared twice, and long account names could spill beyond the form. Kept guidance beneath New password, added safe full-name wrapping, and retained all field labels, masking and password autocomplete.
+
+### Settings verification
+- Real signed-in staff account: ten saved recent sign-ins load in Admin and Teacher modes; ten remain after reload. Timestamps and locale formatting are unchanged.
+- No horizontal overflow at 1024/1440/1920px in either mode. Main width caps at 1152px and form width at 512px. DOM-only long-identity stress passes those widths without changing stored profile data.
+- All three labeled password fields accept unsaved masked drafts. Drafts were cleared before screenshots and reload; no password-update request was sent. Password update success/validation submission was intentionally not exercised in this presentation-only review.
+- Inspected populated Admin and Teacher screenshots at 1280×1800. No browser runtime errors; latest preview build OK.
+- Profile/password business rules, sign-in queries, auth logic and stored account settings unchanged. Student/guardian branch and empty history state are source-reviewed only. Safari/macOS rendering remains unverified. Forgot password has not been started.
