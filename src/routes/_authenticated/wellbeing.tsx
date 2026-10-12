@@ -168,7 +168,8 @@ function WellbeingPage() {
       : null;
 
   return (
-    <AppShell desktopReview
+    <AppShell
+      desktopReview
       title={isStaff ? "Well-being" : "How I'm doing"}
       description={
         isStaff
@@ -228,106 +229,121 @@ function WellbeingPage() {
           <Button className="mt-4 w-full" onClick={() => submit.mutate()} disabled={submit.isPending}>
             Save check-in
           </Button>
-          <p className="mt-3 rounded-md bg-secondary/60 p-3 text-xs text-muted-foreground">
+          <div className="mt-4 rounded-md bg-secondary/40 p-3 text-xs text-muted-foreground">
+            <p className="mb-1 font-semibold uppercase tracking-wider text-[10px]">Strategy tip</p>
             {STRATEGIES[Number(mood)]}
-          </p>
+          </div>
         </section>
 
         <section className="panel p-5 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">
-              {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
-            </h2>
-            {average != null ? (
-              <p className="text-xs text-muted-foreground">
-                Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
-              </p>
-            ) : null}
-          </div>
-          <div className="mt-3 flex flex-wrap items-end gap-2">
-            <div className="w-44 space-y-1.5">
-              <Label htmlFor="checkin-date">View a specific date</Label>
-              <Input
-                id="checkin-date"
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-              />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">
+                {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
+              </h2>
+              {average != null && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
+                </p>
+              )}
             </div>
-            {filterDate && (
-              <Button size="sm" variant="ghost" onClick={() => setFilterDate("")}>
-                Show all dates
-              </Button>
-            )}
+            <div className="flex items-end gap-2">
+              <div className="w-40 space-y-1">
+                <Label htmlFor="checkin-date" className="text-[10px] uppercase tracking-wider text-muted-foreground">View date</Label>
+                <Input
+                  id="checkin-date"
+                  type="date"
+                  size="sm"
+                  className="h-8 py-1 text-xs"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+              </div>
+              {filterDate && (
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setFilterDate("")}>
+                  Show all
+                </Button>
+              )}
+            </div>
           </div>
+
           {checkinsLoading ? (
-            <p className="mt-3 text-sm text-muted-foreground">Loading check-ins…</p>
+            <p className="mt-6 text-sm text-muted-foreground text-center">Loading check-ins…</p>
           ) : checkinsFailed ? (
-            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
-              <p className="text-sm text-foreground">We couldn’t load the Well-being updates.</p>
-              <Button className="mt-2" size="sm" variant="outline" onClick={() => retryCheckins()}>
+            <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-center">
+              <p className="text-sm text-foreground font-medium">We couldn’t load the Well-being updates.</p>
+              <Button className="mt-3" size="sm" variant="outline" onClick={() => retryCheckins()}>
                 Try again
               </Button>
             </div>
           ) : checkins.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No check-ins recorded yet.</p>
+            <p className="mt-6 text-sm text-muted-foreground text-center">No check-ins recorded yet.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="divide-y divide-border">
               {checkins.map((c) => {
                 const mood = MOODS.find((m) => m.value === Number(c.mood));
                 const responses = c.responses;
                 const myResponse = responses.find((r) => r.createdBy && r.createdBy === user?.id);
                 return (
-                  <li key={c.id} className="py-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-lg">{mood?.emoji ?? "😐"}</span>
-                      <p className="text-sm font-medium">{c.studentName}</p>
+                  <li key={c.id} className="py-5 first:pt-4 last:pb-4">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-xl" role="img" aria-label={mood?.label}>{mood?.emoji ?? "😐"}</span>
+                      <p className="text-sm font-semibold">{c.studentName}</p>
                       <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
-                      <span className="text-xs text-muted-foreground">{mood?.label}</span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-secondary-foreground">
+                        {mood?.label}
+                      </span>
                     </div>
-                    {c.note ? (
-                      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{c.note}</p>
-                    ) : null}
-                    {isStaff ? (
-                      <>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <p className="text-xs text-muted-foreground">
-                            Suggested: {STRATEGIES[Number(c.mood)]}
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              const value = window.prompt(
-                                "Your response to this student",
-                                myResponse?.note ?? "",
-                              );
-                              if (value != null) addStaffNote.mutate({ id: c.id, value });
-                            }}
-                          >
-                           {myResponse ? "Edit my response" : "Add my response"}
-                          </Button>
-                        </div>
-                      </>
-                    ) : null}
-                    {responses.length > 0 ? (
-                      <div className="mt-2 space-y-2">
+                    {c.note && (
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground/90">{c.note}</p>
+                    )}
+                    
+                    {isStaff && (
+                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/50 pt-3">
+                        <p className="max-w-xl text-xs text-muted-foreground italic">
+                          <span className="font-medium not-italic text-[10px] uppercase tracking-wide mr-2">Strategy:</span>
+                          {STRATEGIES[Number(c.mood)]}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 px-3 text-[11px] font-medium"
+                          onClick={() => {
+                            const value = window.prompt(
+                              "Your response to this student",
+                              myResponse?.note ?? "",
+                            );
+                            if (value != null) addStaffNote.mutate({ id: c.id, value });
+                          }}
+                        >
+                         {myResponse ? "Edit response" : "Add response"}
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {responses.length > 0 && (
+                      <div className="mt-4 space-y-3">
                         {responses.map((r) => (
                           <div
                             key={r.id}
-                            className="rounded-md border border-border bg-secondary/60 p-3"
+                            className="max-w-2xl rounded-lg border border-border bg-secondary/30 p-4"
                           >
-                            <p className="text-xs font-semibold text-foreground">
-                              Teacher response{r.createdBy === user?.id ? " (you)" : ""}
-                            </p>
-                            <p className="mt-1 max-w-2xl text-sm text-foreground">{r.note}</p>
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              Responded by {r.responderName} · {formatDate(r.createdAt)}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                Teacher response{r.createdBy === user?.id ? " (you)" : ""}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground font-medium">
+                                {formatDate(r.createdAt)}
+                              </p>
+                            </div>
+                            <p className="text-sm leading-relaxed text-foreground">{r.note}</p>
+                            <p className="mt-3 text-[10px] font-medium text-muted-foreground/80">
+                              Responded by {r.responderName}
                             </p>
                           </div>
                         ))}
                       </div>
-                    ) : null}
+                    )}
                   </li>
                 );
               })}
