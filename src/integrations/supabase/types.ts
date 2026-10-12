@@ -442,6 +442,7 @@ export type Database = {
           id: string
           points_possible: number
           rubric_id: string | null
+          status: string
           submission_mode: string
           title: string
         }
@@ -456,6 +457,7 @@ export type Database = {
           id?: string
           points_possible?: number
           rubric_id?: string | null
+          status?: string
           submission_mode?: string
           title: string
         }
@@ -470,6 +472,7 @@ export type Database = {
           id?: string
           points_possible?: number
           rubric_id?: string | null
+          status?: string
           submission_mode?: string
           title?: string
         }
@@ -1091,6 +1094,63 @@ export type Database = {
           },
         ]
       }
+      grade_changes: {
+        Row: {
+          assignment_id: string | null
+          assignment_title: string | null
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_feedback: string | null
+          new_score: number | null
+          old_feedback: string | null
+          old_score: number | null
+          reason: string | null
+          student_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          assignment_title?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_feedback?: string | null
+          new_score?: number | null
+          old_feedback?: string | null
+          old_score?: number | null
+          reason?: string | null
+          student_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          assignment_title?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_feedback?: string | null
+          new_score?: number | null
+          old_feedback?: string | null
+          old_score?: number | null
+          reason?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_changes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_changes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grade_reset_log: {
         Row: {
           assessment_id: string | null
@@ -1167,7 +1227,10 @@ export type Database = {
           assignment_id: string
           comment: string | null
           id: string
+          is_draft: boolean
           points_earned: number | null
+          posted_at: string | null
+          posted_by: string | null
           student_id: string
           updated_at: string
         }
@@ -1175,7 +1238,10 @@ export type Database = {
           assignment_id: string
           comment?: string | null
           id?: string
+          is_draft?: boolean
           points_earned?: number | null
+          posted_at?: string | null
+          posted_by?: string | null
           student_id: string
           updated_at?: string
         }
@@ -1183,7 +1249,10 @@ export type Database = {
           assignment_id?: string
           comment?: string | null
           id?: string
+          is_draft?: boolean
           points_earned?: number | null
+          posted_at?: string | null
+          posted_by?: string | null
           student_id?: string
           updated_at?: string
         }
