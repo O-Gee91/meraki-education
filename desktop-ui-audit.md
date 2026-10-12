@@ -10,8 +10,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 ## Ranked page inventory
 | Impact | Page | Layout and clutter findings | Planned presentation fix | Status |
 | --- | --- | --- | --- | --- |
-| High | /classes/$classId | Unbounded shared content width; many tabs/actions and wide grade matrices risk desktop scrolling. Coursework summaries compete with the ledger. | Check each tab and grading/report dialog; constrain sections, consolidate tools and devise a no-horizontal-scroll gradebook layout without losing scores. | Awaiting earlier page reviews |
-| High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Fixed; awaiting review |
+| High | /classes/$classId | Unbounded shared content width; many tabs/actions and wide grade matrices risk desktop scrolling. Coursework summaries compete with the ledger. | Bound the shell, wrap navigation cleanly, separate filters and paginate gradebook columns without losing scores. | Initial fixes shown; awaiting review; staff dialogs unverified |
+| High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Fixed and approved |
 | Medium | /auth | Promotional panel consumes 40% of the display; form starts at different heights as tabs change; registration is 760px tall, with a single-choice role menu and long eligibility copy. No explicit page heading in the normal form. | Bounded, top-aligned forms; clear heading; compact paired registration fields, concise eligibility text, one primary submit action. | Fixed and approved |
 | Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
 | Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded directory and consolidated secondary tools; verify long names and full rosters. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth and landing approved. Dashboard updated and shown; wait for Joe's dashboard review before changing any remaining page.
+Auth, landing and dashboard approved. Class page updated and shown; wait for Joe's class-page review before changing any remaining page.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -73,3 +73,19 @@ Auth and landing approved. Dashboard updated and shown; wait for Joe's dashboard
 - Calendar collapse/expand and class navigation passed in the signed-in dashboard; preview build reports OK.
 - Staff layout changes reviewed in source only: the available requesting-user account is student-only. No other account was selected without permission.
 - Safari/macOS-specific rendering remains unverified. No remaining page has been started.
+
+## Class page ranked issues and fixes
+1. High — Assignment columns required horizontal table scrolling. Show three assignment columns per page with named Previous/Next controls and page/range indicators. Current grade and missing counts remain based on all filtered work; print still includes all filtered assignments.
+2. High — Header/content lacked a maximum width. Opted this page into the approved desktopReview shell alignment.
+3. Medium — Tabs used wrapping within a fixed-height bar. Changed the class tab bar to auto-height with wrapping, consistent gaps and a quiet divider; grading setup uses semantic theme colors.
+4. Medium — Teacher filters competed with the heading and print control. Moved filter controls into their own full-width aligned grid beneath a divider.
+5. Medium — Student feedback appeared ahead of the grade ledger. Moved it below the ledger and removed the ledger's floating-card shadow; retained all feedback and existing progress/missing-work controls.
+
+### Class page verification
+- Signed-in student class with 11 real assignments: all 11 unique headers reachable across four pages; Previous and Next work, last-page Next disabled.
+- Saved score 12 and Missing mark visible in the inspected final screenshot; class average and missing-count logic unchanged.
+- No horizontal page or gradebook-table overflow at 1024/1440/1920px.
+- Coursework, discussion, roster, attendance, files and gradebook tabs open without page overflow at 1280px.
+- Preview build OK; final populated screenshot inspected at 1280×1800.
+- Staff filter layout, full roster, grading dialogs and print behavior were source-reviewed only; available requesting-user session is student-only. Staff visual verification remains open, not claimed complete.
+- Safari/macOS rendering remains unverified; no next page started.

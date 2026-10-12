@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronsUpDown, Printer, Search } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -91,6 +91,8 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
         name: "description",
         content: "Gradebook, assignments and roster for a single class section.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Class gradebook — Meraki Education" },
       {
         property: "og:description",
@@ -108,6 +110,7 @@ function ClassDetailPage() {
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookSearch, setGradebookSearch] = useState("");
+  const [assignmentPage, setAssignmentPage] = useState(0);
   const [gradebookReportStudentId, setGradebookReportStudentId] = useState<string | null>(null);
   const [gradebookCategory, setGradebookCategory] = useState("all");
   const [gradebookDueFrom, setGradebookDueFrom] = useState("");
@@ -319,6 +322,10 @@ function ClassDetailPage() {
     setup,
   ]);
 
+  const assignmentPageCount = Math.max(1, Math.ceil(gradebookRows.length / 3));
+  const currentAssignmentPage = Math.min(assignmentPage, assignmentPageCount - 1);
+  const pageAssignments = gradebookRows.slice(currentAssignmentPage * 3, currentAssignmentPage * 3 + 3);
+
   function printGradebook() {
     const headerCells = gradebookRows
       .map(
@@ -371,6 +378,7 @@ function ClassDetailPage() {
 
   return (
     <AppShell
+      desktopReview
       title={
         isStaff && switcherClasses.length > 1 ? (
           <DropdownMenu>
@@ -427,7 +435,7 @@ function ClassDetailPage() {
       }
     >
       <Tabs defaultValue="gradebook">
-        <TabsList className="flex-wrap">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
           <TabsTrigger value="gradebook">{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
           <TabsTrigger value="coursework">Coursework</TabsTrigger>
           <TabsTrigger value="discussions">Discussion board</TabsTrigger>
@@ -439,7 +447,7 @@ function ClassDetailPage() {
           {isStaff && (
             <>
               <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-              <TabsTrigger value="grading" className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
+              <TabsTrigger value="grading" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground">
                 Grading setup
               </TabsTrigger>
             </>
@@ -460,8 +468,7 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
-          {!isStaff && <FeedbackInbox classId={classId} />}
-          <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm">
+          <section className="coursework-ledger mt-6 border-y border-border/70 bg-card">
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
                 {isStaff
@@ -483,7 +490,7 @@ function ClassDetailPage() {
                         <Printer className="size-4" /> Print gradebook
                       </Button>
                     )}
-                    {isStaff && <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
+                    {isStaff && <div className="grid w-full gap-3 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
                       <div className="space-y-1 lg:col-span-2">
                         <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
                         <div className="relative">
@@ -566,16 +573,26 @@ function ClassDetailPage() {
                      No students match that search.
                    </p>
                 ) : (
-                     <div className="max-h-[68vh] overflow-auto">
-                     <table className="w-full min-w-max border-collapse text-sm">
+                     <div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                      <p className="text-xs text-muted-foreground">Assignments {currentAssignmentPage * 3 + 1}–{Math.min((currentAssignmentPage + 1) * 3, gradebookRows.length)} of {gradebookRows.length}</p>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" aria-label="Previous assignments" disabled={currentAssignmentPage === 0} onClick={() => setAssignmentPage(currentAssignmentPage - 1)}><ChevronLeft className="size-4" /></Button>
+                        <span className="min-w-16 text-center text-xs tabular-nums text-muted-foreground">{currentAssignmentPage + 1} / {assignmentPageCount}</span>
+                        <Button variant="outline" size="icon" aria-label="Next assignments" disabled={currentAssignmentPage >= assignmentPageCount - 1} onClick={() => setAssignmentPage(currentAssignmentPage + 1)}><ChevronRight className="size-4" /></Button>
+                      </div>
+                    </div>
+                    <div className="max-h-[68vh] overflow-y-auto">
+
+                     <table className="w-full table-fixed border-collapse text-sm">
                        <thead className="sticky top-0 z-20 border-b border-border/60 bg-muted/50 text-xs uppercase text-muted-foreground">
                         <tr>
-                            {isStaff && <th className="sticky left-0 z-30 min-w-52 border-r border-border/60 bg-muted/50 px-4 py-3 text-left font-semibold">Student</th>}
-                            <th className="min-w-28 border-r border-border/60 bg-muted/30 px-4 py-3 text-center font-semibold text-foreground">Current grade</th>
-                            <th className="min-w-24 border-r border-border/60 px-3 py-3 text-center font-semibold">Missing</th>
-                           {gradebookRows.map(({ assignment, average }) => (
-                              <th key={assignment.id} className="w-28 min-w-28 border-r border-border/60 px-3 py-3 text-center font-semibold normal-case">
-                               <span className="block max-w-24 truncate text-foreground" title={assignment.title}>{assignment.title}</span>
+                            {isStaff && <th className="sticky left-0 z-30 w-[26%] border-r border-border/60 bg-muted/50 px-4 py-3 text-left font-semibold">Student</th>}
+                            <th className="w-[18%] border-r border-border/60 bg-muted/30 px-4 py-3 text-center font-semibold text-foreground">Current grade</th>
+                            <th className="w-[10%] border-r border-border/60 px-3 py-3 text-center font-semibold">Missing</th>
+                           {pageAssignments.map(({ assignment, average }) => (
+                              <th key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center font-semibold normal-case">
+                               <span className="block break-words text-foreground" title={assignment.title}>{assignment.title}</span>
                                <span className="mt-1 block font-normal text-muted-foreground">
                                  {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(0)}% avg`}
                                </span>
@@ -597,7 +614,7 @@ function ClassDetailPage() {
                                  <Button
                                    type="button"
                                    variant="link"
-                                   className="h-auto justify-start p-0 text-left font-semibold text-foreground"
+                                   className="h-auto w-full justify-start whitespace-normal break-words p-0 text-left font-semibold text-foreground"
                                    onClick={() => setGradebookReportStudentId(row.student_id)}
                                  >
                                    {studentLabel(row.students, useIds)}
@@ -610,7 +627,7 @@ function ClassDetailPage() {
                                  {average == null ? (
                                    <span className="text-muted-foreground">—</span>
                                  ) : (
-                                    <div className="inline-flex items-center gap-2">
+                                    <div className="inline-flex flex-wrap items-center justify-center gap-1">
                                       <span className={`size-1.5 shrink-0 rounded-full ${average >= 80 ? "bg-success" : average >= 70 ? "bg-warning" : "bg-destructive"}`} aria-hidden />
                                       <span className="font-semibold tabular-nums text-foreground">
                                        {average.toFixed(1)}%
@@ -626,7 +643,7 @@ function ClassDetailPage() {
                                    <span className="text-muted-foreground">—</span>
                                  )}
                                </td>
-                               {gradebookRows.map(({ assignment }) => {
+                               {pageAssignments.map(({ assignment }) => {
                                  const grade = gradeFor(row.student_id, assignment.id);
                                  const markCode = markCodeFromComment(grade?.comment);
                                  return (
@@ -646,6 +663,7 @@ function ClassDetailPage() {
                          })}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
                   <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
@@ -674,6 +692,7 @@ function ClassDetailPage() {
                displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
              />
            )}
+          {!isStaff && <FeedbackInbox classId={classId} />}
         </TabsContent>
 
         <TabsContent value="coursework">
