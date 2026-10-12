@@ -41,6 +41,8 @@ export const Route = createFileRoute("/_authenticated/wellbeing")({
         content:
           "Students share how they feel each day; teachers see trends and follow up with the right support.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: WellbeingPage,
@@ -169,6 +171,7 @@ function WellbeingPage() {
 
   return (
     <AppShell
+      desktopReview
       title={isStaff ? "Well-being" : "How I'm doing"}
       description={
         isStaff
@@ -176,16 +179,16 @@ function WellbeingPage() {
           : "Check in on how you're feeling and get strategies that can help."
       }
     >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="panel h-fit p-5">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
+      <div className="grid min-w-0 gap-8 xl:grid-cols-[20rem_minmax(0,1fr)]">
+        <section className="min-w-0 self-start border-b border-border pb-6 xl:border-b-0 xl:border-r xl:pr-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
             <HeartPulse className="size-4 text-accent" /> New check-in
           </h2>
           {isStaff && (
-            <div className="mt-3">
-              <Label>Student</Label>
+            <div className="mt-4">
+              <Label htmlFor="checkin-student">Student</Label>
               <Select value={studentId} onValueChange={setStudentId}>
-                <SelectTrigger>
+                <SelectTrigger id="checkin-student">
                   <SelectValue placeholder="Select a student" />
                 </SelectTrigger>
                 <SelectContent>
@@ -201,133 +204,149 @@ function WellbeingPage() {
               </div>
             </div>
           )}
-          <div className="mt-3">
-            <Label>How is the day going?</Label>
-            <div className="mt-2 grid grid-cols-5 gap-2">
+          <div className="mt-4">
+            <Label id="checkin-mood-label">How is the day going?</Label>
+            <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-labelledby="checkin-mood-label">
               {MOODS.map((m) => (
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-pressed={mood === String(m.value)}
+                  aria-label={m.label}
                   key={m.value}
                   onClick={() => setMood(String(m.value))}
                   className={
-                    "rounded-md border px-2 py-3 text-center text-xs transition-colors " +
+                    "h-10 min-w-0 justify-start gap-2 px-3 text-sm shadow-none " +
+                    (m.value === 1 ? "col-span-2 " : "") +
                     (mood === String(m.value)
-                      ? "border-accent bg-accent/10"
-                      : "border-border hover:bg-secondary/60")
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-transparent hover:bg-secondary/60")
                   }
                 >
-                  <span className="block text-lg">{m.emoji}</span>
+                  <span aria-hidden="true" className="text-lg">{m.emoji}</span>
                   {m.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-4">
             <Label htmlFor="note">Anything to share? (optional)</Label>
             <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
           </div>
           <Button className="mt-4 w-full" onClick={() => submit.mutate()} disabled={submit.isPending}>
             Save check-in
           </Button>
-          <p className="mt-3 rounded-md bg-secondary/60 p-3 text-xs text-muted-foreground">
-            {STRATEGIES[Number(mood)]}
-          </p>
+          <details className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium focus-visible:outline-2 focus-visible:outline-ring">Suggested support</summary>
+            <p className="mt-2 leading-relaxed">{STRATEGIES[Number(mood)]}</p>
+          </details>
         </section>
 
-        <section className="panel p-5 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">
-              {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
-            </h2>
-            {average != null ? (
-              <p className="text-xs text-muted-foreground">
-                Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
-              </p>
-            ) : null}
-          </div>
-          <div className="mt-3 flex flex-wrap items-end gap-2">
-            <div className="w-44 space-y-1.5">
-              <Label htmlFor="checkin-date">View a specific date</Label>
-              <Input
-                id="checkin-date"
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-              />
+        <section className="min-w-0 [overflow-wrap:anywhere]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">
+                {filterDate ? `Check-ins on ${formatDate(filterDate)}` : "Recent check-ins"}
+              </h2>
+              {average != null && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Average mood {average.toFixed(1)} / 5 across {checkins.length} check-ins
+                </p>
+              )}
             </div>
-            {filterDate && (
-              <Button size="sm" variant="ghost" onClick={() => setFilterDate("")}>
-                Show all dates
-              </Button>
-            )}
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-40 space-y-1">
+                <Label htmlFor="checkin-date" className="text-xs text-muted-foreground">View date</Label>
+                <Input
+                  id="checkin-date"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+              </div>
+              {filterDate && (
+                <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => setFilterDate("")}>
+                  Show all
+                </Button>
+              )}
+            </div>
           </div>
+
           {checkinsLoading ? (
-            <p className="mt-3 text-sm text-muted-foreground">Loading check-ins…</p>
+            <p className="mt-6 text-sm text-muted-foreground text-center">Loading check-ins…</p>
           ) : checkinsFailed ? (
-            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
-              <p className="text-sm text-foreground">We couldn’t load the Well-being updates.</p>
-              <Button className="mt-2" size="sm" variant="outline" onClick={() => retryCheckins()}>
+            <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-center">
+              <p className="text-sm text-foreground font-medium">We couldn’t load the Well-being updates.</p>
+              <Button className="mt-4" size="sm" variant="outline" onClick={() => retryCheckins()}>
                 Try again
               </Button>
             </div>
           ) : checkins.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No check-ins recorded yet.</p>
+            <p className="mt-6 text-sm text-muted-foreground text-center">No check-ins recorded yet.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="divide-y divide-border">
               {checkins.map((c) => {
                 const mood = MOODS.find((m) => m.value === Number(c.mood));
                 const responses = c.responses;
                 const myResponse = responses.find((r) => r.createdBy && r.createdBy === user?.id);
                 return (
-                  <li key={c.id} className="py-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-lg">{mood?.emoji ?? "😐"}</span>
-                      <p className="text-sm font-medium">{c.studentName}</p>
-                      <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
-                      <span className="text-xs text-muted-foreground">{mood?.label}</span>
+                  <li key={c.id} className="min-w-0 space-y-3 py-5">
+                    <div className="flex items-start gap-3">
+                      <span aria-hidden="true" className="shrink-0 text-xl">{mood?.emoji ?? "😐"}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{c.studentName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{formatDate(c.date)} · {mood?.label}</p>
+                      </div>
                     </div>
-                    {c.note ? (
-                      <p className="mt-1 text-sm text-muted-foreground">{c.note}</p>
-                    ) : null}
-                    {isStaff ? (
-                      <>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <p className="text-xs text-muted-foreground">
-                            Suggested: {STRATEGIES[Number(c.mood)]}
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              const value = window.prompt(
-                                "Your response to this student",
-                                myResponse?.note ?? "",
-                              );
-                              if (value != null) addStaffNote.mutate({ id: c.id, value });
-                            }}
-                          >
-                           {myResponse ? "Edit my response" : "Add my response"}
-                          </Button>
-                        </div>
-                      </>
-                    ) : null}
-                    {responses.length > 0 ? (
-                      <div className="mt-2 space-y-2">
+                    {c.note && (
+                      <p className="max-w-prose whitespace-pre-wrap text-sm leading-relaxed text-foreground">{c.note}</p>
+                    )}
+                    
+                    {isStaff && (
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <details className="min-w-0 flex-1 text-xs text-muted-foreground">
+                          <summary className="cursor-pointer font-medium focus-visible:outline-2 focus-visible:outline-ring">Suggested support</summary>
+                          <p className="mt-2 max-w-prose leading-relaxed">{STRATEGIES[Number(c.mood)]}</p>
+                        </details>
+                        <Button
+                                  variant="ghost"
+                          className="h-auto shrink-0 px-2 py-1 text-xs"
+                          onClick={() => {
+                            const value = window.prompt(
+                              "Your response to this student",
+                              myResponse?.note ?? "",
+                            );
+                            if (value != null) addStaffNote.mutate({ id: c.id, value });
+                          }}
+                        >
+                         {myResponse ? "Edit response" : "Add response"}
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {responses.length > 0 && (
+                      <div className="space-y-4 border-l-2 border-border pl-4">
                         {responses.map((r) => (
                           <div
                             key={r.id}
-                            className="rounded-md border border-border bg-secondary/60 p-3"
+                            className="min-w-0 max-w-prose"
                           >
-                            <p className="text-xs font-semibold text-foreground">
-                              Teacher response{r.createdBy === user?.id ? " (you)" : ""}
-                            </p>
-                            <p className="mt-1 text-sm text-foreground">{r.note}</p>
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              Responded by {r.responderName} · {formatDate(r.createdAt)}
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-foreground">
+                                Teacher response{r.createdBy === user?.id ? " (you)" : ""}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(r.createdAt)}
+                              </p>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{r.note}</p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Responded by {r.responderName}
                             </p>
                           </div>
                         ))}
                       </div>
-                    ) : null}
+                    )}
                   </li>
                 );
               })}

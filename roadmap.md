@@ -15,7 +15,9 @@
 - [x] Fix and show Reports.
 - [x] Receive Reports review before proceeding to Behavior.
 - [x] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
-- [ ] Receive Behavior review before proceeding to Well-being.
+- [x] Receive Behavior review before proceeding to Well-being.
+- [x] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
+- [ ] Receive Well-being review before proceeding to Messages.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
