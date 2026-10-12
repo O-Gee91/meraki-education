@@ -12,7 +12,7 @@
 - [x] Receive class-page review before proceeding.
 - [x] Fix and show Students, the next medium-impact page in the ranked inventory.
 - [x] Receive Students review before proceeding to Reports.
-- [ ] Fix and show Reports.
+- [x] Fix and show Reports.
 - [ ] Receive Reports review before proceeding to Behavior.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

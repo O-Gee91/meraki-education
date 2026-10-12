@@ -14,8 +14,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | High | /dashboard | No shared maximum width; repeated role switchers/scope descriptions in the desktop shell. Student secondary panels push upcoming work lower. | Cap content width, give upcoming work clear priority, consolidate duplicated role controls. | Fixed and approved |
 | Medium | /auth | Promotional panel consumes 40% of the display; form starts at different heights as tabs change; registration is 760px tall, with a single-choice role menu and long eligibility copy. No explicit page heading in the normal form. | Bounded, top-aligned forms; clear heading; compact paired registration fields, concise eligibility text, one primary submit action. | Fixed and approved |
 | Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
-| Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and shown; awaiting review; staff-only controls unverified |
-| Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize selected report mode, group secondary actions. | Awaiting review |
+| Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and approved; staff-only controls unverified |
+| Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and shown; awaiting review; populated staff report cards and print controls unverified |
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Awaiting review |
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Awaiting review |
 | Medium | /messages | Wide message text and separated metadata slow scanning. | Bound inbox/detail reading widths and distinguish the main compose action. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard and class page approved. Students updated and shown; wait for Joe's Students review before changing Reports.
+Auth, landing, dashboard, class page and Students approved. Reports updated and shown; wait for Joe's Reports review before changing Behavior.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -104,3 +104,18 @@ Auth, landing, dashboard and class page approved. Students updated and shown; wa
 - Final screenshot inspected at 1280×1800; preview build OK.
 - Populated staff rosters, admin tools, bulk removal and ID editing are source-reviewed only, not authenticated end-to-end verified. Long-name/email wrapping is source-reviewed, not tested against real long-name records.
 - Safari/macOS-specific rendering remains unverified. Reports has not been changed.
+
+## Reports ranked issues and fixes
+1. High — Six report-card columns compete for space with editable comments and publication buttons. Combined class/term, used fixed proportional columns, wrapping names/terms/comments and full-column secondary publication controls. Kept saved percentages, comments and publish behavior unchanged.
+2. Medium — Unbounded width stretches report rows; compact four-column forms squeeze notes beside action buttons. Opted Reports into desktopReview max-w-6xl alignment, wrapped tab navigation, and used two-column portfolio fields with a separate Add work action. Standard creation now uses a secondary disclosure with more balanced fields.
+3. Medium — The fully expanded ELA catalog pushes actual coverage below a very long list. Coverage now comes first with readable line lengths; the original catalog is preserved behind a default-collapsed disclosure.
+4. Low — Repeated section cards, template selection rings and primary publication buttons add visual noise. Replaced section cards with quiet dividers, kept borders only for repeated portfolio/template items, and changed template choices to accessible pressed-state controls. Template selection, print/download output and calculations remain unchanged.
+
+### Reports verification
+- Real requesting-user student session at /reports: all three student tabs render; two existing standards and their descriptions appear in coverage.
+- No horizontal page overflow at 1024/1440/1920px across the report-card, standards and portfolio tabs. Main width caps at 1152px.
+- ELA disclosure expands/collapses, search finds RL.5.1, and Literature strand collapse/expand works against the actual catalog.
+- Portfolio title/note fields accept drafts and Add work remains visible; no records created, removed or changed.
+- Updated standards and portfolio screenshots inspected at 1280×1800; no runtime errors; preview build OK.
+- This student has no published report cards or portfolio artifacts. Populated report-card rows, staff generation/comment/publication controls, template choices and printing are source-reviewed only, not authenticated end-to-end verified.
+- Safari/macOS-specific rendering remains unverified. Behavior has not been changed.
