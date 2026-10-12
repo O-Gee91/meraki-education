@@ -51,7 +51,9 @@ const INITIAL: Sub[] = [
   { id: "5", student: "Doyle, Sam", status: "graded", submittedAt: "Oct 14, 1:10 PM", text: "Here is my essay.", file: "sam_essay.docx", score: 92, feedback: "Strong voice!", posted: false },
 ];
 
-const STUDENT_ROWS = [
+type Row = { cls: string; title: string; due: string; status: string; score: string };
+const ESSAY_ROW: Row = { cls: "G7 English", title: "Narrative Essay", due: "Oct 14", status: "Due soon", score: "—" };
+const STUDENT_ROWS: Row[] = [
   { cls: "G7 English", title: "Narrative Essay", due: "Oct 14", status: "Due soon", score: "—" },
   { cls: "G7 Math", title: "Linear Equations Quiz", due: "Oct 10", status: "Missing", score: "—" },
   { cls: "G7 Science", title: "Photosynthesis Lab", due: "Oct 5", status: "Graded", score: "95% · A" },
@@ -95,10 +97,10 @@ function PreviewPage() {
           <Gradebook subs={subs} history={history} />
         </TabsContent>
         <TabsContent value="student" className="mt-6">
-          <StudentHub sub={subs[0]} />
+          <StudentHub sub={subs[0]!} />
         </TabsContent>
         <TabsContent value="guardian" className="mt-6">
-          <GuardianView sub={subs[0]} />
+          <GuardianView sub={subs[0]!} />
         </TabsContent>
       </Tabs>
     </AppShell>
@@ -114,7 +116,7 @@ function TeacherGrading({
   setSubs: React.Dispatch<React.SetStateAction<Sub[]>>;
   setHistory: React.Dispatch<React.SetStateAction<Record<string, Change[]>>>;
 }) {
-  const [selected, setSelected] = useState(subs[0].id);
+  const [selected, setSelected] = useState(subs[0]!.id);
   const current = subs.find((s) => s.id === selected)!;
   const [score, setScore] = useState(current.score?.toString() ?? "");
   const [feedback, setFeedback] = useState(current.feedback ?? "");
@@ -271,7 +273,7 @@ function StudentHub({ sub }: { sub: Sub }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [open, setOpen] = useState(false);
   const rows = useMemo(() => {
-    const essay = { ...STUDENT_ROWS[0], status: sub.posted ? "Graded" : "Submitted", score: sub.posted && sub.score !== undefined ? `${sub.score}%` : "—" };
+    const essay = { ...ESSAY_ROW, status: sub.posted ? "Graded" : "Submitted", score: sub.posted && sub.score !== undefined ? `${sub.score}%` : "—" };
     const all = [essay, ...STUDENT_ROWS.slice(1)];
     return filter === "All" ? all : all.filter((r) => r.status === filter);
   }, [filter, sub]);
@@ -316,7 +318,7 @@ function StudentHub({ sub }: { sub: Sub }) {
 
 function GuardianView({ sub }: { sub: Sub }) {
   const rows = [
-    { ...STUDENT_ROWS[0], status: sub.posted ? "Graded" : "Submitted", score: sub.posted && sub.score !== undefined ? `${sub.score}%` : "—" },
+    { ...ESSAY_ROW, status: sub.posted ? "Graded" : "Submitted", score: sub.posted && sub.score !== undefined ? `${sub.score}%` : "—" },
     ...STUDENT_ROWS.slice(1),
   ];
   return (
@@ -327,7 +329,7 @@ function GuardianView({ sub }: { sub: Sub }) {
   );
 }
 
-function AssignmentTable({ rows, onOpen }: { rows: typeof STUDENT_ROWS; onOpen?: () => void }) {
+function AssignmentTable({ rows, onOpen }: { rows: Row[]; onOpen?: () => void }) {
   return (
     <table className="w-full table-fixed text-sm">
       <thead>
