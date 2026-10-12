@@ -248,3 +248,9 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - Back to sign in reaches /auth; the brand link reaches the landing page. No runtime errors; preview build OK.
 - No reset request or email was sent. Request handling, neutral success/error enumeration protection, expiry behavior and email delivery are unchanged. Check-your-email state is source-reviewed only, not exercised through a real request; email delivery remains outside this presentation review.
 - Safari/macOS rendering remains unverified. Reset password has not been started.
+## Reset password (src/routes/reset-password.tsx)
+Ranked issues and fixes:
+1. Medium: centered floating box on tall screens -> top-aligned layout matching the approved sign-in/forgot-password pattern.
+2. Low: narrow padded panel squeezed fields -> wider bounded form (max-w-xl main), 44px fields and actions.
+3. Low: heavy panels and inconsistent button variants -> quiet presentation, one primary action per state (Save new password / Request a reset link / Go to sign in).
+Verified at 1024/1440/1920: no horizontal overflow; "Reset link needed" state renders with working CTA. Live recovery-link flow unverified (email delivery pending domain DNS); Safari/macOS unverified.
