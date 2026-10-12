@@ -3,8 +3,9 @@
 ## Desktop UI checkup
 - [x] Inventory and rank desktop layout/clutter issues for every content page (source audit; visually verify each page before its fix).
 - [x] Fix and show /auth.
-- [ ] Receive /auth review before changing landing page.
-- [ ] Fix and show landing page after /auth review.
+- [x] Receive /auth review before changing landing page.
+- [x] Fix and show landing page after /auth review.
+- [ ] Receive landing page review before changing dashboard.
 - [ ] Fix and show dashboard after landing review.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

@@ -54,11 +54,15 @@
   --color-coursework-ink: var(--coursework-ink);
   --color-coursework-gold: var(--coursework-gold);
   --color-coursework-mist: var(--coursework-mist);
+  --color-landing-scrim: var(--landing-scrim);
+  --color-landing-foreground: var(--landing-foreground);
   --shadow-panel: 0 1px 2px oklch(0.2 0.06 240 / 0.06), 0 8px 24px -12px oklch(0.2 0.06 240 / 0.18);
   --shadow-float: 0 20px 50px -24px oklch(0.2 0.06 240 / 0.35);
 }
 
 :root {
+  --landing-scrim: oklch(0.2 0.025 240);
+  --landing-foreground: oklch(0.99 0.002 220);
   --radius: 0.5rem;
   /* Ocean Deep */
   --deep: oklch(0.26 0.062 249);

@@ -1,19 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  BookOpen,
-  CalendarCheck,
-  ClipboardList,
-  MessageSquare,
-  ShieldCheck,
-  GraduationCap,
-} from "lucide-react";
+import { ArrowRight, ChevronDown, GraduationCap } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-      meta: [
+    meta: [
       { title: "Meraki — K-12 School Gradebook, Attendance & Family Portal" },
       {
         name: "description",
@@ -29,38 +22,12 @@ export const Route = createFileRoute("/")({
         content:
           "Teachers, students, guardians and admins in one K-12 school platform: grades, attendance, behavior, messaging, rosters and reporting.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
 });
-
-const MODULES = [
-  {
-    icon: ClipboardList,
-    title: "Gradebook",
-    lines: ["Assignments & categories", "Points, comments, averages", "Letter grades at a glance"],
-  },
-  {
-    icon: CalendarCheck,
-    title: "Attendance & Behavior",
-    lines: ["Daily roll per class", "Tardy & absence tracking", "Positive and concern notes"],
-  },
-  {
-    icon: MessageSquare,
-    title: "Communications",
-    lines: ["Direct messages", "Class & school announcements", "Guardians stay in the loop"],
-  },
-  {
-    icon: BookOpen,
-    title: "Rosters & Scheduling",
-    lines: ["Import students from a spreadsheet", "Create student & guardian logins", "Roster & class scheduling"],
-  },
-  {
-    icon: ShieldCheck,
-    title: "Role-based access",
-    lines: ["Teachers see their classes", "Students see their own work", "Admins see the school"],
-  },
-];
 
 const PILLARS = [
   {
@@ -122,81 +89,55 @@ const AUDIENCES = [
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="size-6 text-accent" />
-            <span className="font-display text-lg font-semibold">Meraki Education</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button asChild size="sm">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background [&_h1]:tracking-normal [&_h2]:tracking-normal [&_h3]:tracking-normal">
+      <header className="border-b border-border/60 bg-card">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-5">
+          <Link to="/" className="flex min-w-0 items-center gap-2">
+            <GraduationCap className="size-6 shrink-0 text-primary" />
+            <span className="font-display text-base font-semibold sm:text-lg">Meraki Education</span>
+          </Link>
+          <ThemeToggle />
         </div>
       </header>
 
-      <section className="surface-deep">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-current/75">
-              {"\n"}
-            </p>
-            <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
-              Simplify teaching for your school
-            </h1>
-            <p className="mt-5 max-w-lg text-base text-current/85">
-              Gradebook, attendance, behavior, family messaging, rosters and reporting — one
-              student information system your teachers will actually use.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/auth">Open your gradebook</Link>
-              </Button>
-            </div>
-          </div>
+      <main>
+      <section className="relative isolate overflow-hidden text-landing-foreground" aria-labelledby="landing-title">
           <img
             src={heroImage}
-            alt="Soulful, glowing scene of students learning with flowing light and open books"
+            alt=""
             width={1600}
             height={1104}
-            className="rounded-xl shadow-[var(--shadow-float)]"
+            fetchPriority="high"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
+          <div className="absolute inset-0 -z-10 bg-landing-scrim/75" />
+        <div className="mx-auto flex min-h-[min(480px,60dvh)] w-full max-w-6xl items-center px-6 py-12 sm:py-16">
+          <div className="max-w-xl">
+            <p className="mb-4 text-sm font-medium text-landing-foreground/85">Grades 5–9</p>
+            <h1 id="landing-title" className="text-4xl font-semibold leading-tight sm:text-5xl">Meraki Education</h1>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-landing-foreground/90">
+              Your school day, connected. Grades, attendance, coursework and family messages in one place.
+            </p>
+            <Button asChild size="lg" variant="secondary" className="mt-8 h-11">
+              <Link to="/auth">Sign in to Meraki <ArrowRight aria-hidden="true" /></Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-2xl font-semibold">Everything the school day needs</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {MODULES.map((m) => (
-            <div key={m.title} className="panel p-5">
-              <m.icon className="size-6 text-accent" />
-              <h3 className="mt-4 text-base font-semibold">{m.title}</h3>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                {m.lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t border-border bg-secondary/40">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 className="text-2xl font-semibold">Three pillars of the platform</h2>
-          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Community, classroom management, and assessment and reporting — connected, so nothing
-            has to be re-entered.
-          </p>
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <section className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+          <h2 className="text-2xl font-semibold">Everything the school day needs</h2>
+          <div className="mt-8 grid items-start gap-8 md:grid-cols-3">
             {PILLARS.map((p) => (
-              <div key={p.title} className="panel p-6">
-                <h3 className="font-display text-xl font-semibold">{p.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{p.blurb}</p>
-                <ul className="mt-4 space-y-2 text-sm">
+              <div key={p.title} className="min-w-0 border-t border-border pt-5">
+                <h3 className="text-base font-semibold">{p.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.blurb}</p>
+                <details className="group mt-4">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+                    Explore {p.title.toLowerCase()}
+                    <ChevronDown aria-hidden="true" className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                  </summary>
+                <ul className="mt-4 space-y-3 text-sm">
                   {p.items.map((item) => (
                     <li key={item} className="flex gap-2">
                       <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
@@ -204,47 +145,32 @@ function Landing() {
                     </li>
                   ))}
                 </ul>
+                </details>
               </div>
             ))}
           </div>
-        </div>
       </section>
 
-
-
-      <section className="border-y border-border bg-secondary/50">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 className="text-2xl font-semibold">Everybody wins</h2>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="border-t border-border/60 bg-muted/30">
+        <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+          <h2 className="text-2xl font-semibold">For your school community</h2>
+          <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {AUDIENCES.map((a) => (
               <div key={a.who}>
                 <h3 className="text-base font-semibold">{a.who}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{a.copy}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.copy}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="panel flex flex-wrap items-center justify-between gap-6 p-8">
-          <div>
-            <h2 className="text-xl font-semibold">Ready for the new term?</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Create a staff account, add your classes, and start taking roll today.
-            </p>
-          </div>
-          <Button asChild size="lg">
-            <Link to="/auth">Get started</Link>
-          </Button>
-        </div>
-      </section>
-
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
+      </main>
+      <footer className="border-t border-border/60 bg-card">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
           <span>Meraki Education Platform</span>
           <Link to="/auth" search={{}} className="hover:text-foreground">
-            Sign in
+            Account access <span aria-hidden="true">→</span>
           </Link>
         </div>
       </footer>
