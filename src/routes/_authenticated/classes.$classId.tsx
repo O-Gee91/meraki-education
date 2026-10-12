@@ -811,6 +811,79 @@ function ClassDetailPage() {
   );
 }
 
+/** Staff-only "History" popover: every posted score/feedback change for a cell. */
+function GradeHistoryButton({
+  assignmentId,
+  studentId,
+}: {
+  assignmentId: string;
+  studentId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data: changes = [] } = useQuery({
+    queryKey: ["grade-changes", assignmentId, studentId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("grade_changes")
+        .select(
+          "id, old_score, new_score, old_feedback, new_feedback, reason, changed_at",
+        )
+        .eq("assignment_id", assignmentId)
+        .eq("student_id", studentId)
+        .order("changed_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Score history"
+          title="Score history"
+        >
+          <History className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="center" className="w-80">
+        <p className="text-sm font-semibold">Score history</p>
+        {changes.length === 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            No posted changes recorded yet.
+          </p>
+        ) : (
+          <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+            {changes.map((change) => (
+              <li key={change.id} className="rounded-md border border-border/60 p-2 text-xs">
+                <p className="font-medium">
+                  {change.old_score == null ? "—" : String(change.old_score)} →{" "}
+                  {change.new_score == null ? "—" : String(change.new_score)}
+                </p>
+                {change.new_feedback && change.new_feedback !== change.old_feedback ? (
+                  <p className="mt-0.5 break-words text-muted-foreground">
+                    “{change.new_feedback}”
+                  </p>
+                ) : null}
+                {change.reason ? (
+                  <p className="mt-0.5 text-muted-foreground">Reason: {change.reason}</p>
+                ) : null}
+                <p className="mt-0.5 text-muted-foreground">
+                  {new Date(change.changed_at).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 type AssignmentRow = {
   id: string;
   title: string;
