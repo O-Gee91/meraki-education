@@ -8,7 +8,14 @@ import { useIntegrityGuard } from "@/hooks/useIntegrityGuard";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
+    let { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      // Right after sign-in, the preview's brokered session storage can answer
+      // with a stale empty value before the new session syncs. Retry once after
+      // a short delay so a successful sign-in isn't bounced back to /auth.
+      await new Promise((r) => setTimeout(r, 400));
+      ({ data, error } = await supabase.auth.getUser());
+    }
     if (error || !data.user) throw redirect({ to: "/auth" });
     return { user: data.user };
   },
