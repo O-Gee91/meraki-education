@@ -21,7 +21,9 @@
 - [x] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
 - [x] Receive Messages review before proceeding to Community.
 - [x] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
-- [ ] Receive Community review before proceeding to People & roles.
+- [x] Receive Community review before proceeding to People & roles.
+- [ ] Fix and show People & roles: bounded account list, aligned role controls and quieter access requests.
+- [ ] Receive People & roles review before proceeding to Classes.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
