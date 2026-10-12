@@ -28,7 +28,7 @@
 - [x] Receive Classes review before proceeding to Files.
 - [x] Fix and show Files: bounded library, aligned upload controls and readable file rows.
 - [x] Receive Files review before proceeding to Settings.
-- [ ] Fix and show Settings: aligned account form, quieter sign-in history and consistent section spacing.
+- [x] Fix and show Settings: aligned account form, quieter sign-in history and consistent section spacing.
 - [ ] Receive Settings review before proceeding to Forgot password.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
