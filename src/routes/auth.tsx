@@ -97,6 +97,14 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
+    // Confirm the session is readable before leaving this page — otherwise the
+    // dashboard's sign-in check can run before the session has synced and
+    // bounce straight back here.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) break;
+      await new Promise((r) => setTimeout(r, 300));
+    }
     await recordLogin();
     goToApp();
   }
