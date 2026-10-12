@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +35,8 @@ export const Route = createFileRoute("/_authenticated/classes/")({
       { name: "description", content: "All class sections for the current term." },
       { property: "og:title", content: "Classes — Meraki Education" },
       { property: "og:description", content: "All class sections for the current term." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ClassesPage,
@@ -153,6 +155,7 @@ function ClassesPage() {
   return (
     <AppShell
       title={isStaff ? "Classes" : "My classes"}
+      desktopReview
       description={
         isStaff
           ? "Each section links to its gradebook, assignments and roster."
@@ -177,14 +180,15 @@ function ClassesPage() {
                   setForm({ ...emptyForm, teacher_name: profile?.full_name ?? "" });
                 }}
               >
+                <Plus className="size-4" aria-hidden="true" />
                 New class
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
+            <DialogContent className="max-h-[calc(100dvh-3rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:max-w-xl" aria-describedby={undefined}>
+              <DialogHeader className="border-b border-border p-6 pr-12">
                 <DialogTitle>{editingId ? "Edit class" : "Create a class"}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
+              <div className="grid min-h-0 gap-4 overflow-y-auto p-6 sm:grid-cols-2">
                 {(
                   [
                     ["name", "Class name", "Math 7 – Section B"],
@@ -195,7 +199,7 @@ function ClassesPage() {
                     ["term", "Term", "Fall 2026"],
                   ] as const
                 ).map(([key, label, placeholder]) => (
-                  <div key={key} className="space-y-1.5">
+                  <div key={key} className={`min-w-0 space-y-1.5 ${key === "name" || key === "teacher_name" ? "sm:col-span-2" : ""}`}>
                     <Label htmlFor={key}>{label}</Label>
                     <Input
                       id={key}
@@ -228,7 +232,7 @@ function ClassesPage() {
                   </Select>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="border-t border-border p-6">
                 <Button onClick={() => saveClass.mutate()} disabled={saveClass.isPending}>
                   {saveClass.isPending
                     ? "Saving…"
@@ -245,7 +249,7 @@ function ClassesPage() {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading classes…</p>
       ) : classes.length === 0 ? (
-        <div className="panel p-8 text-center">
+        <div className="border-t border-border py-8">
           <p className="text-sm text-muted-foreground">
             {isStaff
               ? "No classes yet — create your first section to start a gradebook."
@@ -254,8 +258,9 @@ function ClassesPage() {
         </div>
       ) : (
         <>
-          <div className="mb-5 flex items-center gap-3">
-            <Label htmlFor="grade-filter" className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+            <div className="space-y-1.5">
+            <Label htmlFor="grade-filter">
               Grade
             </Label>
             <Select value={gradeFilter} onValueChange={setGradeFilter}>
@@ -272,38 +277,41 @@ function ClassesPage() {
                 <SelectItem value="none">Ungraded</SelectItem>
               </SelectContent>
             </Select>
+            </div>
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {visible.length} of {classes.length} {classes.length === 1 ? "class" : "classes"}
+            </p>
           </div>
 
           {groups.length === 0 ? (
-            <div className="panel p-8 text-center">
+            <div className="py-8">
               <p className="text-sm text-muted-foreground">No classes for this grade.</p>
             </div>
           ) : (
             <div className="space-y-8">
               {groups.map(([label, items]) => (
-                <section key={label}>
-                  <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <section key={label} className="min-w-0">
+                  <h2 className="mb-3 text-sm font-semibold">
                     {label} · {items.length} {items.length === 1 ? "class" : "classes"}
                   </h2>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {items.map((c) => {
                       const canEdit = isAdmin || (isStaff && c.teacher_id === user?.id);
                       return (
-                        <div key={c.id} className="relative">
+                        <div key={c.id} className="relative min-w-0 rounded-lg border border-border bg-card transition-colors hover:border-ring">
                           <Link
                             to="/classes/$classId"
                             params={{ classId: c.id }}
-                            className="block panel p-5 transition-shadow hover:shadow-[var(--shadow-float)]"
+                            className="block h-full min-w-0 rounded-lg p-5 text-card-foreground [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            <h3 className={`text-base font-semibold ${canEdit ? "pr-10" : ""}`}>{c.name}</h3>
+                            <p className="mt-3 text-xs text-muted-foreground">
                               Period {c.period ?? "—"} · {c.term}
-                              {c.grade_level != null ? ` · Grade ${c.grade_level}` : ""}
                             </p>
-                            <h3 className="mt-2 pr-10 text-lg font-semibold">{c.name}</h3>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {c.subject ?? "General"} · Room {c.room ?? "—"}
                             </p>
-                            <p className="mt-1 text-sm font-medium">
+                            <p className="mt-2 text-sm text-muted-foreground">
                               Teacher: {c.teacher_name || "Unassigned"}
                             </p>
                           </Link>
@@ -313,6 +321,7 @@ function ClassesPage() {
                               variant="ghost"
                               size="icon"
                               aria-label={`Edit ${c.name}`}
+                              title={`Edit ${c.name}`}
                               className="absolute right-3 top-3"
                               onClick={() => {
                                 setEditingId(c.id);
