@@ -268,13 +268,8 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {/* Temporary: shortcut to the feedback-loop prototype */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-        <span>Try the new assignment &amp; feedback preview (sample data only).</span>
-        <Button asChild variant="outline" className="h-11">
-          <Link to="/feedback-loop-preview">Open preview</Link>
-        </Button>
-      </div>
+      {!isStaff && <MissingWorkCard />}
+
 
       <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "xl:grid-cols-5"}`}>
 
