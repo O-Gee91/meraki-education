@@ -1,68 +1,23 @@
 # Roadmap
 
-## Desktop UI checkup
-- [x] Inventory and rank desktop layout/clutter issues for every content page (source audit; visually verify each page before its fix).
-- [x] Fix and show /auth.
-- [x] Receive /auth review before changing landing page.
-- [x] Fix and show landing page after /auth review.
-- [x] Receive landing page review before changing dashboard.
-- [x] Fix and show dashboard after landing review.
-- [x] Receive dashboard review before changing remaining pages.
-- [x] Fix and show the class page (highest-impact remaining page).
-- [x] Receive class-page review before proceeding.
-- [x] Fix and show Students, the next medium-impact page in the ranked inventory.
-- [x] Receive Students review before proceeding to Reports.
-- [x] Fix and show Reports.
-- [x] Receive Reports review before proceeding to Behavior.
-- [x] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
-- [x] Receive Behavior review before proceeding to Well-being.
-- [x] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
-- [x] Receive Well-being review before proceeding to Messages.
-- [x] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
-- [x] Receive Messages review before proceeding to Community.
-- [x] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
-- [x] Receive Community review before proceeding to People & roles.
-- [x] Fix and show People & roles: bounded account list, aligned role controls and quieter access requests.
-- [x] Receive People & roles review before proceeding to Classes.
-- [x] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
-- [x] Receive Classes review before proceeding to Files.
-- [x] Fix and show Files: bounded library, aligned upload controls and readable file rows.
-- [x] Receive Files review before proceeding to Settings.
-- [x] Fix and show Settings: aligned account form, quieter sign-in history and consistent section spacing.
-- [x] Receive Settings review before proceeding to Forgot password.
-- [x] Fix and show Forgot password: align with approved sign-in layout and quiet recovery states.
-- [x] Receive Forgot password review before proceeding to Reset password.
-- [x] Fix and show Reset password: align with approved sign-in layout and quiet recovery states.
-- [x] Receive Reset password review before proceeding to remaining pages.
-- [x] Fix and show Connect app approval: brand-header error state, safe name wrapping, 44px actions.
-- [ ] Receive Connect app approval review; that completes the ranked page inventory.
+## Assignment & Feedback Loop (approved by Joe Doyle 2026-10-12, spec: Build_a_complete_Assignment_Feedback_Loop)
+- [ ] DB migration: assignments.status (draft/published), grades.is_draft/posted_at/posted_by, grade_changes audit table + RLS (student/guardian see posted only)
+- [ ] Teacher: New Assignment dialog — Save as Draft / Publish
+- [ ] Teacher: Grade Submissions panel — Save Draft / Post Grade, GradeChange on every post
+- [ ] Gradebook: amber draft dot on cells, History popover from grade_changes
+- [ ] Gradebook: unsubmitted counts as 0 only after teacher posts grades for that assignment
+- [ ] Student: /assignments hub (All / Due Soon / Missing / Graded filters) + detail view
+- [ ] Student: Missing Work summary card on dashboard
+- [ ] Guardian: read-only assignments view with status chips and posted score/feedback
+- [ ] Delete assignment preserves grade_changes history
+- [ ] Remove temporary "Open preview" button + /feedback-loop-preview route once real flow verified
+- [ ] Verify end-to-end with real sessions (teacher, student, guardian)
 
-- [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
-- [x] Add four persistent per-view sorting choices.
-- [x] Apply sorting to directories, class rosters, gradebooks, grading, attendance, reports, pickers, Pulse, printing, and login generation.
-- [x] Preserve ID-based selections, filtered bulk actions, and collected-work selection.
-- [x] Validate typechecking, preview build, visible controls, and saved choices.
-- [x] Redesign the Classes coursework list as a scalable Meraki assignment ledger.
-- [x] Add category filtering, assignment search, due-date ordering, and grading progress.
-- [x] Verify the redesigned ledger on desktop and mobile without breaking assignment actions.
-- [x] Apply the compact Meraki ledger design to the class Gradebook.
-- [x] Verify Gradebook filtering, sorting, score editing, and responsive scrolling.
-- [x] Replace the Gradebook score grid with a simplified assignment list.
-- [x] Add category and due-date filters plus assignment-level sorting.
-- [x] Calculate and display class averages without exposing individual scores.
-- [x] Open a detailed assignment and assessment report from each staff roster name.
-- [x] Add synchronized inline scores, missing-work status, summaries, optional behavior strikes, and printing.
-- [x] Add independent start and end times to assignments and assessments in the class time zone.
-- [x] Show "Not yet available" and "Closed" to students, auto-hand-in at the end time, and flag late work.
-- [x] Keep late work out of the grade until a teacher chooses to count it.
-
-- [x] Simplify the grading workspace roster and detail layout.
-- [x] Replace the assignment-only Gradebook with a student-first grade matrix.
-- [x] Show current grades, missing counts, assignment scores, search, sorting, and direct report access.
-- [x] Keep teacher assessment forms within the viewport with scrollable fields and fixed save actions.
-- [x] Let teachers reverse an accidental collected status without removing scores or submitted work.
-- [x] Let grade-level teachers respond to Well-being entries and show named responses to students.
-- [x] Restore current and historical Well-being updates with consistent access-aware loading and visible errors.
-- [x] Prevent teacher comments from being reset or overwritten while grading.
-- [x] Calm the Gradebook presentation in teacher and student views.
-- [x] Use the shared grading rules for the student Overview average.
+## Deferred / open
+- Email delivery for password resets (DNS for merakieducation.com — user deferred)
+- Mainland China migration (Tencent Cloud) — awaiting user's chosen first step
+- 2FA options presented — awaiting user's choice
+- Print gradebook unverified on paginated class page
+- No student-facing pages reviewed with real student session; Safari/macOS unverified
+- Homework late-status penalty override recorded but not applied to scores
+- 11 security findings untouched per user request
