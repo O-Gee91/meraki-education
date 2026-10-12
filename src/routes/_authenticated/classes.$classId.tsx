@@ -195,7 +195,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at, status",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -219,7 +219,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, assignment_id, student_id, points_earned, comment")
+        .select("id, assignment_id, student_id, points_earned, comment, is_draft")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data;
