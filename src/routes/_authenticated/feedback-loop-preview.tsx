@@ -31,14 +31,14 @@ type Sub = {
   id: string;
   student: string;
   status: Status;
-  submittedAt?: string;
-  text?: string;
-  file?: string;
-  score?: number;
-  feedback?: string;
+  submittedAt?: string | undefined;
+  text?: string | undefined;
+  file?: string | undefined;
+  score?: number | undefined;
+  feedback?: string | undefined;
   posted: boolean;
 };
-type Change = { at: string; by: string; old?: number; next?: number; note: string };
+type Change = { at: string; by: string; old?: number | undefined; next?: number | undefined; note: string };
 
 const DUE = "Oct 14, 3:00 PM";
 const POINTS = 100;
@@ -130,7 +130,7 @@ function TeacherGrading({
 
   const save = (post: boolean) => {
     const n = score === "" ? undefined : Math.max(0, Math.min(POINTS, Number(score)));
-    if (post && n === undefined) return toast.error("Enter a score before posting.");
+    if (post && n === undefined) { toast.error("Enter a score before posting."); return; }
     if (post) {
       setHistory((h) => ({
         ...h,
@@ -247,7 +247,7 @@ function Gradebook({ subs, history }: { subs: Sub[]; history: Record<string, Cha
                         <p className="text-muted-foreground">No posted changes yet.</p>
                       ) : (
                         <ul className="space-y-2">
-                          {history[s.id].map((h, i) => (
+                          {(history[s.id] ?? []).map((h, i) => (
                             <li key={i} className="border-b border-border pb-2 last:border-0">
                               <p>{h.note}: {h.old ?? "—"} → {h.next ?? "—"}</p>
                               <p className="text-xs text-muted-foreground">{h.by} · {h.at}</p>
