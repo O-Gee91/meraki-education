@@ -14,7 +14,7 @@ type RequestRow = {
   created_at: string;
 };
 
-export function StaffRequests({ enabled }: { enabled: boolean }) {
+export function StaffRequests({ enabled, desktopReview = false }: { enabled: boolean; desktopReview?: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: requests = [], isLoading } = useQuery({
@@ -62,15 +62,15 @@ export function StaffRequests({ enabled }: { enabled: boolean }) {
   if (!enabled) return null;
 
   return (
-    <section className="panel p-5">
+    <section className={desktopReview ? "min-w-0 border-b border-border pb-5" : "panel p-5"}>
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold">Educator access requests</h2>
         <Badge variant="secondary">{requests.length}</Badge>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      {!desktopReview && <p className="mt-1 text-xs text-muted-foreground">
         Staff who signed up with an email outside the approved school domains stay as
         non-staff accounts until an administrator approves them here.
-      </p>
+      </p>}
 
       <div className="mt-4 divide-y divide-border">
         {isLoading ? (
@@ -81,11 +81,11 @@ export function StaffRequests({ enabled }: { enabled: boolean }) {
           requests.map((row) => (
             <div
               key={row.id}
-              className="flex flex-wrap items-start justify-between gap-3 py-4"
+              className={desktopReview ? "grid min-w-0 items-start gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-6" : "flex flex-wrap items-start justify-between gap-3 py-4"}
             >
-              <div className="min-w-0">
+              <div className={desktopReview ? "min-w-0 [overflow-wrap:anywhere]" : "min-w-0"}>
                 <p className="text-sm font-semibold">{row.full_name || "Unnamed"}</p>
-                <p className="truncate text-xs text-muted-foreground">{row.email}</p>
+                <p className={desktopReview ? "mt-1 text-xs text-muted-foreground" : "truncate text-xs text-muted-foreground"}>{row.email}</p>
                 {row.note ? (
                   <p className="mt-1 max-w-prose text-xs text-muted-foreground">“{row.note}”</p>
                 ) : null}
