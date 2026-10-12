@@ -138,7 +138,7 @@ function TeacherGrading({
         ],
       }));
     }
-    setSubs((all) => all.map((s) => (s.id === current.id ? { ...s, score: n, feedback, posted: post || s.posted && false } : s)));
+    setSubs((all) => all.map((s) => (s.id === current.id ? { ...s, score: n, feedback, posted: post } : s)));
     toast.success(post ? "Grade posted — visible to student and guardian." : "Draft saved — only you can see it.");
   };
 
