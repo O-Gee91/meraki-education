@@ -254,3 +254,10 @@ Ranked issues and fixes:
 2. Low: narrow padded panel squeezed fields -> wider bounded form (max-w-xl main), 44px fields and actions.
 3. Low: heavy panels and inconsistent button variants -> quiet presentation, one primary action per state (Save new password / Request a reset link / Go to sign in).
 Verified at 1024/1440/1920: no horizontal overflow; "Reset link needed" state renders with working CTA. Live recovery-link flow unverified (email delivery pending domain DNS); Safari/macOS unverified.
+
+## Connect app approval (src/routes/[.]lovable.oauth.consent.tsx)
+Ranked issues and fixes:
+1. Low: bare unstyled error state (plain text, no brand header) -> approved bounded brand header + top-aligned max-w-xl error layout matching the other recovery pages.
+2. Low: long app names could overflow the centered dialog -> safe word wrapping on the dialog content.
+3. Low: button heights below the 44px standard -> h-11 Approve/Deny actions; quiet unframed dialog retained (centered layout kept deliberately for a consent screen).
+Verified at 1024/1440/1920: no horizontal overflow; error state renders with brand header. Live approve/deny flow requires a real authorization request and remains unverified; Safari/macOS unverified.
