@@ -23,7 +23,9 @@
 - [x] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
 - [x] Receive Community review before proceeding to People & roles.
 - [x] Fix and show People & roles: bounded account list, aligned role controls and quieter access requests.
-- [ ] Receive People & roles review before proceeding to Classes.
+- [x] Receive People & roles review before proceeding to Classes.
+- [x] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
+- [ ] Receive Classes review before proceeding to Files.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
