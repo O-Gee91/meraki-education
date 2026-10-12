@@ -16,8 +16,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
 | Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and approved; staff-only controls unverified |
 | Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and approved; populated staff report cards and print controls unverified |
-| Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and shown; awaiting review |
-| Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Awaiting review |
+| Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and approved |
+| Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and shown; awaiting review |
 | Medium | /messages | Wide message text and separated metadata slow scanning. | Bound inbox/detail reading widths and distinguish the main compose action. | Awaiting review |
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width and clarify section hierarchy. | Awaiting review |
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students and Reports approved. Behavior updated and shown; wait for Joe's Behavior review before changing Well-being.
+Auth, landing, dashboard, class page, Students, Reports and Behavior approved. Well-being updated and shown; wait for Joe's review before changing Messages.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -134,3 +134,19 @@ Auth, landing, dashboard, class page, Students and Reports approved. Behavior up
 - Inspected populated log, tracker, detention, note-editor and Teacher-mode screenshots at 1280×1800. No browser runtime errors; preview build OK.
 - Student/guardian presentation reviewed in source only; no student or guardian account impersonated. Safari/macOS-specific rendering remains unverified.
 - No business rules, permissions, database queries or records changed; no next page started.
+
+## Well-being ranked issues and fixes
+1. High — Long unbroken saved text caused actual horizontal overflow (document width exceeded 71000px). Constrained grid tracks and feed children, applied safe word wrapping and preserved note line breaks. All text remains available, not truncated or hidden.
+2. High — Wide displays stretched content to 1664px, while narrower desktop squeezed five mood labels into a narrow form. Opted into the reviewed 1152px shell cap, used a stable 20rem form track on wide desktop and stacked sections on narrower desktop; mood choices now have readable two-column tracks and accessible pressed states.
+3. Medium — Names, mood, dates, tips and reply actions competed within each row. Names lead, dates/mood are secondary, advice is a default-collapsed Suggested support disclosure, and response actions use one consistent placement. Save check-in remains the primary action.
+4. Low — Floating section panels and nested response boxes added clutter. Replaced panels with quiet dividers and teacher-response boxes with a left rule; preserved each teacher name, date and response text with comfortable line lengths.
+
+### Well-being verification
+- Real signed-in staff session: 310 historical check-ins in Admin mode and 135 in Teacher mode, including saved teacher responses and a 9133-character check-in row.
+- No horizontal page overflow at 1024/1440/1920px in Admin and Teacher modes; main width caps at 1152px on large desktop.
+- Mood selection updates its pressed state; optional note accepts and clears an unsaved draft; Suggested support expands/collapses.
+- October 9, 2026 filter loads six saved check-ins; Show all restores 310. Empty date displays the existing no-check-ins state. Checks wait for actual loading completion.
+- Existing named teacher response and response date visually inspected; Add response opens the existing prompt and cancellation sends no mutation. No check-in or response was created, changed or deleted.
+- Inspected populated Admin/Teacher and filtered-date screenshots plus the saved-response element. No runtime errors; latest preview build OK.
+- Student/guardian presentation is source-reviewed only; Safari/macOS rendering and save/write paths remain unverified in this presentation-only audit.
+- No data-access, mood calculations, response ownership or grade-scope rules changed. Messages has not been started.

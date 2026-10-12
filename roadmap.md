@@ -16,7 +16,7 @@
 - [x] Receive Reports review before proceeding to Behavior.
 - [x] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
 - [x] Receive Behavior review before proceeding to Well-being.
-- [ ] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
+- [x] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
 - [ ] Receive Well-being review before proceeding to Messages.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
