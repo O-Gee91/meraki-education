@@ -637,12 +637,19 @@ function StaffCollectPanel({
       const previous = latestGrade?.comment ?? null;
       const keptComment = markCodeFromComment(previous) ? null : previous;
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
+      // Explicit "Save draft" keeps the grade teacher-only; every other save
+      // path (quick scores, Enter/blur, Post grade) posts it immediately.
+      const asDraft = input.draft === true;
+      const { data: authData } = await supabase.auth.getUser();
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
           student_id: input.studentId,
           points_earned: points,
           comment: markComment,
+          is_draft: asDraft,
+          posted_at: asDraft ? null : new Date().toISOString(),
+          posted_by: asDraft ? null : authData.user?.id ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
