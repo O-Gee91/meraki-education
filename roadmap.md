@@ -14,7 +14,7 @@
 - [x] Receive Students review before proceeding to Reports.
 - [x] Fix and show Reports.
 - [x] Receive Reports review before proceeding to Behavior.
-- [ ] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
+- [x] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
 - [ ] Receive Behavior review before proceeding to Well-being.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

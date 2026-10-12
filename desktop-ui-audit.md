@@ -15,8 +15,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /auth | Promotional panel consumes 40% of the display; form starts at different heights as tabs change; registration is 760px tall, with a single-choice role menu and long eligibility copy. No explicit page heading in the normal form. | Bounded, top-aligned forms; clear heading; compact paired registration fields, concise eligibility text, one primary submit action. | Fixed and approved |
 | Medium | / | Large split promotional section; repeated feature descriptions across modules/pillars/audiences; repeated sign-in/start actions; empty paragraph used for spacing. | Reduce repetition, use one primary CTA in the visible screen, maintain clear Meraki identity and bounded section widths. | Fixed and approved |
 | Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and approved; staff-only controls unverified |
-| Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and shown; awaiting review; populated staff report cards and print controls unverified |
-| Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Awaiting review |
+| Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and approved; populated staff report cards and print controls unverified |
+| Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and shown; awaiting review |
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Awaiting review |
 | Medium | /messages | Wide message text and separated metadata slow scanning. | Bound inbox/detail reading widths and distinguish the main compose action. | Awaiting review |
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width and clarify section hierarchy. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page and Students approved. Reports updated and shown; wait for Joe's Reports review before changing Behavior.
+Auth, landing, dashboard, class page, Students and Reports approved. Behavior updated and shown; wait for Joe's Behavior review before changing Well-being.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -119,3 +119,18 @@ Auth, landing, dashboard, class page and Students approved. Reports updated and 
 - Updated standards and portfolio screenshots inspected at 1280×1800; no runtime errors; preview build OK.
 - This student has no published report cards or portfolio artifacts. Populated report-card rows, staff generation/comment/publication controls, template choices and printing are source-reviewed only, not authenticated end-to-end verified.
 - Safari/macOS-specific rendering remains unverified. Behavior has not been changed.
+
+## Behavior ranked issues and fixes
+1. High — Wide displays stretched names, notes and controls across 1664px. Opted Behavior into the reviewed max-w-6xl shell; header and content now cap at 1152px. The note form has a stable 20rem track on wide desktop, stacking above the log at narrower desktop widths.
+2. High — Detention fields wrapped into irregular rows, with placeholder-only labels. Replaced the wrapping toolbar with aligned, labeled fields: two columns on narrower desktop, five tracks on wide desktop; kept existing save-on-change/blur behavior.
+3. Medium — Long red note badges competed with names, while strike indicators wandered according to name length. Names now lead each note/strike row, with date and reason beneath; strike progress and detention-required labels use a stable secondary column. Subtle theme tints retain explicit status text and numeric cycle counts.
+4. Low — Repeated floating panels, boxed tabs and text Edit/Delete controls added noise. Replaced section panels with quiet dividers, wrapped the tab bar, and used named pencil/trash controls. Log note remains the primary action; inline Save is secondary.
+
+### Behavior verification
+- Current signed-in account now has staff access: verified 56 saved notes, 34 strike-tracker students (33 Grade 8, one Grade 9) and three detentions in Admin mode.
+- All three tabs have no horizontal page overflow at 1024/1440/1920px in both Admin and Teacher modes; content caps at 1152px on wide desktop.
+- Grade 8 selection displays 33 students; All grades restores 34. Original grade grouping and strike-count ordering are unchanged.
+- Opened an existing note editor, confirmed its saved text, typed a temporary draft and canceled; no save or deletion sent. Detention controls were visually inspected without editing records.
+- Inspected populated log, tracker, detention, note-editor and Teacher-mode screenshots at 1280×1800. No browser runtime errors; preview build OK.
+- Student/guardian presentation reviewed in source only; no student or guardian account impersonated. Safari/macOS-specific rendering remains unverified.
+- No business rules, permissions, database queries or records changed; no next page started.
