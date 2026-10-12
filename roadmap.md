@@ -25,7 +25,9 @@
 - [x] Fix and show People & roles: bounded account list, aligned role controls and quieter access requests.
 - [x] Receive People & roles review before proceeding to Classes.
 - [x] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
-- [ ] Receive Classes review before proceeding to Files.
+- [x] Receive Classes review before proceeding to Files.
+- [x] Fix and show Files: bounded library, aligned upload controls and readable file rows.
+- [ ] Receive Files review before proceeding to Settings.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.

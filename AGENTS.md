@@ -14,4 +14,5 @@
 - Apply reviewed desktop shell presentation through the opt-in AppShell desktopReview prop; this keeps unrevised pages unchanged until their review gate.
 - Scope Community conversation presentation through ClassFeed's opt-in desktopReview prop; this preserves the previously reviewed class feed presentation.
 - Scope reviewed educator-request presentation through StaffRequests' opt-in desktopReview prop; this preserves other request surfaces until their own review gate.
+- Scope the reviewed school Files presentation through FileLibrary's opt-in desktopReview prop; this preserves class and student file surfaces and upload behavior.
 - Paginate class gradebook assignment columns independently of the filtered data set; this prevents horizontal scrolling while keeping averages, missing counts and printing based on all filtered assignments.

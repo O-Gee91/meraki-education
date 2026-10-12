@@ -27,10 +27,11 @@ export const Route = createFileRoute("/_authenticated/files")({
 function FilesPage() {
   return (
     <AppShell
+      desktopReview
       title="Files & resources"
       description="School-wide library for staff, students and guardians — upload handbooks, forms, slides, video and more."
     >
-      <FileLibrary emptyLabel="No school-wide files yet. Upload the first resource." />
+      <FileLibrary desktopReview emptyLabel="No school-wide files yet. Upload the first resource." />
     </AppShell>
   );
 }
