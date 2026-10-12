@@ -13,7 +13,9 @@
 - [x] Fix and show Students, the next medium-impact page in the ranked inventory.
 - [x] Receive Students review before proceeding to Reports.
 - [x] Fix and show Reports.
-- [ ] Receive Reports review before proceeding to Behavior.
+- [x] Receive Reports review before proceeding to Behavior.
+- [x] Fix and show Behavior: bounded layout, readable note/strike rows, aligned detention controls.
+- [ ] Receive Behavior review before proceeding to Well-being.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
