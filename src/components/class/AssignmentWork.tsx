@@ -675,7 +675,11 @@ function StaffCollectPanel({
       }
     },
     onSuccess: (_data, variables) => {
-      toast.success("Score saved");
+      toast.success(
+        variables.draft
+          ? "Draft saved — only you can see this grade"
+          : "Grade posted — the student and their guardian can see it now",
+      );
       setPendingScore((current) =>
         current && current.studentId === variables.studentId ? null : current,
       );
