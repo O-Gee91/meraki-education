@@ -401,29 +401,30 @@ export function PrintTemplates() {
   }
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TEMPLATES.map((t) => (
-          <button
+          <Button variant="ghost"
             key={t.id}
             type="button"
             onClick={() => setTemplate(t.id)}
+            aria-pressed={template === t.id}
             className={
-              "panel p-4 text-left transition " +
-              (template === t.id ? "ring-2 ring-accent" : "hover:border-accent/50")
+              "h-auto min-w-0 flex-col items-stretch justify-start whitespace-normal rounded-lg border p-4 text-left " +
+              (template === t.id ? "border-primary bg-secondary/40" : "border-border")
             }
           >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">{t.name}</h3>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h3 className="min-w-0 flex-1 text-sm font-semibold">{t.name}</h3>
               <Badge variant="outline">{t.needs}</Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">{t.blurb}</p>
-          </button>
+          </Button>
         ))}
       </div>
 
-      <div className="panel flex flex-wrap items-end gap-3 p-5">
-        <div className="min-w-56">
+      <div className="flex flex-wrap items-end gap-4 border-t border-border pt-5">
+        <div className="w-full max-w-sm space-y-1.5">
           <Label>Class</Label>
           <Select value={classId} onValueChange={setClassId}>
             <SelectTrigger>
@@ -439,7 +440,7 @@ export function PrintTemplates() {
           </Select>
         </div>
         {(needsAssessment || template === "answer_sheet") && (
-          <div className="min-w-56">
+          <div className="w-full max-w-sm space-y-1.5">
             <Label>Assessment</Label>
             <Select value={assessmentId} onValueChange={setAssessmentId} disabled={!classId}>
               <SelectTrigger>
@@ -462,10 +463,6 @@ export function PrintTemplates() {
           Download
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Printing opens your browser print dialog — choose “Save as PDF” to keep a digital copy.
-        Downloads save a formatted file you can open in Word or a browser.
-      </p>
     </div>
   );
 }

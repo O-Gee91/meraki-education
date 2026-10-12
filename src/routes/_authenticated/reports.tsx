@@ -24,6 +24,7 @@ import { ElaCatalog } from "@/components/standards/ElaCatalog";
 import { PrintTemplates } from "@/components/reports/PrintTemplates";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { compareStudentNames, sortStudents } from "@/lib/student-sort";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -36,6 +37,8 @@ export const Route = createFileRoute("/_authenticated/reports")({
           "Standards-based grading, report cards and student portfolios of learning evidence in one reporting workspace.",
       },
       { property: "og:title", content: "Assessment & reporting — Meraki Education" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content:
@@ -52,6 +55,7 @@ function ReportsPage() {
 
   return (
     <AppShell
+      desktopReview
       title={isStudent ? "My grades & progress" : "Assessment & reporting"}
       description={
         isStudent
@@ -60,7 +64,7 @@ function ReportsPage() {
       }
     >
       <Tabs defaultValue="reportcards">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
           <TabsTrigger value="reportcards">{isStudent ? "My report card" : "Report cards"}</TabsTrigger>
           <TabsTrigger value="standards">{isStudent ? "My standards" : "Standards"}</TabsTrigger>
           <TabsTrigger value="portfolios">{isStudent ? "My portfolio" : "Portfolios"}</TabsTrigger>
@@ -220,13 +224,13 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
   const classFor = (id: string) => classes.find((c) => c.id === id)?.name ?? "Class";
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-6 space-y-6">
       {isStaff && (
-        <div className="panel flex flex-wrap items-end gap-3 p-5">
-          <div className="min-w-56">
+        <div className="flex flex-wrap items-end gap-4 border-b border-border pb-5">
+          <div className="w-full max-w-sm space-y-1.5">
             <Label>Class</Label>
             <Select value={classId} onValueChange={setClassId}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Report card class">
                 <SelectValue placeholder="Select a class" />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +249,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
         </div>
       )}
 
-      <div className="panel overflow-x-auto p-0">
+      <div>
         {cards.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">
             {isStaff
@@ -253,12 +257,18 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
               : "No report cards have been published for you yet."}
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[22%]" />
+              <col className="w-[25%]" />
+              <col className="w-[16%]" />
+              <col className={isStaff ? "w-[22%]" : "w-[37%]"} />
+              {isStaff ? <col className="w-[15%]" /> : null}
+            </colgroup>
+            <thead className="border-b border-border text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-3">Student</th>
-                <th className="p-3">Class</th>
-                <th className="p-3">Term</th>
+                <th className="p-3">Class &amp; term</th>
                 <th className="p-3">Grade</th>
                 <th className="p-3">Comment</th>
                 {isStaff ? <th className="p-3">Status</th> : null}
@@ -268,16 +278,17 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
               {cards.map((card) => {
                 const pct = card.grade_pct == null ? null : Number(card.grade_pct);
                 return (
-                  <tr key={card.id}>
+                  <tr key={card.id} className="[overflow-wrap:anywhere]">
                     <td className="p-3 font-medium">{nameFor(card.student_id)}</td>
-                    <td className="p-3 text-muted-foreground">{classFor(card.class_id)}</td>
-                    <td className="p-3 text-muted-foreground">{card.term}</td>
+                    <td className="p-3">{classFor(card.class_id)}<span className="mt-1 block text-xs text-muted-foreground">{card.term}</span></td>
                     <td className={`p-3 font-semibold ${pct == null ? "" : gradeTone(pct)}`}>
                       {pct == null ? "—" : `${pct.toFixed(1)}% ${card.letter ?? ""}`}
                     </td>
                     <td className="p-3 text-muted-foreground">
                       {isStaff ? (
                         <Input
+                          aria-label={`Teacher comment for ${nameFor(card.student_id)}`}
+                          className="min-w-0"
                           defaultValue={card.comment ?? ""}
                           placeholder="Teacher comment"
                           onBlur={(e) => {
@@ -294,7 +305,8 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
                       <td className="p-3">
                         <Button
                           size="sm"
-                          variant={card.published ? "outline" : "default"}
+                          variant="outline"
+                          className="h-auto min-h-8 w-full whitespace-normal px-2"
                           onClick={() =>
                             update.mutate({
                               id: card.id,
@@ -365,10 +377,11 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
   });
 
   return (
-    <div className="mt-4 space-y-4">
-      <ElaCatalog isStaff={isStaff} />
+    <div className="mt-6 space-y-6">
       {isStaff && (
-        <div className="panel grid gap-3 p-5 sm:grid-cols-4">
+        <details className="group border-b border-border pb-4">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"><ChevronDown className="size-4 transition-transform group-open:rotate-180" />Add a standard</summary>
+        <div className="mt-4 grid items-end gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <Label htmlFor="s-code">Code</Label>
             <Input
@@ -378,7 +391,7 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
               placeholder="MATH.6.NS.1"
             />
           </div>
-          <div className="sm:col-span-2">
+          <div className="xl:col-span-2">
             <Label htmlFor="s-desc">Expectation</Label>
             <Input
               id="s-desc"
@@ -387,7 +400,7 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
             />
           </div>
           <div className="flex items-end gap-2">
-            <div className="flex-1">
+              <div className="min-w-0 flex-1">
               <Label htmlFor="s-subject">Subject</Label>
               <Input
                 id="s-subject"
@@ -395,20 +408,21 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
               />
             </div>
-            <Button onClick={() => create.mutate()} disabled={create.isPending}>
+            <Button variant="outline" onClick={() => create.mutate()} disabled={create.isPending}>
               Add
             </Button>
           </div>
         </div>
+        </details>
       )}
 
-      <div className="panel p-5">
+      <section>
         <h2 className="text-sm font-semibold">Standards coverage</h2>
         <ul className="mt-4 divide-y divide-border">
           {standards.map((s) => {
             const covered = links.filter((l) => l.standard_id === s.id);
             return (
-              <li key={s.id} className="py-3">
+              <li key={s.id} className="py-4 [overflow-wrap:anywhere]">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{s.code}</Badge>
                   {s.subject ? (
@@ -425,9 +439,9 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
                       : "not yet assessed"}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>
+                <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground">{s.description}</p>
                 {covered.length > 0 ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-2 max-w-prose text-xs text-muted-foreground">
                     {covered.map((c) => c.assignments?.title ?? "Assessment").join(" · ")}
                   </p>
                 ) : null}
@@ -435,10 +449,12 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
             );
           })}
         </ul>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Tag assessments to standards from a class page → Assignments.
-        </p>
-      </div>
+        {standards.length === 0 ? <p className="py-4 text-sm text-muted-foreground">No standards in the school library yet.</p> : null}
+      </section>
+      <details className="group border-t border-border pt-4">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"><ChevronDown className="size-4 transition-transform group-open:rotate-180" />Common Core ELA library</summary>
+        <div className="mt-4 max-w-4xl"><ElaCatalog isStaff={isStaff} /></div>
+      </details>
     </div>
   );
 }
@@ -512,8 +528,10 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
   };
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="panel grid gap-3 p-5 sm:grid-cols-4">
+    <div className="mt-6 space-y-6">
+      <section className="border-b border-border pb-6">
+      <h2 className="mb-4 text-sm font-semibold">Add portfolio work</h2>
+      <div className="grid gap-4 md:grid-cols-2">
         {isStaff && (
           <div>
             <Label>Student</Label>
@@ -521,7 +539,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
               value={form.studentId}
               onValueChange={(studentId) => setForm({ ...form, studentId })}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Portfolio student">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
@@ -554,34 +572,35 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
             onChange={(e) => setForm({ ...form, link: e.target.value })}
           />
         </div>
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
+        <div>
             <Label htmlFor="p-desc">Note</Label>
             <Input
               id="p-desc"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-          </div>
+        </div>
+        <div className="flex items-end md:col-span-2">
           <Button onClick={() => add.mutate()} disabled={add.isPending}>
-            Add
+            <Plus className="size-4" />Add work
           </Button>
         </div>
       </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.length === 0 ? (
-          <p className="panel p-6 text-sm text-muted-foreground">
+          <p className="col-span-full py-6 text-sm text-muted-foreground">
             No portfolio work yet. Add evidence of learning — projects, photos, reflections.
           </p>
         ) : (
           items.map((item) => (
-            <article key={item.id} className="panel p-4">
+            <article key={item.id} className="min-w-0 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere]">
               <div className="flex items-center justify-between gap-2">
                 <Badge variant="outline">{item.kind}</Badge>
                 <span className="text-xs text-muted-foreground">{formatDate(item.created_at)}</span>
               </div>
-              <h3 className="mt-3 text-sm font-semibold">{item.title}</h3>
+              <h3 className="mt-3 text-base font-semibold">{item.title}</h3>
               <p className="text-xs text-muted-foreground">{nameFor(item.student_id)}</p>
               {item.description ? <p className="mt-2 text-sm">{item.description}</p> : null}
               {item.link ? (
@@ -594,12 +613,12 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
                   Open work
                 </a>
               ) : null}
-              <button
+              <Button variant="ghost" size="icon" title="Remove portfolio work" aria-label={`Remove ${item.title}`}
                 onClick={() => remove.mutate(item.id)}
-                className="mt-3 block text-xs text-muted-foreground hover:text-destructive"
+                className="mt-3 text-muted-foreground hover:text-destructive"
               >
-                Remove
-              </button>
+                <Trash2 className="size-4" />
+              </Button>
             </article>
           ))
         )}
