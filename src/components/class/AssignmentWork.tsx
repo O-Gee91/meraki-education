@@ -528,7 +528,7 @@ function StaffCollectPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, student_id, points_earned, comment")
+        .select("id, student_id, points_earned, comment, is_draft")
         .eq("assignment_id", assignment.id);
       if (error) throw error;
       return data;
@@ -610,7 +610,12 @@ function StaffCollectPanel({
   });
 
   const score = useMutation({
-    mutationFn: async (input: { studentId: string; value: string; note?: string }) => {
+    mutationFn: async (input: {
+      studentId: string;
+      value: string;
+      note?: string;
+      draft?: boolean;
+    }) => {
       const raw = input.value.trim();
       const mark = findMark(raw ? raw.toUpperCase() : null, marks);
       const points = mark || raw === "" ? null : Number(raw);
@@ -632,12 +637,19 @@ function StaffCollectPanel({
       const previous = latestGrade?.comment ?? null;
       const keptComment = markCodeFromComment(previous) ? null : previous;
       const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
+      // Explicit "Save draft" keeps the grade teacher-only; every other save
+      // path (quick scores, Enter/blur, Post grade) posts it immediately.
+      const asDraft = input.draft === true;
+      const { data: authData } = await supabase.auth.getUser();
       const { error } = await supabase.from("grades").upsert(
         {
           assignment_id: assignment.id,
           student_id: input.studentId,
           points_earned: points,
           comment: markComment,
+          is_draft: asDraft,
+          posted_at: asDraft ? null : new Date().toISOString(),
+          posted_by: asDraft ? null : authData.user?.id ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "assignment_id,student_id" },
@@ -663,7 +675,11 @@ function StaffCollectPanel({
       }
     },
     onSuccess: (_data, variables) => {
-      toast.success("Score saved");
+      toast.success(
+        variables.draft
+          ? "Draft saved — only you can see this grade"
+          : "Grade posted — the student and their guardian can see it now",
+      );
       setPendingScore((current) =>
         current && current.studentId === variables.studentId ? null : current,
       );
@@ -1377,7 +1393,14 @@ function StaffCollectPanel({
                             </span>
                           </span>
                         </Button>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1.5">
+                          {grade?.is_draft ? (
+                            <span
+                              className="size-1.5 shrink-0 rounded-full bg-warning"
+                              title="Draft grade — only you can see it until posted"
+                              aria-label="Draft grade"
+                            />
+                          ) : null}
                           <Input
                             key={shownScore}
                             className="h-10 w-20 text-center text-base font-semibold"
@@ -1457,6 +1480,51 @@ function StaffCollectPanel({
                               }}
                             />
                             <span className="text-sm text-muted-foreground">of {assignment.points_possible}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {activeGrade?.is_draft ? (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 border-warning/60 bg-warning/15 text-warning-foreground"
+                              >
+                                <span className="size-1.5 rounded-full bg-warning" aria-hidden />
+                                Draft — hidden from student
+                              </Badge>
+                            ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={score.isPending}
+                              onClick={() =>
+                                score.mutate({
+                                  studentId: activeStudent.id,
+                                  value:
+                                    (document.getElementById(
+                                      `detail-score-${activeStudent.id}`,
+                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
+                                  draft: true,
+                                })
+                              }
+                            >
+                              Save draft
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={score.isPending}
+                              onClick={() =>
+                                score.mutate({
+                                  studentId: activeStudent.id,
+                                  value:
+                                    (document.getElementById(
+                                      `detail-score-${activeStudent.id}`,
+                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
+                                })
+                              }
+                            >
+                              Post grade
+                            </Button>
                           </div>
                         </div>
                         {assignment.submission_mode === "collected" ? (

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, Printer, Search } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 
@@ -195,7 +196,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at, status",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -219,7 +220,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, assignment_id, student_id, points_earned, comment")
+        .select("id, assignment_id, student_id, points_earned, comment, is_draft")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data;
@@ -643,21 +644,37 @@ function ClassDetailPage() {
                                    <span className="text-muted-foreground">—</span>
                                  )}
                                </td>
-                               {pageAssignments.map(({ assignment }) => {
-                                 const grade = gradeFor(row.student_id, assignment.id);
-                                 const markCode = markCodeFromComment(grade?.comment);
-                                 return (
-                                    <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
-                                     {markCode ? (
-                                        <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
-                                     ) : grade?.points_earned == null ? (
-                                       <span className="text-muted-foreground">—</span>
-                                     ) : (
-                                       <span className="font-medium text-foreground">{Number(grade.points_earned).toLocaleString()}</span>
-                                     )}
-                                   </td>
-                                 );
-                               })}
+                                {pageAssignments.map(({ assignment }) => {
+                                  const grade = gradeFor(row.student_id, assignment.id);
+                                  const markCode = markCodeFromComment(grade?.comment);
+                                  const isDraft = Boolean(grade?.is_draft);
+                                  return (
+                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
+                                      <span className="inline-flex items-center justify-center gap-1.5">
+                                        {markCode ? (
+                                           <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
+                                        ) : grade?.points_earned == null ? (
+                                          <span className="text-muted-foreground">—</span>
+                                        ) : (
+                                          <span className="font-medium text-foreground">{Number(grade.points_earned).toLocaleString()}</span>
+                                        )}
+                                        {isStaff && isDraft ? (
+                                          <span
+                                            className="size-1.5 shrink-0 rounded-full bg-warning"
+                                            title="Draft grade — only you can see it until posted"
+                                            aria-label="Draft grade"
+                                          />
+                                        ) : null}
+                                        {isStaff && grade ? (
+                                          <GradeHistoryButton
+                                            assignmentId={assignment.id}
+                                            studentId={row.student_id}
+                                          />
+                                        ) : null}
+                                      </span>
+                                    </td>
+                                  );
+                                })}
                              </tr>
                            );
                          })}
@@ -685,9 +702,9 @@ function ClassDetailPage() {
                }}
                classId={classId}
                className={klass?.name ?? "Class"}
-               student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
-               assignments={assignments}
-               grades={grades}
+                student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
+                assignments={assignments}
+                grades={grades.filter((g) => !g.is_draft)}
                setup={setup}
                displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
              />
@@ -794,6 +811,79 @@ function ClassDetailPage() {
   );
 }
 
+/** Staff-only "History" popover: every posted score/feedback change for a cell. */
+function GradeHistoryButton({
+  assignmentId,
+  studentId,
+}: {
+  assignmentId: string;
+  studentId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data: changes = [] } = useQuery({
+    queryKey: ["grade-changes", assignmentId, studentId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("grade_changes")
+        .select(
+          "id, old_score, new_score, old_feedback, new_feedback, reason, changed_at",
+        )
+        .eq("assignment_id", assignmentId)
+        .eq("student_id", studentId)
+        .order("changed_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Score history"
+          title="Score history"
+        >
+          <History className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="center" className="w-80">
+        <p className="text-sm font-semibold">Score history</p>
+        {changes.length === 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            No posted changes recorded yet.
+          </p>
+        ) : (
+          <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+            {changes.map((change) => (
+              <li key={change.id} className="rounded-md border border-border/60 p-2 text-xs">
+                <p className="font-medium">
+                  {change.old_score == null ? "—" : String(change.old_score)} →{" "}
+                  {change.new_score == null ? "—" : String(change.new_score)}
+                </p>
+                {change.new_feedback && change.new_feedback !== change.old_feedback ? (
+                  <p className="mt-0.5 break-words text-muted-foreground">
+                    “{change.new_feedback}”
+                  </p>
+                ) : null}
+                {change.reason ? (
+                  <p className="mt-0.5 text-muted-foreground">Reason: {change.reason}</p>
+                ) : null}
+                <p className="mt-0.5 text-muted-foreground">
+                  {new Date(change.changed_at).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 type AssignmentRow = {
   id: string;
   title: string;
@@ -804,6 +894,7 @@ type AssignmentRow = {
   submission_mode: string;
   rubric_id: string | null;
   created_at?: string | null;
+  status?: string;
 };
 
 function AssignmentsTab({
@@ -904,7 +995,7 @@ function AssignmentsTab({
   }, [assignmentSearch, assignments, categoryFilter]);
 
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (status: "draft" | "published") => {
       if (form.title.trim().length < 2) throw new Error("Assignment title is required");
       const points = Number(form.points);
       if (Number.isNaN(points) || points <= 0 || points > 10000)
@@ -926,16 +1017,23 @@ function AssignmentsTab({
         targets.map((cid) => ({
           ...base,
           class_id: cid,
+          status,
           // A rubric belongs to one class, so only the original class keeps it.
           rubric_id: cid === classId ? form.rubricId || null : null,
         })),
       );
       if (error) throw error;
-      return targets.length;
+      return { count: targets.length, status };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ count, status }) => {
       toast.success(
-        count > 1 ? `Assignment added to ${count} classes` : "Assignment added",
+        status === "draft"
+          ? count > 1
+            ? `Draft saved to ${count} classes — students can't see it yet`
+            : "Draft saved — students can't see it yet"
+          : count > 1
+            ? `Assignment published to ${count} classes`
+            : "Assignment published",
       );
       setOpen(false);
       setForm(blank);
@@ -944,6 +1042,21 @@ function AssignmentsTab({
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
 
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const publishAssignment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("assignments")
+        .update({ status: "published" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assignment published — students can see it now");
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1076,11 +1189,20 @@ function AssignmentsTab({
                 </div>
               ) : null}
             </div>
-            <DialogFooter className="sm:justify-between">
+            <DialogFooter className="gap-2 sm:justify-between">
               <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
-              <Button onClick={() => create.mutate()} disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Add assignment"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => create.mutate("draft")}
+                  disabled={create.isPending}
+                >
+                  Save as draft
+                </Button>
+                <Button onClick={() => create.mutate("published")} disabled={create.isPending}>
+                  {create.isPending ? "Saving…" : "Publish"}
+                </Button>
+              </div>
             </DialogFooter>
 
           </DialogContent>
@@ -1190,6 +1312,14 @@ function AssignmentsTab({
                         <div className="flex flex-col gap-3 pl-2 xl:flex-row xl:items-start xl:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              {a.status === "draft" ? (
+                                <Badge
+                                  variant="outline"
+                                  className="border-warning/60 bg-warning/15 text-warning-foreground"
+                                >
+                                  Draft — hidden from students
+                                </Badge>
+                              ) : null}
                               <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
                                 {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
                               </Badge>
@@ -1223,6 +1353,15 @@ function AssignmentsTab({
                             ) : null}
                             {isStaff && (
                               <>
+                                {a.status === "draft" ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => publishAssignment.mutate(a.id)}
+                                    disabled={publishAssignment.isPending}
+                                  >
+                                    Publish
+                                  </Button>
+                                ) : null}
                                 <EditAssignment assignment={a} classId={classId} categories={categories} timeZone={timeZone} />
                                 <ShareResourceButton
                                   kind="assignment"

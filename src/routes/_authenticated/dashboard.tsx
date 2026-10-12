@@ -268,13 +268,8 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {/* Temporary: shortcut to the feedback-loop prototype */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-        <span>Try the new assignment &amp; feedback preview (sample data only).</span>
-        <Button asChild variant="outline" className="h-11">
-          <Link to="/feedback-loop-preview">Open preview</Link>
-        </Button>
-      </div>
+      {!isStaff && <MissingWorkCard />}
+
 
       <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "xl:grid-cols-5"}`}>
 
@@ -495,6 +490,95 @@ function DashboardPage() {
         </p>
       )}
     </AppShell>
+  );
+}
+
+/** Student/guardian summary: published work past its due date with nothing turned in. */
+function MissingWorkCard() {
+  const { user, primaryRole } = useAuth();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: me } = useQuery({
+    queryKey: ["missing-work-student", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const column = primaryRole === "parent" ? "guardian_user_id" : "user_id";
+      const { data, error } = await supabase
+        .from("students")
+        .select("id")
+        .eq(column, user!.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: missingCount = 0 } = useQuery({
+    queryKey: ["missing-work", me?.id, today],
+    enabled: !!me,
+    queryFn: async () => {
+      const { data: enrols, error: eErr } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", me!.id);
+      if (eErr) throw eErr;
+      const classIds = (enrols ?? []).map((e) => e.class_id);
+      if (classIds.length === 0) return 0;
+      // RLS limits this to published assignments automatically.
+      const { data: due, error: aErr } = await supabase
+        .from("assignments")
+        .select("id")
+        .in("class_id", classIds)
+        .not("due_date", "is", null)
+        .lt("due_date", today);
+      if (aErr) throw aErr;
+      const ids = (due ?? []).map((a) => a.id);
+      if (ids.length === 0) return 0;
+      const [{ data: subs, error: sErr }, { data: graded, error: gErr }] = await Promise.all([
+        supabase
+          .from("assignment_submissions")
+          .select("assignment_id, status")
+          .eq("student_id", me!.id)
+          .in("assignment_id", ids),
+        supabase
+          .from("grades")
+          .select("assignment_id, points_earned, comment")
+          .eq("student_id", me!.id)
+          .in("assignment_id", ids),
+      ]);
+      if (sErr) throw sErr;
+      if (gErr) throw gErr;
+      const done = new Set<string>();
+      for (const s of subs ?? []) {
+        if (["submitted", "collected", "returned"].includes(s.status)) done.add(s.assignment_id);
+      }
+      for (const g of graded ?? []) {
+        if (g.points_earned != null || markCodeFromComment(g.comment)) done.add(g.assignment_id);
+      }
+      return ids.filter((id) => !done.has(id)).length;
+    },
+  });
+
+  if (!me) return null;
+
+  return (
+    <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+      <span>
+        {missingCount > 0 ? (
+          <>
+            <span className="font-semibold text-destructive">{missingCount}</span>{" "}
+            {missingCount === 1 ? "assignment is" : "assignments are"} past due with nothing
+            turned in.
+          </>
+        ) : (
+          "No missing work — you're all caught up."
+        )}
+      </span>
+      <Button asChild variant="outline" className="h-11">
+        <Link to="/assignments">View my assignments</Link>
+      </Button>
+    </section>
   );
 }
 

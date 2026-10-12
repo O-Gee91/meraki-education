@@ -67,6 +67,13 @@ const NAV: NavItem[] = [
     icon: HeartPulse,
     roles: ["admin", "teacher", "student", "parent"],
   },
+  {
+    to: "/assignments",
+    label: "Assignments",
+    studentLabel: "My assignments",
+    icon: ClipboardCheck,
+    roles: ["student", "parent"],
+  },
   { to: "/students", label: "Students", icon: Users, roles: ["admin", "teacher"] },
 
   {
