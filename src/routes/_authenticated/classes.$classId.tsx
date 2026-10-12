@@ -955,6 +955,21 @@ function AssignmentsTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const publishAssignment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("assignments")
+        .update({ status: "published" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Assignment published — students can see it now");
+      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const removeAssignment = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("assignments").delete().eq("id", id);
