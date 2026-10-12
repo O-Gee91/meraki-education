@@ -1393,7 +1393,14 @@ function StaffCollectPanel({
                             </span>
                           </span>
                         </Button>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1.5">
+                          {grade?.is_draft ? (
+                            <span
+                              className="size-1.5 shrink-0 rounded-full bg-warning"
+                              title="Draft grade — only you can see it until posted"
+                              aria-label="Draft grade"
+                            />
+                          ) : null}
                           <Input
                             key={shownScore}
                             className="h-10 w-20 text-center text-base font-semibold"
