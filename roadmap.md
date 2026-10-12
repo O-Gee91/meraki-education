@@ -5,7 +5,7 @@
 - [x] Fix and show /auth.
 - [x] Receive /auth review before changing landing page.
 - [x] Fix and show landing page after /auth review.
-- [ ] Receive landing page review before changing dashboard.
+- [x] Receive landing page review before changing dashboard.
 - [ ] Fix and show dashboard after landing review.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
