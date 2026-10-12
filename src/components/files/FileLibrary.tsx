@@ -78,10 +78,12 @@ export function FileLibrary({
   classId,
   studentId,
   emptyLabel = "No files shared yet.",
+  desktopReview = false,
 }: {
   classId?: string;
   studentId?: string;
   emptyLabel?: string;
+  desktopReview?: boolean;
 }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
@@ -256,15 +258,17 @@ export function FileLibrary({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="panel p-4">
-        <Label htmlFor="file-input" className="text-sm font-medium">
-          Share files
-        </Label>
+    <div className={desktopReview ? "min-w-0 space-y-6" : "space-y-4"}>
+      <div className={desktopReview ? "min-w-0 border-b border-border pb-6" : "panel p-4"}>
+        {desktopReview ? (
+          <h2 className="text-base font-semibold">Share files</h2>
+        ) : (
+          <Label htmlFor="file-input" className="text-sm font-medium">Share files</Label>
+        )}
         <p className="mt-1 text-xs text-muted-foreground">
           Excel, CSV, PDF, Word, PowerPoint, images, audio and video up to 50 MB each.
         </p>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div className={desktopReview ? "mt-4 grid items-end gap-4 sm:grid-cols-[minmax(0,18rem)_auto] sm:justify-start" : "mt-3 flex flex-wrap items-end gap-3"}>
           <Input
             id="file-input"
             ref={inputRef}
@@ -273,13 +277,19 @@ export function FileLibrary({
             accept={ACCEPT}
             disabled={busy}
             onChange={(e) => e.target.files && uploadFiles(e.target.files)}
-            className="max-w-sm"
+            aria-label="Choose files to upload"
+            className={desktopReview ? "hidden" : "max-w-sm"}
           />
+          {desktopReview && !isStaff && (
+            <Button disabled={busy} onClick={() => inputRef.current?.click()}>
+              <Upload aria-hidden="true" /> {busy ? "Uploading…" : "Upload files"}
+            </Button>
+          )}
           {isStaff && (
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Visible to</Label>
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={desktopReview ? "review-file-audience" : undefined} className="text-xs text-muted-foreground">Visible to</Label>
               <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
-                <SelectTrigger className="w-56">
+                <SelectTrigger id={desktopReview ? "review-file-audience" : undefined} className={desktopReview ? "w-full" : "w-56"}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -292,9 +302,15 @@ export function FileLibrary({
               </Select>
             </div>
           )}
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Upload className="size-3.5" /> {busy ? "Uploading…" : "Choose files to upload"}
-          </span>
+          {desktopReview ? (
+            isStaff && <Button disabled={busy} onClick={() => inputRef.current?.click()}>
+              <Upload aria-hidden="true" /> {busy ? "Uploading…" : "Upload files"}
+            </Button>
+          ) : (
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Upload className="size-3.5" /> {busy ? "Uploading…" : "Choose files to upload"}
+            </span>
+          )}
         </div>
 
         {isStaff && classId && myClasses.length > 0 && (
@@ -329,25 +345,39 @@ export function FileLibrary({
       </div>
 
       {shown.length === 0 ? (
-        <p className="panel p-6 text-sm text-muted-foreground">{emptyLabel}</p>
+        <p className={desktopReview ? "py-6 text-sm text-muted-foreground" : "panel p-6 text-sm text-muted-foreground"}>{emptyLabel}</p>
       ) : (
-        <ul className="panel divide-y divide-border">
+        <ul aria-label="Shared files" className={desktopReview ? "min-w-0 divide-y divide-border" : "panel divide-y divide-border"}>
           {shown.map((f) => {
             const sharedWith = grouped
               .get(f.storage_path)!
               .map((r) => classNameFor(r.class_id))
               .filter(Boolean) as string[];
             return (
-              <li key={f.storage_path} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <li key={f.storage_path} className={desktopReview ? "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-3 py-4 xl:grid-cols-[1rem_minmax(0,1fr)_auto]" : "flex flex-wrap items-center gap-3 px-4 py-3"}>
                 <FileText className="size-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{f.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={desktopReview ? "text-sm font-medium [overflow-wrap:anywhere]" : "truncate text-sm font-medium"}>{f.title}</p>
+                  <p className={desktopReview ? "mt-1 max-w-prose text-xs text-muted-foreground [overflow-wrap:anywhere]" : "text-xs text-muted-foreground"}>
                     {humanSize(Number(f.size_bytes))} · {nameFor(f.uploaded_by)} ·{" "}
                     {formatDate(f.created_at)}
                     {sharedWith.length > 1 ? ` · Also in: ${sharedWith.filter((n) => n !== classNameFor(f.class_id)).join(", ") || sharedWith.join(", ")}` : ""}
                   </p>
                 </div>
+                {desktopReview && <div className="col-start-2 flex flex-wrap items-center gap-2 xl:col-start-3 xl:row-start-1">
+                  {f.audience !== "everyone" && <Badge variant="secondary" className="max-w-full whitespace-normal">{audienceLabel(f.audience)}</Badge>}
+                  <Button variant="ghost" size="sm" aria-label={`Open ${f.title}`} title={`Open ${f.title}`} onClick={() => open(f.storage_path)}>
+                    <Download aria-hidden="true" /> Open
+                  </Button>
+                  {(isStaff || f.uploaded_by === user?.id) && <ConfirmDeleteButton
+                    label="Delete"
+                    title={`Delete “${f.title}”?`}
+                    description="The file is permanently removed from every class it was shared with. This cannot be undone."
+                    disabled={remove.isPending}
+                    onConfirm={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
+                  />}
+                </div>}
+                {!desktopReview && <>
                 {f.audience !== "everyone" && (
                   <Badge variant="secondary">{audienceLabel(f.audience)}</Badge>
                 )}
@@ -363,6 +393,7 @@ export function FileLibrary({
                     onConfirm={() => remove.mutate({ id: f.id, storage_path: f.storage_path })}
                   />
                 )}
+                </>}
               </li>
             );
           })}
