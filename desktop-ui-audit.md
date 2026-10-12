@@ -70,5 +70,6 @@ Auth and landing approved. Dashboard updated and shown; wait for Joe's dashboard
 - Real signed-in student account: two classes, 56.4% overall grade, attendance, feedback and recent scores render; grade calculations unchanged.
 - No desktop horizontal overflow at 1024/1440/1920px; due-date heading moved from y=719/655/655 to y=366/222/222.
 - Updated dashboard screenshot inspected at 1280×1800.
+- Calendar collapse/expand and class navigation passed in the signed-in dashboard; preview build reports OK.
 - Staff layout changes reviewed in source only: the available requesting-user account is student-only. No other account was selected without permission.
 - Safari/macOS-specific rendering remains unverified. No remaining page has been started.

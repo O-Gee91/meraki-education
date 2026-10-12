@@ -6,7 +6,8 @@
 - [x] Receive /auth review before changing landing page.
 - [x] Fix and show landing page after /auth review.
 - [x] Receive landing page review before changing dashboard.
-- [ ] Fix and show dashboard after landing review.
+- [x] Fix and show dashboard after landing review.
+- [ ] Receive dashboard review before changing remaining pages.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
