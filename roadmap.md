@@ -18,7 +18,7 @@
 - [x] Receive Behavior review before proceeding to Well-being.
 - [x] Fix and show Well-being: wrap long text, bound reading width, clarify mood choices and response hierarchy.
 - [x] Receive Well-being review before proceeding to Messages.
-- [ ] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
+- [x] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
 - [ ] Receive Messages review before proceeding to Community.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

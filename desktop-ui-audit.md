@@ -17,8 +17,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /students | Wide directory separates names from row actions; multiple management tools can overwhelm the directory. | Bounded four-detail-column directory and collapsed secondary tools. | Fixed and approved; staff-only controls unverified |
 | Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and approved; populated staff report cards and print controls unverified |
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and approved |
-| Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and shown; awaiting review |
-| Medium | /messages | Wide message text and separated metadata slow scanning. | Bound inbox/detail reading widths and distinguish the main compose action. | Awaiting review |
+| Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and approved |
+| Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and shown; awaiting review |
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width and clarify section hierarchy. | Awaiting review |
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Awaiting review |
 | Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports and Behavior approved. Well-being updated and shown; wait for Joe's review before changing Messages.
+Auth, landing, dashboard, class page, Students, Reports, Behavior and Well-being approved. Messages updated and shown; wait for Joe's review before changing Community.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -150,3 +150,18 @@ Auth, landing, dashboard, class page, Students, Reports and Behavior approved. W
 - Inspected populated Admin/Teacher and filtered-date screenshots plus the saved-response element. No runtime errors; latest preview build OK.
 - Student/guardian presentation is source-reviewed only; Safari/macOS rendering and save/write paths remain unverified in this presentation-only audit.
 - No data-access, mood calculations, response ownership or grade-scope rules changed. Messages has not been started.
+
+## Messages ranked issues and fixes
+1. High — At 1024px the composition section shrank to 224px, leaving cramped inputs inside a padded panel. Stack the form above the history at narrower desktop widths and use a stable 20rem form track on wide desktop; remove panel padding so fields use the available width.
+2. High — On wide displays the page stretched to 1664px and message lines grew excessively long. Opt into the reviewed max-w-6xl shell, cap body reading lengths with max-w-prose and safely wrap long subjects, names and body text without truncation.
+3. Medium — Subject, recipient badge and date competed on a wrapping header row. Subjects now lead; sender/recipient and date occupy a consistent secondary row. Announcement audience/date sit beneath the title, with editing controls separate.
+4. Low — Floating form/feed panels, boxed tabs, repeated name badges and duplicate desktop role controls added clutter. Use quiet section dividers and a wrapping tab bar, plain-text message metadata and a named pencil edit control. Send message and Post remain the sole primary actions on their respective tabs; inline announcement save is secondary.
+
+### Messages verification
+- Real signed-in staff account at /messages: 27 saved messages load. Announcements are currently empty; the existing empty state remains visible.
+- Both tabs have no horizontal page overflow at 1024/1440/1920px in Admin and Teacher modes. Main width caps at 1152px; wide-desktop form is 320px, narrower-desktop form uses the full 720px available width.
+- Recipient menu loads 719 accessible options; selecting a recipient and entering an unsent subject/body works. Switching tabs preserves the message draft. Announcement title/details accept drafts and all four existing audience options appear.
+- No message or announcement sent, changed or deleted. Temporary drafts were cleared; reload returns the original 27 saved messages.
+- DOM-only long-subject/body stress checks pass at all three desktop widths; no test text was saved. Inspected final inbox, compose draft and announcement draft screenshots at 1280×1800; no browser runtime errors; preview build OK.
+- Student/guardian presentation and populated announcement edit/delete controls are source-reviewed only. Sending, posting, saving, deleting and email delivery were intentionally not exercised in this presentation-only audit. Safari/macOS rendering remains unverified.
+- No data-access, recipient/audience rules, notification behavior or records changed. Community has not been started.
