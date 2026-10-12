@@ -67,37 +67,48 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2">
-          <GraduationCap className="size-6 text-primary" />
-          <span className="font-display text-lg font-semibold">Meraki Education</span>
-        </Link>
-
+    <div className="min-h-dvh bg-background">
+      <header className="border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-5">
+          <Link to="/" className="inline-flex min-w-0 items-center gap-2 text-foreground">
+            <GraduationCap aria-hidden="true" className="size-6 shrink-0 text-primary" />
+            <span className="font-display text-lg font-semibold">Meraki Education</span>
+          </Link>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-xl px-6 py-10 sm:py-12">
         {done ? (
-          <div className="panel p-6 text-center">
-            <h1 className="text-xl font-semibold">Password updated</h1>
-            <p className="mt-3 text-sm text-muted-foreground">
+          <section
+            aria-labelledby="reset-done"
+            className="min-w-0 space-y-6 [overflow-wrap:anywhere]"
+          >
+            <h1 id="reset-done" className="text-2xl font-semibold">
+              Password updated
+            </h1>
+            <p className="text-sm text-muted-foreground">
               Your password has been changed. You can now sign in with it.
             </p>
-            <Button asChild className="mt-6">
+            <Button asChild className="h-11 w-full">
               <Link to="/auth">Go to sign in</Link>
             </Button>
-          </div>
+          </section>
         ) : ready ? (
-          <form onSubmit={submit} className="panel space-y-4 p-6">
-            <h1 className="text-xl font-semibold">Choose a new password</h1>
+          <form onSubmit={submit} className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
+            <h1 className="text-2xl font-semibold">Choose a new password</h1>
+            <p className="text-sm text-muted-foreground">
+              Pick a new password for your account. It must be at least 8 characters long.
+            </p>
             <div className="space-y-2">
               <Label htmlFor="new-password">New password</Label>
               <Input
                 id="new-password"
                 type="password"
                 autoComplete="new-password"
+                className="h-11 bg-card"
                 value={password}
                 maxLength={72}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm new password</Label>
@@ -105,28 +116,34 @@ function ResetPasswordPage() {
                 id="confirm-password"
                 type="password"
                 autoComplete="new-password"
+                className="h-11 bg-card"
                 value={confirm}
                 maxLength={72}
                 onChange={(e) => setConfirm(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="h-11 w-full" disabled={busy}>
               {busy ? "Saving…" : "Save new password"}
             </Button>
           </form>
         ) : (
-          <div className="panel p-6 text-center">
-            <h1 className="text-xl font-semibold">Reset link needed</h1>
-            <p className="mt-3 text-sm text-muted-foreground">
+          <section
+            aria-labelledby="reset-needed"
+            className="min-w-0 space-y-6 [overflow-wrap:anywhere]"
+          >
+            <h1 id="reset-needed" className="text-2xl font-semibold">
+              Reset link needed
+            </h1>
+            <p className="text-sm text-muted-foreground">
               This page only works from a password reset link. Request a new one if yours has
               expired.
             </p>
-            <Button asChild className="mt-6" variant="outline">
+            <Button asChild className="h-11 w-full">
               <Link to="/forgot-password">Request a reset link</Link>
             </Button>
-          </div>
+          </section>
         )}
-      </div>
+      </main>
     </div>
   );
 }
