@@ -1474,6 +1474,51 @@ function StaffCollectPanel({
                             />
                             <span className="text-sm text-muted-foreground">of {assignment.points_possible}</span>
                           </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {activeGrade?.is_draft ? (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 border-warning/60 bg-warning/15 text-warning-foreground"
+                              >
+                                <span className="size-1.5 rounded-full bg-warning" aria-hidden />
+                                Draft — hidden from student
+                              </Badge>
+                            ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={score.isPending}
+                              onClick={() =>
+                                score.mutate({
+                                  studentId: activeStudent.id,
+                                  value:
+                                    (document.getElementById(
+                                      `detail-score-${activeStudent.id}`,
+                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
+                                  draft: true,
+                                })
+                              }
+                            >
+                              Save draft
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={score.isPending}
+                              onClick={() =>
+                                score.mutate({
+                                  studentId: activeStudent.id,
+                                  value:
+                                    (document.getElementById(
+                                      `detail-score-${activeStudent.id}`,
+                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
+                                })
+                              }
+                            >
+                              Post grade
+                            </Button>
+                          </div>
                         </div>
                         {assignment.submission_mode === "collected" ? (
                           <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
