@@ -528,7 +528,7 @@ function StaffCollectPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, student_id, points_earned, comment")
+        .select("id, student_id, points_earned, comment, is_draft")
         .eq("assignment_id", assignment.id);
       if (error) throw error;
       return data;
@@ -610,7 +610,12 @@ function StaffCollectPanel({
   });
 
   const score = useMutation({
-    mutationFn: async (input: { studentId: string; value: string; note?: string }) => {
+    mutationFn: async (input: {
+      studentId: string;
+      value: string;
+      note?: string;
+      draft?: boolean;
+    }) => {
       const raw = input.value.trim();
       const mark = findMark(raw ? raw.toUpperCase() : null, marks);
       const points = mark || raw === "" ? null : Number(raw);
