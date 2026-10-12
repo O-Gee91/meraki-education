@@ -7,7 +7,9 @@
 - [x] Fix and show landing page after /auth review.
 - [x] Receive landing page review before changing dashboard.
 - [x] Fix and show dashboard after landing review.
-- [ ] Receive dashboard review before changing remaining pages.
+- [x] Receive dashboard review before changing remaining pages.
+- [ ] Fix and show the class page (highest-impact remaining page).
+- [ ] Receive class-page review before proceeding.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
 - [x] Add a shared locale-aware student name sorter with deterministic tie-breaking.
