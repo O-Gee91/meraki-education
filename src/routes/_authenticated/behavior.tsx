@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Pencil, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
@@ -47,16 +48,12 @@ export const Route = createFileRoute("/_authenticated/behavior")({
         content:
           "Three-strike behavior tracking that notifies students, guardians and admins when detention is required.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: BehaviorPage,
 });
-
-function kindTone(kind: string) {
-  if (kind === "positive") return "default";
-  if (kind === "strike") return "destructive";
-  return "secondary";
-}
 
 
 function BehaviorPage() {
@@ -65,6 +62,7 @@ function BehaviorPage() {
 
   return (
     <AppShell
+      desktopReview
       title={isStudent ? "My behavior" : "Behavior & strikes"}
       description={
         isStudent
@@ -73,7 +71,7 @@ function BehaviorPage() {
       }
     >
       <Tabs defaultValue="log">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
           <TabsTrigger value="log">{isStudent ? "My log" : "Behavior log"}</TabsTrigger>
           <TabsTrigger value="strikes">{isStudent ? "My strikes" : "Strike tracker"}</TabsTrigger>
           <TabsTrigger value="detentions">{isStudent ? "My detentions" : "Detentions"}</TabsTrigger>
@@ -246,11 +244,11 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
 
 
   return (
-    <div className="mt-4 grid gap-6 lg:grid-cols-3">
+    <div className={`mt-6 grid min-w-0 gap-8 ${isStaff ? "xl:grid-cols-[20rem_minmax(0,1fr)]" : ""}`}>
       {isStaff && (
-        <section className="panel h-fit p-5">
+        <section className="min-w-0 self-start border-b border-border pb-6 xl:border-b-0 xl:border-r xl:pr-6">
           <h2 className="text-lg font-semibold">Log a note</h2>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="student">Student</Label>
               <Select
@@ -388,13 +386,11 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
         </section>
       )}
 
-      <section
-        className={`panel divide-y divide-border ${isStaff ? "lg:col-span-2" : "lg:col-span-3"}`}
-      >
-        <div className="flex flex-wrap items-center gap-3 p-4">
-          <p className="text-sm font-semibold">Grade-wide behavior log</p>
+      <section className="min-w-0 divide-y divide-border">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+          <h2 className="text-lg font-semibold">{isStaff ? "Grade-wide behavior log" : "Behavior log"}</h2>
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="ml-auto w-40" aria-label="Filter by grade">
+            <SelectTrigger className="w-40" aria-label="Filter by grade">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -496,13 +492,13 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
 
   if (editing) {
     return (
-      <article className="space-y-3 p-4">
-        <div className="flex flex-wrap gap-3">
+      <article className="space-y-4 py-5">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Select
             value={draft.kind}
             onValueChange={(kind) => setDraft({ ...draft, kind, reason: "" })}
           >
-            <SelectTrigger className="w-56">
+            <SelectTrigger aria-label="Edit note type" className="min-w-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -515,7 +511,7 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
           </Select>
           {draftReasons.length > 0 && (
             <Select value={draft.reason} onValueChange={(reason) => setDraft({ ...draft, reason })}>
-              <SelectTrigger className="w-64">
+              <SelectTrigger aria-label="Edit note reason" className="min-w-0">
                 <SelectValue placeholder="Choose a reason" />
               </SelectTrigger>
               <SelectContent>
@@ -529,19 +525,21 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
           )}
           <Input
             type="date"
-            className="w-40"
+            aria-label="Edit note date"
+            className="min-w-0"
             value={draft.date}
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
           />
         </div>
 
         <Textarea
+          aria-label="Edit note text"
           value={draft.notes}
           maxLength={1000}
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button size="sm" variant="secondary" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
@@ -553,34 +551,40 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
   }
 
   return (
-    <article className="p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={kindTone(note.kind)}>{noteHeadline(note)}</Badge>
-        <span className="text-sm font-medium">
-          {note.students?.last_name}, {note.students?.first_name}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {formatDate(note.date)}
-          {note.students?.grade_level ? ` · Grade ${note.students.grade_level}` : ""}
-        </span>
+    <article className="py-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="break-words text-sm font-semibold">
+            {note.students?.last_name}, {note.students?.first_name}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {formatDate(note.date)}
+            {note.students?.grade_level ? ` · Grade ${note.students.grade_level}` : ""}
+          </p>
+        </div>
         {isStaff && (
-          <div className="ml-auto flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-              Edit
+          <div className="flex shrink-0 gap-1">
+            <Button size="icon" variant="ghost" aria-label="Edit note" title="Edit note" onClick={() => setEditing(true)}>
+              <Pencil className="size-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
-              className="text-destructive"
+              className="text-muted-foreground hover:text-destructive"
+              aria-label="Delete note"
+              title="Delete note"
               disabled={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              Delete
+              <Trash2 className="size-4" />
             </Button>
           </div>
         )}
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">{note.notes}</p>
+      <Badge variant="outline" className={`mt-2 max-w-full whitespace-normal break-words border-transparent shadow-none ${note.kind === "strike" ? "bg-destructive/10 text-destructive" : note.kind === "positive" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"}`}>
+        {noteHeadline(note)}
+      </Badge>
+      <p className="mt-2 max-w-prose whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{note.notes}</p>
     </article>
   );
 }
@@ -598,27 +602,34 @@ type StrikeRow = {
 function StrikeRowItem({ row }: { row: StrikeRow }) {
   const inCycle = row.strikes % 3 === 0 ? 3 : row.strikes % 3;
   return (
-    <li className="flex flex-wrap items-center gap-3 py-3">
-      <span className="text-sm font-medium">{row.name}</span>
-      <span className="flex gap-1">
+    <li className="grid min-w-0 gap-3 py-4 md:grid-cols-[minmax(0,1fr)_11rem]">
+      <div className="min-w-0">
+        <p className="break-words text-sm font-semibold">{row.name}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {row.strikes} total · last {formatDate(row.last)}
+        </p>
+        {row.reasons.length ? <p className="mt-1 max-w-prose break-words text-sm text-muted-foreground">{row.reasons.join(", ")}</p> : null}
+      </div>
+      <div className="space-y-2 md:justify-self-end">
+      <span className="flex items-center gap-2">
+        <span className="flex gap-1" aria-hidden="true">
         {[1, 2, 3].map((i) => (
           <span
             key={i}
             className={
-              "h-2.5 w-6 rounded-full " + (i <= inCycle ? "bg-destructive" : "bg-secondary")
+              "h-2 w-5 rounded-sm " + (i <= inCycle ? "bg-destructive/70" : "bg-secondary")
             }
           />
         ))}
-      </span>
-      <span className="text-xs text-muted-foreground">
-        {inCycle}/3 in current cycle · {row.strikes} total · last {formatDate(row.last)}
-        {row.reasons.length ? ` · ${row.reasons.join(", ")}` : ""}
+        </span>
+        <span className="text-xs text-muted-foreground">{inCycle}/3 in cycle</span>
       </span>
       {inCycle === 3 ? (
-        <Badge variant="destructive" className="ml-auto">
+        <Badge variant="outline" className="border-transparent bg-destructive/10 text-destructive">
           Detention required
         </Badge>
       ) : null}
+      </div>
     </li>
   );
 }
@@ -680,16 +691,16 @@ function StrikeTracker() {
   }, [grades, visibleRows]);
 
   return (
-    <div className="panel mt-4 p-5">
-      <div className="flex flex-wrap items-start gap-3">
+    <div className="mt-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h2 className="text-sm font-semibold">Three-strike tracker</h2>
+          <h2 className="text-lg font-semibold">Three-strike tracker</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Strikes reset in cycles of three — reaching the third strike schedules detention.
           </p>
         </div>
         <Select value={gradeFilter} onValueChange={setGradeFilter}>
-          <SelectTrigger className="ml-auto w-40" aria-label="Filter strikes by grade">
+          <SelectTrigger className="w-40" aria-label="Filter strikes by grade">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -714,7 +725,7 @@ function StrikeTracker() {
           {groups.map((group) => (
             <section key={group.key}>
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="text-sm font-semibold">
                   {group.label}
                 </h3>
                 <Badge variant="secondary">{group.items.length}</Badge>
@@ -786,7 +797,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
 
   if (detentions.length === 0) {
     return (
-      <p className="panel mt-4 p-6 text-sm text-muted-foreground">
+      <p className="mt-6 border-t border-border py-6 text-sm text-muted-foreground">
         No detentions scheduled. They are created automatically when a student reaches three
         strikes.
       </p>
@@ -794,34 +805,43 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
   }
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-6 divide-y divide-border border-t border-border">
       {detentions.map((d) => (
-        <article key={d.id} className="panel flex flex-wrap items-center gap-3 p-4">
-          <div className="min-w-52">
-            <p className="text-sm font-semibold">
+        <article key={d.id} className="grid min-w-0 gap-4 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="break-words text-sm font-semibold">
               {d.students?.last_name}, {d.students?.first_name}
             </p>
-            <p className="text-xs text-muted-foreground">{d.reason}</p>
+            <p className="mt-1 max-w-prose break-words text-sm text-muted-foreground">{d.reason}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Scheduled {formatDate(d.scheduled_date)}</p>
           </div>
-          <Badge variant="destructive">{d.strike_count} strikes</Badge>
-          <span className="text-xs text-muted-foreground">
-            Scheduled {formatDate(d.scheduled_date)}
-          </span>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-transparent bg-destructive/10 text-destructive">{d.strike_count} strikes</Badge>
+            {!isStaff ? <Badge variant="outline">{d.status}</Badge> : null}
+          </div>
+          </div>
           {isStaff ? (
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[10rem_9rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem]">
+              <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={`detention-date-${d.id}`}>Scheduled date</Label>
               <Input
+                id={`detention-date-${d.id}`}
                 type="date"
-                className="w-40"
+                className="min-w-0"
                 defaultValue={d.scheduled_date}
                 onChange={(e) =>
                   e.target.value && update.mutate({ id: d.id, patch: { scheduled_date: e.target.value } })
                 }
               />
+              </div>
+              <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={`detention-status-${d.id}`}>Status</Label>
               <Select
                 value={d.status}
                 onValueChange={(status) => update.mutate({ id: d.id, patch: { status } })}
               >
-                <SelectTrigger className="w-36">
+                <SelectTrigger id={`detention-status-${d.id}`} className="min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -832,8 +852,12 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+              </div>
+              <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={`detention-reason-${d.id}`}>Reason</Label>
               <Input
-                className="w-56"
+                id={`detention-reason-${d.id}`}
+                className="min-w-0"
                 placeholder="Reason"
                 defaultValue={d.reason ?? ""}
                 onBlur={(e) => {
@@ -842,8 +866,12 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                     update.mutate({ id: d.id, patch: { reason } });
                 }}
               />
+              </div>
+              <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={`detention-notes-${d.id}`}>Staff notes</Label>
               <Input
-                className="w-56"
+                id={`detention-notes-${d.id}`}
+                className="min-w-0"
                 placeholder="Staff notes"
                 defaultValue={d.notes ?? ""}
                 onBlur={(e) => {
@@ -851,22 +879,20 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                   if (notes !== (d.notes ?? "")) update.mutate({ id: d.id, patch: { notes } });
                 }}
               />
+              </div>
               <Button
-                size="sm"
+                size="icon"
                 variant="ghost"
-                className="text-destructive"
+                className="self-end text-muted-foreground hover:text-destructive"
+                aria-label="Delete detention"
+                title="Delete detention"
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(d.id)}
               >
-                Delete
+                <Trash2 className="size-4" />
               </Button>
             </div>
-          ) : (
-
-            <Badge variant="outline" className="ml-auto">
-              {d.status}
-            </Badge>
-          )}
+          ) : null}
         </article>
       ))}
     </div>
