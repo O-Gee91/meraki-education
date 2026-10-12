@@ -804,6 +804,7 @@ type AssignmentRow = {
   submission_mode: string;
   rubric_id: string | null;
   created_at?: string | null;
+  status?: string;
 };
 
 function AssignmentsTab({
@@ -904,7 +905,7 @@ function AssignmentsTab({
   }, [assignmentSearch, assignments, categoryFilter]);
 
   const create = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (status: "draft" | "published") => {
       if (form.title.trim().length < 2) throw new Error("Assignment title is required");
       const points = Number(form.points);
       if (Number.isNaN(points) || points <= 0 || points > 10000)
