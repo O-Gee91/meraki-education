@@ -702,9 +702,9 @@ function ClassDetailPage() {
                }}
                classId={classId}
                className={klass?.name ?? "Class"}
-               student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
-               assignments={assignments}
-               grades={grades}
+                student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
+                assignments={assignments}
+                grades={grades.filter((g) => !g.is_draft)}
                setup={setup}
                displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
              />
