@@ -26,7 +26,7 @@
 - [x] Receive People & roles review before proceeding to Classes.
 - [x] Fix and show Classes: bounded grid, clearer class identities and aligned secondary controls.
 - [x] Receive Classes review before proceeding to Files.
-- [ ] Fix and show Files: bounded library, aligned upload controls and readable file rows.
+- [x] Fix and show Files: bounded library, aligned upload controls and readable file rows.
 - [ ] Receive Files review before proceeding to Settings.
 - [ ] Fix remaining pages individually, showing each before continuing.
 

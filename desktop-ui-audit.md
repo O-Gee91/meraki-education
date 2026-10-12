@@ -21,8 +21,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and approved |
 | Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and approved |
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and approved |
-| Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Fixed and shown; awaiting review |
-| Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and multi-class upload controls; keep one primary upload action. | Awaiting review |
+| Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Fixed and approved |
+| Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and upload controls; keep one primary upload action. | Fixed and shown; awaiting review |
 | Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Awaiting review |
 | Low | /forgot-password | Existing bounded form and one main action; styling/position differ from updated auth. | Align with approved auth pattern; preserve reset behavior. | Awaiting review |
 | Low | /reset-password | Existing bounded form; success/expired states need consistency checks. | Align recovery form/states with approved auth pattern. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community and People & roles approved. Classes updated and shown; wait for Joe's review before changing Files.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community, People & roles and Classes approved. Files updated and shown; wait for Joe's review before changing Settings.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -208,3 +208,18 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - Inspected populated Admin/Teacher, create-dialog and edit-dialog screenshots at 1280×1800. No browser runtime errors; preview build OK.
 - Student/guardian presentation and empty enrollment state are source-reviewed only. Class creation, editing saves and post-creation roster import intentionally unexercised in this presentation-only audit. Safari/macOS and short-height dialog rendering remain unverified.
 - No queries, teacher scope, grade filters, permissions, validation or stored records changed. Files has not been started.
+
+## Files ranked issues and fixes
+1. Medium — The library stretched to 1664px on wide desktop, separating resource names from their actions. Opted into the reviewed 1152px shell, retaining a consistent name/action alignment and suppressing duplicate desktop role controls.
+2. Medium — Native file-picker controls, a sharing selector and repeated upload text lacked a clear primary action. Replaced the reviewed file-picker presentation with one Upload files button alongside the labeled visibility selector. It invokes the original multiple-file input and unchanged upload handler; selecting files still uploads immediately.
+3. Low — File names were truncated and metadata could create long unbroken lines. Full titles now wrap safely; uploader/date metadata is quieter and bounded. Actions move beneath identities at narrower desktop widths and occupy a stable separate track on wide desktop.
+4. Low — Floating upload/list panels and outlined Open controls added unnecessary noise. Replaced page sections with quiet dividers and made Open secondary; audience badges and the existing delete confirmation remain visible.
+
+### Files verification
+- Real signed-in staff session: one saved school-wide PDF with its uploader, date, size and Students only audience visible. Same row remains after reload.
+- Admin and Teacher modes have no horizontal overflow at 1024/1440/1920px; main width caps at 1152px. DOM-only long-title stress also passes all three widths without changing stored text.
+- All four visibility options load; changing an unsaved selection and restoring Everyone works. Upload files invokes the multiple-file chooser. No file was supplied, uploaded or deleted.
+- Existing delete confirmation opens and cancels. Open requests a valid signed resource link; actual resource retrieval returns 200 application/pdf. Chromium's PDF popup remained at a placeholder URL in this harness, so visible PDF-viewer rendering is unverified (no opening logic changed).
+- Inspected populated Admin, Teacher and delete-dialog screenshots at 1280×1800. No runtime errors; preview build OK.
+- School-wide presentation is opt-in through FileLibrary desktopReview; class file views, multi-class selection, file storage/snapshot behavior, permissions, queries and mutations are unchanged.
+- Student/guardian presentation, empty-state rendering, upload completion and delete confirmation are source-reviewed only. Safari/macOS rendering remains unverified. Settings has not been started.
