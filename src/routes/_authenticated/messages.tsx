@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Megaphone, Pencil, Send } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,6 +37,8 @@ export const Route = createFileRoute("/_authenticated/messages")({
         property: "og:description",
         content: "Direct messages between staff, students and guardians, plus school announcements.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MessagesPage,
@@ -179,6 +182,7 @@ function MessagesPage() {
 
   return (
     <AppShell
+      desktopReview
       title={isStaff ? "Communications" : "My messages"}
       description={
         isStaff
@@ -187,14 +191,14 @@ function MessagesPage() {
       }
     >
       <Tabs defaultValue="inbox">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
           <TabsTrigger value="inbox">{isStaff ? "Messages" : "My inbox"}</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox">
-          <div className="mt-4 grid gap-6 lg:grid-cols-3">
-            <section className="panel h-fit p-5">
+          <div className="mt-6 grid min-w-0 items-start gap-8 xl:grid-cols-[20rem_minmax(0,1fr)]">
+            <section className="min-w-0 border-t border-border pt-5">
               <h2 className="text-lg font-semibold">New message</h2>
               <div className="mt-4 space-y-3">
                 <div className="space-y-1.5">
@@ -203,12 +207,12 @@ function MessagesPage() {
                     value={compose.recipient}
                     onValueChange={(v) => setCompose({ ...compose, recipient: v })}
                   >
-                    <SelectTrigger id="recipient">
+                    <SelectTrigger id="recipient" className="min-w-0 [&>span]:min-w-0">
                       <SelectValue placeholder="Choose a person" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[calc(100vw-3rem)]">
                       {people.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
+                        <SelectItem key={p.id} value={p.id} className="[overflow-wrap:anywhere] [&>span:last-child]:min-w-0">
                           {p.full_name}
                         </SelectItem>
                       ))}
@@ -235,27 +239,29 @@ function MessagesPage() {
                   />
                 </div>
                 <Button className="w-full" onClick={() => send.mutate()} disabled={send.isPending}>
+                  <Send className="size-4" aria-hidden="true" />
                   {send.isPending ? "Sending…" : "Send message"}
                 </Button>
               </div>
             </section>
 
-            <section className="panel divide-y divide-border lg:col-span-2">
+            <section aria-label="Message history" className="min-w-0 divide-y divide-border border-t border-border">
+              <h2 className="py-5 text-lg font-semibold">{isStaff ? "Message history" : "My inbox"}</h2>
               {inbox.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">No messages yet.</p>
+                <p className="py-6 text-sm text-muted-foreground">No messages yet.</p>
               ) : (
                 inbox.map((m) => (
-                  <article key={m.id} className="p-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-sm font-semibold">{m.subject}</h3>
-                      <Badge variant="secondary">
+                  <article key={m.id} className="min-w-0 py-5 [overflow-wrap:anywhere]">
+                    <h3 className="text-base font-semibold">{m.subject}</h3>
+                    <div className="mt-1.5 grid min-w-0 gap-1 text-xs text-muted-foreground sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+                      <span>
                         {m.sender_id === user?.id ? `To ${nameFor(m.recipient_id)}` : `From ${nameFor(m.sender_id)}`}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
+                      </span>
+                      <span className="whitespace-nowrap">
                         {formatDate(m.created_at)}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                    <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">
                       {m.body}
                     </p>
                   </article>
@@ -266,9 +272,9 @@ function MessagesPage() {
         </TabsContent>
 
         <TabsContent value="announcements">
-          <div className="mt-4 grid gap-6 lg:grid-cols-3">
+          <div className={`mt-6 grid min-w-0 items-start gap-8 ${isStaff ? "xl:grid-cols-[20rem_minmax(0,1fr)]" : ""}`}>
             {isStaff && (
-              <section className="panel h-fit p-5">
+              <section className="min-w-0 border-t border-border pt-5">
                 <h2 className="text-lg font-semibold">Post announcement</h2>
                 <div className="mt-4 space-y-3">
                   <div className="space-y-1.5">
@@ -313,22 +319,26 @@ function MessagesPage() {
                     onClick={() => announce.mutate()}
                     disabled={announce.isPending}
                   >
+                    <Megaphone className="size-4" aria-hidden="true" />
                     {announce.isPending ? "Posting…" : "Post"}
                   </Button>
                 </div>
               </section>
             )}
             <section
-              className={`panel divide-y divide-border ${isStaff ? "lg:col-span-2" : "lg:col-span-3"}`}
+              aria-label="School announcements"
+              className="min-w-0 divide-y divide-border border-t border-border"
             >
+              <h2 className="py-5 text-lg font-semibold">School announcements</h2>
               {announcements.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">No announcements yet.</p>
+                <p className="py-6 text-sm text-muted-foreground">No announcements yet.</p>
               ) : (
                 announcements.map((a) => (
-                  <article key={a.id} className="p-4">
+                  <article key={a.id} className="min-w-0 py-5 [overflow-wrap:anywhere]">
                     {editingId === a.id ? (
                       <div className="space-y-3">
                         <Input
+                          aria-label="Announcement title"
                           value={editDraft.title}
                           maxLength={140}
                           onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
@@ -337,7 +347,7 @@ function MessagesPage() {
                           value={editDraft.audience}
                           onValueChange={(audience) => setEditDraft({ ...editDraft, audience })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Announcement audience">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -349,14 +359,16 @@ function MessagesPage() {
                           </SelectContent>
                         </Select>
                         <Textarea
+                          aria-label="Announcement details"
                           rows={4}
                           value={editDraft.body}
                           maxLength={4000}
                           onChange={(e) => setEditDraft({ ...editDraft, body: e.target.value })}
                         />
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
+                            variant="outline"
                             onClick={() => saveAnnouncement.mutate()}
                             disabled={saveAnnouncement.isPending}
                           >
@@ -369,22 +381,30 @@ function MessagesPage() {
                       </div>
                     ) : (
                       <>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold">{a.title}</h3>
-                          <Badge variant={a.audience === "everyone" ? "secondary" : "outline"}>
-                            {audienceLabel(a.audience)}
-                          </Badge>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="text-base font-semibold">{a.title}</h3>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <Badge variant="outline" className="max-w-full whitespace-normal font-normal text-muted-foreground">
+                                {audienceLabel(a.audience)}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{formatDate(a.created_at)}</span>
+                            </div>
+                          </div>
                           {isStaff && (
-                            <span className="ml-auto flex gap-1">
+                            <span className="flex shrink-0 gap-1">
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                aria-label="Edit announcement"
+                                title="Edit announcement"
+                                className="size-8"
                                 onClick={() => {
                                   setEditingId(a.id);
                                   setEditDraft({ title: a.title, body: a.body, audience: a.audience });
                                 }}
                               >
-                                Edit
+                                <Pencil className="size-4" aria-hidden="true" />
                               </Button>
                               <ConfirmDeleteButton
                                 title="Delete announcement?"
@@ -395,11 +415,8 @@ function MessagesPage() {
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+                        <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">
                           {a.body}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {formatDate(a.created_at)}
                         </p>
                       </>
                     )}
