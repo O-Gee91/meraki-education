@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { GraduationCap } from "lucide-react";
+import { ArrowLeft, GraduationCap, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { requestPasswordReset } from "@/lib/password-reset.functions";
 import { looksLikeEmail } from "@/lib/usernames";
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/forgot-password")({
         name: "description",
         content: "Request a password reset link for your Meraki Education account.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Forgot password — Meraki Education Platform" },
       {
         property: "og:description",
@@ -53,27 +55,31 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2">
-          <GraduationCap className="size-6 text-primary" />
-          <span className="font-display text-lg font-semibold">Meraki Education</span>
-        </Link>
+    <div className="min-h-dvh bg-background">
+      <header className="border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-5">
+          <Link to="/" className="inline-flex min-w-0 items-center gap-2 text-foreground">
+            <GraduationCap aria-hidden="true" className="size-6 shrink-0 text-primary" />
+            <span className="font-display text-lg font-semibold">Meraki Education</span>
+          </Link>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-xl px-6 py-10 sm:py-12">
 
         {sent ? (
-          <div className="panel p-6 text-center">
-            <h1 className="text-xl font-semibold">Check your email</h1>
+          <section aria-labelledby="recovery-status" className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
+            <h1 id="recovery-status" className="text-2xl font-semibold">Check your email</h1>
             <p className="mt-3 text-sm text-muted-foreground">
               If an account is registered with that address, we sent a link to choose a new
               password. The link works once and expires shortly.
             </p>
-            <Button asChild className="mt-6" variant="outline">
-              <Link to="/auth">Back to sign in</Link>
+            <Button asChild className="h-11 w-full">
+              <Link to="/auth"><ArrowLeft aria-hidden="true" /> Back to sign in</Link>
             </Button>
-          </div>
+          </section>
         ) : (
-          <form onSubmit={submit} className="panel space-y-4 p-6">
-            <h1 className="text-xl font-semibold">Forgot your password?</h1>
+          <form onSubmit={submit} className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
+            <h1 className="text-2xl font-semibold">Forgot your password?</h1>
             <p className="text-sm text-muted-foreground">
               Enter the email address registered on your account and we'll send you a link to
               choose a new password.
@@ -84,13 +90,15 @@ function ForgotPasswordPage() {
                 id="reset-email"
                 type="email"
                 autoComplete="email"
+                className="h-11 bg-card"
                 value={email}
                 maxLength={255}
                 placeholder="name@example.com"
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={run.isPending}>
+            <Button type="submit" className="h-11 w-full" disabled={run.isPending}>
+              <Mail aria-hidden="true" />
               {run.isPending ? "Sending…" : "Send reset link"}
             </Button>
             <p className="text-center text-sm">
@@ -100,7 +108,7 @@ function ForgotPasswordPage() {
             </p>
           </form>
         )}
-      </div>
+      </main>
     </div>
   );
 }

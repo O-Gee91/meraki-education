@@ -23,8 +23,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Fixed and approved |
 | Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Fixed and approved |
 | Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and upload controls; keep one primary upload action. | Fixed and approved |
-| Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Fixed and shown; awaiting review |
-| Low | /forgot-password | Existing bounded form and one main action; styling/position differ from updated auth. | Align with approved auth pattern; preserve reset behavior. | Awaiting review |
+| Low | /settings | Existing max-w-lg panels already constrain forms; still needs alignment with the common shell. | Verify spacing and primary save/password action, avoid unnecessary redesign. | Fixed and approved |
+| Low | /forgot-password | Existing bounded form and one main action; styling/position differ from updated auth. | Align with approved auth pattern; preserve reset behavior. | Fixed and shown; awaiting review |
 | Low | /reset-password | Existing bounded form; success/expired states need consistency checks. | Align recovery form/states with approved auth pattern. | Awaiting review |
 | Low | /.lovable/oauth/consent | Bounded approval dialog already has one primary and one secondary action; long app names may wrap poorly. | Verify long-name/error-state wrapping, preserve approval semantics. | Awaiting review |
 
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community, People & roles, Classes and Files approved. Settings updated and shown; wait for Joe's review before changing Forgot password.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, Messages, Community, People & roles, Classes, Files and Settings approved. Forgot password updated and shown; wait for Joe's review before changing Reset password.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -236,3 +236,15 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - All three labeled password fields accept unsaved masked drafts. Drafts were cleared before screenshots and reload; no password-update request was sent. Password update success/validation submission was intentionally not exercised in this presentation-only review.
 - Inspected populated Admin and Teacher screenshots at 1280×1800. No browser runtime errors; latest preview build OK.
 - Profile/password business rules, sign-in queries, auth logic and stored account settings unchanged. Student/guardian branch and empty history state are source-reviewed only. Safari/macOS rendering remains unverified. Forgot password has not been started.
+
+## Forgot password ranked issues and fixes
+1. Medium — Vertically centered recovery content moved down with viewport height and differed from approved sign-in positioning (form top y=781 at the required 1800px test height). Adopted the approved bounded brand header and top-aligned max-w-xl main, starting at y=69 with consistent 40/48px inner spacing.
+2. Low — The 448px outer box and padding reduced field width to 398px. The unframed recovery form now uses the approved 576px outer width with 528px usable field width, preserving readable line lengths.
+3. Low — Floating panels, smaller fields and inconsistent return-button styling differed from sign-in. Removed the decorative section box, matched 44px fields/actions, and kept one primary action per state: Send reset link or Back to sign in.
+
+### Forgot password verification
+- Public recovery form visually inspected at 1280×1800. No horizontal overflow at 1024/1440/1920px; main caps at 576px and begins at the same top position at each width.
+- Invalid email is blocked by existing browser validation; the form remains visible and no reset request is sent. A valid-format unsent draft is accepted and cleared.
+- Back to sign in reaches /auth; the brand link reaches the landing page. No runtime errors; preview build OK.
+- No reset request or email was sent. Request handling, neutral success/error enumeration protection, expiry behavior and email delivery are unchanged. Check-your-email state is source-reviewed only, not exercised through a real request; email delivery remains outside this presentation review.
+- Safari/macOS rendering remains unverified. Reset password has not been started.
