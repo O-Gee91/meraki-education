@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, Printer, Search } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 
