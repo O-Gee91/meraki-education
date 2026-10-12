@@ -1207,6 +1207,14 @@ function AssignmentsTab({
                         <div className="flex flex-col gap-3 pl-2 xl:flex-row xl:items-start xl:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              {a.status === "draft" ? (
+                                <Badge
+                                  variant="outline"
+                                  className="border-warning/60 bg-warning/15 text-warning-foreground"
+                                >
+                                  Draft — hidden from students
+                                </Badge>
+                              ) : null}
                               <Badge variant={isExtraCredit(a.category) ? "outline" : "secondary"}>
                                 {isExtraCredit(a.category) ? "★ Extra credit" : a.category}
                               </Badge>
