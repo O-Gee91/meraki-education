@@ -18,8 +18,8 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 | Medium | /reports | Wide report tables/standards descriptions hinder scanning; several report modes share space. | Cap width, prioritize coverage and selected mode, group secondary actions. | Fixed and approved; populated staff report cards and print controls unverified |
 | Medium | /behavior | Full-width note/log grids and strike sections become overly stretched; multiple tabs/actions compete. | Bound content, align filters and section headings; verify grade-filtered strike tracker. | Fixed and approved |
 | Medium | /wellbeing | Wide responses and strategy tips create long lines and uneven feed rhythm. | Bound reading width, standardize response spacing; preserve dates/responders. | Fixed and approved |
-| Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and shown; awaiting review |
-| Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width and clarify section hierarchy. | Awaiting review |
+| Medium | /messages | Wide message text and separated metadata slow scanning; composition fields shrink at narrower desktop widths. | Bound reading width, stack the form at narrower widths and align metadata beneath subjects. | Fixed and approved |
+| Medium | /community | News and group content can expand into long lines, with several competing regions. | Bound news reading width, collapse creation tools and bring selected conversations forward. | Fixed and shown; awaiting review |
 | Medium | /people | Role-management actions drift away from names on wide displays. | Bound list width, align role controls with identities. | Awaiting review |
 | Low | /classes | Cards scale reasonably; filters and New class can become disconnected on wide screens. | Bound grid and align toolbar. | Awaiting review |
 | Low | /files | Broad empty/list states; upload and sharing tools need hierarchy checks with populated data. | Bound library and multi-class upload controls; keep one primary upload action. | Awaiting review |
@@ -47,7 +47,7 @@ Impact means difficulty completing or scanning a task, not severity of a functio
 - No account was created and no password changed; successful authentication was not tested as part of this presentation change.
 
 ## Review gate
-Auth, landing, dashboard, class page, Students, Reports, Behavior and Well-being approved. Messages updated and shown; wait for Joe's review before changing Community.
+Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being and Messages approved. Community updated and shown; wait for Joe's review before changing People & roles.
 
 ## Landing checks completed
 - Kept the existing Meraki image, now full-width behind the brand heading rather than a floating image card.
@@ -165,3 +165,18 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior and Well-being
 - DOM-only long-subject/body stress checks pass at all three desktop widths; no test text was saved. Inspected final inbox, compose draft and announcement draft screenshots at 1280×1800; no browser runtime errors; preview build OK.
 - Student/guardian presentation and populated announcement edit/delete controls are source-reviewed only. Sending, posting, saving, deleting and email delivery were intentionally not exercised in this presentation-only audit. Safari/macOS rendering remains unverified.
 - No data-access, recipient/audience rules, notification behavior or records changed. Community has not been started.
+
+## Community ranked issues and fixes
+1. High — Unbounded content stretched to 1664px on wide displays, separating names from controls. Opt into the reviewed 1152px shell; use a stable 20rem news track on wide desktop and stack news beneath groups on narrower desktop. Wrap long names/text safely and bound reading lengths.
+2. High — The always-expanded creation form placed secondary administration above the directory; selected conversations appeared after the entire group list. Creation is now a default-collapsed disclosure that preserves drafts; the selected conversation appears ahead of the directory so it remains near the top.
+3. Medium — Kind/visibility badges competed with group names, descriptions were truncated, and Join/Leave positions varied. Names now lead as keyboard-accessible selected-state controls; readable type labels and a quieter Staff only badge sit beneath, full descriptions wrap and membership buttons use a stable column.
+4. Low — Floating section cards, duplicate desktop role controls and repeated conversation/reply boxes added noise. Use quiet dividers for page sections and opt-in Community feed presentation, with restrained posting controls and left-rule replies. Existing class-page feed appearance stays unchanged.
+
+### Community verification
+- Real signed-in staff account at /community: one saved group (Online PD), no school news and no posts in the selected group. The existing empty states remain visible.
+- No horizontal page overflow at 1024/1440/1920px in Admin and Teacher modes, with content capped at 1152px. Selecting the real group loads its conversation and updates the directory control's pressed state; selected view also has no overflow at those widths.
+- Creation disclosure starts collapsed, opens/closes and preserves unsaved name/description drafts. All four existing group types and both visibility options remain available; fields have associated labels.
+- Conversation text and optional link accept unsent drafts; temporary drafts were cleared. No group created, membership changed, post sent, pin toggled or record removed. Reload still shows the original single group.
+- DOM-only long-group-name stress checks passed at all desktop widths without changing stored text. Inspected default, selected-conversation and creation-draft screenshots at 1280×1800. No runtime errors; preview build OK.
+- Populated school news, posts/replies, student/guardian views and save/write paths are source-reviewed only; not verified against real populated data. Safari/macOS rendering remains unverified.
+- No data queries, membership permissions, audience rules or draft-storage logic changed. People & roles has not been started.

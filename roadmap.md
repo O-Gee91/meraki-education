@@ -20,7 +20,7 @@
 - [x] Receive Well-being review before proceeding to Messages.
 - [x] Fix and show Messages: bounded reading width, aligned metadata and calmer compose/feed sections.
 - [x] Receive Messages review before proceeding to Community.
-- [ ] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
+- [x] Fix and show Community: bounded group/news layout, clear group controls and quieter creation tools.
 - [ ] Receive Community review before proceeding to People & roles.
 - [ ] Fix remaining pages individually, showing each before continuing.
 
