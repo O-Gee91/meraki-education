@@ -643,21 +643,37 @@ function ClassDetailPage() {
                                    <span className="text-muted-foreground">—</span>
                                  )}
                                </td>
-                               {pageAssignments.map(({ assignment }) => {
-                                 const grade = gradeFor(row.student_id, assignment.id);
-                                 const markCode = markCodeFromComment(grade?.comment);
-                                 return (
-                                    <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
-                                     {markCode ? (
-                                        <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
-                                     ) : grade?.points_earned == null ? (
-                                       <span className="text-muted-foreground">—</span>
-                                     ) : (
-                                       <span className="font-medium text-foreground">{Number(grade.points_earned).toLocaleString()}</span>
-                                     )}
-                                   </td>
-                                 );
-                               })}
+                                {pageAssignments.map(({ assignment }) => {
+                                  const grade = gradeFor(row.student_id, assignment.id);
+                                  const markCode = markCodeFromComment(grade?.comment);
+                                  const isDraft = Boolean(grade?.is_draft);
+                                  return (
+                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
+                                      <span className="inline-flex items-center justify-center gap-1.5">
+                                        {markCode ? (
+                                           <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
+                                        ) : grade?.points_earned == null ? (
+                                          <span className="text-muted-foreground">—</span>
+                                        ) : (
+                                          <span className="font-medium text-foreground">{Number(grade.points_earned).toLocaleString()}</span>
+                                        )}
+                                        {isStaff && isDraft ? (
+                                          <span
+                                            className="size-1.5 shrink-0 rounded-full bg-warning"
+                                            title="Draft grade — only you can see it until posted"
+                                            aria-label="Draft grade"
+                                          />
+                                        ) : null}
+                                        {isStaff && grade ? (
+                                          <GradeHistoryButton
+                                            assignmentId={assignment.id}
+                                            studentId={row.student_id}
+                                          />
+                                        ) : null}
+                                      </span>
+                                    </td>
+                                  );
+                                })}
                              </tr>
                            );
                          })}
