@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Users2 } from "lucide-react";
+import { ChevronDown, LockKeyhole, Plus, Users2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ClassFeed } from "@/components/class/ClassFeed";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ export const Route = createFileRoute("/_authenticated/community")({
         content:
           "Collaborate in secure groups, follow the school news river and share resources with your class community.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CommunityPage,
@@ -137,16 +139,20 @@ function CommunityPage() {
 
   return (
     <AppShell
+      desktopReview
       title="Community"
       description="Groups, collaboration spaces and the school news river."
     >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid min-w-0 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-8 [overflow-wrap:anywhere]">
           {isStaff && (
-            <section className="panel p-5">
-              <h2 className="text-sm font-semibold">Create a group</h2>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+            <details className="group border-t border-border pt-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2"><Plus className="size-4" aria-hidden="true" />Create a group</span>
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+              </summary>
+              <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-1.5 sm:col-span-2">
                   <Label htmlFor="g-name">Name</Label>
                   <Input
                     id="g-name"
@@ -155,13 +161,13 @@ function CommunityPage() {
                     placeholder="Grade 7 Robotics Club"
                   />
                 </div>
-                <div>
-                  <Label>Type</Label>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="g-kind">Type</Label>
                   <Select
                     value={form.kind}
                     onValueChange={(kind) => setForm({ ...form, kind })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="g-kind" className="min-w-0 [&>span]:min-w-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -173,13 +179,13 @@ function CommunityPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Visible to</Label>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="g-visibility">Visible to</Label>
                   <Select
                     value={form.visibility}
                     onValueChange={(visibility) => setForm({ ...form, visibility })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="g-visibility" className="min-w-0 [&>span]:min-w-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -188,7 +194,7 @@ function CommunityPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="min-w-0 space-y-1.5 sm:col-span-2">
                   <Label htmlFor="g-desc">Description</Label>
                   <Textarea
                     id="g-desc"
@@ -204,37 +210,55 @@ function CommunityPage() {
                 onClick={() => createGroup.mutate()}
                 disabled={createGroup.isPending}
               >
+                <Plus className="size-4" aria-hidden="true" />
                 Create group
               </Button>
+            </details>
+          )}
+
+          {selected && (
+            <section className="min-w-0 border-t border-border pt-5" aria-label="Selected group conversation">
+              <h2 className="flex items-start gap-2 text-lg font-semibold">
+                <Users2 className="mt-1 size-5 shrink-0 text-muted-foreground" aria-hidden="true" /> {selected.name}
+              </h2>
+              <ClassFeed scope={{ groupId: selected.id }} desktopReview />
             </section>
           )}
 
-          <section className="panel p-5">
-            <h2 className="text-sm font-semibold">Groups</h2>
+          <section className="min-w-0 border-t border-border pt-5" aria-label="Community groups">
+            <h2 className="text-lg font-semibold">Groups</h2>
             {groups.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 No groups yet. Staff can open clubs, teams and professional learning spaces.
               </p>
             ) : (
-              <ul className="mt-3 divide-y divide-border">
+              <ul className="mt-4 min-w-0 divide-y divide-border">
                 {groups.map((g) => {
                   const joined = memberships.some(
                     (m) => m.group_id === g.id && m.user_id === user?.id,
                   );
                   return (
-                    <li key={g.id} className="flex flex-wrap items-center gap-3 py-3">
-                      <button
-                        className="min-w-0 flex-1 text-left"
+                    <li key={g.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-4 py-4">
+                      <div className="min-w-0">
+                      <Button
+                        variant="ghost"
+                        aria-pressed={activeGroup === g.id}
+                        className="h-auto max-w-full justify-start whitespace-normal px-0 py-0 text-left text-base font-semibold [overflow-wrap:anywhere]"
                         onClick={() => setActiveGroup(g.id)}
                       >
-                        <p className="text-sm font-medium hover:text-accent">{g.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {g.description || "No description"}
-                        </p>
-                      </button>
-                      <Badge variant="outline">{g.kind}</Badge>
-                      {g.visibility === "staff" ? <Badge>Staff only</Badge> : null}
+                        {g.name}
+                      </Button>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>{KINDS.find((kind) => kind.value === g.kind)?.label ?? g.kind}</span>
+                        {g.visibility === "staff" ? <Badge variant="outline" className="gap-1 font-normal text-muted-foreground"><LockKeyhole className="size-3" aria-hidden="true" />Staff only</Badge> : null}
+                        {activeGroup === g.id ? <span>Selected</span> : null}
+                      </div>
+                      <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground">
+                        {g.description || "No description"}
+                      </p>
+                      </div>
                       <Button
+                        className="w-16"
                         size="sm"
                         variant={joined ? "outline" : "secondary"}
                         onClick={() => toggleMembership.mutate(g.id)}
@@ -248,27 +272,19 @@ function CommunityPage() {
             )}
           </section>
 
-          {selected && (
-            <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Users2 className="size-5 text-accent" /> {selected.name}
-              </h2>
-              <ClassFeed scope={{ groupId: selected.id }} />
-            </section>
-          )}
         </div>
 
-        <section className="panel h-fit p-5">
-          <h2 className="text-sm font-semibold">School news river</h2>
-          <div className="mt-4 space-y-4">
+        <section className="min-w-0 border-t border-border pt-5 [overflow-wrap:anywhere]" aria-label="School news">
+          <h2 className="text-lg font-semibold">School news river</h2>
+          <div className="mt-4 divide-y divide-border">
             {news.length === 0 ? (
               <p className="text-sm text-muted-foreground">No school news yet.</p>
             ) : (
               news.map((n) => (
-                <article key={n.id}>
-                  <h3 className="text-sm font-semibold">{n.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
+                <article key={n.id} className="min-w-0 py-4 first:pt-0">
+                  <h3 className="text-base font-semibold">{n.title}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(n.created_at)}</p>
+                  <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">{n.body}</p>
                 </article>
               ))
             )}

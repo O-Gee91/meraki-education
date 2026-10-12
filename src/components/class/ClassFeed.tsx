@@ -17,7 +17,7 @@ function scopeKey(scope: Scope) {
   return "classId" in scope ? ["feed", "class", scope.classId] : ["feed", "group", scope.groupId];
 }
 
-export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: boolean }) {
+export function ClassFeed({ scope, canPost = true, desktopReview = false }: { scope: Scope; canPost?: boolean; desktopReview?: boolean }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
   const draftKey = `feed:${scopeKey(scope).join(":")}`;
@@ -109,10 +109,11 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
   });
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={desktopReview ? "mt-4 min-w-0 space-y-6 [overflow-wrap:anywhere]" : "mt-4 space-y-4"}>
       {canPost && (
-        <div className="panel p-4">
+        <div className={desktopReview ? "min-w-0 border-b border-border pb-5" : "panel p-4"}>
           <Textarea
+            aria-label="Group or class update"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Share an update, question or resource with the class…"
@@ -120,17 +121,19 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Input
+              aria-label="Optional post link"
               value={link}
               onChange={(e) => setLink(e.target.value)}
               placeholder="Optional link (document, video, site)"
-              className="max-w-sm"
+              className={desktopReview ? "min-w-0 flex-1 basis-48" : "max-w-sm"}
             />
             <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={dirty} />
             <Button
               size="sm"
               onClick={() => createPost.mutate()}
               disabled={createPost.isPending}
-              className="ml-auto"
+              className="ml-auto shrink-0"
+              variant={desktopReview ? "outline" : "default"}
             >
               <Send className="mr-2 size-4" /> Post
             </Button>
@@ -140,14 +143,14 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
       )}
 
       {posts.length === 0 ? (
-        <p className="panel p-6 text-sm text-muted-foreground">
+        <p className={desktopReview ? "py-3 text-sm text-muted-foreground" : "panel p-6 text-sm text-muted-foreground"}>
           No conversations yet. Start the first one.
         </p>
       ) : (
         posts.map((post) => (
-          <article key={post.id} className="panel p-4">
+          <article key={post.id} className={desktopReview ? "min-w-0 border-b border-border pb-6" : "panel p-4"}>
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className={desktopReview ? "min-w-0" : undefined}>
                 <p className="text-sm font-semibold">
                   {nameFor(post.author_id)}
                   {post.pinned ? (
@@ -158,7 +161,7 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
                 </p>
                 <p className="text-xs text-muted-foreground">{formatDate(post.created_at)}</p>
               </div>
-              <div className="flex gap-1">
+              <div className={desktopReview ? "flex shrink-0 flex-wrap justify-end gap-1" : "flex gap-1"}>
                 {isStaff && (
                   <Button
                     variant="ghost"
@@ -175,18 +178,18 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
                 )}
               </div>
             </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm">{post.body}</p>
+            <p className={desktopReview ? "mt-3 max-w-prose whitespace-pre-wrap text-sm leading-relaxed" : "mt-3 whitespace-pre-wrap text-sm"}>{post.body}</p>
             {post.link ? (
               <a
                 href={post.link}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-block text-sm text-accent hover:underline"
+                className={desktopReview ? "mt-2 inline-block max-w-full text-sm text-accent hover:underline" : "mt-2 inline-block text-sm text-accent hover:underline"}
               >
                 {post.link}
               </a>
             ) : null}
-            <Comments postId={post.id} nameFor={nameFor} />
+            <Comments postId={post.id} nameFor={nameFor} desktopReview={desktopReview} />
           </article>
         ))
       )}
@@ -197,9 +200,11 @@ export function ClassFeed({ scope, canPost = true }: { scope: Scope; canPost?: b
 function Comments({
   postId,
   nameFor,
+  desktopReview = false,
 }: {
   postId: string;
   nameFor: (id: string) => string;
+  desktopReview?: boolean;
 }) {
   const { user, isStaff } = useAuth();
   const queryClient = useQueryClient();
@@ -255,9 +260,9 @@ function Comments({
       </p>
       <div className="mt-2 space-y-2">
         {comments.map((c) => (
-          <div key={c.id} className="rounded-md bg-secondary/50 px-3 py-2 text-sm">
+          <div key={c.id} className={desktopReview ? "min-w-0 border-l border-border pl-3 py-2 text-sm" : "rounded-md bg-secondary/50 px-3 py-2 text-sm"}>
             <p className="text-xs font-semibold">{nameFor(c.author_id)}</p>
-            <p className="mt-1 whitespace-pre-wrap">{c.body}</p>
+            <p className={desktopReview ? "mt-1 max-w-prose whitespace-pre-wrap leading-relaxed" : "mt-1 whitespace-pre-wrap"}>{c.body}</p>
             {(isStaff || c.author_id === user?.id) && (
               <button
                 onClick={() => remove.mutate(c.id)}
@@ -271,6 +276,7 @@ function Comments({
       </div>
       <div className="mt-2 flex gap-2">
         <Input
+          aria-label="Write a reply"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Write a reply…"
