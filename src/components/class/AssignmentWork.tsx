@@ -1476,6 +1476,10 @@ function StaffCollectPanel({
                               }}
                               onBlur={(event) => {
                                 if (event.target.value === cellText(activeGrade)) return;
+                                // If focus moved to a grade action button, let its click
+                                // handler decide draft vs posted instead of auto-posting.
+                                const next = event.relatedTarget as HTMLElement | null;
+                                if (next?.closest("[data-grade-action]")) return;
                                 score.mutate({ studentId: activeStudent.id, value: event.target.value });
                               }}
                             />
@@ -1495,7 +1499,9 @@ function StaffCollectPanel({
                               type="button"
                               size="sm"
                               variant="outline"
+                              data-grade-action="draft"
                               disabled={score.isPending}
+                              onMouseDown={(event) => event.preventDefault()}
                               onClick={() =>
                                 score.mutate({
                                   studentId: activeStudent.id,
@@ -1512,7 +1518,9 @@ function StaffCollectPanel({
                             <Button
                               type="button"
                               size="sm"
+                              data-grade-action="post"
                               disabled={score.isPending}
+                              onMouseDown={(event) => event.preventDefault()}
                               onClick={() =>
                                 score.mutate({
                                   studentId: activeStudent.id,
