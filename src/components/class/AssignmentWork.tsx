@@ -690,6 +690,39 @@ function StaffCollectPanel({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Release every draft grade for this assignment in one step.
+  const draftCount = grades.filter((g) => g.is_draft).length;
+  const [confirmPostAll, setConfirmPostAll] = useState(false);
+  const postAll = useMutation({
+    mutationFn: async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("grades")
+        .update({
+          is_draft: false,
+          posted_at: new Date().toISOString(),
+          posted_by: authData.user?.id ?? null,
+        })
+        .eq("assignment_id", assignment.id)
+        .eq("is_draft", true)
+        .select("id");
+      if (error) throw error;
+      return data?.length ?? 0;
+    },
+    onSuccess: (count) => {
+      toast.success(
+        count === 1
+          ? "1 grade posted — the student and their guardian can see it now"
+          : `${count} grades posted — students and guardians can see them now`,
+      );
+      setConfirmPostAll(false);
+      queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const cellText = (g?: { points_earned: number | null; comment?: string | null }) => {
     const code = markCodeFromComment(g?.comment);
     if (code) return code;
@@ -1226,9 +1259,40 @@ function StaffCollectPanel({
                   <span>{activeIndex >= 0 ? `Student ${activeIndex + 1} of ${visibleRoster.length}` : "No student selected"}</span>
                 </div>
               </DialogHeader>
-              <DialogClose asChild>
-                <Button variant="outline" size="sm">Close</Button>
-              </DialogClose>
+              <div className="flex items-center gap-2">
+                {draftCount > 0 ? (
+                  <Button size="sm" onClick={() => setConfirmPostAll(true)} disabled={postAll.isPending}>
+                    Post {draftCount} draft {draftCount === 1 ? "grade" : "grades"}
+                  </Button>
+                ) : null}
+                <DialogClose asChild>
+                  <Button variant="outline" size="sm">Close</Button>
+                </DialogClose>
+              </div>
+              <AlertDialog open={confirmPostAll} onOpenChange={setConfirmPostAll}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Post {draftCount} {draftCount === 1 ? "grade" : "grades"} to students and guardians?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Students will immediately be able to view their scores and feedback. Scores, comments and marks stay as they are.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={postAll.isPending}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        postAll.mutate();
+                      }}
+                    >
+                      Post all
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </header>
 
