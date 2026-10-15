@@ -61,8 +61,8 @@ function buildCsp(frameAncestors: string): string {
   return [
     "default-src 'self'",
     // The theme pre-paint script is inline; the bundler also emits inline module
-    // preload shims, so inline scripts must stay allowed.
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    // preload shims, so inline scripts must stay allowed. eval() is not needed.
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
