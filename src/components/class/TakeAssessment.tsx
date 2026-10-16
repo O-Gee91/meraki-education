@@ -356,17 +356,21 @@ export function TakeAssessment({ assessmentId }: { assessmentId: string }) {
                       value={value.choice != null ? String(value.choice) : ""}
                       onValueChange={(v) => setResponse(q.id, { choice: Number(v) })}
                     >
-                      {q.options.map((opt, oi) => (
+                      {q.options.map((opt, di) => {
+                        const oi = q.optionIndices?.[di] ?? di;
+                        return (
                         <label key={oi} className="flex items-center gap-2 text-sm">
                           <RadioGroupItem value={String(oi)} id={`${q.id}-${oi}`} />
                           {opt}
                         </label>
-                      ))}
+                        );
+                      })}
                     </RadioGroup>
                   )}
                   {q.kind === "multi_select" && (
                     <div className="space-y-2">
-                      {q.options.map((opt, oi) => {
+                      {q.options.map((opt, di) => {
+                        const oi = q.optionIndices?.[di] ?? di;
                         const chosen = value.choices ?? [];
                         return (
                           <label key={oi} className="flex items-center gap-2 text-sm">

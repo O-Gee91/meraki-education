@@ -35,7 +35,7 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     const { data: assessment, error } = await context.supabase
       .from("assessments")
       .select(
-        "id, class_id, assignment_id, title, instructions, kind, time_limit_minutes, due_at, available_from, closes_at, published, grammar_check_enabled",
+        "id, class_id, assignment_id, title, instructions, kind, time_limit_minutes, due_at, available_from, closes_at, published, grammar_check_enabled, shuffle_choices",
       )
       .eq("id", data.assessmentId)
       .maybeSingle();
@@ -63,20 +63,31 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error: qErr } = await supabaseAdmin
       .from("assessment_questions")
-      .select("id, position, kind, prompt, options, points, rubric")
+      .select("id, position, kind, prompt, options, points, rubric, lock_order")
       .eq("assessment_id", assessment.id)
       .order("position", { ascending: true });
     if (qErr) throw qErr;
 
-    const questions: PaperQuestion[] = (rows ?? []).map((q) => ({
-      id: q.id,
-      position: q.position,
-      kind: q.kind as QuestionKind,
-      prompt: q.prompt,
-      options: Array.isArray(q.options) ? (q.options as string[]) : [],
-      points: Number(q.points),
-      rubric: isStaff === true ? q.rubric : null,
-    }));
+    const { seededOrder } = await import("@/lib/assessments");
+    const shuffle = assessment.shuffle_choices === true && isStaff !== true;
+    const questions: PaperQuestion[] = (rows ?? []).map((q) => {
+      const options = Array.isArray(q.options) ? (q.options as string[]) : [];
+      const canShuffle =
+        shuffle && !q.lock_order && (q.kind === "multiple_choice" || q.kind === "multi_select");
+      const order = canShuffle
+        ? seededOrder(options.length, `${assessment.id}:${context.userId}:${q.id}`)
+        : null;
+      return {
+        id: q.id,
+        position: q.position,
+        kind: q.kind as QuestionKind,
+        prompt: q.prompt,
+        options: order ? order.map((i) => options[i]!) : options,
+        ...(order ? { optionIndices: order } : {}),
+        points: Number(q.points),
+        rubric: isStaff === true ? q.rubric : null,
+      };
+    });
 
 
     return { assessment, questions, timeZone };
