@@ -328,6 +328,7 @@ function ClassDetailPage() {
     gradebookDueTo,
     gradebookSortDirection,
     setup,
+    testerIds,
   ]);
 
   const assignmentPageCount = Math.max(1, Math.ceil(gradebookRows.length / 3));
