@@ -44,7 +44,8 @@ import { FileLibrary } from "@/components/files/FileLibrary";
 
 import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
-import { sortStudents } from "@/lib/student-sort";
+import { isTestStudent, sortStudents } from "@/lib/student-sort";
+import { TestAccountBadge } from "@/components/students/TestAccountBadge";
 import { AssessmentsTab } from "@/components/class/AssessmentsTab";
 import { AssignmentWork } from "@/components/class/AssignmentWork";
 import { GradingSetupTab } from "@/components/class/GradingSetup";
@@ -172,12 +173,17 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("id, student_id, students(id, first_name, last_name, grade_level, student_number)")
+        .select("id, student_id, students(id, first_name, last_name, grade_level, student_number, is_tester)")
         .eq("class_id", classId);
       if (error) throw error;
       return (data ?? []).filter((r) => r.students);
     },
   });
+  // Demo/test accounts stay visible but never count toward class statistics.
+  const testerIds = useMemo(
+    () => new Set(roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id)),
+    [roster],
+  );
   const gradebookRoster = sortStudents(roster, gradebookSort, (row) => row.students);
   const visibleGradebookRoster = gradebookRoster.filter((row) => {
     const query = gradebookSearch.trim().toLocaleLowerCase();
@@ -264,6 +270,7 @@ function ClassDetailPage() {
         const countedScores = possible > 0
           ? grades.flatMap((grade) => {
               if (grade.assignment_id !== assignment.id) return [];
+              if (testerIds.has(grade.student_id)) return [];
               const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
               let earned: number | null =
                 grade.points_earned == null ? null : Number(grade.points_earned);
@@ -321,6 +328,7 @@ function ClassDetailPage() {
     gradebookDueTo,
     gradebookSortDirection,
     setup,
+    testerIds,
   ]);
 
   const assignmentPageCount = Math.max(1, Math.ceil(gradebookRows.length / 3));
@@ -337,6 +345,7 @@ function ClassDetailPage() {
       )
       .join("");
     const bodyRows = visibleGradebookRoster
+      .filter((row) => !testerIds.has(row.student_id))
       .map((row) => {
         const average = studentAverage(row.student_id);
         const missingCount = gradebookRows.filter(({ assignment }) => {
@@ -610,7 +619,7 @@ function ClassDetailPage() {
                              return code === "M";
                            }).length;
                            return (
-                              <tr key={row.id} className={rowIndex % 2 === 0 ? "bg-card hover:bg-muted/25" : "bg-muted/10 hover:bg-muted/25"}>
+                              <tr key={row.id} className={`${rowIndex % 2 === 0 ? "bg-card hover:bg-muted/25" : "bg-muted/10 hover:bg-muted/25"}${testerIds.has(row.student_id) ? " opacity-70" : ""}`}>
                                 {isStaff && <td className="sticky left-0 z-10 border-r border-border/60 bg-inherit px-4 py-3">
                                  <Button
                                    type="button"
@@ -620,6 +629,7 @@ function ClassDetailPage() {
                                  >
                                    {studentLabel(row.students, useIds)}
                                  </Button>
+                                 <TestAccountBadge student={row.students} />
                                  {!useIds && row.students?.student_number && (
                                    <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
                                  )}
@@ -718,7 +728,7 @@ function ClassDetailPage() {
             grades={grades}
             setup={setup}
             isStaff={isStaff}
-            studentIds={roster.map((r) => r.student_id)}
+            studentIds={roster.filter((r) => !testerIds.has(r.student_id)).map((r) => r.student_id)}
           />
           <AssignmentsTab
             classId={classId}
@@ -2133,6 +2143,7 @@ function RosterTab({
                  ) : (
                    studentLabel(r.students, useIds)
                  )}
+                 <TestAccountBadge student={r.students} />
               </span>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span>Grade {r.students?.grade_level}</span>

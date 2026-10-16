@@ -44,13 +44,27 @@ export function compareStudentNames(
   return collator.compare(clean(a?.id), clean(b?.id));
 }
 
+/** Dummy/demo accounts: flagged in the database, with a name fallback. */
+export function isTestStudent(student: (SortableStudent & { is_tester?: boolean | null }) | null | undefined) {
+  if (!student) return false;
+  if (student.is_tester) return true;
+  return clean(student.first_name).toLowerCase() === "student" && clean(student.last_name).toLowerCase() === "tester";
+}
+
 export function sortStudents<T>(
   items: readonly T[],
   mode: StudentSortMode = DEFAULT_STUDENT_SORT,
   getStudent: (item: T) => SortableStudent | null | undefined = (item) =>
     item as SortableStudent,
 ) {
-  return [...items].sort((a, b) => compareStudentNames(getStudent(a), getStudent(b), mode));
+  return [...items].sort((a, b) => {
+    const sa = getStudent(a);
+    const sb = getStudent(b);
+    const ta = isTestStudent(sa);
+    const tb = isTestStudent(sb);
+    if (ta !== tb) return ta ? 1 : -1;
+    return compareStudentNames(sa, sb, mode);
+  });
 }
 
 export function isStudentSortMode(value: string | null): value is StudentSortMode {
