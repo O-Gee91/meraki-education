@@ -146,6 +146,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          lock_order: boolean
           options: Json
           points: number
           position: number
@@ -159,6 +160,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          lock_order?: boolean
           options?: Json
           points?: number
           position?: number
@@ -172,6 +174,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          lock_order?: boolean
           options?: Json
           points?: number
           position?: number
@@ -266,6 +269,7 @@ export type Database = {
           instructions: string | null
           kind: string
           published: boolean
+          shuffle_choices: boolean
           time_limit_minutes: number | null
           title: string
           updated_at: string
@@ -283,6 +287,7 @@ export type Database = {
           instructions?: string | null
           kind?: string
           published?: boolean
+          shuffle_choices?: boolean
           time_limit_minutes?: number | null
           title: string
           updated_at?: string
@@ -300,6 +305,7 @@ export type Database = {
           instructions?: string | null
           kind?: string
           published?: boolean
+          shuffle_choices?: boolean
           time_limit_minutes?: number | null
           title?: string
           updated_at?: string

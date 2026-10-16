@@ -70,6 +70,7 @@ type AssessmentRow = {
   time_limit_minutes: number | null;
   published: boolean;
   grammar_check_enabled: boolean;
+  shuffle_choices: boolean;
   assignment_id: string | null;
 };
 
@@ -120,7 +121,7 @@ export function AssessmentsTab({
       const { data, error } = await supabase
         .from("assessments")
         .select(
-          "id, title, kind, instructions, due_at, available_from, closes_at, time_limit_minutes, published, grammar_check_enabled, assignment_id",
+          "id, title, kind, instructions, due_at, available_from, closes_at, time_limit_minutes, published, grammar_check_enabled, shuffle_choices, assignment_id",
         )
         .eq("class_id", classId)
         .order("created_at", { ascending: false });
@@ -415,6 +416,7 @@ function NewAssessment({
     assignmentId: "none",
     category: categories[0] ?? "none",
     grammar: true,
+    shuffle: false,
     availableFrom: "",
     closesAt: "",
   };
@@ -445,6 +447,7 @@ function NewAssessment({
         time_limit_minutes: form.limit ? Number(form.limit) : null,
         assignment_id: assignmentId,
         grammar_check_enabled: form.grammar,
+        shuffle_choices: form.shuffle ?? false,
       });
       if (error) throw error;
 
@@ -589,6 +592,19 @@ function NewAssessment({
             />
             Enable AI grammar proofing for written responses
           </label>
+          <label className="flex items-start gap-2 text-sm">
+            <Checkbox
+              className="mt-0.5"
+              checked={form.shuffle ?? false}
+              onCheckedChange={(v) => setForm({ ...form, shuffle: v === true })}
+            />
+            <span>
+              Shuffle answer choices
+              <span className="block text-xs text-muted-foreground">
+                Each student sees multiple-choice options in their own order. True / false stays as is.
+              </span>
+            </span>
+          </label>
         </div>
         <DialogFooter className="shrink-0 gap-3 border-t border-border bg-background px-5 py-4 sm:justify-between sm:px-6">
           <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
@@ -631,6 +647,7 @@ function EditAssessment({
     assignmentId: assessment.assignment_id ?? "none",
     category: currentCategory(),
     grammar: assessment.grammar_check_enabled,
+    shuffle: assessment.shuffle_choices,
     availableFrom: isoToZonedInput(assessment.available_from, timeZone),
     closesAt: isoToZonedInput(assessment.closes_at, timeZone),
   });
@@ -669,6 +686,7 @@ function EditAssessment({
           time_limit_minutes: form.limit ? Number(form.limit) : null,
           assignment_id: assignmentId,
           grammar_check_enabled: form.grammar,
+        shuffle_choices: form.shuffle ?? false,
         })
         .eq("id", assessment.id);
       if (error) throw error;
@@ -839,6 +857,19 @@ function EditAssessment({
             />
             Enable AI grammar proofing for written responses
           </label>
+          <label className="flex items-start gap-2 text-sm">
+            <Checkbox
+              className="mt-0.5"
+              checked={form.shuffle ?? false}
+              onCheckedChange={(v) => setForm({ ...form, shuffle: v === true })}
+            />
+            <span>
+              Shuffle answer choices
+              <span className="block text-xs text-muted-foreground">
+                Each student sees multiple-choice options in their own order. True / false stays as is.
+              </span>
+            </span>
+          </label>
         </div>
         <DialogFooter className="shrink-0 border-t border-border bg-background px-5 py-4 sm:px-6">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
@@ -861,6 +892,7 @@ type QuestionRow = {
   answer_key: unknown;
   points: number;
   rubric: string | null;
+  lock_order: boolean;
 };
 
 type QuestionDraft = {
@@ -888,6 +920,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
   const [correct, setCorrect] = useState<number[]>(saved?.correct ?? []);
   const [accepted, setAccepted] = useState(saved?.accepted ?? "");
   const [manualKey, setManualKey] = useState(saved?.manualKey ?? false);
+  const [lockOrder, setLockOrder] = useState(false);
   const [numeric, setNumeric] = useState(saved?.numeric ?? { value: "", tolerance: "0" });
   const questionDirty = prompt.trim().length > 0;
   const draft = useAutosaveDraft<QuestionDraft>(
@@ -902,7 +935,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assessment_questions")
-        .select("id, position, kind, prompt, options, answer_key, points, rubric")
+        .select("id, position, kind, prompt, options, answer_key, points, rubric, lock_order")
         .eq("assessment_id", assessmentId)
         .order("position", { ascending: true });
       if (error) throw error;
@@ -920,6 +953,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setCorrect([]);
     setAccepted("");
     setManualKey(false);
+    setLockOrder(false);
     setNumeric({ value: "", tolerance: "0" });
     draft.clear();
   }
@@ -933,6 +967,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     setPrompt(q.prompt);
     setPoints(String(q.points));
     setRubric(q.rubric ?? "");
+    setLockOrder(Boolean(q.lock_order));
     setOptions(opts.length > 0 ? opts : ["", "", "", ""]);
     setCorrect(key.choices ?? (key.choice != null ? [key.choice] : []));
     setAccepted((key.accepted ?? []).join("\n"));
@@ -992,6 +1027,7 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
       answer_key: key,
       points: pts,
       rubric: rubric.trim().slice(0, 2000) || null,
+      lock_order: (kind === "multiple_choice" || kind === "multi_select") && lockOrder,
     };
   }
 
@@ -1156,6 +1192,10 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
             <Button variant="ghost" size="sm" onClick={() => setOptions([...options, ""])}>
               Add choice
             </Button>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={lockOrder} onCheckedChange={(v) => setLockOrder(v === true)} />
+              Keep choices in this exact order (e.g. “All of the above”)
+            </label>
           </div>
         )}
 

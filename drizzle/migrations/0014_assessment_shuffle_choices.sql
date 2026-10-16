@@ -1,0 +1,2 @@
+ALTER TABLE public.assessments ADD COLUMN IF NOT EXISTS shuffle_choices boolean NOT NULL DEFAULT false;
+ALTER TABLE public.assessment_questions ADD COLUMN IF NOT EXISTS lock_order boolean NOT NULL DEFAULT false;
