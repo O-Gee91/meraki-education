@@ -2152,6 +2152,7 @@ export type Database = {
           guardian_email: string | null
           guardian_user_id: string | null
           id: string
+          is_tester: boolean
           last_name: string
           student_number: string | null
           user_id: string | null
@@ -2164,6 +2165,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_user_id?: string | null
           id?: string
+          is_tester?: boolean
           last_name: string
           student_number?: string | null
           user_id?: string | null
@@ -2176,6 +2178,7 @@ export type Database = {
           guardian_email?: string | null
           guardian_user_id?: string | null
           id?: string
+          is_tester?: boolean
           last_name?: string
           student_number?: string | null
           user_id?: string | null
