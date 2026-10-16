@@ -925,6 +925,7 @@ function AssignmentsTab({
     assignment_id: string;
     student_id: string;
     points_earned: number | null;
+    is_draft?: boolean | null;
   }>;
   roster: RosterRow[];
   categories: string[];
@@ -1066,6 +1067,24 @@ function AssignmentsTab({
     onSuccess: () => {
       toast.success("Assignment published — students can see it now");
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const postDrafts = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("grades")
+        .update({ is_draft: false, posted_at: new Date().toISOString(), posted_by: auth.user?.id ?? null })
+        .eq("assignment_id", assignmentId)
+        .eq("is_draft", true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Draft grades posted — students and guardians can see them now");
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-grades"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1361,6 +1380,28 @@ function AssignmentsTab({
                                 {scoredCount}/{roster.length} scored
                               </Badge>
                             ) : null}
+                            {isStaff && (() => {
+                              const drafts = grades.filter(
+                                (grade) => grade.assignment_id === a.id && grade.is_draft,
+                              ).length;
+                              if (drafts === 0) return null;
+                              const label = `${drafts} draft ${drafts === 1 ? "grade" : "grades"}`;
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-warning/60"
+                                  disabled={postDrafts.isPending}
+                                  onClick={() => {
+                                    if (window.confirm(`Post ${label} to students and guardians? They will see scores and feedback immediately.`)) {
+                                      postDrafts.mutate(a.id);
+                                    }
+                                  }}
+                                >
+                                  Post {label}
+                                </Button>
+                              );
+                            })()}
                             {isStaff && (
                               <>
                                 {a.status === "draft" ? (
