@@ -1262,7 +1262,7 @@ function StaffCollectPanel({
               <div className="flex items-center gap-2">
                 {draftCount > 0 ? (
                   <Button size="sm" onClick={() => setConfirmPostAll(true)} disabled={postAll.isPending}>
-                    Post {draftCount} draft {draftCount === 1 ? "grade" : "grades"}
+                    Post all {draftCount} draft {draftCount === 1 ? "grade" : "grades"}
                   </Button>
                 ) : null}
                 <DialogClose asChild>
@@ -1550,53 +1550,90 @@ function StaffCollectPanel({
                             <span className="text-sm text-muted-foreground">of {assignment.points_possible}</span>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            {activeGrade?.is_draft ? (
-                              <Badge
-                                variant="outline"
-                                className="gap-1 border-warning/60 bg-warning/15 text-warning-foreground"
-                              >
-                                <span className="size-1.5 rounded-full bg-warning" aria-hidden />
-                                Draft — hidden from student
-                              </Badge>
-                            ) : null}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              data-grade-action="draft"
-                              disabled={score.isPending}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() =>
-                                score.mutate({
-                                  studentId: activeStudent.id,
-                                  value:
-                                    (document.getElementById(
-                                      `detail-score-${activeStudent.id}`,
-                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
-                                  draft: true,
-                                })
+                            {(() => {
+                              const currentValue = () =>
+                                (document.getElementById(
+                                  `detail-score-${activeStudent.id}`,
+                                ) as HTMLInputElement | null)?.value ?? cellText(activeGrade);
+                              const isPosted = activeGrade != null && !activeGrade.is_draft;
+                              const edited = pendingScore?.studentId === activeStudent.id;
+                              if (isPosted) {
+                                return (
+                                  <>
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 border-success/60 bg-success/15 text-success"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3" aria-hidden />
+                                      Posted · Visible to student &amp; guardian
+                                    </Badge>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      data-grade-action="draft"
+                                      disabled={score.isPending}
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() =>
+                                        score.mutate({ studentId: activeStudent.id, value: currentValue(), draft: true })
+                                      }
+                                    >
+                                      Revert to draft
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      data-grade-action="post"
+                                      disabled={score.isPending || !edited}
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() =>
+                                        score.mutate({ studentId: activeStudent.id, value: currentValue() })
+                                      }
+                                    >
+                                      Update score
+                                    </Button>
+                                  </>
+                                );
                               }
-                            >
-                              Save draft
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              data-grade-action="post"
-                              disabled={score.isPending}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() =>
-                                score.mutate({
-                                  studentId: activeStudent.id,
-                                  value:
-                                    (document.getElementById(
-                                      `detail-score-${activeStudent.id}`,
-                                    ) as HTMLInputElement | null)?.value ?? cellText(activeGrade),
-                                })
-                              }
-                            >
-                              Post grade
-                            </Button>
+                              return (
+                                <>
+                                  {activeGrade?.is_draft ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 border-warning/60 bg-warning/15 text-warning-foreground"
+                                    >
+                                      <span className="size-1.5 rounded-full bg-warning" aria-hidden />
+                                      Draft · Hidden from student
+                                    </Badge>
+                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    data-grade-action="draft"
+                                    disabled={score.isPending}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() =>
+                                      score.mutate({ studentId: activeStudent.id, value: currentValue(), draft: true })
+                                    }
+                                  >
+                                    Save draft
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    data-grade-action="post"
+                                    disabled={score.isPending}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() =>
+                                      score.mutate({ studentId: activeStudent.id, value: currentValue() })
+                                    }
+                                  >
+                                    Post grade
+                                  </Button>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                         {assignment.submission_mode === "collected" ? (
