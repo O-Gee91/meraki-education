@@ -925,6 +925,7 @@ function AssignmentsTab({
     assignment_id: string;
     student_id: string;
     points_earned: number | null;
+    is_draft?: boolean | null;
   }>;
   roster: RosterRow[];
   categories: string[];
