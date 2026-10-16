@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { applyMissedAssessmentZeros } from "@/lib/assessments.functions";
+import { ImportQuestionsDialog } from "@/components/class/ImportQuestionsDialog";
 
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
@@ -1306,6 +1307,17 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {editingId ? "Save changes" : "Add question"}
           </Button>
+          {!editingId && (
+            <ImportQuestionsDialog
+              assessmentId={assessmentId}
+              startPosition={questions.length}
+              onImported={async () => {
+                await syncColumnPoints(assessmentId);
+                queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
+                queryClient.invalidateQueries({ queryKey: ["assignments"] });
+              }}
+            />
+          )}
           {editingId && (
             <Button size="sm" variant="ghost" onClick={reset}>
               Cancel edit
