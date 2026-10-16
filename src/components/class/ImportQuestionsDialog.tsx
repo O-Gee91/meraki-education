@@ -119,7 +119,10 @@ export function ImportQuestionsDialog({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.from("assessment_questions").insert(rows as any);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(`${rows.length} question${rows.length === 1 ? "" : "s"} added`);
     await onImported();
     setOpen(false);
