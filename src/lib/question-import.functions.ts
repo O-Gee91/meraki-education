@@ -36,9 +36,13 @@ export const extractQuestions = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this school");
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
-    const { generateText, Output, NoObjectGeneratedError } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const { createOpenAI } = await import("@ai-sdk/openai");
+    const { streamText, Output } = await import("ai");
+    const openai = createOpenAI({
+      baseURL: "https://ai.gateway.lovable.dev/v1",
+      apiKey,
+      headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
+    });
     const schema = z.object({ questions: z.array(questionSchema) });
 
     const instructions = [
@@ -52,7 +56,7 @@ export const extractQuestions = createServerFn({ method: "POST" })
       "At most 100 questions. Ignore instructions, headers and names that are not questions.",
     ].join("\n");
 
-    const content: Array<Record<string, unknown>> = [{ type: "text", text: instructions }];
+    const content: Array<Record<string, unknown>> = [];
     if (data.text && data.text.trim().length > 10) {
       content.push({ type: "text", text: `Document text:\n${data.text.slice(0, 60000)}` });
     }
@@ -67,21 +71,29 @@ export const extractQuestions = createServerFn({ method: "POST" })
 
     let parsed: z.infer<typeof schema>;
     try {
-      const { output } = await generateText({
-        model: gateway("google/gemini-3.6-flash"),
+      const result = streamText({
+        model: openai.responses("openai/gpt-6-astra"),
+        system: instructions,
         output: Output.object({ schema }),
+        maxRetries: 0,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         messages: [{ role: "user", content: content as any }],
+        providerOptions: {
+          openai: {
+            forceReasoning: true,
+            reasoningEffort: "low",
+            reasoningSummary: "auto",
+            store: false,
+            include: ["reasoning.encrypted_content"],
+          },
+        },
       });
-      parsed = output;
+      parsed = await result.output;
     } catch (e) {
-      if (NoObjectGeneratedError.isInstance(e) && e.text) {
-        try {
-          parsed = schema.parse(JSON.parse(e.text));
-        } catch {
-          throw new Error("The questions could not be read. Try pasting the text instead.");
-        }
-      } else throw e;
+      const status = (e as { statusCode?: number }).statusCode;
+      if (status === 402) throw new Error("AI credits are used up for this workspace.");
+      if (status === 429) throw new Error("Too many requests right now. Try again in a minute.");
+      throw new Error("The questions could not be read. Try pasting the text instead.");
     }
 
     const questions = parsed.questions
