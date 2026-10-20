@@ -23,6 +23,7 @@ import { formatDate } from "@/lib/school";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { notifyMessageRecipient } from "@/lib/messaging.functions";
+import { compareStudentNames } from "@/lib/student-sort";
 
 export const Route = createFileRoute("/_authenticated/messages")({
   head: () => ({
@@ -89,32 +90,83 @@ function MessagesPage() {
     },
   });
 
+  const [pickMode, setPickMode] = useState<"class" | "person">("class");
+  const [classId, setClassId] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [target, setTarget] = useState<"student" | "parent" | "both">("student");
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ["message-classes"],
+    enabled: Boolean(isStaff),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("classes").select("id, name, period").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: roster = [] } = useQuery({
+    queryKey: ["message-roster", classId],
+    enabled: Boolean(isStaff && classId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("students(id, first_name, last_name, chinese_name, user_id, guardian_user_id, is_tester)")
+        .eq("class_id", classId);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r) => r.students)
+        .filter((s): s is NonNullable<typeof s> => Boolean(s))
+        .sort((a, b) => compareStudentNames(a, b));
+    },
+  });
+
+  const chosenStudent = roster.find((s) => s.id === studentId);
+  const classRecipients = (() => {
+    if (!chosenStudent) return [] as string[];
+    const ids: (string | null)[] = [];
+    if (target !== "parent") ids.push(chosenStudent.user_id);
+    if (target !== "student") ids.push(chosenStudent.guardian_user_id);
+    return [...new Set(ids.filter(Boolean) as string[])];
+  })();
+
   const send = useMutation({
     mutationFn: async () => {
-      if (!compose.recipient) throw new Error("Choose a recipient");
+      const recipients = isStaff && pickMode === "class" ? classRecipients : compose.recipient ? [compose.recipient] : [];
+      if (recipients.length === 0)
+        throw new Error(
+          isStaff && pickMode === "class" && chosenStudent
+            ? "This person has no login yet — they can't receive messages"
+            : "Choose a recipient",
+        );
       if (compose.subject.trim().length < 2) throw new Error("Add a subject");
       if (compose.body.trim().length < 2) throw new Error("Write a message");
       const { data: inserted, error } = await supabase
         .from("messages")
-        .insert({
-          sender_id: user!.id,
-          recipient_id: compose.recipient,
-          subject: compose.subject.trim().slice(0, 140),
-          body: compose.body.trim().slice(0, 4000),
-        })
-        .select("id")
-        .single();
+        .insert(
+          recipients.map((recipient_id) => ({
+            sender_id: user!.id,
+            recipient_id,
+            subject: compose.subject.trim().slice(0, 140),
+            body: compose.body.trim().slice(0, 4000),
+          })),
+        )
+        .select("id");
       if (error) throw error;
-      // Also deliver it to the recipient's email inbox (best effort).
-      try {
-        await notifyMessageRecipient({ data: { message_id: inserted.id } });
-      } catch (err) {
-        console.error("Message email notification failed", err);
+      // Also deliver it to each recipient's email inbox (best effort).
+      for (const row of inserted ?? []) {
+        try {
+          await notifyMessageRecipient({ data: { message_id: row.id } });
+        } catch (err) {
+          console.error("Message email notification failed", err);
+        }
       }
+      return recipients.length;
     },
-    onSuccess: () => {
-      toast.success("Message sent");
+    onSuccess: (count) => {
+      toast.success(count > 1 ? `Message sent to ${count} people` : "Message sent");
       setCompose({ recipient: "", subject: "", body: "" });
+      setStudentId("");
       queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -201,6 +253,59 @@ function MessagesPage() {
             <section className="min-w-0 border-t border-border pt-5">
               <h2 className="text-lg font-semibold">New message</h2>
               <div className="mt-4 space-y-3">
+                {isStaff && (
+                  <div className="grid grid-cols-2 gap-1 rounded-md border border-border p-1" role="group" aria-label="How to choose recipient">
+                    <Button type="button" size="sm" variant={pickMode === "class" ? "secondary" : "ghost"} onClick={() => setPickMode("class")}>
+                      By class
+                    </Button>
+                    <Button type="button" size="sm" variant={pickMode === "person" ? "secondary" : "ghost"} onClick={() => setPickMode("person")}>
+                      Anyone
+                    </Button>
+                  </div>
+                )}
+                {isStaff && pickMode === "class" ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="msg-class">Class</Label>
+                      <Select value={classId} onValueChange={(v) => { setClassId(v); setStudentId(""); }}>
+                        <SelectTrigger id="msg-class"><SelectValue placeholder="Choose a class" /></SelectTrigger>
+                        <SelectContent>
+                          {classes.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}{c.period ? ` · ${c.period}` : ""}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="msg-student">Student</Label>
+                      <Select value={studentId} onValueChange={setStudentId} disabled={!classId}>
+                        <SelectTrigger id="msg-student"><SelectValue placeholder={classId ? "Choose a student" : "Pick a class first"} /></SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {roster.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.last_name}, {s.first_name}{s.chinese_name ? ` ${s.chinese_name}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Send to</Label>
+                      <div className="grid grid-cols-3 gap-1" role="group" aria-label="Send to">
+                        {(["student", "parent", "both"] as const).map((t) => (
+                          <Button key={t} type="button" size="sm" variant={target === t ? "default" : "outline"} onClick={() => setTarget(t)}>
+                            {t === "student" ? "Student" : t === "parent" ? "Parent" : "Both"}
+                          </Button>
+                        ))}
+                      </div>
+                      {chosenStudent && (
+                        <p className="text-xs text-muted-foreground">
+                          Student login {chosenStudent.user_id ? "✓" : "— none"} · Parent login {chosenStudent.guardian_user_id ? "✓" : "— none"}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
                 <div className="space-y-1.5">
                   <Label htmlFor="recipient">To</Label>
                   <Select
@@ -219,6 +324,7 @@ function MessagesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="subject">Subject</Label>
                   <Input
