@@ -44,7 +44,7 @@ export const MessageNotificationEmail = ({
           <Text style={cardSubject}>{subject ?? 'New message'}</Text>
           <Text style={cardBody}>{body ?? 'Sign in to read the full message.'}</Text>
         </Section>
-        <Button style={button} href={inboxUrl ?? 'https://ignite-learner-zone.lovable.app/messages'}>
+        <Button style={button} href={inboxUrl ?? 'https://meraki-education.app/messages'}>
           Open your inbox
         </Button>
         <Text style={footer}>
@@ -69,7 +69,7 @@ export const template = {
     senderName: 'Ms. Alvarez',
     subject: 'Reading log for this week',
     body: 'Please bring your reading log to class on Thursday so we can review it together.',
-    inboxUrl: 'https://ignite-learner-zone.lovable.app/messages',
+    inboxUrl: 'https://meraki-education.app/messages',
   },
 } satisfies TemplateEntry
 

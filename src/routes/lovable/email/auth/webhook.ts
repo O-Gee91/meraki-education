@@ -10,16 +10,21 @@ import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
 const SITE_NAME = "Meraki Education"
-const SENDER_DOMAIN = "notify.merakieducation.com"
-const ROOT_DOMAIN = "merakieducation.com"
-const FROM_DOMAIN = "notify.merakieducation.com"
+const SENDER_DOMAIN = "notify.meraki-education.app"
+const ROOT_DOMAIN = "meraki-education.app"
+const FROM_DOMAIN = "notify.meraki-education.app"
 const SITE_URL = `https://${ROOT_DOMAIN}`
 
 // The SDK handler owns verification, dispatch, and retry semantics; this file
 // owns only the email decisions: subjects, templates, and per-type props.
-const handler = createAuthEmailHandler({
-  apiKey: process.env['LOVABLE_API_KEY']!,
-  from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+function handleAuthEmail(request: Request) {
+  const apiKey = process.env['LOVABLE_API_KEY']
+  if (!apiKey) {
+    return Response.json({ error: 'Server configuration error' }, { status: 500 })
+  }
+  const handler = createAuthEmailHandler({
+  apiKey,
+  from: { name: SITE_NAME, address: `noreply@${FROM_DOMAIN}` },
   senderDomain: SENDER_DOMAIN,
   sendUrl: process.env['LOVABLE_SEND_URL'],
   emails: {
@@ -75,12 +80,14 @@ const handler = createAuthEmailHandler({
         React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
     },
   },
-})
+  })
+  return handler(request)
+}
 
 export const Route = createFileRoute("/lovable/email/auth/webhook")({
   server: {
     handlers: {
-      POST: ({ request }) => handler(request),
+      POST: ({ request }) => handleAuthEmail(request),
     },
   },
 })
