@@ -5,6 +5,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, Printe
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,8 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { isStaff, isAdmin, user, profile } = useAuth();
+  const { isStaff: realStaff, isAdmin, user, profile } = useAuth();
+  const [previewRequested, setPreviewing] = useState(false);
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -168,7 +170,7 @@ function ClassDetailPage() {
     EXTRA_CREDIT_CATEGORY,
   ];
 
-  const { data: roster = [] } = useQuery({
+  const { data: fullRoster = [] } = useQuery({
     queryKey: ["roster", classId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -179,6 +181,10 @@ function ClassDetailPage() {
       return (data ?? []).filter((r) => r.students);
     },
   });
+  const testerId = fullRoster.find((r) => isTestStudent(r.students))?.student_id ?? null;
+  const previewing = previewRequested && realStaff && !!testerId;
+  const isStaff = realStaff && !previewing;
+  const roster = previewing ? fullRoster.filter((r) => r.student_id === testerId) : fullRoster;
   // Demo/test accounts stay visible but never count toward class statistics.
   const testerIds = useMemo(
     () => new Set(roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id)),
@@ -220,7 +226,7 @@ function ClassDetailPage() {
       }, {}),
     [assignments],
   );
-  const { data: grades = [] } = useQuery({
+  const { data: allGrades = [] } = useQuery({
     queryKey: ["grades", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
@@ -232,6 +238,10 @@ function ClassDetailPage() {
       return data;
     },
   });
+  // Students only ever see their own posted grades.
+  const grades = previewing
+    ? allGrades.filter((g) => g.student_id === testerId && !g.is_draft)
+    : allGrades;
 
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
@@ -387,6 +397,7 @@ function ClassDetailPage() {
   }
 
   return (
+    <StudentPreviewContext.Provider value={previewing ? testerId : null}>
     <AppShell
       desktopReview
       title={
@@ -433,6 +444,11 @@ function ClassDetailPage() {
       }
       actions={
         <div className="flex flex-wrap gap-2">
+          {isStaff && testerId && (
+            <Button variant="outline" size="sm" onClick={() => setPreviewing(true)}>
+              View as student
+            </Button>
+          )}
           {isStaff && (
             <Button variant="outline" size="sm" onClick={toggleIds}>
               {useIds ? "Show names" : "Show student IDs"}
@@ -444,7 +460,15 @@ function ClassDetailPage() {
         </div>
       }
     >
-      <Tabs defaultValue="gradebook">
+      {previewing && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
+          <span>
+            <strong>Student view preview</strong> — you're seeing this class as the demo Student Tester sees it. Nothing here affects real grades.
+          </span>
+          <Button size="sm" onClick={() => setPreviewing(false)}>Exit student view</Button>
+        </div>
+      )}
+      <Tabs defaultValue="gradebook" key={previewing ? "preview" : "staff"}>
         <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
           <TabsTrigger value="gradebook">{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
           <TabsTrigger value="coursework">Coursework</TabsTrigger>
@@ -818,6 +842,7 @@ function ClassDetailPage() {
       </Tabs>
 
     </AppShell>
+    </StudentPreviewContext.Provider>
   );
 }
 
