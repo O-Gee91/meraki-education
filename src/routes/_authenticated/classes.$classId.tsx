@@ -1283,6 +1283,14 @@ function AssignmentsTab({
           </DialogContent>
         </Dialog>
       )}
+      <PublishNotifyDialog
+        open={!!publishTarget}
+        onOpenChange={(o) => !o && setPublishTarget(null)}
+        title={publishTarget?.title ?? ""}
+        pending={publishAssignment.isPending}
+        onConfirm={(v) => publishTarget && publishAssignment.mutate({ id: publishTarget.id, notify: v })}
+      />
+      {null}
 
       <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
         {assignments.length === 0 ? (
