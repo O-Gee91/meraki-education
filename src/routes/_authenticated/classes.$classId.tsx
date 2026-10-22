@@ -15,6 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { MoveStudentsButton } from "@/components/class/MoveStudentsButton";
 import { CoTeachersPanel } from "@/components/class/CoTeachersPanel";
+import {
+  NotifyChoices,
+  PublishNotifyDialog,
+  noNotify,
+  useNotifyCoursework,
+  type NotifyValue,
+} from "@/components/class/NotifyChoices";
 import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -979,6 +986,9 @@ function AssignmentsTab({
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const [applyToSubject, setApplyToSubject] = useState(false);
+  const [notify, setNotify] = useState<NotifyValue>(noNotify);
+  const [publishTarget, setPublishTarget] = useState<{ id: string; title: string } | null>(null);
+  const sendNotify = useNotifyCoursework();
   const formDirty = form.title.trim().length > 0 || form.description.trim().length > 0;
   const draft = useAutosaveDraft(draftKey, form, { dirty: formDirty });
 
@@ -1054,7 +1064,7 @@ function AssignmentsTab({
         submission_mode: form.mode,
       };
 
-      const { error } = await supabase.from("assignments").insert(
+      const { data: inserted, error } = await supabase.from("assignments").insert(
         targets.map((cid) => ({
           ...base,
           class_id: cid,
@@ -1062,11 +1072,11 @@ function AssignmentsTab({
           // A rubric belongs to one class, so only the original class keeps it.
           rubric_id: cid === classId ? form.rubricId || null : null,
         })),
-      );
+      ).select("id");
       if (error) throw error;
-      return { count: targets.length, status };
+      return { count: targets.length, status, ids: (inserted ?? []).map((r) => r.id) };
     },
-    onSuccess: ({ count, status }) => {
+    onSuccess: ({ count, status, ids }) => {
       toast.success(
         status === "draft"
           ? count > 1
@@ -1076,6 +1086,8 @@ function AssignmentsTab({
             ? `Assignment published to ${count} classes`
             : "Assignment published",
       );
+      if (status === "published") sendNotify("assignment", ids, notify);
+      setNotify(noNotify);
       setOpen(false);
       setForm(blank);
       setApplyToSubject(false);
@@ -1087,15 +1099,18 @@ function AssignmentsTab({
   });
 
   const publishAssignment = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: { id: string; notify: NotifyValue }) => {
       const { error } = await supabase
         .from("assignments")
         .update({ status: "published" })
-        .eq("id", id);
+        .eq("id", input.id);
       if (error) throw error;
+      return input;
     },
-    onSuccess: () => {
+    onSuccess: (input) => {
       toast.success("Assignment published — students can see it now");
+      setPublishTarget(null);
+      sendNotify("assignment", [input.id], input.notify);
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1247,6 +1262,7 @@ function AssignmentsTab({
                   </div>
                 </div>
               ) : null}
+              <NotifyChoices value={notify} onChange={setNotify} idPrefix="new-assignment" />
             </div>
             <DialogFooter className="gap-2 sm:justify-between">
               <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={formDirty} />
@@ -1267,6 +1283,13 @@ function AssignmentsTab({
           </DialogContent>
         </Dialog>
       )}
+      <PublishNotifyDialog
+        open={!!publishTarget}
+        onOpenChange={(o) => !o && setPublishTarget(null)}
+        title={publishTarget?.title ?? ""}
+        pending={publishAssignment.isPending}
+        onConfirm={(v) => publishTarget && publishAssignment.mutate({ id: publishTarget.id, notify: v })}
+      />
 
       <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
         {assignments.length === 0 ? (
@@ -1444,7 +1467,7 @@ function AssignmentsTab({
                                 {a.status === "draft" ? (
                                   <Button
                                     size="sm"
-                                    onClick={() => publishAssignment.mutate(a.id)}
+                                    onClick={() => setPublishTarget({ id: a.id, title: a.title })}
                                     disabled={publishAssignment.isPending}
                                   >
                                     Publish
