@@ -51,8 +51,24 @@ export async function listUnlinkedAccounts(
     (students ?? []).map((s) => s.guardian_user_id).filter(Boolean) as string[],
   );
 
-  const candidates = roles.filter((r) =>
-    r.role === "student" ? !linkedStudents.has(r.user_id) : !linkedGuardians.has(r.user_id),
+  // Staff (and anyone who asked for educator access) are never roster candidates,
+  // even if a stray student/guardian role is still attached to their account.
+  const [{ data: staffRoles, error: staffError }, { data: requests, error: requestError }] =
+    await Promise.all([
+      admin.from("user_roles").select("user_id").in("role", ["teacher", "admin"]),
+      admin.from("staff_access_requests").select("user_id").neq("status", "denied"),
+    ]);
+  if (staffError) throw new Error(staffError.message);
+  if (requestError) throw new Error(requestError.message);
+  const staffIds = new Set([
+    ...(staffRoles ?? []).map((r) => r.user_id),
+    ...(requests ?? []).map((r) => r.user_id),
+  ]);
+
+  const candidates = roles.filter(
+    (r) =>
+      !staffIds.has(r.user_id) &&
+      (r.role === "student" ? !linkedStudents.has(r.user_id) : !linkedGuardians.has(r.user_id)),
   );
   if (candidates.length === 0) return [];
 

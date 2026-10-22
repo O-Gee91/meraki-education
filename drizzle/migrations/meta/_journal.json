@@ -120,6 +120,13 @@
       "when": 1792651295313,
       "tag": "0016_scope_detention_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792653185654,
+      "tag": "0017_educator_signup_no_student_role",
+      "breakpoints": true
     }
   ]
 }
