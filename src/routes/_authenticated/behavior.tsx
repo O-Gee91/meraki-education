@@ -379,7 +379,7 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
             {form.kind === "strike" ? (
               <p className="text-xs text-muted-foreground">
                 Three strikes automatically schedules detention and messages the student, their
-                guardian and administrators.
+                guardian, their teachers and school leadership.
               </p>
             ) : null}
           </div>
