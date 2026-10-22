@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { applyMissedAssessmentZeros } from "@/lib/assessments.functions";
 import { ImportQuestionsDialog } from "@/components/class/ImportQuestionsDialog";
+import { PublishNotifyDialog, useNotifyCoursework } from "@/components/class/NotifyChoices";
 
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
@@ -156,12 +157,28 @@ export function AssessmentsTab({
   });
 
   const visible = isStaff ? assessments : assessments.filter((a) => a.published);
+  const [publishTarget, setPublishTarget] = useState<{ id: string; title: string } | null>(null);
+  const sendNotify = useNotifyCoursework();
 
   return (
     <div className="mt-6 space-y-4 border-t border-border pt-6">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         Online quizzes, tests &amp; essays
       </h3>
+      <PublishNotifyDialog
+        open={!!publishTarget}
+        onOpenChange={(o) => !o && setPublishTarget(null)}
+        title={publishTarget?.title ?? ""}
+        pending={update.isPending}
+        onConfirm={(v) => {
+          const target = publishTarget;
+          if (!target) return;
+          update.mutate(
+            { id: target.id, patch: { published: true } },
+            { onSuccess: () => { setPublishTarget(null); sendNotify("assessment", [target.id], v); } },
+          );
+        }}
+      />
       {isStaff && (
         <NewAssessment
           classId={classId}
@@ -231,7 +248,9 @@ export function AssessmentsTab({
                         <Switch
                           checked={a.published}
                           onCheckedChange={(v) =>
-                            update.mutate({ id: a.id, patch: { published: v } })
+                            v
+                              ? setPublishTarget({ id: a.id, title: a.title })
+                              : update.mutate({ id: a.id, patch: { published: false } })
                           }
                           aria-label="Published"
                         />
