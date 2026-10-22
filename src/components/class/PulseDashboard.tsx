@@ -9,7 +9,7 @@ import { letterFor, type GradingSetup } from "@/lib/grading";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
-import { sortStudents } from "@/lib/student-sort";
+import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { shouldAutoFlag } from "@/lib/assignment-status";
 
 type RosterRow = {
@@ -21,6 +21,7 @@ type RosterRow = {
     last_name: string;
     grade_level: number;
     student_number: string | null;
+    is_tester?: boolean | null;
   } | null;
 };
 
@@ -131,8 +132,10 @@ export function PulseDashboard({
   });
 
   const visibleRoster = useMemo(() => {
-    if (isStaff) return roster;
-    return roster.filter((r) => myStudentIds.has(r.student_id));
+    // Demo/test accounts never count toward risk, missing-work or slipping metrics.
+    const real = roster.filter((r) => !isTestStudent(r.students));
+    if (isStaff) return real;
+    return real.filter((r) => myStudentIds.has(r.student_id));
   }, [isStaff, roster, myStudentIds]);
 
   const { data: links = [] } = useQuery({
