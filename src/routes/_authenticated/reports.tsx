@@ -154,7 +154,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     mutationFn: async () => {
       if (!classId) throw new Error("Choose a class first");
       const klass = classes.find((c) => c.id === classId);
-      const [{ data: roster, error: rosterError }, { data: assignments, error: aError }] =
+      const [{ data: rawRoster, error: rosterError }, { data: assignments, error: aError }] =
         await Promise.all([
           supabase
             .from("enrollments")
