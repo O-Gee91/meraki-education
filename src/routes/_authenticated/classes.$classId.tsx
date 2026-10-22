@@ -1320,6 +1320,9 @@ function AssignmentsTab({
                   </p>
                 ) : (
                   visibleAssignments.map((a) => {
+                    const testerIds = new Set(
+                      roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id),
+                    );
                     const scoredCount = grades.filter(
                       (grade) =>
                         grade.assignment_id === a.id &&
