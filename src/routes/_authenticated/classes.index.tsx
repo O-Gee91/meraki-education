@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { StudentImport } from "@/components/students/StudentImport";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,15 +122,17 @@ function ClassesPage() {
 
   // Working as a teacher narrows everything to the classes this person teaches,
   // even though their admin row-level access could see the whole school.
+  const coTaught = useCoTaughtClassIds();
   const classes = useMemo(() => {
     if (!teacherMode) return allClasses;
     const myName = (profile?.full_name ?? "").trim().toLowerCase();
     return allClasses.filter(
       (c) =>
         c.teacher_id === user?.id ||
+        coTaught.has(c.id) ||
         (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
     );
-  }, [allClasses, teacherMode, user?.id, profile?.full_name]);
+  }, [allClasses, teacherMode, user?.id, profile?.full_name, coTaught]);
 
   const visible = useMemo(
     () =>

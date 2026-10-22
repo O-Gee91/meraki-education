@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 
 /**
  * When a staff member with both hats is deliberately working as a teacher,
@@ -23,9 +24,11 @@ export function useTeacherScope() {
       if (error) throw error;
 
       const name = (profile?.full_name ?? "").trim().toLowerCase();
+      const coTaught = await fetchCoTaughtClassIds(user!.id);
       const mine = (classes ?? []).filter(
         (c) =>
           c.teacher_id === user!.id ||
+          coTaught.has(c.id) ||
           (!!name && (c.teacher_name ?? "").trim().toLowerCase() === name),
       );
       const classIds = new Set(mine.map((c) => c.id));

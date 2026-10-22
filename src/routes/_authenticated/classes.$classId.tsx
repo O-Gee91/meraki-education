@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { MoveStudentsButton } from "@/components/class/MoveStudentsButton";
+import { CoTeachersPanel } from "@/components/class/CoTeachersPanel";
+import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -152,9 +154,11 @@ function ClassDetailPage() {
       // Admin mode sees every class; everyone else only their own.
       if (isAdmin) return data ?? [];
       const myName = (profile?.full_name ?? "").trim().toLowerCase();
+      const coTaught = await fetchCoTaughtClassIds(user!.id);
       return (data ?? []).filter(
         (c) =>
           c.teacher_id === user!.id ||
+          coTaught.has(c.id) ||
           (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
       );
     },
@@ -449,6 +453,7 @@ function ClassDetailPage() {
               View as student
             </Button>
           )}
+          {isStaff && <CoTeachersPanel classId={classId} />}
           {isStaff && (
             <Button variant="outline" size="sm" onClick={toggleIds}>
               {useIds ? "Show names" : "Show student IDs"}

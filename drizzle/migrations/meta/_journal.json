@@ -127,6 +127,20 @@
       "when": 1792653185654,
       "tag": "0017_educator_signup_no_student_role",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792654593629,
+      "tag": "0018_class_co_teachers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792654627071,
+      "tag": "0019_list_staff_function",
+      "breakpoints": true
     }
   ]
 }
