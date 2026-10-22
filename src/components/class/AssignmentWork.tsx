@@ -2,6 +2,8 @@ import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { notifyGradesPosted } from "@/lib/grade-notify.functions";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -678,6 +680,7 @@ function StaffCollectPanel({
       }
     },
     onSuccess: (_data, variables) => {
+      if (!variables.draft) void gradeAlert({ data: { assignmentId: assignment.id, studentIds: [variables.studentId] } }).catch(() => {});
       toast.success(
         variables.draft
           ? "Draft saved — only you can see this grade"
@@ -695,6 +698,7 @@ function StaffCollectPanel({
 
   // Release every draft grade for this assignment in one step.
   const draftCount = grades.filter((g) => g.is_draft).length;
+  const gradeAlert = useServerFn(notifyGradesPosted);
   const [confirmPostAll, setConfirmPostAll] = useState(false);
   const postAll = useMutation({
     mutationFn: async () => {
@@ -708,9 +712,11 @@ function StaffCollectPanel({
         })
         .eq("assignment_id", assignment.id)
         .eq("is_draft", true)
-        .select("id");
+        .select("id, student_id");
       if (error) throw error;
-      return data?.length ?? 0;
+      const ids = (data ?? []).map((g) => g.student_id);
+      if (ids.length) void gradeAlert({ data: { assignmentId: assignment.id, studentIds: ids } }).catch(() => {});
+      return ids.length;
     },
     onSuccess: (count) => {
       toast.success(

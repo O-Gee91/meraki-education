@@ -83,6 +83,7 @@ import {
 } from "@/components/class/ReopenOptions";
 import { reopenCoursework } from "@/lib/coursework-reopen.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { notifyGradesPosted } from "@/lib/grade-notify.functions";
 
 import {
   computeAverage,
@@ -1116,15 +1117,19 @@ function AssignmentsTab({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const gradeAlert = useServerFn(notifyGradesPosted);
   const postDrafts = useMutation({
     mutationFn: async (assignmentId: string) => {
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("grades")
         .update({ is_draft: false, posted_at: new Date().toISOString(), posted_by: auth.user?.id ?? null })
         .eq("assignment_id", assignmentId)
-        .eq("is_draft", true);
+        .eq("is_draft", true)
+        .select("student_id");
       if (error) throw error;
+      const ids = (data ?? []).map((g) => g.student_id);
+      if (ids.length) void gradeAlert({ data: { assignmentId, studentIds: ids } }).catch(() => {});
     },
     onSuccess: () => {
       toast.success("Draft grades posted — students and guardians can see them now");

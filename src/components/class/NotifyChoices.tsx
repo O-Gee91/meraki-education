@@ -10,7 +10,8 @@ import {
 import { notifyCourseworkPosted } from "@/lib/coursework-notify.functions";
 
 export type NotifyValue = { students: boolean; parents: boolean };
-export const noNotify: NotifyValue = { students: false, parents: false };
+// Coursework alerts are on by default so students get immediate notice; teachers can untick.
+export const noNotify: NotifyValue = { students: true, parents: true };
 
 export function NotifyChoices({ value, onChange, idPrefix }: { value: NotifyValue; onChange: (v: NotifyValue) => void; idPrefix: string }) {
   return (
