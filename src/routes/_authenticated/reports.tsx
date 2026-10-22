@@ -23,7 +23,7 @@ import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
 import { PrintTemplates } from "@/components/reports/PrintTemplates";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
-import { compareStudentNames, sortStudents } from "@/lib/student-sort";
+import { compareStudentNames, isTestStudent, sortStudents } from "@/lib/student-sort";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 
 
@@ -154,14 +154,19 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     mutationFn: async () => {
       if (!classId) throw new Error("Choose a class first");
       const klass = classes.find((c) => c.id === classId);
-      const [{ data: roster, error: rosterError }, { data: assignments, error: aError }] =
+      const [{ data: rawRoster, error: rosterError }, { data: assignments, error: aError }] =
         await Promise.all([
-          supabase.from("enrollments").select("student_id").eq("class_id", classId),
+          supabase
+            .from("enrollments")
+            .select("student_id, students(first_name, last_name, is_tester)")
+            .eq("class_id", classId),
           supabase.from("assignments").select("id, points_possible").eq("class_id", classId),
         ]);
       if (rosterError) throw rosterError;
       if (aError) throw aError;
-      if (!roster || roster.length === 0) throw new Error("This class has no students yet");
+      // Demo/test accounts never receive report cards.
+      const roster = (rawRoster ?? []).filter((r) => !isTestStudent(r.students));
+      if (roster.length === 0) throw new Error("This class has no students yet");
       const assignmentIds = (assignments ?? []).map((a) => a.id);
       const { data: grades, error: gError } = assignmentIds.length
         ? await supabase

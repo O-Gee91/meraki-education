@@ -1320,10 +1320,17 @@ function AssignmentsTab({
                   </p>
                 ) : (
                   visibleAssignments.map((a) => {
+                    const testerIds = new Set(
+                      roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id),
+                    );
                     const scoredCount = grades.filter(
-                      (grade) => grade.assignment_id === a.id && grade.points_earned != null,
+                      (grade) =>
+                        grade.assignment_id === a.id &&
+                        grade.points_earned != null &&
+                        !testerIds.has(grade.student_id),
                     ).length;
-                    const fullyScored = roster.length > 0 && scoredCount === roster.length;
+                    const realRosterCount = roster.length - testerIds.size;
+                    const fullyScored = realRosterCount > 0 && scoredCount === realRosterCount;
                     const progressTone = fullyScored
                       ? "bg-success"
                       : scoredCount > 0
@@ -1377,7 +1384,7 @@ function AssignmentsTab({
                           <div className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-72 xl:justify-end">
                             {isStaff ? (
                               <Badge variant={fullyScored ? "default" : "outline"}>
-                                {scoredCount}/{roster.length} scored
+                                {scoredCount}/{realRosterCount} scored
                               </Badge>
                             ) : null}
                             {isStaff && (() => {
