@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { MoveStudentsButton } from "@/components/class/MoveStudentsButton";
+import { CoTeachersPanel } from "@/components/class/CoTeachersPanel";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -449,6 +450,7 @@ function ClassDetailPage() {
               View as student
             </Button>
           )}
+          {isStaff && <CoTeachersPanel classId={classId} />}
           {isStaff && (
             <Button variant="outline" size="sm" onClick={toggleIds}>
               {useIds ? "Show names" : "Show student IDs"}
