@@ -3,6 +3,7 @@ import type { ComponentType } from 'react'
 import { template as messageNotificationTemplate } from './message-notification'
 import { template as passwordResetTemplate } from './password-reset'
 import { template as courseworkPostedTemplate } from './coursework-posted'
+import { template as gradePostedTemplate } from './grade-posted'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -25,4 +26,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'message-notification': messageNotificationTemplate,
   'password-reset': passwordResetTemplate,
   'coursework-posted': courseworkPostedTemplate,
+  'grade-posted': gradePostedTemplate,
 }
