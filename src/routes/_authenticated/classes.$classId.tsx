@@ -142,7 +142,7 @@ function ClassDetailPage() {
   // Classes this staff member can hop between via the title switcher.
   const { data: switcherClasses = [] } = useQuery({
     queryKey: ["class-switcher", user?.id, profile?.full_name, isAdmin],
-    enabled: isStaff && !!user,
+    enabled: realStaff && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
