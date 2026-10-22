@@ -756,6 +756,48 @@ export type Database = {
           },
         ]
       }
+      class_co_teachers: {
+        Row: {
+          added_by: string | null
+          class_id: string
+          created_at: string
+          id: string
+          permission_level: string
+          teacher_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          class_id: string
+          created_at?: string
+          id?: string
+          permission_level?: string
+          teacher_id: string
+        }
+        Update: {
+          added_by?: string | null
+          class_id?: string
+          created_at?: string
+          id?: string
+          permission_level?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_co_teachers_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_co_teachers_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           created_at: string
@@ -2282,6 +2324,7 @@ export type Database = {
       can_view_grade: { Args: { _grade: number }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
+      co_teacher_level: { Args: { _class_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2301,6 +2344,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      owns_class_or_admin: { Args: { _class_id: string }; Returns: boolean }
       poll_results: {
         Args: { _poll_id: string }
         Returns: {
