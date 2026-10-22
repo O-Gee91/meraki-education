@@ -173,9 +173,10 @@ function StudentWorkPanel({
   const draftKey = `assignment:${assignment.id}`;
   const draft = useAutosaveDraft(draftKey, body, { enabled: open, dirty: open && body.trim().length > 0 });
 
-  const { data: me } = useQuery({
+  const previewId = useStudentPreviewId();
+  const { data: ownRecord } = useQuery({
     queryKey: ["my-student-record", user?.id],
-    enabled: !!user,
+    enabled: !!user && !previewId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
@@ -186,6 +187,7 @@ function StudentWorkPanel({
       return data;
     },
   });
+  const me = previewId ? { id: previewId } : ownRecord;
 
   const { data: submissions = [] } = useSubmissions(assignment.id);
   const mine = me ? submissions.find((s) => s.student_id === me.id) : undefined;
