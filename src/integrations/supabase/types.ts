@@ -2335,6 +2335,14 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_school_staff_email: { Args: { _email: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      list_staff: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       override_late_status: {
         Args: {
           _on_time: boolean
