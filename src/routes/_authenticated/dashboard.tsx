@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { HeroProfilePanel } from "@/components/HeroProfilePanel";
 import { FeedbackInbox, useMyFeedback, useUnreadFeedback } from "@/components/FeedbackInbox";
+import { TeacherTodo } from "@/components/TeacherTodo";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -313,6 +314,8 @@ function DashboardPage() {
           </>
         )}
       </div>
+
+      {isStaff && <TeacherTodo classes={classes} />}
 
       <section className="mt-6 border-b border-border pb-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
