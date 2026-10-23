@@ -253,7 +253,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grades")
-        .select("id, assignment_id, student_id, points_earned, comment, is_draft")
+        .select("id, assignment_id, student_id, points_earned, comment, is_draft, posted_at, updated_at")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data;
@@ -708,7 +708,7 @@ function ClassDetailPage() {
                                    <span className="text-muted-foreground">—</span>
                                  ) : (
                                     <div className="inline-flex flex-wrap items-center justify-center gap-1">
-                                      <span className={`size-1.5 shrink-0 rounded-full ${average >= 80 ? "bg-success" : average >= 70 ? "bg-warning" : "bg-destructive"}`} aria-hidden />
+                                      <span className={`size-1.5 shrink-0 rounded-full ${average >= 80 ? "bg-success" : average >= 70 ? "bg-muted-foreground/60" : "bg-warning"}`} aria-hidden />
                                       <span className="font-semibold tabular-nums text-foreground">
                                        {average.toFixed(1)}%
                                      </span>
@@ -718,7 +718,7 @@ function ClassDetailPage() {
                                </td>
                                 <td className="border-r border-border/60 px-3 py-3 text-center">
                                  {missingCount > 0 ? (
-                                    <span className="inline-flex items-center gap-1 font-medium text-destructive"><AlertCircle className="size-3.5" />{missingCount}</span>
+                                    <span className="inline-flex items-center gap-1 font-medium text-foreground"><AlertCircle className="size-3.5 text-warning" />{missingCount}</span>
                                  ) : (
                                    <span className="text-muted-foreground">—</span>
                                  )}
@@ -728,10 +728,10 @@ function ClassDetailPage() {
                                   const markCode = markCodeFromComment(grade?.comment);
                                   const isDraft = Boolean(grade?.is_draft);
                                   return (
-                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums">
+                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums" title={gradeCellTitle(assignment, grade, markCode, isStaff)}>
                                       <span className="inline-flex items-center justify-center gap-1.5">
                                         {markCode ? (
-                                           <Badge variant="outline" className={markCode === "M" ? "border-destructive/25 bg-destructive/5 text-destructive" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
+                                           <Badge variant="outline" className={markCode === "M" ? "border-warning/50 bg-warning/10 text-foreground" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
                                         ) : grade?.points_earned == null ? (
                                           <span className="text-muted-foreground">—</span>
                                         ) : (
@@ -765,8 +765,8 @@ function ClassDetailPage() {
                   <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
                    <div className="flex flex-wrap gap-4">
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-success" />80%+ proficient</span>
-                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />70–79% approaching</span>
-                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-destructive" />Below 70% needs support</span>
+                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-muted-foreground/60" />70–79% approaching</span>
+                     <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />Below 70% needs support</span>
                    </div>
                    {isStaff && <span>Click a student name for the full report.</span>}
                  </footer>
@@ -1334,7 +1334,7 @@ function AssignmentsTab({
               <div className="space-y-1">
                 <Button
                   type="button"
-                  variant={categoryFilter === "all" ? "default" : "ghost"}
+                  variant={categoryFilter === "all" ? "secondary" : "ghost"}
                   className="w-full justify-between"
                   onClick={() => setCategoryFilter("all")}
                 >
@@ -1347,7 +1347,7 @@ function AssignmentsTab({
                     <Button
                       key={category}
                       type="button"
-                      variant={categoryFilter === category ? "default" : "ghost"}
+                      variant={categoryFilter === category ? "secondary" : "ghost"}
                       className="w-full justify-between"
                       onClick={() => setCategoryFilter(category)}
                     >
@@ -2215,7 +2215,7 @@ function RosterTab({
             <Button
               key={g}
               size="sm"
-              variant={groupBy === g ? "default" : "outline"}
+              variant={groupBy === g ? "secondary" : "outline"}
               onClick={() => setGroupBy(g)}
             >
               {g === "none" ? "All students" : g === "grade" ? "Grade" : "Homeroom"}
@@ -2331,4 +2331,26 @@ function RosterTab({
       />
     </div>
   );
+}
+
+/** Hover summary for a Gradebook cell: points, then when it was posted (or that it is a draft). */
+function gradeCellTitle(
+  assignment: { title: string; points_possible: number | string | null },
+  grade: { points_earned: number | string | null; is_draft?: boolean | null; posted_at?: string | null; updated_at?: string | null } | undefined,
+  markCode: string | null | undefined,
+  isStaff: boolean,
+) {
+  const possible = Number(assignment.points_possible ?? 0);
+  if (!grade) return `${assignment.title} — not scored yet`;
+  const score = markCode
+    ? `Mark ${markCode}`
+    : grade.points_earned == null
+      ? "Not scored yet"
+      : `${Number(grade.points_earned).toLocaleString()} / ${possible.toLocaleString()} points`;
+  const when = grade.is_draft
+    ? isStaff ? "Draft — not posted yet" : ""
+    : grade.posted_at ?? grade.updated_at
+      ? `Posted ${formatDate(grade.posted_at ?? grade.updated_at)}`
+      : "";
+  return [assignment.title, score, when].filter(Boolean).join(" · ");
 }
