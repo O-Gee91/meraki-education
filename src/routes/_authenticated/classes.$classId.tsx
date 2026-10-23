@@ -482,19 +482,19 @@ function ClassDetailPage() {
         </div>
       )}
       <Tabs defaultValue="gradebook" key={previewing ? "preview" : "staff"}>
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 pb-3">
-          <TabsTrigger value="gradebook">{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
-          <TabsTrigger value="coursework">Coursework</TabsTrigger>
-          <TabsTrigger value="discussions">Discussion board</TabsTrigger>
-          {isStaff && <TabsTrigger value="rubrics">Rubrics</TabsTrigger>}
-          {isStaff && <TabsTrigger value="shared">Shared library</TabsTrigger>}
-          <TabsTrigger value="roster">Roster</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="files">Files</TabsTrigger>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+          <TabsTrigger value="gradebook" className={UNDERLINE_TAB}>{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
+          <TabsTrigger value="coursework" className={UNDERLINE_TAB}>Coursework</TabsTrigger>
+          <TabsTrigger value="discussions" className={UNDERLINE_TAB}>Discussion board</TabsTrigger>
+          {isStaff && <TabsTrigger value="rubrics" className={UNDERLINE_TAB}>Rubrics</TabsTrigger>}
+          {isStaff && <TabsTrigger value="shared" className={UNDERLINE_TAB}>Shared library</TabsTrigger>}
+          <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>
+          <TabsTrigger value="attendance" className={UNDERLINE_TAB}>Attendance</TabsTrigger>
+          <TabsTrigger value="files" className={UNDERLINE_TAB}>Files</TabsTrigger>
           {isStaff && (
             <>
               <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-              <TabsTrigger value="grading" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground">
+              <TabsTrigger value="grading" className={UNDERLINE_TAB}>
                 Grading setup
               </TabsTrigger>
             </>
@@ -515,6 +515,24 @@ function ClassDetailPage() {
             useIds={useIds}
             studentAverage={studentAverage}
           />
+          {assignments.length > 0 && (
+            <details className="group/avg mt-6 rounded-lg border border-border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                <span>Averages overview</span>
+                <span className="text-xs font-normal text-muted-foreground group-open/avg:hidden">Show</span>
+                <span className="hidden text-xs font-normal text-muted-foreground group-open/avg:inline">Hide</span>
+              </summary>
+              <div className="border-t border-border px-4 pt-4">
+                <CourseworkAverages
+                  assignments={assignments}
+                  grades={grades}
+                  setup={setup}
+                  isStaff={isStaff}
+                  studentIds={roster.filter((r) => !testerIds.has(r.student_id)).map((r) => r.student_id)}
+                />
+              </div>
+            </details>
+          )}
           <section className="coursework-ledger mt-6 border-y border-border/70 bg-card">
             {roster.length === 0 || assignments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
@@ -760,13 +778,7 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="coursework">
-          <CourseworkAverages
-            assignments={assignments}
-            grades={grades}
-            setup={setup}
-            isStaff={isStaff}
-            studentIds={roster.filter((r) => !testerIds.has(r.student_id)).map((r) => r.student_id)}
-          />
+
           <AssignmentsTab
             classId={classId}
             isStaff={isStaff}
@@ -1454,8 +1466,8 @@ function AssignmentsTab({
                               return (
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="border-warning/60"
+                                  variant="ghost"
+                                  className="text-muted-foreground"
                                   disabled={postDrafts.isPending}
                                   onClick={() => {
                                     if (window.confirm(`Post ${label} to students and guardians? They will see scores and feedback immediately.`)) {
@@ -1478,25 +1490,36 @@ function AssignmentsTab({
                                     Publish
                                   </Button>
                                 ) : null}
-                                <EditAssignment assignment={a} classId={classId} categories={categories} timeZone={timeZone} />
-                                <ShareResourceButton
-                                  kind="assignment"
-                                  id={a.id}
-                                  title={a.title}
-                                  defaultGrade={gradeLevel ?? null}
-                                />
-                                <CopyToClassesButton
-                                  kind="assignment"
-                                  id={a.id}
-                                  title={a.title}
-                                  classId={classId}
-                                />
-                                <ConfirmDeleteButton
-                                  title={`Delete "${a.title}"?`}
-                                  description="This removes the assignment along with its scores, submissions and linked standards."
-                                  onConfirm={() => removeAssignment.mutate(a.id)}
-                                  disabled={removeAssignment.isPending}
-                                />
+                                <details className="group/more relative">
+                                  <summary
+                                    className="flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground [&::-webkit-details-marker]:hidden"
+                                    aria-label={`More actions for ${a.title}`}
+                                    title="More actions"
+                                  >
+                                    <MoreVertical className="size-4" />
+                                  </summary>
+                                  <div className="mt-2 flex flex-wrap items-center gap-2 xl:justify-end">
+                                    <EditAssignment assignment={a} classId={classId} categories={categories} timeZone={timeZone} />
+                                    <ShareResourceButton
+                                      kind="assignment"
+                                      id={a.id}
+                                      title={a.title}
+                                      defaultGrade={gradeLevel ?? null}
+                                    />
+                                    <CopyToClassesButton
+                                      kind="assignment"
+                                      id={a.id}
+                                      title={a.title}
+                                      classId={classId}
+                                    />
+                                    <ConfirmDeleteButton
+                                      title={`Delete "${a.title}"?`}
+                                      description="This removes the assignment along with its scores, submissions and linked standards."
+                                      onConfirm={() => removeAssignment.mutate(a.id)}
+                                      disabled={removeAssignment.isPending}
+                                    />
+                                  </div>
+                                </details>
                               </>
                             )}
                           </div>
