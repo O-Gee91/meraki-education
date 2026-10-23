@@ -1449,7 +1449,7 @@ function StaffCollectPanel({
                                   // Backdated assignments stay neutral until the
                                   // teacher records a status themselves.
                                   if (shouldAutoFlag(assignment))
-                                    return <span className="font-medium text-destructive">Missing</span>;
+                                    return <span className="inline-flex items-center gap-1 font-medium"><span className="size-1.5 rounded-full bg-warning" aria-hidden />Missing</span>;
                                   return assignment.due_date < new Date().toISOString().slice(0, 10)
                                     ? <span>Assigned</span>
                                     : <span>Not due yet</span>;
@@ -1457,7 +1457,7 @@ function StaffCollectPanel({
                                 return <span>Not collected</span>;
                               })()}
                               {submission?.is_late ? (
-                                <span className="font-medium text-destructive" title="Handed in after the due date">
+                                <span className="font-medium text-foreground" title="Handed in after the due date">
                                   · Late
                                 </span>
                               ) : submission?.late_override_at ? (

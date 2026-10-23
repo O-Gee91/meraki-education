@@ -51,15 +51,15 @@ const STATUS_META: Record<Status, { label: string; dot: string; ring: string; te
   },
   yellow: {
     label: "Slowing down",
-    dot: "bg-warning",
-    ring: "border-warning/50 bg-warning/10",
-    text: "text-warning-foreground",
+    dot: "bg-muted-foreground/60",
+    ring: "border-border bg-muted/30",
+    text: "text-muted-foreground",
   },
   red: {
     label: "At risk",
-    dot: "bg-destructive",
-    ring: "border-destructive/50 bg-destructive/10",
-    text: "text-destructive",
+    dot: "bg-warning",
+    ring: "border-warning/50 bg-warning/10",
+    text: "text-foreground",
   },
   none: {
     label: "No data yet",
@@ -76,8 +76,8 @@ function initials(first?: string, last?: string) {
 function averageTone(pct: number | null) {
   if (pct == null) return "bg-muted";
   if (pct >= 80) return "bg-success";
-  if (pct >= 70) return "bg-warning";
-  return "bg-destructive";
+  if (pct >= 70) return "bg-muted-foreground/60";
+  return "bg-warning";
 }
 
 export function PulseDashboard({
@@ -419,7 +419,7 @@ export function PulseDashboard({
               <ClipboardList className="size-4 shrink-0" />
               {isStaff ? "Missing work tracker" : "My missing work"}
               {!missingOpen && totalMissing > 0 && (
-                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium normal-case text-destructive">
+                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium normal-case text-foreground">
                   {totalMissing}
                 </span>
               )}
@@ -445,7 +445,7 @@ export function PulseDashboard({
           ) : (
             <div className="mt-4 space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-destructive/10 px-2 py-1 font-medium text-destructive">
+                <span className="rounded-full bg-warning/15 px-2 py-1 font-medium text-foreground">
                   {totalMissing} missing item{totalMissing === 1 ? "" : "s"}
                 </span>
                 {isStaff && (
@@ -465,7 +465,7 @@ export function PulseDashboard({
                       <p className="min-w-0 truncate text-sm font-semibold">
                         {studentLabel(row.students, useIds)}
                       </p>
-                      <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                      <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium text-foreground">
                         {items.length} missing
                       </span>
                     </div>
