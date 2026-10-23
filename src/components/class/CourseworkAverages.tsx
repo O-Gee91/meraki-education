@@ -213,15 +213,9 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
         )}
       </div>
 
-      <details className="text-xs text-muted-foreground">
-        <summary className="inline-flex cursor-pointer items-center gap-1"><Info className="h-3.5 w-3.5" /> What do the colors mean?</summary>
-        <ul className="mt-2 flex flex-wrap gap-3">
-          <li className="inline-flex items-center gap-1 text-success"><CircleCheck className="h-3.5 w-3.5" /> 90% and above — strong</li>
-          <li className="inline-flex items-center gap-1 text-warning-foreground dark:text-warning"><TriangleAlert className="h-3.5 w-3.5" /> 70–89.9% — on track</li>
-          <li className="inline-flex items-center gap-1 text-destructive"><CircleAlert className="h-3.5 w-3.5" /> Below 70% — needs attention</li>
-          <li>Excused work isn't counted; Missing counts as 0.</li>
-        </ul>
-      </details>
+      <p className="inline-flex items-center gap-1 pb-4 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5" /> Excused work isn't counted; Missing counts as 0.
+      </p>
     </section>
   );
 }
