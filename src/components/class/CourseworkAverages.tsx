@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, CircleCheck, CircleAlert, TriangleAlert, Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import {
   computeAverage,
   findMark,
