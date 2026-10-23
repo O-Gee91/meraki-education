@@ -16,3 +16,4 @@
 - Scope reviewed educator-request presentation through StaffRequests' opt-in desktopReview prop; this preserves other request surfaces until their own review gate.
 - Scope the reviewed school Files presentation through FileLibrary's opt-in desktopReview prop; this preserves class and student file surfaces and upload behavior.
 - Paginate class gradebook assignment columns independently of the filtered data set; this prevents horizontal scrolling while keeping averages, missing counts and printing based on all filtered assignments.
+- Keep educator navigation groups and shared breadcrumbs in AppShell, with class pages supplying their class name and controlled active-tab context; this keeps navigation consistent without changing student/guardian menus or class-scoped grading.
