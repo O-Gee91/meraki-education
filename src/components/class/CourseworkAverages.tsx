@@ -35,11 +35,10 @@ export function fmtPct(pct: number | null | undefined) {
   return pct == null || Number.isNaN(pct) ? "—" : `${pct.toFixed(1)}%`;
 }
 
+// Calm, neutral presentation: averages are context, not a judgement.
 function band(pct: number | null) {
-  if (pct == null) return { text: "text-muted-foreground", bg: "bg-muted/50 border-border", Icon: null, label: "No grades yet" };
-  if (pct >= 90) return { text: "text-success", bg: "bg-success/10 border-success/30", Icon: CircleCheck, label: "Strong" };
-  if (pct >= 70) return { text: "text-warning-foreground dark:text-warning", bg: "bg-warning/15 border-warning/40", Icon: TriangleAlert, label: "On track" };
-  return { text: "text-destructive", bg: "bg-destructive/10 border-destructive/30", Icon: CircleAlert, label: "Needs attention" };
+  if (pct == null) return { text: "text-muted-foreground", bg: "bg-muted/40 border-border", Icon: null, label: "No grades yet" };
+  return { text: "text-foreground", bg: "bg-card border-border", Icon: null as typeof Info | null, label: "Average" };
 }
 
 function Pct({ value, size = "sm" }: { value: number | null; size?: "sm" | "lg" }) {

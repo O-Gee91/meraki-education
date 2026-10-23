@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, Printer, Search } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
+
+const UNDERLINE_TAB =
+  "-mb-px rounded-none border-b-2 border-transparent px-3 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
