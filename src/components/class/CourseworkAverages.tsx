@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, CircleCheck, CircleAlert, TriangleAlert, Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import {
   computeAverage,
   findMark,
@@ -35,11 +35,10 @@ export function fmtPct(pct: number | null | undefined) {
   return pct == null || Number.isNaN(pct) ? "—" : `${pct.toFixed(1)}%`;
 }
 
+// Calm, neutral presentation: averages are context, not a judgement.
 function band(pct: number | null) {
-  if (pct == null) return { text: "text-muted-foreground", bg: "bg-muted/50 border-border", Icon: null, label: "No grades yet" };
-  if (pct >= 90) return { text: "text-success", bg: "bg-success/10 border-success/30", Icon: CircleCheck, label: "Strong" };
-  if (pct >= 70) return { text: "text-warning-foreground dark:text-warning", bg: "bg-warning/15 border-warning/40", Icon: TriangleAlert, label: "On track" };
-  return { text: "text-destructive", bg: "bg-destructive/10 border-destructive/30", Icon: CircleAlert, label: "Needs attention" };
+  if (pct == null) return { text: "text-muted-foreground", bg: "bg-muted/40 border-border", Icon: null, label: "No grades yet" };
+  return { text: "text-foreground", bg: "bg-card border-border", Icon: null as typeof Info | null, label: "Average" };
 }
 
 function Pct({ value, size = "sm" }: { value: number | null; size?: "sm" | "lg" }) {
@@ -214,15 +213,9 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
         )}
       </div>
 
-      <details className="text-xs text-muted-foreground">
-        <summary className="inline-flex cursor-pointer items-center gap-1"><Info className="h-3.5 w-3.5" /> What do the colors mean?</summary>
-        <ul className="mt-2 flex flex-wrap gap-3">
-          <li className="inline-flex items-center gap-1 text-success"><CircleCheck className="h-3.5 w-3.5" /> 90% and above — strong</li>
-          <li className="inline-flex items-center gap-1 text-warning-foreground dark:text-warning"><TriangleAlert className="h-3.5 w-3.5" /> 70–89.9% — on track</li>
-          <li className="inline-flex items-center gap-1 text-destructive"><CircleAlert className="h-3.5 w-3.5" /> Below 70% — needs attention</li>
-          <li>Excused work isn't counted; Missing counts as 0.</li>
-        </ul>
-      </details>
+      <p className="inline-flex items-center gap-1 pb-4 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5" /> Excused work isn't counted; Missing counts as 0.
+      </p>
     </section>
   );
 }
