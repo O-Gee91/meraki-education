@@ -1,7 +1,5 @@
 # Student Success Hub
 
-I need a site like i have been using for Jupiter Education platofrm for middle school students. Here is the link to give you context and what it provides: https://jupitered.com/index.php
-
 This project was built with [Lovable](https://lovable.dev).
 
 **Live app**: https://meraki-education.lovable.app
