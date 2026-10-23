@@ -5,6 +5,7 @@
 - [x] Phase 2: grouped educator sidebar and contextual class/tab breadcrumbs; student navigation preserved
 - [ ] Phase 2 educator visual review — available minted session reads as Student Tester; requires an educator preview session
 - [x] Phase 3: clickable Pulse filters and teacher dashboard to-do feed (educator visual check pending educator session)
+- [x] Phase 4: Gradebook score hover details, calm amber/slate statuses (red only for destructive), one solid button per area on class pages
 
 
 ## Assignment & Feedback Loop (approved by Joe Doyle 2026-10-12, spec: Build_a_complete_Assignment_Feedback_Loop)
