@@ -106,6 +106,7 @@ export function PulseDashboard({
   const [sortMode, setSortMode] = useStudentSort(`pulse-${classId}`);
   const [open, setOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   useEffect(() => {
     if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
   }, [classId]);
@@ -288,23 +289,48 @@ export function PulseDashboard({
           </button>
           <div className="flex flex-wrap gap-2 text-xs">
             {isStaff && open ? <StudentSortControl value={sortMode} onChange={setSortMode} /> : null}
-            {(["green", "yellow", "red", "none"] as Status[]).map((s) => (
-              <span
-                key={s}
-                className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1"
+            {(["green", "yellow", "red", "none"] as Status[]).map((s) => {
+              const on = statusFilter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={on}
+                  title={on ? "Show all students" : `Show only ${STATUS_META[s].label.toLowerCase()}`}
+                  onClick={() => {
+                    setStatusFilter(on ? null : s);
+                    setSelected(null);
+                    setOpen(true);
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-accent ${
+                    on ? "border-foreground bg-muted font-medium" : "border-border"
+                  }`}
+                >
+                  <span className={`size-2 rounded-full ${STATUS_META[s].dot}`} />
+                  {STATUS_META[s].label}
+                  <strong>{counts[s]}</strong>
+                </button>
+              );
+            })}
+            {statusFilter ? (
+              <button
+                type="button"
+                onClick={() => setStatusFilter(null)}
+                className="rounded-full px-3 py-1 text-muted-foreground underline-offset-2 hover:underline"
               >
-                <span className={`size-2 rounded-full ${STATUS_META[s].dot}`} />
-                {STATUS_META[s].label}
-                <strong>{counts[s]}</strong>
-              </span>
-            ))}
+                Show all
+              </button>
+            ) : null}
           </div>
         </div>
 
         {open && (
         <>
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
-          {cards.map(({ row, avg, missing, status }) => {
+          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).length === 0 ? (
+            <p className="col-span-full text-sm text-muted-foreground">No students in this group.</p>
+          ) : null}
+          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
             const active = selected === row.student_id;
             return (
