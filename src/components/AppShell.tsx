@@ -138,7 +138,7 @@ export function AppShell({
     ...item,
     label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
   }));
-  const staffNavigation = primaryRole === "admin" || primaryRole === "teacher";
+  const staffNavigation = desktopReview && (primaryRole === "admin" || primaryRole === "teacher");
   const navGroups = staffNavigation
     ? STAFF_NAV_GROUPS.map((group) => ({ ...group, items: items.filter((item) => group.paths.includes(item.to)) })).filter((group) => group.items.length > 0)
     : [{ label: "", items }];

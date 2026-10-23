@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
@@ -125,6 +125,10 @@ function ClassDetailPage() {
   const [previewRequested, setPreviewing] = useState(false);
   const [classTab, setClassTab] = useState("gradebook");
   const [previewTab, setPreviewTab] = useState("gradebook");
+  useEffect(() => {
+    setClassTab("gradebook");
+    setPreviewTab("gradebook");
+  }, [previewRequested]);
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
