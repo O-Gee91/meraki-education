@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
@@ -123,6 +123,12 @@ function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { isStaff: realStaff, isAdmin, user, profile } = useAuth();
   const [previewRequested, setPreviewing] = useState(false);
+  const [classTab, setClassTab] = useState("gradebook");
+  const [previewTab, setPreviewTab] = useState("gradebook");
+  useEffect(() => {
+    setClassTab("gradebook");
+    setPreviewTab("gradebook");
+  }, [previewRequested]);
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -415,6 +421,11 @@ function ClassDetailPage() {
     <StudentPreviewContext.Provider value={previewing ? testerId : null}>
     <AppShell
       desktopReview
+      breadcrumbContext={{
+        label: klass?.name ?? "Class",
+        section: ({ gradebook: isStaff ? "Gradebook" : "My grades", coursework: "Coursework", discussions: "Discussion board", rubrics: "Rubrics", shared: "Shared library", roster: "Roster", attendance: "Attendance", files: "Files", grading: "Grading setup" } as Record<string, string>)[previewing ? previewTab : classTab] ?? "Gradebook",
+        onNavigate: () => previewing ? setPreviewTab("gradebook") : setClassTab("gradebook"),
+      }}
       title={
         isStaff && switcherClasses.length > 1 ? (
           <DropdownMenu>
@@ -484,7 +495,7 @@ function ClassDetailPage() {
           <Button size="sm" onClick={() => setPreviewing(false)}>Exit student view</Button>
         </div>
       )}
-      <Tabs defaultValue="gradebook" key={previewing ? "preview" : "staff"}>
+      <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
         <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
           <TabsTrigger value="gradebook" className={UNDERLINE_TAB}>{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
           <TabsTrigger value="coursework" className={UNDERLINE_TAB}>Coursework</TabsTrigger>

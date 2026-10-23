@@ -261,3 +261,11 @@ Ranked issues and fixes:
 2. Low: long app names could overflow the centered dialog -> safe word wrapping on the dialog content.
 3. Low: button heights below the 44px standard -> h-11 Approve/Deny actions; quiet unframed dialog retained (centered layout kept deliberately for a consent screen).
 Verified at 1024/1440/1920: no horizontal overflow; error state renders with brand header. Live approve/deny flow requires a real authorization request and remains unverified; Safari/macOS unverified.
+
+## Phase 2: educator navigation and breadcrumbs
+- Reviewed shells group educator desktop links into Core Teaching (Overview, Classes, Assessment), Student Support (Students, Well-being, Behavior), Communication (Messages, Community, Files), and Admin (People & roles). Existing role filtering remains unchanged; empty groups are omitted.
+- Breadcrumbs above educator headings provide Overview and current-page context. Class pages provide linked Classes and actual class name plus the active tab; clicking the class-name ancestor returns to Gradebook. Class grading remains class-scoped; no global gradebook destination was added.
+- Presentation remains opt-in through AppShell desktopReview. Mobile menus and student/guardian navigation retain existing labels, order and visibility. Preview entry/exit resets class tabs to Gradebook as before.
+- Verification: available self-minted session returned the Student Tester profile and student-only role, so real educator menus/breadcrumbs could not be visually verified. No permissions or stored records were modified to bypass this limitation.
+- Live Student Tester regression: Classes opens a saved class, Coursework and My grades tabs switch successfully, sidebar remains ungrouped and no educator breadcrumbs appear. No horizontal overflow at 390/916/1024/1440/1920px; screenshot inspected; no browser runtime errors. Existing student-sort and assessment tests pass (5 tests); latest preview build OK.
+- Review gate: Phase 2 educator presentation awaits an educator preview session and Joe's review; Phase 3 has not been started. Guardian-specific and Safari/macOS checks remain unverified.

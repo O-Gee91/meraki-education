@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
 import { HeroClassGate } from "@/components/HeroClassGate";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 type NavItem = {
   to: string;
@@ -106,18 +107,27 @@ const ROLE_LABEL: Record<Role, string> = {
   parent: "Guardian",
 };
 
+const STAFF_NAV_GROUPS = [
+  { label: "Core Teaching", paths: ["/dashboard", "/classes", "/reports"] },
+  { label: "Student Support", paths: ["/students", "/wellbeing", "/behavior"] },
+  { label: "Communication", paths: ["/messages", "/community", "/files"] },
+  { label: "Admin", paths: ["/people"] },
+];
+
 export function AppShell({
   title,
   description,
   actions,
   children,
   desktopReview = false,
+  breadcrumbContext,
 }: {
   title: ReactNode;
   description?: string | undefined;
   actions?: ReactNode | undefined;
   children: ReactNode;
   desktopReview?: boolean;
+  breadcrumbContext?: { label: string; section: string; onNavigate: () => void };
 }) {
   const { profile, primaryRole, user, canSwitchRole } = useAuth();
   const navigate = useNavigate();
@@ -128,6 +138,12 @@ export function AppShell({
     ...item,
     label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
   }));
+  const staffNavigation = desktopReview && (primaryRole === "admin" || primaryRole === "teacher");
+  const navGroups = staffNavigation
+    ? STAFF_NAV_GROUPS.map((group) => ({ ...group, items: items.filter((item) => group.paths.includes(item.to)) })).filter((group) => group.items.length > 0)
+    : [{ label: "", items }];
+  const currentItem = items.find((item) => pathname === item.to || pathname.startsWith(item.to + "/"));
+  const currentLabel = currentItem?.label ?? (pathname === "/settings" ? "Account settings" : typeof title === "string" ? title : "Class");
 
   function switchRole(role: "admin" | "teacher") {
     setActingRole(role);
@@ -165,13 +181,17 @@ export function AppShell({
           <GraduationCap className="size-6 text-sidebar-primary" />
           <span className="font-display text-lg font-semibold tracking-tight">Meraki Education</span>
         </Link>
-        <nav className="flex flex-1 flex-col gap-1">
-          {items.map((item) => {
+        <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1">
+          {navGroups.map((group) => (
+            <div key={group.label} className={cn(staffNavigation && "mb-3 last:mb-0")}>
+              {group.label ? <h2 className="mb-1 px-3 text-xs font-medium text-sidebar-foreground/60">{group.label}</h2> : null}
+          {group.items.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (
               <Link
                 key={item.to}
                 to={item.to}
+                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   active
@@ -184,6 +204,8 @@ export function AppShell({
               </Link>
             );
           })}
+            </div>
+          ))}
         </nav>
         <div className="mt-6 rounded-lg bg-sidebar-accent/60 p-3">
           <p className="truncate text-sm font-semibold">
@@ -243,6 +265,27 @@ export function AppShell({
         <header className="border-b border-border bg-card">
           <div className={cn("flex flex-wrap items-center justify-between gap-4 px-6 py-5", desktopReview && "mx-auto w-full max-w-6xl")}>
           <div className="min-w-0">
+            {staffNavigation ? (
+              <Breadcrumb className="mb-2">
+                <BreadcrumbList className="text-xs">
+                  {pathname !== "/dashboard" ? (
+                    <>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/dashboard">Overview</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                    </>
+                  ) : null}
+                  {breadcrumbContext ? (
+                    <>
+                      <BreadcrumbItem><BreadcrumbLink asChild><Link to="/classes">Classes</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem className="min-w-0"><BreadcrumbLink asChild><Link to={pathname} onClick={breadcrumbContext.onNavigate} className="break-words [overflow-wrap:anywhere]">{breadcrumbContext.label}</Link></BreadcrumbLink></BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem><BreadcrumbPage>{breadcrumbContext.section}</BreadcrumbPage></BreadcrumbItem>
+                    </>
+                  ) : <BreadcrumbItem><BreadcrumbPage>{currentLabel}</BreadcrumbPage></BreadcrumbItem>}
+                </BreadcrumbList>
+              </Breadcrumb>
+            ) : null}
             <h1 className="break-words text-2xl font-semibold">{title}</h1>
             {description ? (
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>

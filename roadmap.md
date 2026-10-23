@@ -1,5 +1,12 @@
 # Roadmap
 
+## Teacher cognitive-load rollout
+- [x] Phase 1: quieter assignment cards, collapsed Gradebook averages and underline class tabs
+- [x] Phase 2: grouped educator sidebar and contextual class/tab breadcrumbs; student navigation preserved
+- [ ] Phase 2 educator visual review — available minted session reads as Student Tester; requires an educator preview session
+- [ ] Phase 3: clickable Pulse filters and teacher dashboard to-do feed — awaiting request
+
+
 ## Assignment & Feedback Loop (approved by Joe Doyle 2026-10-12, spec: Build_a_complete_Assignment_Feedback_Loop)
 - [x] DB migration: assignments.status (draft/published), grades.is_draft/posted_at/posted_by, grade_changes audit table + RLS (student/guardian see posted only)
 - [x] Teacher: New Assignment dialog — Save as Draft / Publish
