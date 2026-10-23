@@ -2,7 +2,8 @@
 
 ## Teacher cognitive-load rollout
 - [x] Phase 1: quieter assignment cards, collapsed Gradebook averages and underline class tabs
-- [ ] Phase 2: grouped educator sidebar and contextual breadcrumbs; verify real navigation and show for review
+- [x] Phase 2: grouped educator sidebar and contextual class/tab breadcrumbs; student navigation preserved
+- [ ] Phase 2 educator visual review — available minted session reads as Student Tester; requires an educator preview session
 - [ ] Phase 3: clickable Pulse filters and teacher dashboard to-do feed — awaiting request
 
 
