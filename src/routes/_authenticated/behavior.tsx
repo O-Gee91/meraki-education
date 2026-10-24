@@ -2,10 +2,18 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
+import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -52,12 +60,15 @@ export const Route = createFileRoute("/_authenticated/behavior")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { classId?: string } =>
+    typeof search["classId"] === "string" ? { classId: search["classId"] } : {},
   component: BehaviorPage,
 });
 
 
 function BehaviorPage() {
   const { isStaff, primaryRole } = useAuth();
+  const { classId } = Route.useSearch();
   const isStudent = primaryRole === "student";
 
   return (
@@ -77,7 +88,7 @@ function BehaviorPage() {
           <TabsTrigger value="detentions">{isStudent ? "My detentions" : "Detentions"}</TabsTrigger>
         </TabsList>
         <TabsContent value="log">
-          <BehaviorLog isStaff={isStaff} />
+          <BehaviorLog isStaff={isStaff} initialClassId={classId} />
         </TabsContent>
         <TabsContent value="strikes">
           <StrikeTracker />
@@ -97,21 +108,23 @@ function useNotes() {
       const { data, error } = await supabase
         .from("behavior_notes")
         .select(
-          "id, kind, reason, assignment_id, scored_zero, notes, date, student_id, students(first_name, last_name, grade_level), assignments(title)",
+          "id, kind, reason, assignment_id, scored_zero, notes, date, student_id, class_id, recorded_by, students(first_name, last_name, grade_level), assignments(title), classes(name)",
         )
 
         .order("date", { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
       return data;
     },
   });
 }
 
-function BehaviorLog({ isStaff }: { isStaff: boolean }) {
+function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialClassId?: string | undefined }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     studentId: "",
+    classId: initialClassId ?? "",
     kind: "positive",
     reason: "",
     assignmentId: "",
@@ -122,7 +135,72 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
 
   const { data: notes = [] } = useNotes();
   const [gradeFilter, setGradeFilter] = useState("all");
+  const [kindFilter, setKindFilter] = useState("all");
+  const [classFilter, setClassFilter] = useState(initialClassId ?? "all");
+  const [scope, setScope] = useState<"all" | "classes" | "mine">(
+    initialClassId ? "classes" : "all",
+  );
+  const [search, setSearch] = useState("");
+  const [drawerStudent, setDrawerStudent] = useState<string | null>(null);
   const [sortMode, setSortMode] = useStudentSort("behavior-student-picker");
+
+  // Classes this staff member teaches or co-teaches, with their enrollments.
+  const { data: myScope } = useQuery({
+    queryKey: ["behavior-my-classes", user?.id],
+    enabled: isStaff && !!user,
+    queryFn: async () => {
+      const coTaught = await fetchCoTaughtClassIds(user!.id);
+      const { data: classes, error } = await supabase
+        .from("classes")
+        .select("id, name, teacher_id");
+      if (error) throw error;
+      const mine = (classes ?? []).filter((c) => c.teacher_id === user!.id || coTaught.has(c.id));
+      const ids = mine.map((c) => c.id);
+      const { data: enr, error: eErr } = ids.length
+        ? await supabase.from("enrollments").select("student_id, class_id").in("class_id", ids)
+        : { data: [], error: null };
+      if (eErr) throw eErr;
+      return { classes: mine.sort((a, b) => a.name.localeCompare(b.name)), enrollments: enr ?? [] };
+    },
+  });
+  const myClasses = myScope?.classes ?? [];
+  const myClassIds = useMemo(() => new Set(myClasses.map((c) => c.id)), [myClasses]);
+  const myStudentIds = useMemo(
+    () => new Set((myScope?.enrollments ?? []).map((e) => e.student_id)),
+    [myScope],
+  );
+  const classStudents = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const e of myScope?.enrollments ?? []) {
+      if (!map.has(e.class_id)) map.set(e.class_id, new Set());
+      map.get(e.class_id)!.add(e.student_id);
+    }
+    return map;
+  }, [myScope]);
+
+  // Class filter options: my classes plus any class appearing on a note.
+  const classOptions = useMemo(() => {
+    const map = new Map<string, string>(myClasses.map((c) => [c.id, c.name]));
+    for (const n of notes) if (n.class_id && n.classes?.name) map.set(n.class_id, n.classes.name);
+    return [...map].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [myClasses, notes]);
+
+  const recorderIds = useMemo(
+    () => [...new Set(notes.map((n) => n.recorded_by).filter((v): v is string => !!v))].sort(),
+    [notes],
+  );
+  const { data: recorderNames = new Map<string, string>() } = useQuery({
+    queryKey: ["behavior-recorders", recorderIds],
+    enabled: isStaff && recorderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", recorderIds);
+      if (error) throw error;
+      return new Map((data ?? []).map((p) => [p.id, p.full_name]));
+    },
+  });
 
   const grades = useMemo(
     () =>
@@ -131,13 +209,30 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       ),
     [notes],
   );
-  const visibleNotes = useMemo(
-    () =>
-      gradeFilter === "all"
-        ? notes
-        : notes.filter((n) => String(n.students?.grade_level ?? "") === gradeFilter),
-    [notes, gradeFilter],
-  );
+  const visibleNotes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return notes.filter((n) => {
+      if (gradeFilter !== "all" && String(n.students?.grade_level ?? "") !== gradeFilter) return false;
+      if (kindFilter !== "all" && n.kind !== kindFilter) return false;
+      if (scope === "mine" && n.recorded_by !== user?.id) return false;
+      if (
+        scope === "classes" &&
+        !(myStudentIds.has(n.student_id) || (n.class_id && myClassIds.has(n.class_id)))
+      )
+        return false;
+      if (classFilter !== "all") {
+        const inClass =
+          n.class_id === classFilter ||
+          (!n.class_id && classStudents.get(classFilter)?.has(n.student_id));
+        if (!inClass) return false;
+      }
+      if (q) {
+        const name = `${n.students?.first_name ?? ""} ${n.students?.last_name ?? ""}`.toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [notes, gradeFilter, kindFilter, scope, classFilter, search, user?.id, myStudentIds, myClassIds, classStudents]);
 
   const { studentIds } = useTeacherScope();
   const { data: allStudents = [] } = useQuery({
@@ -152,10 +247,17 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
-  // Teacher mode limits logging to students this person actually teaches.
+  // Teacher mode limits logging to students this person actually teaches;
+  // a chosen class narrows the picker to that roster.
+  const formRoster = form.classId ? classStudents.get(form.classId) : undefined;
   const students = sortStudents(
-    studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+    allStudents.filter(
+      (s) => (!studentIds || studentIds.has(s.id)) && (!formRoster || formRoster.has(s.id)),
+    ),
     sortMode,
+  );
+  const formClassOptions = myClasses.filter(
+    (c) => !form.studentId || classStudents.get(c.id)?.has(form.studentId),
   );
 
 
@@ -195,6 +297,8 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       const zeroed = Boolean(needsAssignment && form.markZero && form.assignmentId);
       const { error } = await supabase.from("behavior_notes").insert({
         student_id: form.studentId,
+        class_id: form.classId || null,
+        recorded_by: user?.id ?? null,
         kind: form.kind,
         reason: form.reason || null,
         assignment_id: needsAssignment && form.assignmentId ? form.assignmentId : null,
@@ -227,6 +331,7 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       );
       setForm({
         studentId: "",
+        classId: form.classId,
         kind: form.kind,
         reason: "",
         assignmentId: "",
@@ -273,6 +378,27 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
                 className="w-full"
               />
             </div>
+            {formClassOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="note-class">Class (optional)</Label>
+                <Select
+                  value={form.classId || "none"}
+                  onValueChange={(v) => setForm({ ...form, classId: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger id="note-class">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not class-specific</SelectItem>
+                    {formClassOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="kind">Type</Label>
               <Select
@@ -387,29 +513,203 @@ function BehaviorLog({ isStaff }: { isStaff: boolean }) {
       )}
 
       <section className="min-w-0 divide-y divide-border">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+        <div className="space-y-3 pb-4">
           <h2 className="text-lg font-semibold">{isStaff ? "Grade-wide behavior log" : "Behavior log"}</h2>
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-40" aria-label="Filter by grade">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All my grades</SelectItem>
-              {grades.map((g) => (
-                <SelectItem key={g} value={String(g)}>
-                  Grade {g}
-                </SelectItem>
+          {isStaff && (
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Log scope">
+              {(
+                [
+                  ["all", "All grade-wide"],
+                  ["classes", "My classes"],
+                  ["mine", "Logged by me"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={scope === value ? "secondary" : "ghost"}
+                  aria-pressed={scope === value}
+                  onClick={() => setScope(value)}
+                >
+                  {label}
+                </Button>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {isStaff && (
+              <div className="relative min-w-48 flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  placeholder="Search student…"
+                  aria-label="Search student"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            )}
+            {isStaff && classOptions.length > 0 && (
+              <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger className="w-48" aria-label="Filter by class">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All classes</SelectItem>
+                  {classOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger className="w-36" aria-label="Filter by grade">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All grades</SelectItem>
+                {grades.map((g) => (
+                  <SelectItem key={g} value={String(g)}>
+                    Grade {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={kindFilter} onValueChange={setKindFilter}>
+              <SelectTrigger className="w-36" aria-label="Filter by type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {NOTE_KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {kindLabel(k)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Showing {visibleNotes.length} of {notes.length} notes
+          </p>
         </div>
         {visibleNotes.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No behavior notes recorded.</p>
+          <p className="p-6 text-sm text-muted-foreground">No behavior notes match these filters.</p>
         ) : (
-          visibleNotes.map((n) => <NoteRow key={n.id} note={n} isStaff={isStaff} />)
+          visibleNotes.map((n) => (
+            <NoteRow
+              key={n.id}
+              note={n}
+              isStaff={isStaff}
+              currentUserId={user?.id}
+              recorderName={n.recorded_by ? recorderNames.get(n.recorded_by) : undefined}
+              onOpenStudent={isStaff ? setDrawerStudent : undefined}
+            />
+          ))
         )}
       </section>
+      <StudentHistorySheet
+        studentId={drawerStudent}
+        notes={notes}
+        recorderNames={recorderNames}
+        currentUserId={user?.id}
+        onClose={() => setDrawerStudent(null)}
+      />
     </div>
+  );
+}
+
+function StudentHistorySheet({
+  studentId,
+  notes,
+  recorderNames,
+  currentUserId,
+  onClose,
+}: {
+  studentId: string | null;
+  notes: NoteRecord[];
+  recorderNames: Map<string, string>;
+  currentUserId?: string | undefined;
+  onClose: () => void;
+}) {
+  const history = studentId ? notes.filter((n) => n.student_id === studentId) : [];
+  const student = history[0]?.students;
+  const strikes = history.filter((n) => n.kind === "strike").length;
+  const inCycle = strikes % 3;
+  const positives = history.filter((n) => n.kind === "positive").length;
+  const { data: detentions = [] } = useQuery({
+    queryKey: ["detentions", "student", studentId],
+    enabled: !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("detentions")
+        .select("id, reason, scheduled_date, status")
+        .eq("student_id", studentId!)
+        .order("scheduled_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  return (
+    <Sheet open={!!studentId} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>
+            {student ? `${student.last_name}, ${student.first_name}` : "Student"}
+          </SheetTitle>
+          <SheetDescription>
+            {student?.grade_level ? `Grade ${student.grade_level} · ` : ""}Full behavior history
+          </SheetDescription>
+        </SheetHeader>
+        <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-md border border-border p-3">
+            <dt className="text-xs text-muted-foreground">Strikes in cycle</dt>
+            <dd className="text-lg font-semibold">{inCycle}/3</dd>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <dt className="text-xs text-muted-foreground">Total strikes</dt>
+            <dd className="text-lg font-semibold">{strikes}</dd>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <dt className="text-xs text-muted-foreground">Shout-outs</dt>
+            <dd className="text-lg font-semibold">{positives}</dd>
+          </div>
+        </dl>
+        <h3 className="mt-6 text-sm font-semibold">Detentions</h3>
+        {detentions.length === 0 ? (
+          <p className="mt-1 text-sm text-muted-foreground">None scheduled.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-sm">
+            {detentions.map((d) => (
+              <li key={d.id} className="flex justify-between gap-2">
+                <span>{formatDate(d.scheduled_date)}</span>
+                <span className="text-muted-foreground">{d.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <h3 className="mt-6 text-sm font-semibold">Notes</h3>
+        <ul className="mt-2 divide-y divide-border">
+          {history.map((n) => (
+            <li key={n.id} className="py-3 text-sm">
+              <p className="font-medium">{noteHeadline(n)}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(n.date)}
+                {n.classes?.name ? ` · ${n.classes.name}` : ""}
+                {n.recorded_by === currentUserId && currentUserId
+                  ? " · Logged by you"
+                  : n.recorded_by && recorderNames.get(n.recorded_by)
+                    ? ` · Logged by ${recorderNames.get(n.recorded_by)}`
+                    : ""}
+              </p>
+              {n.notes ? <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{n.notes}</p> : null}
+            </li>
+          ))}
+        </ul>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -422,8 +722,11 @@ type NoteRecord = {
   notes: string | null;
   date: string;
   student_id: string;
+  class_id?: string | null;
+  recorded_by?: string | null;
   students: { first_name: string; last_name: string; grade_level?: number | null } | null;
   assignments?: { title: string } | null;
+  classes?: { name: string } | null;
 };
 
 /** e.g. "Strike — Plagiarism — Essay 2 (0)" */
@@ -437,7 +740,19 @@ function noteHeadline(note: NoteRecord) {
   return parts.join(" — ");
 }
 
-function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
+function NoteRow({
+  note,
+  isStaff,
+  currentUserId,
+  recorderName,
+  onOpenStudent,
+}: {
+  note: NoteRecord;
+  isStaff: boolean;
+  currentUserId?: string | undefined;
+  recorderName?: string | undefined;
+  onOpenStudent?: ((studentId: string) => void) | undefined;
+}) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
@@ -550,16 +865,28 @@ function NoteRow({ note, isStaff }: { note: NoteRecord; isStaff: boolean }) {
     );
   }
 
+  const mine = !!currentUserId && note.recorded_by === currentUserId;
   return (
-    <article className="py-5">
+    <article className={`py-5 ${mine ? "border-l-2 border-l-primary/50 pl-3" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="break-words text-sm font-semibold">
+          <button
+            type="button"
+            className="break-words text-left text-sm font-semibold hover:underline"
+            onClick={() => onOpenStudent?.(note.student_id)}
+            title="See this student's full behavior history"
+          >
             {note.students?.last_name}, {note.students?.first_name}
-          </p>
+          </button>
           <p className="mt-1 text-xs text-muted-foreground">
             {formatDate(note.date)}
             {note.students?.grade_level ? ` · Grade ${note.students.grade_level}` : ""}
+            {note.classes?.name ? ` · ${note.classes.name}` : ""}
+            {mine
+              ? " · Logged by you"
+              : recorderName
+                ? ` · Logged by ${recorderName}`
+                : ""}
           </p>
         </div>
         {isStaff && (
