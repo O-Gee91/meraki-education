@@ -141,6 +141,13 @@
       "when": 1792654627071,
       "tag": "0019_list_staff_function",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792823013259,
+      "tag": "0020_message_contacts_and_read_receipts",
+      "breakpoints": true
     }
   ]
 }

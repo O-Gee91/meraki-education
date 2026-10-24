@@ -57,25 +57,74 @@ function MessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, subject, body, created_at, read, sender_id, recipient_id")
+        .select("id, subject, body, created_at, read, read_at, sender_id, recipient_id")
         .order("created_at", { ascending: false })
-        .limit(80);
+        .limit(150);
       if (error) throw error;
       return data;
     },
   });
 
+  // Staff may browse everyone; students and guardians only see their teachers and school admins.
   const { data: people = [] } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: ["message-contacts", isStaff],
+    enabled: Boolean(user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .order("full_name");
+      if (isStaff) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .order("full_name");
+        if (error) throw error;
+        return data.filter((p) => p.id !== user?.id).map((p) => ({ ...p, label: "" as string | null }));
+      }
+      const { data, error } = await supabase.rpc("message_contacts");
       if (error) throw error;
-      return data.filter((p) => p.id !== user?.id);
+      return data ?? [];
     },
   });
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["message-participants", user?.id, inbox.length],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("message_participant_names");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [folder, setFolder] = useState<"inbox" | "sent">("inbox");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const received = inbox.filter((m) => m.recipient_id === user?.id);
+  const sent = inbox.filter((m) => m.sender_id === user?.id);
+  const unreadCount = received.filter((m) => !m.read).length;
+
+  const markRead = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("messages").update({ read: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
+    },
+  });
+
+  const openMessage = (m: (typeof inbox)[number]) => {
+    setOpenId(openId === m.id ? null : m.id);
+    if (m.recipient_id === user?.id && !m.read) markRead.mutate(m.id);
+  };
+
+  const reply = (m: (typeof inbox)[number]) => {
+    setPickMode("person");
+    setCompose({
+      recipient: m.sender_id,
+      subject: m.subject.startsWith("Re: ") ? m.subject : `Re: ${m.subject}`.slice(0, 140),
+      body: "",
+    });
+    document.getElementById("subject")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
@@ -192,7 +241,10 @@ function MessagesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const nameFor = (id: string) => people.find((p) => p.id === id)?.full_name ?? "You";
+  const nameFor = (id: string) =>
+    participants.find((p) => p.id === id)?.full_name ??
+    people.find((p) => p.id === id)?.full_name ??
+    "Unknown sender";
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ title: "", body: "", audience: "everyone" });
@@ -316,9 +368,15 @@ function MessagesPage() {
                       <SelectValue placeholder="Choose a person" />
                     </SelectTrigger>
                     <SelectContent className="max-w-[calc(100vw-3rem)]">
+                      {compose.recipient && !people.some((p) => p.id === compose.recipient) && (
+                        <SelectItem value={compose.recipient}>{nameFor(compose.recipient)}</SelectItem>
+                      )}
+                      {people.length === 0 && !compose.recipient && (
+                        <p className="px-2 py-1.5 text-sm text-muted-foreground">No teachers found for your classes yet.</p>
+                      )}
                       {people.map((p) => (
                         <SelectItem key={p.id} value={p.id} className="[overflow-wrap:anywhere] [&>span:last-child]:min-w-0">
-                          {p.full_name}
+                          {p.full_name}{p.label ? ` — ${p.label}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -351,27 +409,62 @@ function MessagesPage() {
               </div>
             </section>
 
-            <section aria-label="Message history" className="min-w-0 divide-y divide-border border-t border-border">
-              <h2 className="py-5 text-lg font-semibold">{isStaff ? "Message history" : "My inbox"}</h2>
-              {inbox.length === 0 ? (
-                <p className="py-6 text-sm text-muted-foreground">No messages yet.</p>
+            <section aria-label="Messages" className="min-w-0 divide-y divide-border border-t border-border">
+              <div className="flex flex-wrap items-center gap-1 py-4" role="group" aria-label="Folder">
+                <Button size="sm" variant={folder === "inbox" ? "secondary" : "ghost"} onClick={() => setFolder("inbox")}>
+                  Inbox{unreadCount > 0 ? ` · ${unreadCount} unread` : ""}
+                </Button>
+                <Button size="sm" variant={folder === "sent" ? "secondary" : "ghost"} onClick={() => setFolder("sent")}>
+                  Sent
+                </Button>
+              </div>
+              {(folder === "inbox" ? received : sent).length === 0 ? (
+                <p className="py-6 text-sm text-muted-foreground">
+                  {folder === "inbox" ? "No messages received yet." : "You haven't sent any messages yet."}
+                </p>
               ) : (
-                inbox.map((m) => (
-                  <article key={m.id} className="min-w-0 py-5 [overflow-wrap:anywhere]">
-                    <h3 className="text-base font-semibold">{m.subject}</h3>
-                    <div className="mt-1.5 grid min-w-0 gap-1 text-xs text-muted-foreground sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
-                      <span>
-                        {m.sender_id === user?.id ? `To ${nameFor(m.recipient_id)}` : `From ${nameFor(m.sender_id)}`}
-                      </span>
-                      <span className="whitespace-nowrap">
-                        {formatDate(m.created_at)}
-                      </span>
-                    </div>
-                    <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">
-                      {m.body}
-                    </p>
-                  </article>
-                ))
+                (folder === "inbox" ? received : sent).map((m) => {
+                  const incoming = m.recipient_id === user?.id;
+                  const unread = incoming && !m.read;
+                  const open = openId === m.id;
+                  return (
+                    <article key={m.id} className="min-w-0 py-4 [overflow-wrap:anywhere]">
+                      <button
+                        type="button"
+                        onClick={() => openMessage(m)}
+                        aria-expanded={open}
+                        className="block w-full text-left"
+                      >
+                        <div className="flex items-start gap-2">
+                          {unread && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />}
+                          <h3 className={`text-base ${unread ? "font-bold" : "font-semibold"}`}>{m.subject}</h3>
+                        </div>
+                        <div className="mt-1.5 grid min-w-0 gap-1 text-xs text-muted-foreground sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+                          <span>{incoming ? `From ${nameFor(m.sender_id)}` : `To ${nameFor(m.recipient_id)}`}</span>
+                          <span className="whitespace-nowrap">{formatDate(m.created_at)}</span>
+                        </div>
+                        {!open && (
+                          <p className="mt-2 line-clamp-1 text-sm text-muted-foreground">{m.body}</p>
+                        )}
+                      </button>
+                      {open && (
+                        <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">
+                          {m.body}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {!incoming && (
+                          <Badge variant="outline" className="font-normal">
+                            {m.read ? `Read${m.read_at ? ` ${formatDate(m.read_at)}` : ""}` : "Not read yet"}
+                          </Badge>
+                        )}
+                        {incoming && open && (
+                          <Button size="sm" variant="outline" onClick={() => reply(m)}>Reply</Button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })
               )}
             </section>
           </div>

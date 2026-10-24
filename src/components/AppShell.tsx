@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import {
   BookOpen,
@@ -134,10 +134,27 @@ export function AppShell({
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const items = NAV.filter((item) => item.roles.includes(primaryRole)).map((item) => ({
-    ...item,
-    label: primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label,
-  }));
+  const { data: unreadMessages = 0 } = useQuery({
+    queryKey: ["unread-messages", user?.id],
+    enabled: Boolean(user),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", user!.id)
+        .eq("read", false);
+      return count ?? 0;
+    },
+  });
+
+  const items = NAV.filter((item) => item.roles.includes(primaryRole)).map((item) => {
+    const base = primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label;
+    return {
+      ...item,
+      label: item.to === "/messages" && unreadMessages > 0 ? `${base} (${unreadMessages})` : base,
+    };
+  });
   const staffNavigation = desktopReview && (primaryRole === "admin" || primaryRole === "teacher");
   const navGroups = staffNavigation
     ? STAFF_NAV_GROUPS.map((group) => ({ ...group, items: items.filter((item) => group.paths.includes(item.to)) })).filter((group) => group.items.length > 0)
