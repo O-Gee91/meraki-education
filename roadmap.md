@@ -1,5 +1,9 @@
 # Roadmap
 
+## Grade-clear email correction
+- [x] Skip cleared scores at both alert boundaries; preserve notifications for zero, special marks and real posted corrections; 12 regression tests pass
+- [ ] Educator end-to-end grading check — restored preview opens as Student Tester, not an educator
+
 ## Teacher cognitive-load rollout
 - [x] Phase 1: quieter assignment cards, collapsed Gradebook averages and underline class tabs
 - [x] Phase 2: grouped educator sidebar and contextual class/tab breadcrumbs; student navigation preserved

@@ -62,6 +62,7 @@ import { DEFAULT_TIME_ZONE } from "@/lib/coursework-window";
 import { shouldAutoFlag } from "@/lib/assignment-status";
 import {
   findMark,
+  hasGradeValue,
   isAutoGradeComment,
   markCodeFromComment,
   parseGradingSetup,
@@ -678,11 +679,14 @@ function StaffCollectPanel({
           });
         }
       }
+      return { hasScore: hasGradeValue(points, markComment) };
     },
-    onSuccess: (_data, variables) => {
-      if (!variables.draft) void gradeAlert({ data: { assignmentId: assignment.id, studentIds: [variables.studentId] } }).catch(() => {});
+    onSuccess: (result, variables) => {
+      if (!variables.draft && result.hasScore) void gradeAlert({ data: { assignmentId: assignment.id, studentIds: [variables.studentId] } }).catch(() => {});
       toast.success(
-        variables.draft
+        !result.hasScore
+          ? "Score cleared"
+          : variables.draft
           ? "Draft saved — only you can see this grade"
           : "Grade posted — the student and their guardian can see it now",
       );

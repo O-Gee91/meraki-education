@@ -112,6 +112,11 @@ export function markCodeFromComment(comment?: string | null) {
   return match?.[1] ? match[1].toUpperCase() : null;
 }
 
+/** Feedback alone is not a score; zero and recorded special marks are grades. */
+export function hasGradeValue(points: number | null | undefined, comment?: string | null) {
+  return (points != null && Number.isFinite(points)) || markCodeFromComment(comment) != null;
+}
+
 /**
  * Comments the system writes for itself (auto-zeroes, graded-assessment sync).
  * They must never be shown to students as teacher feedback.

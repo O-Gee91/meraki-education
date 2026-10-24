@@ -17,3 +17,5 @@
 - Scope the reviewed school Files presentation through FileLibrary's opt-in desktopReview prop; this preserves class and student file surfaces and upload behavior.
 - Paginate class gradebook assignment columns independently of the filtered data set; this prevents horizontal scrolling while keeping averages, missing counts and printing based on all filtered assignments.
 - Keep educator navigation groups and shared breadcrumbs in AppShell, with class pages supplying their class name and controlled active-tab context; this keeps navigation consistent without changing student/guardian menus or class-scoped grading.
+- Share grade-value eligibility through the grading helpers at both the score-save alert and server-send boundaries; this prevents cleared scores from becoming grade notifications on any release path.
+- Run unit tests with the dedicated Vitest configuration rather than the app's RPC transform; this allows mocked server handlers to execute directly without deployment routing.
