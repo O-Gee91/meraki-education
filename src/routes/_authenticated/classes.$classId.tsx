@@ -481,6 +481,11 @@ function ClassDetailPage() {
               {useIds ? "Show names" : "Show student IDs"}
             </Button>
           )}
+          {isStaff && (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/behavior" search={{ classId }}>Behavior log</Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link to="/classes">All classes</Link>
           </Button>
