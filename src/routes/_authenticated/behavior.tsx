@@ -61,7 +61,7 @@ export const Route = createFileRoute("/_authenticated/behavior")({
     ],
   }),
   validateSearch: (search: Record<string, unknown>): { classId?: string } =>
-    typeof search.classId === "string" ? { classId: search.classId } : {},
+    typeof search["classId"] === "string" ? { classId: search["classId"] } : {},
   component: BehaviorPage,
 });
 
@@ -119,7 +119,7 @@ function useNotes() {
   });
 }
 
-function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialClassId?: string }) {
+function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialClassId?: string | undefined }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [form, setForm] = useState({
@@ -631,7 +631,7 @@ function StudentHistorySheet({
   studentId: string | null;
   notes: NoteRecord[];
   recorderNames: Map<string, string>;
-  currentUserId?: string;
+  currentUserId?: string | undefined;
   onClose: () => void;
 }) {
   const history = studentId ? notes.filter((n) => n.student_id === studentId) : [];
@@ -749,9 +749,9 @@ function NoteRow({
 }: {
   note: NoteRecord;
   isStaff: boolean;
-  currentUserId?: string;
-  recorderName?: string;
-  onOpenStudent?: (studentId: string) => void;
+  currentUserId?: string | undefined;
+  recorderName?: string | undefined;
+  onOpenStudent?: ((studentId: string) => void) | undefined;
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
