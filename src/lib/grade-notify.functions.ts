@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { hasGradeValue, markCodeFromComment } from "./grading";
 
 /**
  * Emails each student (and their guardian) privately when their grade is posted.
@@ -47,10 +48,10 @@ export const notifyGradesPosted = createServerFn({ method: "POST" })
     const valid = (e?: string | null) => !!e && e.includes("@") && !e.endsWith(".local");
 
     for (const g of grades ?? []) {
-      if (g.is_draft) continue;
+      if (g.is_draft || !hasGradeValue(g.points_earned, g.comment)) continue;
       const s = (roster ?? []).find((r) => r.id === g.student_id);
       if (!s || s.is_tester) continue;
-      const mark = g.comment?.startsWith("MARK:") ? g.comment.slice(5) : null;
+      const mark = markCodeFromComment(g.comment);
       const base = {
         title: a.title,
         className: cls?.name ?? undefined,
@@ -72,9 +73,11 @@ export const notifyGradesPosted = createServerFn({ method: "POST" })
         }
       };
       const p = s.user_id ? byId.get(s.user_id) : undefined;
-      if (valid(p?.email) && (await send(p!.email!, "s", { recipientName: s.first_name }))) students++;
+      const studentEmail = p?.email;
+      if (studentEmail && valid(studentEmail) && (await send(studentEmail, "s", { recipientName: s.first_name }))) students++;
       const gp = s.guardian_user_id ? byId.get(s.guardian_user_id) : undefined;
-      const ge = valid(gp?.email) ? gp!.email! : valid(s.guardian_email) ? s.guardian_email! : null;
+      const guardianEmail = gp?.email;
+      const ge = guardianEmail && valid(guardianEmail) ? guardianEmail : s.guardian_email && valid(s.guardian_email) ? s.guardian_email : null;
       if (ge && (await send(ge, "g", {
         recipientName: gp?.full_name ?? undefined, isGuardian: true,
         studentName: `${s.first_name} ${s.last_name}`.trim(),
