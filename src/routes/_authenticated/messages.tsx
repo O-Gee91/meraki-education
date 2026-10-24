@@ -368,9 +368,15 @@ function MessagesPage() {
                       <SelectValue placeholder="Choose a person" />
                     </SelectTrigger>
                     <SelectContent className="max-w-[calc(100vw-3rem)]">
+                      {compose.recipient && !people.some((p) => p.id === compose.recipient) && (
+                        <SelectItem value={compose.recipient}>{nameFor(compose.recipient)}</SelectItem>
+                      )}
+                      {people.length === 0 && !compose.recipient && (
+                        <p className="px-2 py-1.5 text-sm text-muted-foreground">No teachers found for your classes yet.</p>
+                      )}
                       {people.map((p) => (
                         <SelectItem key={p.id} value={p.id} className="[overflow-wrap:anywhere] [&>span:last-child]:min-w-0">
-                          {p.full_name}
+                          {p.full_name}{p.label ? ` — ${p.label}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
