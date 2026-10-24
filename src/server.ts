@@ -57,12 +57,13 @@ function isPreviewHost(host: string): boolean {
 
 // Content-Security-Policy is only meaningful on HTML documents; adding it to
 // static assets or JSON API responses has no effect.
-function buildCsp(frameAncestors: string): string {
+function buildCsp(frameAncestors: string, nonce: string): string {
   return [
     "default-src 'self'",
-    // The theme pre-paint script is inline; the bundler also emits inline module
-    // preload shims, so inline scripts must stay allowed. eval() is not needed.
-    "script-src 'self' 'unsafe-inline'",
+    // Inline scripts (theme pre-paint, hydration stream) carry a per-request
+    // nonce stamped in by withSecurityHeaders, so 'unsafe-inline' is not needed.
+    // eval() is not needed either.
+    `script-src 'self' 'nonce-${nonce}'`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
@@ -78,7 +79,21 @@ function buildCsp(frameAncestors: string): string {
   ].join("; ");
 }
 
-function withSecurityHeaders(response: Response, request: Request): Response {
+function generateCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+// Stamps the nonce onto every <script> tag in the HTML so the CSP can require
+// it. Scripts that already carry a nonce are left untouched.
+function stampScriptNonces(html: string, nonce: string): string {
+  return html.replace(/<script(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`);
+}
+
+async function withSecurityHeaders(response: Response, request: Request): Promise<Response> {
   const headers = new Headers(response.headers);
   const contentType = headers.get("content-type") ?? "";
 
@@ -104,10 +119,19 @@ function withSecurityHeaders(response: Response, request: Request): Response {
   headers.delete("Server");
 
   if (contentType.includes("text/html")) {
+    const nonce = generateCspNonce();
     headers.set(
       "Content-Security-Policy",
-      buildCsp(preview ? PREVIEW_FRAME_ANCESTORS : "'self'"),
+      buildCsp(preview ? PREVIEW_FRAME_ANCESTORS : "'self'", nonce),
     );
+    // Buffer the page so every inline script gets this request's nonce.
+    const html = stampScriptNonces(await response.text(), nonce);
+    headers.delete("content-length");
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 
   return new Response(response.body, {
@@ -122,10 +146,10 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);
+      return await withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);
     } catch (error) {
       console.error(error);
-      return withSecurityHeaders(
+      return await withSecurityHeaders(
         new Response(renderErrorPage(), {
           status: 500,
           headers: { "content-type": "text/html; charset=utf-8" },
