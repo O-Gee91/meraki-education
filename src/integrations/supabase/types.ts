@@ -1536,6 +1536,7 @@ export type Database = {
           created_at: string
           id: string
           read: boolean
+          read_at: string | null
           recipient_id: string
           sender_id: string
           subject: string
@@ -1545,6 +1546,7 @@ export type Database = {
           created_at?: string
           id?: string
           read?: boolean
+          read_at?: string | null
           recipient_id: string
           sender_id: string
           subject?: string
@@ -1554,6 +1556,7 @@ export type Database = {
           created_at?: string
           id?: string
           read?: boolean
+          read_at?: string | null
           recipient_id?: string
           sender_id?: string
           subject?: string
@@ -2339,6 +2342,21 @@ export type Database = {
         Args: never
         Returns: {
           email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      message_contacts: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+          label: string
+        }[]
+      }
+      message_participant_names: {
+        Args: never
+        Returns: {
           full_name: string
           id: string
         }[]
