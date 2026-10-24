@@ -57,12 +57,13 @@ function isPreviewHost(host: string): boolean {
 
 // Content-Security-Policy is only meaningful on HTML documents; adding it to
 // static assets or JSON API responses has no effect.
-function buildCsp(frameAncestors: string): string {
+function buildCsp(frameAncestors: string, nonce: string): string {
   return [
     "default-src 'self'",
-    // The theme pre-paint script is inline; the bundler also emits inline module
-    // preload shims, so inline scripts must stay allowed. eval() is not needed.
-    "script-src 'self' 'unsafe-inline'",
+    // Inline scripts (theme pre-paint, hydration stream) carry a per-request
+    // nonce stamped in by withSecurityHeaders, so 'unsafe-inline' is not needed.
+    // eval() is not needed either.
+    `script-src 'self' 'nonce-${nonce}'`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
