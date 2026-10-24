@@ -79,7 +79,21 @@ function buildCsp(frameAncestors: string, nonce: string): string {
   ].join("; ");
 }
 
-function withSecurityHeaders(response: Response, request: Request): Response {
+function generateCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+// Stamps the nonce onto every <script> tag in the HTML so the CSP can require
+// it. Scripts that already carry a nonce are left untouched.
+function stampScriptNonces(html: string, nonce: string): string {
+  return html.replace(/<script(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`);
+}
+
+async function withSecurityHeaders(response: Response, request: Request): Promise<Response> {
   const headers = new Headers(response.headers);
   const contentType = headers.get("content-type") ?? "";
 
