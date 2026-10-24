@@ -119,10 +119,19 @@ async function withSecurityHeaders(response: Response, request: Request): Promis
   headers.delete("Server");
 
   if (contentType.includes("text/html")) {
+    const nonce = generateCspNonce();
     headers.set(
       "Content-Security-Policy",
-      buildCsp(preview ? PREVIEW_FRAME_ANCESTORS : "'self'"),
+      buildCsp(preview ? PREVIEW_FRAME_ANCESTORS : "'self'", nonce),
     );
+    // Buffer the page so every inline script gets this request's nonce.
+    const html = stampScriptNonces(await response.text(), nonce);
+    headers.delete("content-length");
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 
   return new Response(response.body, {
@@ -137,10 +146,10 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);
+      return await withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), request);
     } catch (error) {
       console.error(error);
-      return withSecurityHeaders(
+      return await withSecurityHeaders(
         new Response(renderErrorPage(), {
           status: 500,
           headers: { "content-type": "text/html; charset=utf-8" },
