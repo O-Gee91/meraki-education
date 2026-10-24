@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
 
 const UNDERLINE_TAB =
   "-mb-px rounded-none border-b-2 border-transparent px-3 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none";
@@ -569,76 +569,33 @@ function ClassDetailPage() {
                         <Printer className="size-4" /> Print gradebook
                       </Button>
                     )}
-                    {isStaff && <div className="grid w-full gap-3 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
-                      <div className="space-y-1 lg:col-span-2">
-                        <Label htmlFor="gradebook-search" className="text-xs">Find student</Label>
-                        <div className="relative">
-                          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="gradebook-search"
-                            value={gradebookSearch}
-                            onChange={(event) => setGradebookSearch(event.target.value)}
-                            placeholder="Name or student ID"
-                            className="pl-8"
-                          />
-                        </div>
+                    {isStaff && <div className="flex w-full flex-wrap items-center gap-3 border-t border-border pt-4">
+                      <div className="relative w-full sm:w-72">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="gradebook-search"
+                          aria-label="Search student by name or student ID"
+                          value={gradebookSearch}
+                          onChange={(event) => setGradebookSearch(event.target.value)}
+                          placeholder="Search student..."
+                          className="pl-8"
+                        />
                       </div>
-                      <div className="space-y-1 lg:col-span-2">
-                        <Label className="text-xs">Student order</Label>
-                        <StudentSortControl value={gradebookSort} onChange={setGradebookSort} className="w-full" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="gradebook-category" className="text-xs">Category</Label>
-                        <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
-                          <SelectTrigger id="gradebook-category" aria-label="Filter assignments by category">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All categories ({assignments.length})</SelectItem>
-                            {Object.entries(gradebookCategoryCounts)
-                              .sort(([a], [b]) => a.localeCompare(b))
-                              .map(([category, count]) => (
-                                <SelectItem key={category} value={category}>
-                                  {category} ({count})
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="gradebook-due-from" className="text-xs">Due from</Label>
-                        <Input id="gradebook-due-from" type="date" value={gradebookDueFrom} onChange={(event) => setGradebookDueFrom(event.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="gradebook-due-to" className="text-xs">Due through</Label>
-                        <Input id="gradebook-due-to" type="date" value={gradebookDueTo} onChange={(event) => setGradebookDueTo(event.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="gradebook-sort" className="text-xs">Sort by</Label>
-                        <Select value={gradebookAssignmentSort} onValueChange={(value) => setGradebookAssignmentSort(value as typeof gradebookAssignmentSort)}>
-                          <SelectTrigger id="gradebook-sort" aria-label="Sort assignments">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="due_date">Due date</SelectItem>
-                            <SelectItem value="title">Assignment name</SelectItem>
-                            <SelectItem value="category">Category</SelectItem>
-                            <SelectItem value="average">Class average</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="gradebook-direction" className="text-xs">Direction</Label>
-                        <Select value={gradebookSortDirection} onValueChange={(value) => setGradebookSortDirection(value as "asc" | "desc")}>
-                          <SelectTrigger id="gradebook-direction" aria-label="Sort direction">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select value={gradebookCategory} onValueChange={setGradebookCategory}>
+                        <SelectTrigger id="gradebook-category" className="w-full sm:w-56" aria-label="Filter assignments by category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All categories ({assignments.length})</SelectItem>
+                          {Object.entries(gradebookCategoryCounts)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([category, count]) => (
+                              <SelectItem key={category} value={category}>
+                                {category} ({count})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>}
                   </div>
                 </header>
