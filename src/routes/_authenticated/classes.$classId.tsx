@@ -656,6 +656,29 @@ function ClassDetailPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
                       <p className="text-xs text-muted-foreground">Assignments {currentAssignmentPage * 3 + 1}–{Math.min((currentAssignmentPage + 1) * 3, gradebookRows.length)} of {gradebookRows.length}</p>
                       <div className="flex items-center gap-2">
+                        {isStaff && (
+                          <Select
+                            value={`${gradebookAssignmentSort}:${gradebookSortDirection}`}
+                            onValueChange={(value) => {
+                              const [field, dir] = value.split(":");
+                              setGradebookAssignmentSort(field as typeof gradebookAssignmentSort);
+                              setGradebookSortDirection(dir as "asc" | "desc");
+                            }}
+                          >
+                            <SelectTrigger className="h-9 w-auto gap-1.5 border-none bg-transparent px-2 text-xs text-muted-foreground shadow-none" aria-label="Order assignments">
+                              <ArrowUpDown className="size-3.5" />
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent align="end">
+                              <SelectItem value="due_date:asc">Due date, oldest first</SelectItem>
+                              <SelectItem value="due_date:desc">Due date, newest first</SelectItem>
+                              <SelectItem value="title:asc">Assignment name, A–Z</SelectItem>
+                              <SelectItem value="category:asc">Category</SelectItem>
+                              <SelectItem value="average:desc">Class average, high to low</SelectItem>
+                              <SelectItem value="average:asc">Class average, low to high</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                         <Button variant="outline" size="icon" aria-label="Previous assignments" disabled={currentAssignmentPage === 0} onClick={() => setAssignmentPage(currentAssignmentPage - 1)}><ChevronLeft className="size-4" /></Button>
                         <span className="min-w-16 text-center text-xs tabular-nums text-muted-foreground">{currentAssignmentPage + 1} / {assignmentPageCount}</span>
                         <Button variant="outline" size="icon" aria-label="Next assignments" disabled={currentAssignmentPage >= assignmentPageCount - 1} onClick={() => setAssignmentPage(currentAssignmentPage + 1)}><ChevronRight className="size-4" /></Button>
@@ -666,7 +689,22 @@ function ClassDetailPage() {
                      <table className="w-full table-fixed border-collapse text-sm">
                        <thead className="sticky top-0 z-20 border-b border-border/60 bg-muted/50 text-xs uppercase text-muted-foreground">
                         <tr>
-                            {isStaff && <th className="sticky left-0 z-30 w-[26%] border-r border-border/60 bg-muted/50 px-4 py-3 text-left font-semibold">Student</th>}
+                            {isStaff && (
+                              <th
+                                className="sticky left-0 z-30 w-[26%] border-r border-border/60 bg-muted/50 px-4 py-3 text-left font-semibold"
+                                aria-sort={gradebookSort.endsWith("desc") ? "descending" : "ascending"}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setGradebookSort(gradebookSort === "last-asc" ? "last-desc" : "last-asc")}
+                                  className="inline-flex items-center gap-1 uppercase hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                  aria-label={`Sort students by last name, currently ${gradebookSort === "last-desc" ? "Z to A" : "A to Z"}`}
+                                >
+                                  Student
+                                  {gradebookSort === "last-desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
+                                </button>
+                              </th>
+                            )}
                             <th className="w-[18%] border-r border-border/60 bg-muted/30 px-4 py-3 text-center font-semibold text-foreground">Current grade</th>
                             <th className="w-[10%] border-r border-border/60 px-3 py-3 text-center font-semibold">Missing</th>
                            {pageAssignments.map(({ assignment, average }) => (
