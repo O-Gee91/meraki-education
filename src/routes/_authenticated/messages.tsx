@@ -57,25 +57,74 @@ function MessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, subject, body, created_at, read, sender_id, recipient_id")
+        .select("id, subject, body, created_at, read, read_at, sender_id, recipient_id")
         .order("created_at", { ascending: false })
-        .limit(80);
+        .limit(150);
       if (error) throw error;
       return data;
     },
   });
 
+  // Staff may browse everyone; students and guardians only see their teachers and school admins.
   const { data: people = [] } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: ["message-contacts", isStaff],
+    enabled: Boolean(user),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .order("full_name");
+      if (isStaff) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .order("full_name");
+        if (error) throw error;
+        return data.filter((p) => p.id !== user?.id).map((p) => ({ ...p, label: "" as string | null }));
+      }
+      const { data, error } = await supabase.rpc("message_contacts");
       if (error) throw error;
-      return data.filter((p) => p.id !== user?.id);
+      return data ?? [];
     },
   });
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["message-participants", user?.id, inbox.length],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("message_participant_names");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [folder, setFolder] = useState<"inbox" | "sent">("inbox");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const received = inbox.filter((m) => m.recipient_id === user?.id);
+  const sent = inbox.filter((m) => m.sender_id === user?.id);
+  const unreadCount = received.filter((m) => !m.read).length;
+
+  const markRead = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("messages").update({ read: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
+    },
+  });
+
+  const openMessage = (m: (typeof inbox)[number]) => {
+    setOpenId(openId === m.id ? null : m.id);
+    if (m.recipient_id === user?.id && !m.read) markRead.mutate(m.id);
+  };
+
+  const reply = (m: (typeof inbox)[number]) => {
+    setPickMode("person");
+    setCompose({
+      recipient: m.sender_id,
+      subject: m.subject.startsWith("Re: ") ? m.subject : `Re: ${m.subject}`.slice(0, 140),
+      body: "",
+    });
+    document.getElementById("subject")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements"],
