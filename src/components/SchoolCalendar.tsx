@@ -228,6 +228,15 @@ export function SchoolCalendar() {
     (a, b) => a - b,
   );
   const classNameById = new Map(allClasses.map((c) => [c.id, c.name]));
+  const staffOnly = form.audiences.length === 1 && form.audiences[0] === "teachers";
+
+  // Blue = staff: picking it makes the event staff-only; leaving blue reopens it to everyone.
+  function withColor<T extends typeof form>(prev: T, color: string, base: T = prev): T {
+    const wasStaff = prev.audiences.length === 1 && prev.audiences[0] === "teachers";
+    if (color === "navy") return { ...base, color, audiences: ["teachers"] as Audience[] };
+    if (wasStaff) return { ...base, color, audiences: ["everyone"] as Audience[] };
+    return { ...base, color };
+  }
 
   // A teacher's events default to their whole grade level.
   useEffect(() => {
@@ -293,7 +302,7 @@ export function SchoolCalendar() {
       if (form.audiences.length === 0) throw new Error("Pick at least one audience");
       // Teachers must aim at their own grade or their own classes — never
       // another grade, never the whole school.
-      if (!isAdmin) {
+      if (!isAdmin && !staffOnly) {
         if (form.grade_level == null && form.class_ids.length === 0) {
           throw new Error("Pick your grade level or at least one of your classes");
         }
@@ -375,12 +384,16 @@ export function SchoolCalendar() {
 
   const toggleAudience = (value: Audience) => {
     setForm((prev) => {
-      if (value === "everyone") return { ...prev, audiences: ["everyone"] };
+      if (value === "everyone") {
+        return { ...prev, audiences: ["everyone"], color: prev.color === "navy" ? "amber" : prev.color };
+      }
       const without = prev.audiences.filter((a) => a !== "everyone");
       const next = without.includes(value)
         ? without.filter((a) => a !== value)
         : [...without, value];
-      return { ...prev, audiences: next.length ? next : ["everyone"] };
+      const audiences: Audience[] = next.length ? next : ["everyone"];
+      const nowStaff = audiences.length === 1 && audiences[0] === "teachers";
+      return { ...prev, audiences, color: nowStaff ? "navy" : prev.color };
     });
   };
 
@@ -617,7 +630,13 @@ export function SchoolCalendar() {
                     <Select
                       value={form.category}
                       onValueChange={(v) =>
-                        setForm({ ...form, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? form.color })
+                        setForm((prev) => {
+                          const next = { ...prev, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? prev.color };
+                          if (v === "meeting") return { ...next, color: "navy", audiences: ["teachers"] as Audience[] };
+                          // Holidays are blue but families need them, so don't force staff-only.
+                          if (v === "holiday") return next;
+                          return withColor(prev, next.color, next);
+                        })
                       }
                     >
                       <SelectTrigger id="cal-category">
@@ -641,7 +660,7 @@ export function SchoolCalendar() {
                           type="button"
                           aria-label={c.label}
                           aria-pressed={form.color === c.value}
-                          onClick={() => setForm({ ...form, color: c.value })}
+                          onClick={() => setForm((prev) => withColor(prev, c.value))}
                           title={c.description}
                           className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
                             form.color === c.value
@@ -661,7 +680,7 @@ export function SchoolCalendar() {
                   <div>
                     <Label>Who is this for</Label>
                     <div className="mt-1 flex flex-wrap gap-2">
-                      {isAdmin && (
+                      {(isAdmin || staffOnly) && (
                         <button
                           type="button"
                           aria-pressed={form.grade_level == null && form.class_ids.length === 0}
@@ -672,7 +691,7 @@ export function SchoolCalendar() {
                               : "border-border text-muted-foreground hover:border-accent/50"
                           }`}
                         >
-                          Whole school
+                          {staffOnly ? "All staff" : "Whole school"}
                         </button>
                       )}
                       {myGrades.map((g) => {
@@ -689,7 +708,7 @@ export function SchoolCalendar() {
                                 : "border-border text-muted-foreground hover:border-accent/50"
                             }`}
                           >
-                            All of Grade {g}
+                            {staffOnly ? `Grade ${g} staff` : `All of Grade ${g}`}
                           </button>
                         );
                       })}
@@ -718,19 +737,25 @@ export function SchoolCalendar() {
                                 : "border-border text-muted-foreground hover:border-accent/50"
                             }`}
                           >
-                            {c.name}
+                            {staffOnly ? `${c.name} teachers` : c.name}
                           </button>
                         );
                       })}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {form.grade_level != null
-                        ? `Every Grade ${form.grade_level} class and their families will see it.`
-                        : form.class_ids.length
-                          ? "Only the selected classes and their families will see it."
-                          : isAdmin
-                            ? "Everyone at the school will see it."
-                            : "Pick your grade level or one or more of your classes."}
+                      {staffOnly
+                        ? form.grade_level != null
+                          ? `Visible only to Grade ${form.grade_level} teachers and staff. Hidden from students and families.`
+                          : form.class_ids.length
+                            ? "Visible only to teachers of the selected classes and staff. Hidden from students and families."
+                            : "Visible to all teachers and staff. Hidden from students and families."
+                        : form.grade_level != null
+                          ? `Every Grade ${form.grade_level} class and their families will see it.`
+                          : form.class_ids.length
+                            ? "Only the selected classes and their families will see it."
+                            : isAdmin
+                              ? "Everyone at the school will see it."
+                              : "Pick your grade level or one or more of your classes."}
                     </p>
                   </div>
                   <div>
@@ -836,13 +861,22 @@ export function SchoolCalendar() {
                           <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
                           {(() => {
                             const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
-                            const targeted =
-                              e.grade_level != null || (e.class_ids?.length ?? 0) > 0 || e.class_id;
-                            if (list.length === 1 && list[0] === "everyone" && !targeted) return null;
                             const ids = e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [];
                             const names = ids
                               .map((id) => classNameById.get(id))
                               .filter((n): n is string => !!n);
+                            if (list.length === 1 && list[0] === "teachers") {
+                              const scope =
+                                e.grade_level != null
+                                  ? `Grade ${e.grade_level} teachers & staff only`
+                                  : names.length
+                                    ? `${names.join(", ")} teachers & staff only`
+                                    : "Teachers & staff only";
+                              return <p className="text-xs text-muted-foreground">{scope}</p>;
+                            }
+                            const targeted =
+                              e.grade_level != null || (e.class_ids?.length ?? 0) > 0 || e.class_id;
+                            if (list.length === 1 && list[0] === "everyone" && !targeted) return null;
                             const parts: string[] = [];
                             if (e.grade_level != null) parts.push(`Grade ${e.grade_level}`);
                             if (names.length) parts.push(names.join(", "));
