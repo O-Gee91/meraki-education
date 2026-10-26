@@ -70,6 +70,9 @@ export const digitizeRubric = createServerFn({ method: "POST" })
     }
     if (data.dataBase64 && data.mimeType) {
       const isImage = data.mimeType.startsWith("image/");
+      if (!isImage && data.mimeType !== "application/pdf") {
+        throw new Error("Use a photo, PDF, Word (.docx) or text file");
+      }
       content.push(
         isImage
           ? { type: "image", image: data.dataBase64, mediaType: data.mimeType }
