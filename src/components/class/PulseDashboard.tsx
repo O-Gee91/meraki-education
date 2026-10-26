@@ -51,15 +51,15 @@ const STATUS_META: Record<Status, { label: string; dot: string; ring: string; te
   },
   yellow: {
     label: "Slowing down",
-    dot: "bg-muted-foreground/60",
-    ring: "border-border bg-muted/30",
-    text: "text-muted-foreground",
+    dot: "bg-warning",
+    ring: "border-warning/50 bg-warning/10",
+    text: "text-warning-foreground",
   },
   red: {
     label: "At risk",
-    dot: "bg-warning",
-    ring: "border-warning/50 bg-warning/10",
-    text: "text-foreground",
+    dot: "bg-destructive",
+    ring: "border-destructive/50 bg-destructive/10",
+    text: "text-destructive",
   },
   none: {
     label: "No data yet",
@@ -76,8 +76,8 @@ function initials(first?: string, last?: string) {
 function averageTone(pct: number | null) {
   if (pct == null) return "bg-muted";
   if (pct >= 80) return "bg-success";
-  if (pct >= 70) return "bg-muted-foreground/60";
-  return "bg-warning";
+  if (pct >= 70) return "bg-warning";
+  return "bg-destructive";
 }
 
 export function PulseDashboard({
