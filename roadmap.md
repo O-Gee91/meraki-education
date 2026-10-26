@@ -36,3 +36,4 @@
 - Homework late-status penalty override recorded but not applied to scores
 - 11 security findings untouched per user request
 - [x] Messaging: student/guardian teacher contacts, read receipts, Inbox/Sent, Reply, unread badge (educator end-to-end check pending)
+- [x] Detentions: tester cleanup, no tester detentions, teachers see own classes, admins grouped by grade
