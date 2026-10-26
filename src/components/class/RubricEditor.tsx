@@ -40,6 +40,44 @@ function toBase64(file: File) {
   });
 }
 
+/** Multiplier field that keeps partial decimals like "1." or ".5" while typing. */
+function MultiplierInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => {
+    if (Number(text) !== value) setText(String(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <Input
+      id={id}
+      inputMode="decimal"
+      placeholder="1"
+      value={text}
+      onChange={(e) => {
+        const next = e.target.value.replace(",", ".");
+        if (!/^\d*\.?\d{0,2}$/.test(next)) return;
+        setText(next);
+        const n = Number(next);
+        if (next !== "" && Number.isFinite(n) && n > 0) onChange(Math.min(20, n));
+      }}
+      onBlur={() => {
+        const n = Number(text);
+        const clean = Number.isFinite(n) && n > 0 ? Math.min(20, Math.round(n * 100) / 100) : 1;
+        setText(String(clean));
+        onChange(clean);
+      }}
+    />
+  );
+}
+
 export function RubricEditor({
   classId,
   gradeLevel,
@@ -262,15 +300,10 @@ export function RubricEditor({
                   </div>
                   <div className="w-28 space-y-1.5">
                     <Label htmlFor={`weight-${c.id}`}>Multiplier</Label>
-                    <Input
+                    <MultiplierInput
                       id={`weight-${c.id}`}
-                      inputMode="decimal"
-                      value={String(c.weight ?? 1)}
-                      onChange={(e) =>
-                        updateCriterion(index, {
-                          weight: Math.min(20, Math.max(0, Number(e.target.value) || 0)),
-                        })
-                      }
+                      value={c.weight ?? 1}
+                      onChange={(weight) => updateCriterion(index, { weight })}
                     />
                   </div>
                   <div className="pt-7 text-xs text-muted-foreground">
