@@ -19,3 +19,4 @@
 - Keep educator navigation groups and shared breadcrumbs in AppShell, with class pages supplying their class name and controlled active-tab context; this keeps navigation consistent without changing student/guardian menus or class-scoped grading.
 - Share grade-value eligibility through the grading helpers at both the score-save alert and server-send boundaries; this prevents cleared scores from becoming grade notifications on any release path.
 - Run unit tests with the dedicated Vitest configuration rather than the app's RPC transform; this allows mocked server handlers to execute directly without deployment routing.
+- Keep calendar category, color and audience transitions in shared calendar-form helpers; this lets regression tests cover every holiday visibility path used by the form.
