@@ -78,13 +78,34 @@ export function RubricEditor({
   const importRubric = useMutation({
     mutationFn: async (payload: { file?: File; text?: string }) => {
       if (payload.file) {
-        if (payload.file.size > 8 * 1024 * 1024)
+        const file = payload.file;
+        if (file.size > 8 * 1024 * 1024)
           throw new Error("Please use a file smaller than 8 MB");
-        const dataBase64 = await toBase64(payload.file);
+        const name = file.name.toLowerCase();
+        if (name.endsWith(".docx")) {
+          const mammoth = await import("mammoth");
+          const { value } = await mammoth.extractRawText({
+            arrayBuffer: await file.arrayBuffer(),
+          });
+          if (value.trim().length < 20) throw new Error("No rubric text was found in that Word file");
+          return digitize({ data: { text: value.slice(0, 20000) } });
+        }
+        if (name.endsWith(".doc")) {
+          throw new Error("Older .doc files can't be read. Save it as .docx or PDF and try again.");
+        }
+        if (name.endsWith(".txt") || name.endsWith(".md")) {
+          return digitize({ data: { text: (await file.text()).slice(0, 20000) } });
+        }
+        const isImage = file.type.startsWith("image/");
+        const isPdf = file.type === "application/pdf" || name.endsWith(".pdf");
+        if (!isImage && !isPdf) {
+          throw new Error("Use a photo, PDF, Word (.docx) or text file");
+        }
+        const dataBase64 = await toBase64(file);
         return digitize({
           data: {
-            fileName: payload.file.name,
-            mimeType: payload.file.type || "application/octet-stream",
+            fileName: file.name,
+            mimeType: isPdf ? "application/pdf" : file.type,
             dataBase64,
           },
         });
@@ -175,7 +196,7 @@ export function RubricEditor({
                   id="rubric-upload"
                   type="file"
                   className="hidden"
-                  accept="image/*,application/pdf"
+                  accept="image/*,application/pdf,.pdf,.docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     e.target.value = "";
