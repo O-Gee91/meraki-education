@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
+import { withCalendarAudience, withCalendarCategory, withCalendarColor } from "@/lib/calendar-form";
 import { useAuth } from "@/hooks/useAuth";
 
 const CATEGORIES = [
@@ -61,14 +62,6 @@ const COLORS = [
     edge: "border-l-primary",
   },
 ] as const;
-
-const DEFAULT_COLOR_BY_CATEGORY: Record<string, string> = {
-  event: "amber",
-  exam: "red",
-  deadline: "red",
-  meeting: "navy",
-  holiday: "navy",
-};
 
 function colorOption(value: string) {
   return (
@@ -230,14 +223,6 @@ export function SchoolCalendar() {
   const classNameById = new Map(allClasses.map((c) => [c.id, c.name]));
   const staffOnly = form.audiences.length === 1 && form.audiences[0] === "teachers";
 
-  // Blue = staff: picking it makes the event staff-only; leaving blue reopens it to everyone.
-  function withColor<T extends typeof form>(prev: T, color: string, base: T = prev): T {
-    const wasStaff = prev.audiences.length === 1 && prev.audiences[0] === "teachers";
-    if (color === "navy") return { ...base, color, audiences: ["teachers"] as Audience[] };
-    if (wasStaff) return { ...base, color, audiences: ["everyone"] as Audience[] };
-    return { ...base, color };
-  }
-
   // A teacher's events default to their whole grade level.
   useEffect(() => {
     if (editingId || isAdmin || !myGrades.length) return;
@@ -383,18 +368,7 @@ export function SchoolCalendar() {
   };
 
   const toggleAudience = (value: Audience) => {
-    setForm((prev) => {
-      if (value === "everyone") {
-        return { ...prev, audiences: ["everyone"], color: prev.color === "navy" ? "amber" : prev.color };
-      }
-      const without = prev.audiences.filter((a) => a !== "everyone");
-      const next = without.includes(value)
-        ? without.filter((a) => a !== value)
-        : [...without, value];
-      const audiences: Audience[] = next.length ? next : ["everyone"];
-      const nowStaff = audiences.length === 1 && audiences[0] === "teachers";
-      return { ...prev, audiences, color: nowStaff ? "navy" : prev.color };
-    });
+    setForm((prev) => withCalendarAudience(prev, value));
   };
 
 
@@ -630,13 +604,7 @@ export function SchoolCalendar() {
                     <Select
                       value={form.category}
                       onValueChange={(v) =>
-                        setForm((prev) => {
-                          const next = { ...prev, category: v, color: DEFAULT_COLOR_BY_CATEGORY[v] ?? prev.color };
-                          if (v === "meeting") return { ...next, color: "navy", audiences: ["teachers"] as Audience[] };
-                          // Holidays are blue but families need them, so don't force staff-only.
-                          if (v === "holiday") return next;
-                          return withColor(prev, next.color, next);
-                        })
+                        setForm((prev) => withCalendarCategory(prev, v))
                       }
                     >
                       <SelectTrigger id="cal-category">
@@ -660,7 +628,7 @@ export function SchoolCalendar() {
                           type="button"
                           aria-label={c.label}
                           aria-pressed={form.color === c.value}
-                          onClick={() => setForm((prev) => withColor(prev, c.value))}
+                          onClick={() => setForm((prev) => withCalendarColor(prev, c.value))}
                           title={c.description}
                           className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors ${
                             form.color === c.value
