@@ -148,6 +148,13 @@
       "when": 1792823013259,
       "tag": "0020_message_contacts_and_read_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793010647785,
+      "tag": "0021_scope_detentions_skip_testers",
+      "breakpoints": true
     }
   ]
 }

@@ -1087,7 +1087,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
       const { data, error } = await supabase
         .from("detentions")
         .select(
-          "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email)",
+          "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email, grade_level)",
         )
         .order("scheduled_date", { ascending: false });
       if (error) throw error;
@@ -1131,9 +1131,23 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
     );
   }
 
+  const byGrade = new Map<number, typeof detentions>();
+  for (const d of detentions) {
+    const g = d.students?.grade_level ?? 0;
+    byGrade.set(g, [...(byGrade.get(g) ?? []), d]);
+  }
+  const grades = [...byGrade.keys()].sort((a, b) => a - b);
+
   return (
-    <div className="mt-6 divide-y divide-border border-t border-border">
-      {detentions.map((d) => (
+    <div className="mt-6 grid gap-8">
+      {grades.map((g) => (
+        <section key={g} aria-labelledby={`detention-grade-${g}`}>
+          <h3 id={`detention-grade-${g}`} className="text-sm font-semibold">
+            {g ? `Grade ${g}` : "No grade"}{" "}
+            <span className="font-normal text-muted-foreground">({byGrade.get(g)!.length})</span>
+          </h3>
+          <div className="mt-2 divide-y divide-border border-t border-border">
+          {byGrade.get(g)!.map((d) => (
         <article key={d.id} className="grid min-w-0 gap-4 py-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -1221,6 +1235,9 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
             </div>
           ) : null}
         </article>
+          ))}
+          </div>
+        </section>
       ))}
     </div>
   );
