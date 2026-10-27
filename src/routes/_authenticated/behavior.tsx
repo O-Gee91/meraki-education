@@ -1110,17 +1110,6 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("detentions").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Detention deleted");
-      queryClient.invalidateQueries({ queryKey: ["detentions"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   if (detentions.length === 0) {
     return (
@@ -1221,17 +1210,6 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
                 }}
               />
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="self-end text-muted-foreground hover:text-destructive"
-                aria-label="Delete detention"
-                title="Delete detention"
-                disabled={remove.isPending}
-                onClick={() => remove.mutate(d.id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
             </div>
           ) : null}
         </article>
