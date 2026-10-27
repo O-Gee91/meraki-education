@@ -1110,6 +1110,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [view, setView] = useState<"active" | "completed" | "all">("active");
 
   if (detentions.length === 0) {
     return (
@@ -1120,15 +1121,47 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
     );
   }
 
+  const activeCount = detentions.filter((d) => d.status === "scheduled").length;
+  const completedCount = detentions.length - activeCount;
+  const shown = detentions.filter((d) =>
+    view === "all" ? true : view === "active" ? d.status === "scheduled" : d.status !== "scheduled",
+  );
+
   const byGrade = new Map<number, typeof detentions>();
-  for (const d of detentions) {
+  for (const d of shown) {
     const g = d.students?.grade_level ?? 0;
     byGrade.set(g, [...(byGrade.get(g) ?? []), d]);
   }
   const grades = [...byGrade.keys()].sort((a, b) => a - b);
 
+  const pills = [
+    { key: "active", label: `Active to serve (${activeCount})` },
+    { key: "completed", label: `Completed & waived (${completedCount})` },
+    { key: "all", label: `All (${detentions.length})` },
+  ] as const;
+
   return (
     <div className="mt-6 grid gap-8">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter detentions">
+        {pills.map((p) => (
+          <Button
+            key={p.key}
+            size="sm"
+            variant={view === p.key ? "default" : "outline"}
+            aria-pressed={view === p.key}
+            onClick={() => setView(p.key)}
+          >
+            {p.label}
+          </Button>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {view === "active"
+            ? "No students currently need to serve detention."
+            : "No completed or waived detentions yet."}
+        </p>
+      ) : null}
       {grades.map((g) => (
         <section key={g} aria-labelledby={`detention-grade-${g}`}>
           <h3 id={`detention-grade-${g}`} className="text-sm font-semibold">
