@@ -141,6 +141,20 @@ export function StudentProfile({
     },
   });
 
+  const { data: detentions = [] } = useQuery({
+    queryKey: ["detentions", "student", student?.id, "profile"],
+    enabled: open && !!student && isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("detentions")
+        .select("id, reason, scheduled_date, status")
+        .eq("student_id", student!.id)
+        .order("scheduled_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   if (!student) return null;
 
   return (
@@ -368,6 +382,30 @@ export function StudentProfile({
             </ul>
           )}
         </div>
+
+        {isStaff ? (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Detention record</h3>
+            {detentions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No detentions on record.</p>
+            ) : (
+              <ul className="divide-y divide-border rounded-md border border-border text-sm">
+                {detentions.map((d) => (
+                  <li key={d.id} className="flex items-start justify-between gap-3 px-3 py-2">
+                    <span>
+                      <span className="font-medium">{d.scheduled_date}</span>
+                      <span className="text-muted-foreground"> · {d.reason}</span>
+                    </span>
+                    <Badge variant="outline" className="capitalize">{d.status}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Detentions are kept permanently on the student's record.
+            </p>
+          </div>
+        ) : null}
           </>
         )}
 
