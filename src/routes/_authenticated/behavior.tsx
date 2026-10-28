@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import {
@@ -101,15 +102,25 @@ function BehaviorPage() {
   );
 }
 
+/** In "View as student", only the demo Student Tester's rows (staff RLS sees everyone). */
+function usePreviewStudentIds() {
+  const { previewingStudent } = useAuth();
+  const { ids } = useSelfStudents();
+  return previewingStudent ? ids : null;
+}
+
 function useNotes() {
+  const previewIds = usePreviewStudentIds();
   return useQuery({
-    queryKey: ["behavior"],
+    queryKey: ["behavior", previewIds],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("behavior_notes")
         .select(
           "id, kind, reason, assignment_id, scored_zero, notes, date, student_id, class_id, recorded_by, students(first_name, last_name, grade_level), assignments(title), classes(name)",
-        )
+        );
+      if (previewIds) q = q.in("student_id", previewIds);
+      const { data, error } = await q
 
         .order("date", { ascending: false })
         .limit(500);
@@ -1081,14 +1092,17 @@ const STATUSES = ["scheduled", "served", "waived"] as const;
 function Detentions({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
 
+  const previewIds = usePreviewStudentIds();
   const { data: detentions = [] } = useQuery({
-    queryKey: ["detentions"],
+    queryKey: ["detentions", previewIds],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("detentions")
         .select(
           "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email, grade_level)",
-        )
+        );
+      if (previewIds) q = q.in("student_id", previewIds);
+      const { data, error } = await q
         .order("scheduled_date", { ascending: false });
       if (error) throw error;
       return data;
