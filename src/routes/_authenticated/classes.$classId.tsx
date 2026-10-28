@@ -259,10 +259,12 @@ function ClassDetailPage() {
       return data;
     },
   });
-  // Students only ever see their own posted grades.
+  // Students and guardians only ever see posted grades.
   const grades = previewing
     ? allGrades.filter((g) => g.student_id === testerId && !g.is_draft)
-    : allGrades;
+    : isStaff
+      ? allGrades
+      : allGrades.filter((g) => !g.is_draft);
 
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
