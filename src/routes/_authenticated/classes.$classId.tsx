@@ -671,14 +671,24 @@ function ClassDetailPage() {
                             )}
                             <th className="w-[18%] border-r border-border/60 bg-muted/30 px-4 py-3 text-center font-semibold text-foreground">Current grade</th>
                             <th className="w-[10%] border-r border-border/60 px-3 py-3 text-center font-semibold">Missing</th>
-                           {pageAssignments.map(({ assignment, average }) => (
+                           {pageAssignments.map(({ assignment, average }) => {
+                             const drafts = isStaff
+                               ? grades.filter((g) => g.assignment_id === assignment.id && g.is_draft).length
+                               : 0;
+                             return (
                               <th key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center font-semibold normal-case">
-                               <span className="block break-words text-foreground" title={assignment.title}>{assignment.title}</span>
-                               <span className="mt-1 block font-normal text-muted-foreground">
-                                 {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(0)}% avg`}
+                               <span className="line-clamp-2 break-words text-foreground" title={assignment.title}>{assignment.title}</span>
+                               <span className="mt-1 block font-normal tabular-nums text-muted-foreground">
+                                 {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(1)}% avg`}
                                </span>
+                               {drafts > 0 && (
+                                 <span className="mt-1 inline-block rounded-full border border-warning/50 bg-warning/15 px-2 py-px text-[11px] font-medium text-warning-foreground">
+                                   {drafts} {drafts === 1 ? "draft" : "drafts"} not posted
+                                 </span>
+                               )}
                              </th>
-                           ))}
+                             );
+                           })}
                         </tr>
                       </thead>
                        <tbody className="divide-y divide-border">
@@ -741,10 +751,11 @@ function ClassDetailPage() {
                                         )}
                                         {isStaff && isDraft ? (
                                           <span
-                                            className="size-1.5 shrink-0 rounded-full bg-warning"
+                                            className="rounded-full border border-warning/50 bg-warning/15 px-1.5 py-px text-[10px] font-semibold uppercase leading-4 tracking-wide text-warning-foreground"
                                             title="Draft grade — only you can see it until posted"
-                                            aria-label="Draft grade"
-                                          />
+                                          >
+                                            Draft
+                                          </span>
                                         ) : null}
                                         {isStaff && grade ? (
                                           <GradeHistoryButton
@@ -887,7 +898,7 @@ function ClassDetailPage() {
   );
 }
 
-/** Staff-only "History" popover: every posted score/feedback change for a cell. */
+/** Staff-only "History" popover: who changed a cell's score/feedback, and when. */
 function GradeHistoryButton({
   assignmentId,
   studentId,
@@ -903,16 +914,24 @@ function GradeHistoryButton({
       const { data, error } = await supabase
         .from("grade_changes")
         .select(
-          "id, old_score, new_score, old_feedback, new_feedback, reason, changed_at",
+          "id, old_score, new_score, old_feedback, new_feedback, reason, changed_at, changed_by",
         )
         .eq("assignment_id", assignmentId)
         .eq("student_id", studentId)
         .order("changed_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data;
+      const ids = [...new Set(data.map((c) => c.changed_by).filter((v): v is string => !!v))];
+      let names: Record<string, string> = {};
+      if (ids.length) {
+        const { data: people } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+        names = Object.fromEntries((people ?? []).map((p) => [p.id, p.full_name ?? "Staff member"]));
+      }
+      return data.map((c) => ({ ...c, by: c.changed_by ? names[c.changed_by] ?? "Staff member" : "System" }));
     },
   });
+
+  const fmt = (v: number | null) => (v == null ? "—" : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -928,32 +947,33 @@ function GradeHistoryButton({
       </PopoverTrigger>
       <PopoverContent align="center" className="w-80">
         <p className="text-sm font-semibold">Score history</p>
+        <p className="text-xs text-muted-foreground">Who changed this score and when.</p>
         {changes.length === 0 ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            No posted changes recorded yet.
+            No changes recorded yet.
           </p>
         ) : (
-          <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+          <ol className="mt-3 max-h-72 space-y-3 overflow-y-auto border-l border-border pl-3">
             {changes.map((change) => (
-              <li key={change.id} className="rounded-md border border-border/60 p-2 text-xs">
-                <p className="font-medium">
-                  {change.old_score == null ? "—" : String(change.old_score)} →{" "}
-                  {change.new_score == null ? "—" : String(change.new_score)}
+              <li key={change.id} className="relative text-xs">
+                <span className="absolute -left-[17px] top-1 size-2 rounded-full bg-muted-foreground/50" aria-hidden />
+                <p className="font-medium tabular-nums text-foreground">
+                  {fmt(change.old_score)} → {fmt(change.new_score)} pts
+                </p>
+                <p className="text-muted-foreground">
+                  {change.by} · {new Date(change.changed_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                 </p>
                 {change.new_feedback && change.new_feedback !== change.old_feedback ? (
                   <p className="mt-0.5 break-words text-muted-foreground">
-                    “{change.new_feedback}”
+                    Feedback: “{change.new_feedback}”
                   </p>
                 ) : null}
                 {change.reason ? (
                   <p className="mt-0.5 text-muted-foreground">Reason: {change.reason}</p>
                 ) : null}
-                <p className="mt-0.5 text-muted-foreground">
-                  {new Date(change.changed_at).toLocaleString()}
-                </p>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
       </PopoverContent>
     </Popover>
