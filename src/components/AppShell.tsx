@@ -14,11 +14,13 @@ import {
   Users2,
   LogOut,
   KeyRound,
+  Eye,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type Role } from "@/hooks/useAuth";
 import { setActingRole } from "@/hooks/useActingRole";
+import { setStudentPreviewMode } from "@/hooks/useStudentPreview";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
@@ -129,7 +131,7 @@ export function AppShell({
   desktopReview?: boolean;
   breadcrumbContext?: { label: string; section: string; onNavigate: () => void };
 }) {
-  const { profile, primaryRole, user, canSwitchRole } = useAuth();
+  const { profile, primaryRole, user, canSwitchRole, realStaff, previewingStudent } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -168,7 +170,14 @@ export function AppShell({
     void queryClient.invalidateQueries();
   }
 
+  function togglePreview(next: boolean) {
+    setStudentPreviewMode(next);
+    void queryClient.invalidateQueries();
+    navigate({ to: "/dashboard" });
+  }
+
   async function signOut() {
+    setStudentPreviewMode(false);
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
@@ -279,6 +288,17 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {previewingStudent ? (
+          <div role="status" className="sticky top-0 z-40 border-b border-primary/30 bg-primary/10 px-6 py-2 text-sm">
+            <div className={cn("flex flex-wrap items-center justify-between gap-3", desktopReview && "mx-auto w-full max-w-6xl")}>
+              <span className="flex items-center gap-2">
+                <Eye className="size-4 text-primary" />
+                <span><strong>Viewing as student</strong> — the demo Student Tester's view. Read-only; real grades and data are untouched.</span>
+              </span>
+              <Button size="sm" onClick={() => togglePreview(false)}>Exit student view</Button>
+            </div>
+          </div>
+        ) : null}
         <header className="border-b border-border bg-card">
           <div className={cn("flex flex-wrap items-center justify-between gap-4 px-6 py-5", desktopReview && "mx-auto w-full max-w-6xl")}>
           <div className="min-w-0">
@@ -317,6 +337,11 @@ export function AppShell({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {actions}
+            {realStaff && !previewingStudent ? (
+              <Button variant="outline" size="sm" onClick={() => togglePreview(true)}>
+                <Eye className="size-4" /> View as student
+              </Button>
+            ) : null}
             {canSwitchRole ? (
               <div className={cn("flex items-center gap-2", desktopReview && "lg:hidden")}>
                 <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
