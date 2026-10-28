@@ -7,7 +7,8 @@ export const LOW_MOOD = 2;
 /** Why a student may appreciate a quiet check-in, or null when nothing stands out. */
 export function followUpReason(entries: MoodEntry[], today: string): string | null {
   const sorted = [...entries].sort((a, b) => (a.date < b.date ? 1 : -1));
-  if (sorted.length >= 2 && sorted[0].mood <= LOW_MOOD && sorted[1].mood <= LOW_MOOD) {
+  const [latest, previous] = sorted;
+  if (latest && previous && latest.mood <= LOW_MOOD && previous.mood <= LOW_MOOD) {
     return "Two low check-ins in a row";
   }
   const since = shiftDate(today, -6);
