@@ -65,7 +65,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 function AssignmentsHubPage() {
-  const { user, primaryRole } = useAuth();
+  const { primaryRole } = useAuth();
   const isGuardian = primaryRole === "parent";
   const [filter, setFilter] = useState<Filter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -104,6 +104,7 @@ function AssignmentsHubPage() {
           "id, class_id, title, description, category, points_possible, due_date, submission_mode",
         )
         .in("class_id", classIds)
+        .eq("status", "published")
         .order("due_date", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -133,6 +134,7 @@ function AssignmentsHubPage() {
       const { data, error } = await supabase
         .from("grades")
         .select("assignment_id, student_id, points_earned, comment")
+        .eq("is_draft", false)
         .in("assignment_id", assignmentIds)
         .in("student_id", studentIds);
       if (error) throw error;
