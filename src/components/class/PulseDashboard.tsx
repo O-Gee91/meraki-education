@@ -339,8 +339,123 @@ export function PulseDashboard({
 
   if (roster.length === 0) return null;
 
+  const signalIds: Record<Signal, Set<string>> = {
+    attendance: signals.absentIds,
+    missing: new Set(missingList.map((m) => m.row.student_id)),
+    behavior: signals.behaviorIds,
+    wellbeing: signals.lowIds,
+  };
+  const filteredCards = cards.filter(
+    (c) =>
+      (!statusFilter || c.status === statusFilter) &&
+      (!signalFilter || signalIds[signalFilter].has(c.row.student_id)),
+  );
+  const nameFor = (id: string) =>
+    studentLabel(visibleRoster.find((r) => r.student_id === id)?.students ?? null, useIds);
+  const pickSignal = (s: Signal) => {
+    setSignalFilter((cur) => (cur === s ? null : s));
+    setSelected(null);
+    if (!open) toggleOpen();
+  };
+
+  const tiles: { key: Signal; icon: typeof CalendarCheck; label: string; value: string; detail: string }[] = [
+    {
+      key: "attendance",
+      icon: CalendarCheck,
+      label: "Attendance",
+      value: signals.rate == null ? "—" : `${signals.rate}%`,
+      detail:
+        signals.todayMarked > 0
+          ? `Today: ${signals.todayAbsent} absent · ${signalIds.attendance.size} with absences/tardies (14d)`
+          : `Not taken today · ${signalIds.attendance.size} with absences/tardies (14d)`,
+    },
+    {
+      key: "missing",
+      icon: ClipboardList,
+      label: "Missing work",
+      value: String(totalMissing),
+      detail: `${missingList.length} student${missingList.length === 1 ? "" : "s"} with past-due items`,
+    },
+    {
+      key: "behavior",
+      icon: MessageSquareText,
+      label: "Behavior (14d)",
+      value: String(signals.concerns),
+      detail: `${signals.behaviorIds.size} student${signals.behaviorIds.size === 1 ? "" : "s"} with concerns · ${signals.positives} shout-out${signals.positives === 1 ? "" : "s"}`,
+    },
+    {
+      key: "wellbeing",
+      icon: HeartPulse,
+      label: "Wellbeing (7d)",
+      value: signals.avgMood == null ? "—" : `${signals.avgMood.toFixed(1)}/5`,
+      detail: `${signals.checkins} check-in${signals.checkins === 1 ? "" : "s"} · ${signals.lowIds.size} feeling low`,
+    },
+  ];
+
   return (
     <div className="mt-4 space-y-4">
+      {isStaff && (
+        <section className="panel p-5" aria-label="Class snapshot">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Class snapshot
+            </h2>
+            {signalFilter ? (
+              <button
+                type="button"
+                onClick={() => setSignalFilter(null)}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3" /> Clear filter
+              </button>
+            ) : (
+              <span className="text-xs text-muted-foreground">Tap a card to see those students</span>
+            )}
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {tiles.map((t) => {
+              const on = signalFilter === t.key;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => pickSignal(t.key)}
+                  className={`rounded-lg border p-3 text-left transition hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-accent ${
+                    on ? "border-foreground/60 bg-muted" : "border-border bg-card"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Icon className="size-3.5" /> {t.label}
+                  </span>
+                  <span className="mt-1 block text-2xl font-semibold tabular-nums">{t.value}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{t.detail}</span>
+                </button>
+              );
+            })}
+          </div>
+          {signals.recentBehavior.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-xs font-medium text-muted-foreground">Recent behavior notes</p>
+              <ul className="mt-2 space-y-1">
+                {signals.recentBehavior.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="min-w-0 truncate">
+                      <span className="font-medium">{nameFor(b.student_id)}</span>
+                      <span className="text-muted-foreground">
+                        {" "}· {b.kind === "positive" ? "Shout-out" : b.kind === "strike" ? "Strike" : "Concern"}
+                        {b.reason ? ` — ${b.reason}` : b.notes ? ` — ${b.notes}` : ""}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">{formatDate(b.date)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
       <section className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
@@ -406,10 +521,10 @@ export function PulseDashboard({
         {open && (
         <>
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
-          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).length === 0 ? (
+          {filteredCards.length === 0 ? (
             <p className="col-span-full text-sm text-muted-foreground">No students in this group.</p>
           ) : null}
-          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).map(({ row, avg, missing, status }) => {
+          {filteredCards.map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
             const active = selected === row.student_id;
             return (
