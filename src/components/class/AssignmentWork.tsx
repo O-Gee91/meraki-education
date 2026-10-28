@@ -205,6 +205,8 @@ function StudentWorkPanel({
         .select("points_earned, comment")
         .eq("assignment_id", assignment.id)
         .eq("student_id", me!.id)
+        // Students and guardians only see posted grades and feedback.
+        .eq("is_draft", false)
         .maybeSingle();
       if (error) throw error;
       return data;
