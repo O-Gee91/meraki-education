@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, MessageSquare, Plus, Reply, Users } from "lucide-react";
+import { CalendarDays, MessageSquare, Plus, Reply, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { POST_MAX_LENGTH } from "@/lib/feed-safety";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 type Discussion = {
@@ -248,8 +249,8 @@ export function DiscussionBoard({
           {isStaff ? "Create one to get the class talking." : "Your teacher hasn't posted one yet."}
         </p>
       ) : (
-        discussions.map((d) => (
-          <article key={d.id} className="panel p-4">
+        [...discussions].sort((a, b) => Number(a.closed) - Number(b.closed)).map((d) => (
+          <article key={d.id} className={d.closed ? "panel p-4 opacity-80" : "panel p-4"}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="font-semibold">{d.title}</h3>
@@ -270,7 +271,7 @@ export function DiscussionBoard({
                       {d.required_replies === 1 ? "y" : "ies"} required
                     </span>
                   ) : null}
-                  {d.closed ? <Badge variant="destructive">Closed</Badge> : null}
+                  {d.closed ? <Badge variant="outline">Closed to new posts</Badge> : null}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -427,7 +428,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                 ) : null}
                 {(isStaff || p.author_id === user?.id) && (
                   <button
-                    onClick={() => remove.mutate(p.id)}
+                    onClick={() => { if (window.confirm("Remove this response and its replies?")) remove.mutate(p.id); }}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     Remove
@@ -438,7 +439,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
               {repliesOf(p.id).length > 0 && (
                 <div className="mt-3 space-y-2 border-l-2 border-border pl-3">
                   {repliesOf(p.id).map((r) => (
-                    <div key={r.id} className="rounded-md bg-secondary/40 px-3 py-2">
+                    <div key={r.id} className="py-1">
                       <p className="text-xs font-semibold">
                         {nameFor(r.author_id)}
                         <span className="ml-2 font-normal text-muted-foreground">
@@ -448,7 +449,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                       <p className="mt-1 whitespace-pre-wrap text-sm">{r.body}</p>
                       {(isStaff || r.author_id === user?.id) && (
                         <button
-                          onClick={() => remove.mutate(r.id)}
+                          onClick={() => { if (window.confirm("Remove this reply?")) remove.mutate(r.id); }}
                           className="mt-1 text-xs text-muted-foreground hover:text-destructive"
                         >
                           Remove
@@ -465,6 +466,10 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
 
       {!discussion.closed || isStaff ? (
         <div className="mt-4">
+          <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3.5" aria-hidden="true" />
+            Respond to ideas, not people. Keep personal details private — your name shows on every post.
+          </p>
           {replyTo ? (
             <p className="mb-1 text-xs text-muted-foreground">
               Replying to {nameFor(posts.find((p) => p.id === replyTo)?.author_id ?? "")}
@@ -473,6 +478,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            maxLength={POST_MAX_LENGTH}
             rows={3}
             placeholder={replyTo ? "Write your reply…" : "Post your response to the prompt…"}
           />
