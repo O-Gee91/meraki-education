@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -471,12 +472,12 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
 }
 
 function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
-  const { user } = useAuth();
+  const { user, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ studentId: "", title: "", link: "", description: "" });
   const [sortMode, setSortMode] = useStudentSort("portfolios");
 
-  const { data: students = [] } = useQuery({
+  const { data: allPortfolioStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -487,7 +488,6 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
-  const { previewingStudent } = useAuth();
   const previewScope = useTeacherScope();
   const students = previewingStudent
     ? allPortfolioStudents.filter((s) => previewScope.studentIds?.has(s.id))
@@ -508,6 +508,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
 
   const add = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       const studentId = isStaff ? form.studentId : (students[0]?.id ?? "");
       if (!studentId) throw new Error("Select a student");
       if (form.title.trim().length < 2) throw new Error("Give the work a title");
