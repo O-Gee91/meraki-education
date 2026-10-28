@@ -491,7 +491,7 @@ function DashboardPage() {
       )}
 
       <SchoolCalendar />
-      {!isStaff && <div className="mt-6"><HeroProfilePanel /></div>}
+      {!isStaff && !previewingStudent && <div className="mt-6"><HeroProfilePanel /></div>}
 
       {primaryRole === "parent" && (
         <p className="mt-6 text-sm text-muted-foreground">

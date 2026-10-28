@@ -198,7 +198,7 @@ export function AppShell({
             setEmailSkipped(true);
           }}
         />
-      ) : primaryRole === "student" ? (
+      ) : primaryRole === "student" && !previewingStudent ? (
         <HeroClassGate />
       ) : null}
 
