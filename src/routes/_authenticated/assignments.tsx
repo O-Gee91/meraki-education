@@ -206,6 +206,26 @@ function AssignmentsHubPage() {
         </p>
       ) : (
         <>
+          {children.length > 1 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Choose child">
+              <span className="text-sm text-muted-foreground">Showing</span>
+              {children.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  size="sm"
+                  variant={activeChild?.id === c.id ? "secondary" : "ghost"}
+                  aria-pressed={activeChild?.id === c.id}
+                  onClick={() => {
+                    setChildId(c.id);
+                    setOpenId(null);
+                  }}
+                >
+                  {c.first_name} {c.last_name}
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter assignments">
             {FILTERS.map((f) => (
               <Button
