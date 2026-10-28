@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { StudentImport } from "@/components/students/StudentImport";
 
+import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,7 +57,8 @@ const emptyForm = {
 };
 
 function ClassesPage() {
-  const { isStaff, isAdmin, teacherMode, user, profile } = useAuth();
+  const { isStaff, isAdmin, teacherMode, user, profile, previewingStudent } = useAuth();
+  const previewScope = useTeacherScope();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -124,6 +126,7 @@ function ClassesPage() {
   // even though their admin row-level access could see the whole school.
   const coTaught = useCoTaughtClassIds();
   const classes = useMemo(() => {
+    if (previewingStudent) return allClasses.filter((c) => previewScope.classIds?.has(c.id));
     if (!teacherMode) return allClasses;
     const myName = (profile?.full_name ?? "").trim().toLowerCase();
     return allClasses.filter(
@@ -132,7 +135,7 @@ function ClassesPage() {
         coTaught.has(c.id) ||
         (!!myName && (c.teacher_name ?? "").trim().toLowerCase() === myName),
     );
-  }, [allClasses, teacherMode, user?.id, profile?.full_name, coTaught]);
+  }, [allClasses, teacherMode, user?.id, profile?.full_name, coTaught, previewingStudent, previewScope.classIds]);
 
   const visible = useMemo(
     () =>
