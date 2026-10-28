@@ -169,6 +169,81 @@ export function PulseDashboard({
     },
   });
 
+  // Teacher-only snapshot signals (last 14 days attendance/behavior, last 7 days wellbeing).
+  const rosterIds = visibleRoster.map((r) => r.student_id);
+  const since14 = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
+  const since7 = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const { data: attendanceRows = [] } = useQuery({
+    queryKey: ["pulse-attendance", classId, since14],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance")
+        .select("student_id, status, date")
+        .eq("class_id", classId)
+        .gte("date", since14);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: behaviorRows = [] } = useQuery({
+    queryKey: ["pulse-behavior", classId, rosterIds.length, since14],
+    enabled: isStaff && rosterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("behavior_notes")
+        .select("id, student_id, kind, date, reason, notes")
+        .in("student_id", rosterIds)
+        .gte("date", since14)
+        .order("date", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: wellbeingRows = [] } = useQuery({
+    queryKey: ["pulse-wellbeing", classId],
+    enabled: isStaff,
+    queryFn: async () => {
+      try {
+        return await listWellbeingFeed({ data: { teacherMode: true } });
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const signals = useMemo(() => {
+    const ids = new Set(rosterIds);
+    const att = attendanceRows.filter((a) => ids.has(a.student_id));
+    const todayAtt = att.filter((a) => a.date === todayKey);
+    const absentIds = new Set(att.filter((a) => a.status === "absent" || a.status === "tardy").map((a) => a.student_id));
+    const presentDays = att.filter((a) => a.status === "present" || a.status === "tardy").length;
+    const rate = att.length ? Math.round((presentDays / att.length) * 100) : null;
+    const concerns = behaviorRows.filter((b) => b.kind !== "positive");
+    const positives = behaviorRows.length - concerns.length;
+    const behaviorIds = new Set(concerns.map((b) => b.student_id));
+    const wb = wellbeingRows.filter((w) => ids.has(w.studentId) && w.date >= since7);
+    const lowIds = new Set(wb.filter((w) => w.mood <= 2).map((w) => w.studentId));
+    const avgMood = wb.length ? wb.reduce((s, w) => s + w.mood, 0) / wb.length : null;
+    return {
+      rate,
+      todayMarked: todayAtt.length,
+      todayAbsent: todayAtt.filter((a) => a.status === "absent").length,
+      absentIds,
+      concerns: concerns.length,
+      positives,
+      behaviorIds,
+      recentBehavior: behaviorRows.slice(0, 3),
+      checkins: wb.length,
+      avgMood,
+      lowIds,
+    };
+  }, [attendanceRows, behaviorRows, wellbeingRows, rosterIds.join(","), todayKey, since7]);
+
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
     // Backdated assignments are never auto-flagged.
     if (!shouldAutoFlag(assignment, todayKey)) return false;
