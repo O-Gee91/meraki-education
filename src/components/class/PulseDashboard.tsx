@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ChevronDown, ClipboardList, Send, Sparkles } from "lucide-react";
+import { CalendarCheck, ChevronDown, ClipboardList, HeartPulse, MessageSquareText, Send, Sparkles, X } from "lucide-react";
+import { listWellbeingFeed } from "@/lib/wellbeing.functions";
+
+type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -107,6 +110,7 @@ export function PulseDashboard({
   const [open, setOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
+  const [signalFilter, setSignalFilter] = useState<Signal | null>(null);
   useEffect(() => {
     if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
   }, [classId]);
@@ -168,6 +172,81 @@ export function PulseDashboard({
       return data ?? [];
     },
   });
+
+  // Teacher-only snapshot signals (last 14 days attendance/behavior, last 7 days wellbeing).
+  const rosterIds = visibleRoster.map((r) => r.student_id);
+  const since14 = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
+  const since7 = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const { data: attendanceRows = [] } = useQuery({
+    queryKey: ["pulse-attendance", classId, since14],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance")
+        .select("student_id, status, date")
+        .eq("class_id", classId)
+        .gte("date", since14);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: behaviorRows = [] } = useQuery({
+    queryKey: ["pulse-behavior", classId, rosterIds.length, since14],
+    enabled: isStaff && rosterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("behavior_notes")
+        .select("id, student_id, kind, date, reason, notes")
+        .in("student_id", rosterIds)
+        .gte("date", since14)
+        .order("date", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: wellbeingRows = [] } = useQuery({
+    queryKey: ["pulse-wellbeing", classId],
+    enabled: isStaff,
+    queryFn: async () => {
+      try {
+        return await listWellbeingFeed({ data: { teacherMode: true } });
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const signals = useMemo(() => {
+    const ids = new Set(rosterIds);
+    const att = attendanceRows.filter((a) => ids.has(a.student_id));
+    const todayAtt = att.filter((a) => a.date === todayKey);
+    const absentIds = new Set(att.filter((a) => a.status === "absent" || a.status === "tardy").map((a) => a.student_id));
+    const presentDays = att.filter((a) => a.status === "present" || a.status === "tardy").length;
+    const rate = att.length ? Math.round((presentDays / att.length) * 100) : null;
+    const concerns = behaviorRows.filter((b) => b.kind !== "positive");
+    const positives = behaviorRows.length - concerns.length;
+    const behaviorIds = new Set(concerns.map((b) => b.student_id));
+    const wb = wellbeingRows.filter((w) => ids.has(w.studentId) && w.date >= since7);
+    const lowIds = new Set(wb.filter((w) => w.mood <= 2).map((w) => w.studentId));
+    const avgMood = wb.length ? wb.reduce((s, w) => s + w.mood, 0) / wb.length : null;
+    return {
+      rate,
+      todayMarked: todayAtt.length,
+      todayAbsent: todayAtt.filter((a) => a.status === "absent").length,
+      absentIds,
+      concerns: concerns.length,
+      positives,
+      behaviorIds,
+      recentBehavior: behaviorRows.slice(0, 3),
+      checkins: wb.length,
+      avgMood,
+      lowIds,
+    };
+  }, [attendanceRows, behaviorRows, wellbeingRows, rosterIds.join(","), todayKey, since7]);
 
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
     // Backdated assignments are never auto-flagged.
@@ -260,8 +339,123 @@ export function PulseDashboard({
 
   if (roster.length === 0) return null;
 
+  const signalIds: Record<Signal, Set<string>> = {
+    attendance: signals.absentIds,
+    missing: new Set(missingList.map((m) => m.row.student_id)),
+    behavior: signals.behaviorIds,
+    wellbeing: signals.lowIds,
+  };
+  const filteredCards = cards.filter(
+    (c) =>
+      (!statusFilter || c.status === statusFilter) &&
+      (!signalFilter || signalIds[signalFilter].has(c.row.student_id)),
+  );
+  const nameFor = (id: string) =>
+    studentLabel(visibleRoster.find((r) => r.student_id === id)?.students ?? null, useIds);
+  const pickSignal = (s: Signal) => {
+    setSignalFilter((cur) => (cur === s ? null : s));
+    setSelected(null);
+    if (!open) toggleOpen();
+  };
+
+  const tiles: { key: Signal; icon: typeof CalendarCheck; label: string; value: string; detail: string }[] = [
+    {
+      key: "attendance",
+      icon: CalendarCheck,
+      label: "Attendance",
+      value: signals.rate == null ? "—" : `${signals.rate}%`,
+      detail:
+        signals.todayMarked > 0
+          ? `Today: ${signals.todayAbsent} absent · ${signalIds.attendance.size} with absences/tardies (14d)`
+          : `Not taken today · ${signalIds.attendance.size} with absences/tardies (14d)`,
+    },
+    {
+      key: "missing",
+      icon: ClipboardList,
+      label: "Missing work",
+      value: String(totalMissing),
+      detail: `${missingList.length} student${missingList.length === 1 ? "" : "s"} with past-due items`,
+    },
+    {
+      key: "behavior",
+      icon: MessageSquareText,
+      label: "Behavior (14d)",
+      value: String(signals.concerns),
+      detail: `${signals.behaviorIds.size} student${signals.behaviorIds.size === 1 ? "" : "s"} with concerns · ${signals.positives} shout-out${signals.positives === 1 ? "" : "s"}`,
+    },
+    {
+      key: "wellbeing",
+      icon: HeartPulse,
+      label: "Wellbeing (7d)",
+      value: signals.avgMood == null ? "—" : `${signals.avgMood.toFixed(1)}/5`,
+      detail: `${signals.checkins} check-in${signals.checkins === 1 ? "" : "s"} · ${signals.lowIds.size} feeling low`,
+    },
+  ];
+
   return (
     <div className="mt-4 space-y-4">
+      {isStaff && (
+        <section className="panel p-5" aria-label="Class snapshot">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Class snapshot
+            </h2>
+            {signalFilter ? (
+              <button
+                type="button"
+                onClick={() => setSignalFilter(null)}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3" /> Clear filter
+              </button>
+            ) : (
+              <span className="text-xs text-muted-foreground">Tap a card to see those students</span>
+            )}
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {tiles.map((t) => {
+              const on = signalFilter === t.key;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => pickSignal(t.key)}
+                  className={`rounded-lg border p-3 text-left transition hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-accent ${
+                    on ? "border-foreground/60 bg-muted" : "border-border bg-card"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Icon className="size-3.5" /> {t.label}
+                  </span>
+                  <span className="mt-1 block text-2xl font-semibold tabular-nums">{t.value}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{t.detail}</span>
+                </button>
+              );
+            })}
+          </div>
+          {signals.recentBehavior.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-xs font-medium text-muted-foreground">Recent behavior notes</p>
+              <ul className="mt-2 space-y-1">
+                {signals.recentBehavior.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="min-w-0 truncate">
+                      <span className="font-medium">{nameFor(b.student_id)}</span>
+                      <span className="text-muted-foreground">
+                        {" "}· {b.kind === "positive" ? "Shout-out" : b.kind === "strike" ? "Strike" : "Concern"}
+                        {b.reason ? ` — ${b.reason}` : b.notes ? ` — ${b.notes}` : ""}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">{formatDate(b.date)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
       <section className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
@@ -327,10 +521,10 @@ export function PulseDashboard({
         {open && (
         <>
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
-          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).length === 0 ? (
+          {filteredCards.length === 0 ? (
             <p className="col-span-full text-sm text-muted-foreground">No students in this group.</p>
           ) : null}
-          {(statusFilter ? cards.filter((c) => c.status === statusFilter) : cards).map(({ row, avg, missing, status }) => {
+          {filteredCards.map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
             const active = selected === row.student_id;
             return (
