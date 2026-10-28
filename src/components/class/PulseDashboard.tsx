@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ChevronDown, ClipboardList, Send, Sparkles } from "lucide-react";
+import { CalendarCheck, ChevronDown, ClipboardList, HeartPulse, MessageSquareText, Send, Sparkles, X } from "lucide-react";
+import { listWellbeingFeed } from "@/lib/wellbeing.functions";
+
+type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -107,6 +110,7 @@ export function PulseDashboard({
   const [open, setOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
+  const [signalFilter, setSignalFilter] = useState<Signal | null>(null);
   useEffect(() => {
     if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
   }, [classId]);
