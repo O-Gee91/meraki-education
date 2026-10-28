@@ -12,7 +12,7 @@ import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
  * account), so callers can simply skip filtering.
  */
 export function useTeacherScope() {
-  const { teacherMode, user, profile } = useAuth();
+  const { teacherMode, previewingStudent, user, profile } = useAuth();
 
   const { data } = useQuery({
     queryKey: ["teacher-scope", user?.id, profile?.full_name, teacherMode],
@@ -56,6 +56,40 @@ export function useTeacherScope() {
       };
     },
   });
+
+  // "View as student": narrow everything to the demo Student Tester, because
+  // staff row-level security would otherwise return the whole school.
+  const { data: preview } = useQuery({
+    queryKey: ["preview-scope", user?.id, previewingStudent],
+    enabled: !!user && previewingStudent,
+    queryFn: async () => {
+      const { data: tester, error } = await supabase
+        .from("students")
+        .select("id, grade_level")
+        .eq("is_tester", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!tester) return { classIds: new Set<string>(), studentIds: new Set<string>(), gradeLevels: new Set<number>() };
+      const { data: enrollments, error: eErr } = await supabase
+        .from("enrollments")
+        .select("class_id")
+        .eq("student_id", tester.id);
+      if (eErr) throw eErr;
+      return {
+        classIds: new Set((enrollments ?? []).map((e) => e.class_id)),
+        studentIds: new Set([tester.id]),
+        gradeLevels: new Set(tester.grade_level == null ? [] : [tester.grade_level]),
+      };
+    },
+  });
+
+  if (previewingStudent) {
+    // Until resolved, scope to nothing rather than everything.
+    const empty = { classIds: new Set<string>(), studentIds: new Set<string>(), gradeLevels: new Set<number>() };
+    const scope = preview ?? empty;
+    return { teacherMode: false, ...scope, scoped: !!preview };
+  }
 
   const active = teacherMode && !!data;
 

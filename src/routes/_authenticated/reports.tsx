@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -139,7 +140,13 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
     sortMode,
   );
-  const cards = [...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards)].sort(
+  const { previewingStudent } = useAuth();
+  const cards = [
+    ...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards).filter(
+      // Student view: only the demo student's published cards.
+      (c) => !previewingStudent || (c.published && !!studentIds?.has(c.student_id)),
+    ),
+  ].sort(
     (a, b) => {
       const aStudent = students.find((student) => student.id === a.student_id);
       const bStudent = students.find((student) => student.id === b.student_id);
@@ -465,12 +472,12 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
 }
 
 function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
-  const { user } = useAuth();
+  const { user, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ studentId: "", title: "", link: "", description: "" });
   const [sortMode, setSortMode] = useStudentSort("portfolios");
 
-  const { data: students = [] } = useQuery({
+  const { data: allPortfolioStudents = [] } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -481,9 +488,13 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const previewScope = useTeacherScope();
+  const students = previewingStudent
+    ? allPortfolioStudents.filter((s) => previewScope.studentIds?.has(s.id))
+    : allPortfolioStudents;
   const sortedStudents = sortStudents(students, sortMode);
 
-  const { data: items = [] } = useQuery({
+  const { data: allItems = [] } = useQuery({
     queryKey: ["portfolio-items"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -494,9 +505,14 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const items = previewingStudent
+    ? allItems.filter((it) => previewScope.studentIds?.has(it.student_id))
+    : allItems;
+
 
   const add = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       const studentId = isStaff ? form.studentId : (students[0]?.id ?? "");
       if (!studentId) throw new Error("Select a student");
       if (form.title.trim().length < 2) throw new Error("Give the work a title");

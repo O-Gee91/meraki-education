@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,27 +65,18 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 function AssignmentsHubPage() {
-  const { user, primaryRole } = useAuth();
+  const { primaryRole } = useAuth();
   const isGuardian = primaryRole === "parent";
   const [filter, setFilter] = useState<Filter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Students resolve to their own record; guardians to every linked child.
-  const { data: children = [] } = useQuery({
-    queryKey: ["hub-students", user?.id, primaryRole],
-    enabled: !!user,
-    queryFn: async () => {
-      const column = isGuardian ? "guardian_user_id" : "user_id";
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name")
-        .eq(column, user!.id);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const studentIds = children.map((c) => c.id);
+  // Students resolve to their own record, guardians to every linked child and
+  // staff previews to the demo Student Tester only.
+  const { students: children } = useSelfStudents();
+  const [childId, setChildId] = useState<string | null>(null);
+  const activeChild = children.find((c) => c.id === childId) ?? children[0] ?? null;
+  const studentIds = activeChild ? [activeChild.id] : [];
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["hub-enrollments", studentIds],
@@ -112,6 +104,7 @@ function AssignmentsHubPage() {
           "id, class_id, title, description, category, points_possible, due_date, submission_mode",
         )
         .in("class_id", classIds)
+        .eq("status", "published")
         .order("due_date", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -141,6 +134,7 @@ function AssignmentsHubPage() {
       const { data, error } = await supabase
         .from("grades")
         .select("assignment_id, student_id, points_earned, comment")
+        .eq("is_draft", false)
         .in("assignment_id", assignmentIds)
         .in("student_id", studentIds);
       if (error) throw error;
@@ -151,8 +145,7 @@ function AssignmentsHubPage() {
   const rows = useMemo<HubRow[]>(() => {
     const soon = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
     return assignments.map((a) => {
-      // Guardians with several children see the first child's state per row;
-      // the children switcher below scopes the whole list to one child.
+      // The child selector scopes the whole list to one student.
       const sid = studentIds[0];
       const sub = submissions.find(
         (s) => s.assignment_id === a.id && s.student_id === sid,
@@ -215,6 +208,26 @@ function AssignmentsHubPage() {
         </p>
       ) : (
         <>
+          {children.length > 1 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Choose child">
+              <span className="text-sm text-muted-foreground">Showing</span>
+              {children.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  size="sm"
+                  variant={activeChild?.id === c.id ? "secondary" : "ghost"}
+                  aria-pressed={activeChild?.id === c.id}
+                  onClick={() => {
+                    setChildId(c.id);
+                    setOpenId(null);
+                  }}
+                >
+                  {c.first_name} {c.last_name}
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter assignments">
             {FILTERS.map((f) => (
               <Button

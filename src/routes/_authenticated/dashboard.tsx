@@ -11,6 +11,7 @@ import { TeacherTodo } from "@/components/TeacherTodo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
+import { useSelfStudents } from "@/hooks/useSelfStudents";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, percent } from "@/lib/school";
@@ -52,8 +53,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function DashboardPage() {
-  const { isStaff, primaryRole, profile } = useAuth();
+  const { isStaff, primaryRole, profile, previewingStudent } = useAuth();
   const { classIds, studentIds } = useTeacherScope();
+  const { ids: selfIds } = useSelfStudents();
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: allClasses = [] } = useQuery({
@@ -99,14 +101,17 @@ function DashboardPage() {
   });
 
   const { data: grades = [] } = useQuery({
-    queryKey: ["my-grades"],
-    enabled: !isStaff,
+    queryKey: ["my-grades", selfIds],
+    enabled: !isStaff && selfIds.length > 0,
     queryFn: async () => {
+      // Scoped explicitly: staff previewing as a student could otherwise read every grade.
       const { data, error } = await supabase
         .from("grades")
         .select(
           "id, points_earned, comment, updated_at, assignments(id, title, category, points_possible, due_date, class_id)",
         )
+        .in("student_id", selfIds)
+        .eq("is_draft", false)
         .order("updated_at", { ascending: false })
       if (error) throw error;
       return data;
@@ -114,16 +119,17 @@ function DashboardPage() {
   });
 
   // Students and guardians get a visible count of new teacher comments.
-  const { data: feedback = [] } = useMyFeedback(!isStaff);
+  const { data: feedback = [] } = useMyFeedback(!isStaff && !previewingStudent);
   const { unread: unreadFeedback } = useUnreadFeedback(feedback);
 
   const { data: attendance = [] } = useQuery({
-    queryKey: ["my-attendance"],
-    enabled: !isStaff,
+    queryKey: ["my-attendance", selfIds],
+    enabled: !isStaff && selfIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance")
         .select("id, date, status")
+        .in("student_id", selfIds)
         .order("date", { ascending: false })
         .limit(10);
       if (error) throw error;
@@ -446,7 +452,7 @@ function DashboardPage() {
 
 
 
-      {!isStaff && <FeedbackInbox />}
+      {!isStaff && !previewingStudent && <FeedbackInbox />}
 
       {!isStaff && (
         <section className="mt-6 border-t border-border pt-6">
@@ -485,7 +491,7 @@ function DashboardPage() {
       )}
 
       <SchoolCalendar />
-      {!isStaff && <div className="mt-6"><HeroProfilePanel /></div>}
+      {!isStaff && !previewingStudent && <div className="mt-6"><HeroProfilePanel /></div>}
 
       {primaryRole === "parent" && (
         <p className="mt-6 text-sm text-muted-foreground">
@@ -498,24 +504,9 @@ function DashboardPage() {
 
 /** Student/guardian summary: published work past its due date with nothing turned in. */
 function MissingWorkCard() {
-  const { user, primaryRole } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
-
-  const { data: me } = useQuery({
-    queryKey: ["missing-work-student", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const column = primaryRole === "parent" ? "guardian_user_id" : "user_id";
-      const { data, error } = await supabase
-        .from("students")
-        .select("id")
-        .eq(column, user!.id)
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { students: selfStudents } = useSelfStudents();
+  const me = selfStudents[0] ?? null;
 
   const { data: missingCount = 0 } = useQuery({
     queryKey: ["missing-work", me?.id, today],
