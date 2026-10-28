@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/select";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useSelfStudents } from "@/hooks/useSelfStudents";
+import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -150,23 +152,18 @@ function StudentView() {
   const [mood, setMood] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [editing, setEditing] = useState(false);
-  const { data: students = [] } = useQuery({
-    queryKey: ["students"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name, grade_level")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
-  });
-  const { data: checkins = [], isLoading, isError, refetch } = useFeed("");
+  const { previewingStudent } = useAuth();
+  const { students } = useSelfStudents();
+  const { data: feed = [], isLoading, isError, refetch } = useFeed("");
+  // Only the viewer's own check-ins, even for staff previewing as a student.
+  const ownIds = new Set(students.map((s) => s.id));
+  const checkins = feed.filter((c) => ownIds.has(c.studentId));
   const todays = checkins.find((c) => c.date === today);
   const target = students[0]?.id ?? "";
 
   const submit = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       if (!target) throw new Error("We couldn't find your student record.");
       if (mood == null) throw new Error("Pick how you're feeling first");
       const { error } = await supabase
