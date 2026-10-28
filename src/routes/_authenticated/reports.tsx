@@ -139,7 +139,13 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
     sortMode,
   );
-  const cards = [...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards)].sort(
+  const { previewingStudent } = useAuth();
+  const cards = [
+    ...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards).filter(
+      // Student view: only the demo student's published cards.
+      (c) => !previewingStudent || (c.published && !!studentIds?.has(c.student_id)),
+    ),
+  ].sort(
     (a, b) => {
       const aStudent = students.find((student) => student.id === a.student_id);
       const bStudent = students.find((student) => student.id === b.student_id);
@@ -481,6 +487,11 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const { previewingStudent } = useAuth();
+  const previewScope = useTeacherScope();
+  const students = previewingStudent
+    ? allPortfolioStudents.filter((s) => previewScope.studentIds?.has(s.id))
+    : allPortfolioStudents;
   const sortedStudents = sortStudents(students, sortMode);
 
   const { data: items = [] } = useQuery({
