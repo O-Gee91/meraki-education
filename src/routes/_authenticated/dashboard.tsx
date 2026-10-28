@@ -240,7 +240,12 @@ function DashboardPage() {
   };
 
 
-  const graded = grades.filter((g) => g.points_earned != null && g.assignments);
+  const graded = grades.filter(
+    (g) =>
+      g.points_earned != null &&
+      g.assignments &&
+      (!previewingStudent || classIds?.has(g.assignments.class_id)),
+  );
   const recentGrades = graded.slice(0, 10);
   const classAverages = classes.flatMap((klass) => {
     const setup = parseGradingSetup(klass.weights);
@@ -507,9 +512,12 @@ function MissingWorkCard() {
   const today = new Date().toISOString().slice(0, 10);
   const { students: selfStudents } = useSelfStudents();
   const me = selfStudents[0] ?? null;
+  const { previewingStudent } = useAuth();
+  const { classIds: scopeIds } = useTeacherScope();
+  const scopeKey = previewingStudent ? [...(scopeIds ?? [])].sort().join(",") : "";
 
   const { data: missingCount = 0 } = useQuery({
-    queryKey: ["missing-work", me?.id, today],
+    queryKey: ["missing-work", me?.id, today, scopeKey],
     enabled: !!me,
     queryFn: async () => {
       const { data: enrols, error: eErr } = await supabase
@@ -517,7 +525,8 @@ function MissingWorkCard() {
         .select("class_id")
         .eq("student_id", me!.id);
       if (eErr) throw eErr;
-      const classIds = (enrols ?? []).map((e) => e.class_id);
+      let classIds = (enrols ?? []).map((e) => e.class_id);
+      if (previewingStudent) classIds = classIds.filter((id) => scopeIds?.has(id));
       if (classIds.length === 0) return 0;
       // RLS limits this to published assignments automatically.
       const { data: due, error: aErr } = await supabase

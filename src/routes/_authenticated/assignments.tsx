@@ -13,6 +13,7 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,8 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 function AssignmentsHubPage() {
-  const { primaryRole } = useAuth();
+  const { primaryRole, previewingStudent } = useAuth();
+  const previewScope = useTeacherScope();
   const isGuardian = primaryRole === "parent";
   const [filter, setFilter] = useState<Filter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -90,7 +92,10 @@ function AssignmentsHubPage() {
       return data ?? [];
     },
   });
-  const classIds = Array.from(new Set(enrollments.map((e) => e.class_id)));
+  // Staff previewing as a student only see their own classes.
+  const classIds = Array.from(new Set(enrollments.map((e) => e.class_id))).filter(
+    (id) => !previewingStudent || previewScope.classIds?.has(id),
+  );
   const className = (id: string) =>
     enrollments.find((e) => e.class_id === id)?.classes?.name ?? "Class";
 
