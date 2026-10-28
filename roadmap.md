@@ -25,7 +25,7 @@
 - [x] Delete assignment preserves grade_changes history (ON DELETE SET NULL + title snapshot)
 - [x] Remove temporary "Open preview" button + /feedback-loop-preview route once real flow verified
 - [x] Verify end-to-end: draft→publish, draft grade→post, audit rows, build clean (2026-10-12)
-- [ ] Guardian multi-child: /assignments currently uses first linked child — add child selector
+- [x] Guardian multi-child: child selector on /assignments; hub shows published work and posted grades only
 - [ ] Verify student/guardian RLS with a real student session (preview session is staff)
 
 ## Deferred / open
@@ -38,3 +38,8 @@
 - 11 security findings untouched per user request
 - [x] Messaging: student/guardian teacher contacts, read receipts, Inbox/Sent, Reply, unread badge (educator end-to-end check pending)
 - [x] Detentions: tester cleanup, no tester detentions, teachers see own classes, admins grouped by grade
+
+## Global Student View (Joe Doyle 2026-10-28)
+- [x] Header "View as student" toggle for staff, persistent banner with Exit, student navigation
+- [x] Dashboard, Classes, Assignments, Well-being, Behavior, Reports scoped to the demo Student Tester; staff-only pages blocked; messages/check-ins/portfolio read-only
+- [ ] Educator visual check of student view — needs an educator preview session
