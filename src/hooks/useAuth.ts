@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useActingRoleStore } from "@/hooks/useActingRole";
+import { useStudentPreviewMode } from "@/hooks/useStudentPreview";
 
 export type Role = "admin" | "teacher" | "student" | "parent";
 
@@ -67,19 +68,24 @@ export function useAuth() {
 
   const hasAdminRole = roles.includes("admin");
   const hasTeacherRole = roles.includes("teacher");
+  const realStaff = hasAdminRole || hasTeacherRole;
   // Only people who genuinely hold both hats get to switch between them.
-  const canSwitchRole = hasAdminRole && hasTeacherRole;
+  const storedPreview = useStudentPreviewMode();
+  const previewingStudent = realStaff && storedPreview;
+  const canSwitchRole = hasAdminRole && hasTeacherRole && !previewingStudent;
 
   const storedActingRole = useActingRoleStore();
   const actingRole: Role | null = canSwitchRole ? (storedActingRole ?? "admin") : null;
 
-  const baseRole: Role = hasAdminRole
-    ? "admin"
-    : hasTeacherRole
-      ? "teacher"
-      : roles.includes("parent")
-        ? "parent"
-        : "student";
+  const baseRole: Role = previewingStudent
+    ? "student"
+    : hasAdminRole
+      ? "admin"
+      : hasTeacherRole
+        ? "teacher"
+        : roles.includes("parent")
+          ? "parent"
+          : "student";
 
   const primaryRole: Role = actingRole ?? baseRole;
 
@@ -92,9 +98,14 @@ export function useAuth() {
     /** The role the user is currently acting as (null when they hold only one staff role). */
     actingRole,
     canSwitchRole,
-    hasAdminRole,
-    hasTeacherRole,
-    isStaff: hasAdminRole || hasTeacherRole,
+    hasAdminRole: hasAdminRole && !previewingStudent,
+    hasTeacherRole: hasTeacherRole && !previewingStudent,
+    /** False while staff use the global "View as student" preview. */
+    isStaff: realStaff && !previewingStudent,
+    /** The account really holds a staff role, even while previewing as a student. */
+    realStaff,
+    /** Staff are browsing the app as the demo Student Tester (read-only). */
+    previewingStudent,
     /** Reflects the active hat, so an admin working as a teacher stays class-scoped. */
     isAdmin: primaryRole === "admin",
     /**
@@ -102,7 +113,7 @@ export function useAuth() {
      * security still allows an admin to read everything, so lists must narrow
      * themselves to the classes this person teaches while this is on.
      */
-    teacherMode: primaryRole === "teacher" && hasTeacherRole,
+    teacherMode: primaryRole === "teacher" && hasTeacherRole && !previewingStudent,
     loading: loading || (!!user && rolesLoading),
   };
 }
