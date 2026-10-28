@@ -60,7 +60,7 @@ export function useTeacherScope() {
   // "View as student": narrow everything to the demo Student Tester, because
   // staff row-level security would otherwise return the whole school.
   const { data: preview } = useQuery({
-    queryKey: ["preview-scope", user?.id, previewingStudent],
+    queryKey: ["preview-scope", user?.id, profile?.full_name, previewingStudent],
     enabled: !!user && previewingStudent,
     queryFn: async () => {
       const { data: tester, error } = await supabase
@@ -76,8 +76,30 @@ export function useTeacherScope() {
         .select("class_id")
         .eq("student_id", tester.id);
       if (eErr) throw eErr;
+      let classIds = new Set((enrollments ?? []).map((e) => e.class_id));
+
+      // Only show the viewing teacher's own (or co-taught) classes. Staff with
+      // no classes of their own (e.g. admins) keep the tester's full view.
+      const { data: classes, error: cErr } = await supabase
+        .from("classes")
+        .select("id, teacher_id, teacher_name");
+      if (cErr) throw cErr;
+      const name = (profile?.full_name ?? "").trim().toLowerCase();
+      const coTaught = await fetchCoTaughtClassIds(user!.id);
+      const mine = new Set(
+        (classes ?? [])
+          .filter(
+            (c) =>
+              c.teacher_id === user!.id ||
+              coTaught.has(c.id) ||
+              (!!name && (c.teacher_name ?? "").trim().toLowerCase() === name),
+          )
+          .map((c) => c.id),
+      );
+      if (mine.size > 0) classIds = new Set([...classIds].filter((id) => mine.has(id)));
+
       return {
-        classIds: new Set((enrollments ?? []).map((e) => e.class_id)),
+        classIds,
         studentIds: new Set([tester.id]),
         gradeLevels: new Set(tester.grade_level == null ? [] : [tester.grade_level]),
       };
