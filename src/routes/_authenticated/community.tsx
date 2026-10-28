@@ -221,6 +221,9 @@ function CommunityPage() {
               <h2 className="flex items-start gap-2 text-lg font-semibold">
                 <Users2 className="mt-1 size-5 shrink-0 text-muted-foreground" aria-hidden="true" /> {selected.name}
               </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Group conversation — posts here stay in this group and are separate from class feeds.
+              </p>
               <ClassFeed scope={{ groupId: selected.id }} desktopReview />
             </section>
           )}
