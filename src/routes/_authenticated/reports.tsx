@@ -504,7 +504,8 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       if (error) throw error;
       return data;
     },
-  });  const items = previewingStudent
+  });
+  const items = previewingStudent
     ? allItems.filter((it) => previewScope.studentIds?.has(it.student_id))
     : allItems;
 
