@@ -102,6 +102,9 @@ const NAV: NavItem[] = [
   { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },
 ];
 
+/** Pages a student account can never open; blocked during "View as student". */
+const STAFF_ONLY_PATHS = ["/students", "/people", "/files", "/community"];
+
 const ROLE_LABEL: Record<Role, string> = {
   admin: "School admin",
   teacher: "Teacher",
@@ -397,7 +400,15 @@ export function AppShell({
           ))}
         </nav>
 
-        <main className={cn("flex-1 px-6 py-6", desktopReview && "mx-auto w-full max-w-6xl")}>{children}</main>
+        <main className={cn("flex-1 px-6 py-6", desktopReview && "mx-auto w-full max-w-6xl")}>
+          {previewingStudent && STAFF_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) ? (
+            <p className="text-sm text-muted-foreground">
+              Students can't open this page. Exit student view to use it.
+            </p>
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );
