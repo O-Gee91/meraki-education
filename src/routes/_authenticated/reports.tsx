@@ -494,7 +494,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
     : allPortfolioStudents;
   const sortedStudents = sortStudents(students, sortMode);
 
-  const { data: items = [] } = useQuery({
+  const { data: allItems = [] } = useQuery({
     queryKey: ["portfolio-items"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -504,7 +504,10 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       if (error) throw error;
       return data;
     },
-  });
+  });  const items = previewingStudent
+    ? allItems.filter((it) => previewScope.studentIds?.has(it.student_id))
+    : allItems;
+
 
   const add = useMutation({
     mutationFn: async () => {
