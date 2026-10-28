@@ -205,6 +205,8 @@ function StudentWorkPanel({
         .select("points_earned, comment")
         .eq("assignment_id", assignment.id)
         .eq("student_id", me!.id)
+        // Students and guardians only see posted grades and feedback.
+        .eq("is_draft", false)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -1473,10 +1475,11 @@ function StaffCollectPanel({
                         <div className="flex items-center gap-1.5">
                           {grade?.is_draft ? (
                             <span
-                              className="size-1.5 shrink-0 rounded-full bg-warning"
+                              className="rounded-full border border-warning/50 bg-warning/15 px-1.5 py-px text-[10px] font-semibold uppercase leading-4 tracking-wide text-warning-foreground"
                               title="Draft grade — only you can see it until posted"
-                              aria-label="Draft grade"
-                            />
+                            >
+                              Draft
+                            </span>
                           ) : null}
                           <Input
                             key={shownScore}
