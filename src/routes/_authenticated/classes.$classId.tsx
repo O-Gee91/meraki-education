@@ -121,7 +121,7 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { isStaff: realStaff, isAdmin, user, profile } = useAuth();
+  const { realStaff, previewingStudent, isAdmin, user, profile } = useAuth();
   const [previewRequested, setPreviewing] = useState(false);
   const [classTab, setClassTab] = useState("gradebook");
   const [previewTab, setPreviewTab] = useState("gradebook");
@@ -203,7 +203,7 @@ function ClassDetailPage() {
     },
   });
   const testerId = fullRoster.find((r) => isTestStudent(r.students))?.student_id ?? null;
-  const previewing = previewRequested && realStaff && !!testerId;
+  const previewing = (previewRequested || previewingStudent) && realStaff && !!testerId;
   const isStaff = realStaff && !previewing;
   const roster = previewing ? fullRoster.filter((r) => r.student_id === testerId) : fullRoster;
   // Demo/test accounts stay visible but never count toward class statistics.
@@ -494,12 +494,12 @@ function ClassDetailPage() {
         </div>
       }
     >
-      {previewing && (
+      {previewing && !previewingStudent && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
           <span>
             <strong>Student view preview</strong> — you're seeing this class as the demo Student Tester sees it. Nothing here affects real grades.
           </span>
-          <Button size="sm" onClick={() => setPreviewing(false)}>Exit student view</Button>
+          {!previewingStudent && <Button size="sm" onClick={() => setPreviewing(false)}>Exit student view</Button>}
         </div>
       )}
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
