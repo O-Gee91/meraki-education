@@ -138,7 +138,7 @@ export function AppShell({
 
   const { data: unreadMessages = 0 } = useQuery({
     queryKey: ["unread-messages", user?.id],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !previewingStudent,
     refetchInterval: 60_000,
     queryFn: async () => {
       const { count } = await supabase
