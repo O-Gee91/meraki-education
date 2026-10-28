@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,14 +47,15 @@ export const Route = createFileRoute("/_authenticated/messages")({
 });
 
 function MessagesPage() {
-  const { user, isStaff } = useAuth();
+  const { user, isStaff, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const [compose, setCompose] = useState({ recipient: "", subject: "", body: "" });
   const [post, setPost] = useState({ title: "", body: "", audience: "everyone" });
 
   const { data: inbox = [] } = useQuery({
+    // Student view never shows the staff member's own private inbox.
     queryKey: ["messages", user?.id],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !previewingStudent,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
@@ -181,6 +183,7 @@ function MessagesPage() {
 
   const send = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       const recipients = isStaff && pickMode === "class" ? classRecipients : compose.recipient ? [compose.recipient] : [];
       if (recipients.length === 0)
         throw new Error(
@@ -223,6 +226,7 @@ function MessagesPage() {
 
   const announce = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       if (post.title.trim().length < 3) throw new Error("Add a title");
       if (post.body.trim().length < 3) throw new Error("Add announcement text");
       const { error } = await supabase.from("announcements").insert({
@@ -251,6 +255,7 @@ function MessagesPage() {
 
   const saveAnnouncement = useMutation({
     mutationFn: async () => {
+      if (previewingStudent) throw new Error(PREVIEW_READ_ONLY);
       if (!editingId) return;
       if (editDraft.title.trim().length < 3) throw new Error("Add a title");
       if (editDraft.body.trim().length < 3) throw new Error("Add announcement text");
