@@ -1,6 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState, type ReactNode } from "react";
+import { listWellbeingFeed } from "@/lib/wellbeing.functions";
+import { countNewCheckins, wellbeingSeenKey } from "@/lib/wellbeing-badge";
 import {
   BookOpen,
   FolderOpen,
@@ -119,6 +122,20 @@ const STAFF_NAV_GROUPS = [
   { label: "Admin", paths: ["/people"] },
 ];
 
+function WellbeingBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = `${count} new check-in${count === 1 ? "" : "s"}`;
+  return (
+    <span
+      aria-label={label}
+      title={label}
+      className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary/15 px-1.5 text-[11px] font-semibold leading-5 text-primary"
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
 export function AppShell({
   title,
   description,
@@ -134,7 +151,7 @@ export function AppShell({
   desktopReview?: boolean;
   breadcrumbContext?: { label: string; section: string; onNavigate: () => void };
 }) {
-  const { profile, primaryRole, user, canSwitchRole, realStaff, previewingStudent } = useAuth();
+  const { profile, primaryRole, user, canSwitchRole, realStaff, previewingStudent, teacherMode } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -152,6 +169,39 @@ export function AppShell({
       return count ?? 0;
     },
   });
+
+  // Educator-only "new check-in" signal. Uses the same scoped feed as the
+  // Wellbeing page; only a count is shown, never check-in content.
+  const isEducator = !previewingStudent && (primaryRole === "admin" || primaryRole === "teacher");
+  const fetchWellbeingFeed = useServerFn(listWellbeingFeed);
+  const [seenAt, setSeenAt] = useState<string | null>(null);
+  const [seenLoaded, setSeenLoaded] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    setSeenAt(localStorage.getItem(wellbeingSeenKey(user.id)));
+    setSeenLoaded(true);
+  }, [user?.id]);
+  const onWellbeing = pathname === "/wellbeing";
+  const { data: wellbeingFeed = [] } = useQuery({
+    queryKey: ["checkins", "wellbeing-badge", user?.id, teacherMode],
+    enabled: Boolean(user) && isEducator && seenLoaded,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+    queryFn: () => fetchWellbeingFeed({ data: { teacherMode } }),
+  });
+  function markWellbeingSeen() {
+    if (!user) return;
+    const now = new Date().toISOString();
+    localStorage.setItem(wellbeingSeenKey(user.id), now);
+    setSeenAt(now);
+  }
+  // While the teacher is on the Wellbeing page, everything they see counts as seen.
+  useEffect(() => {
+    if (onWellbeing && isEducator && wellbeingFeed.length) markWellbeingSeen();
+  }, [onWellbeing, isEducator, wellbeingFeed]);
+  const wellbeingNew = isEducator && !onWellbeing ? countNewCheckins(wellbeingFeed, seenAt) : 0;
+
 
   const items = NAV.filter((item) => item.roles.includes(primaryRole)).map((item) => {
     const base = primaryRole === "student" ? (item.studentLabel ?? item.label) : item.label;
@@ -220,6 +270,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
+                onClick={item.to === "/wellbeing" ? markWellbeingSeen : undefined}
                  aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -229,7 +280,8 @@ export function AppShell({
                 )}
               >
                 <item.icon className="size-4" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.to === "/wellbeing" ? <WellbeingBadge count={wellbeingNew} /> : null}
               </Link>
             );
           })}
@@ -388,6 +440,7 @@ export function AppShell({
             <Link
               key={item.to}
               to={item.to}
+              onClick={item.to === "/wellbeing" ? markWellbeingSeen : undefined}
               className={cn(
                 "whitespace-nowrap rounded-md px-3 py-1.5 text-sm",
                 pathname.startsWith(item.to)
@@ -396,6 +449,7 @@ export function AppShell({
               )}
             >
               {item.label}
+              {item.to === "/wellbeing" ? <WellbeingBadge count={wellbeingNew} /> : null}
             </Link>
           ))}
         </nav>
