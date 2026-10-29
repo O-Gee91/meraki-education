@@ -128,6 +128,18 @@ export function DiscussionBoard({
     },
   });
 
+  const linkedAssignmentIds = discussions.map((d) => d.assignment_id).filter((x): x is string => !!x);
+  const { data: categoryById = {} } = useQuery({
+    queryKey: ["assignments", "discussion-categories", classId, linkedAssignmentIds.join(",")],
+    enabled: linkedAssignmentIds.length > 0,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase.from("assignments").select("id, category").in("id", linkedAssignmentIds);
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((a) => [a.id, a.category]));
+    },
+  });
+
+
   // Classes this educator can post into (own, co-taught; admins: all).
   const { data: myClasses = [] } = useQuery({
     queryKey: ["discussion-target-classes", user?.id, isAdmin, [...coTaught].join(",")],
