@@ -71,6 +71,7 @@ import { StudentClassReport } from "@/components/class/StudentClassReport";
 
 import { ShareResourceButton } from "@/components/class/ShareResourceButton";
 import { CopyToClassesButton } from "@/components/class/CopyToClassesButton";
+import { copyResourceToClasses } from "@/lib/sharing.functions";
 import { StudentImport } from "@/components/students/StudentImport";
 import { ClassLogins } from "@/components/students/ClassLogins";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
@@ -1598,11 +1599,30 @@ function EditAssignment({
   const [form, setForm] = useState(initial);
   const [reopen, setReopen] = useState<ReopenSettings>(REOPEN_DEFAULTS);
   const reopenWork = useServerFn(reopenCoursework);
+  const copyWork = useServerFn(copyResourceToClasses);
+  const { user, isAdmin } = useAuth();
+  const [addTo, setAddTo] = useState<string[]>([]);
+  const { data: otherClasses = [] } = useQuery({
+    queryKey: ["edit-assignment-classes", user?.id, isAdmin, classId],
+    enabled: open && !!user,
+    queryFn: async () => {
+      const [{ data, error }, { data: co }] = await Promise.all([
+        supabase.from("classes").select("id, name, period, teacher_id, teacher_name").order("name"),
+        supabase.from("class_co_teachers").select("class_id, permission_level").eq("teacher_id", user!.id),
+      ]);
+      if (error) throw error;
+      const coIds = new Set((co ?? []).filter((r) => r.permission_level !== "view").map((r) => r.class_id));
+      return (data ?? []).filter(
+        (c) => c.id !== classId && (isAdmin || c.teacher_id === user!.id || coIds.has(c.id)),
+      );
+    },
+  });
 
   function openChange(next: boolean) {
     if (next) {
       setForm(initial());
       setReopen(REOPEN_DEFAULTS);
+      setAddTo([]);
     }
     setOpen(next);
   }
@@ -1627,22 +1647,33 @@ function EditAssignment({
         .eq("id", assignment.id);
       if (error) throw error;
 
+      let copied = 0;
+      if (addTo.length > 0) {
+        const r = await copyWork({
+          data: { kind: "assignment", id: assignment.id, classIds: addTo, keepDueDate: true },
+        });
+        copied = r.copied;
+      }
+
       // Pushing the due date later automatically gives students another chance.
       const wasDue = assignment.due_date ?? "";
       const movedLater = Boolean(form.due) && (!wasDue || form.due > wasDue);
       if (movedLater) {
-        return reopenWork({
+        const r = await reopenWork({
           data: { assignmentId: assignment.id, scope: reopen.scope, notify: reopen.notify },
         });
+        return { ...r, copied };
       }
-      return null;
+      return { reopened: 0, copied };
     },
     onSuccess: (result) => {
+      const extra = result.copied > 0 ? ` and added to ${result.copied} more class${result.copied === 1 ? "" : "es"}` : "";
       toast.success(
-        result && result.reopened > 0
-          ? `Assignment updated — reopened for ${result.reopened} student${result.reopened === 1 ? "" : "s"}`
-          : "Assignment updated",
+        result.reopened > 0
+          ? `Assignment updated${extra} — reopened for ${result.reopened} student${result.reopened === 1 ? "" : "s"}`
+          : `Assignment updated${extra}`,
       );
+      setAddTo([]);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
       queryClient.invalidateQueries({ queryKey: ["grades", classId] });
@@ -1749,6 +1780,34 @@ function EditAssignment({
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </div>
+          {otherClasses.length > 0 && (
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <p className="text-sm font-medium">Also add to other classes</p>
+              <p className="text-xs text-muted-foreground">
+                Forgot a class? Tick it here — each class gets its own copy with these details and due date.
+              </p>
+              <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+                {otherClasses.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`e-add-${assignment.id}-${c.id}`}
+                      checked={addTo.includes(c.id)}
+                      onCheckedChange={() =>
+                        setAddTo((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id]))
+                      }
+                    />
+                    <Label htmlFor={`e-add-${assignment.id}-${c.id}`} className="text-sm font-normal">
+                      {c.name}
+                      <span className="text-muted-foreground">
+                        {c.period ? ` · Period ${c.period}` : ""}
+                        {c.teacher_id !== user?.id && c.teacher_name ? ` · ${c.teacher_name}` : ""}
+                      </span>
+                    </Label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
