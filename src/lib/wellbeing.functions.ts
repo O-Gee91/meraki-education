@@ -45,16 +45,20 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
 
     let students = allStudents ?? [];
     if (!isAdmin && isTeacher) {
-      const [{ data: classes, error: classesError }, { data: profile, error: profileError }] = await Promise.all([
+      const [{ data: classes, error: classesError }, { data: profile, error: profileError }, { data: coTeachers, error: coTeachersError }] = await Promise.all([
         supabaseAdmin.from("classes").select("id, teacher_id, teacher_name, grade_level"),
         supabaseAdmin.from("profiles").select("full_name").eq("id", context.userId).maybeSingle(),
+        context.supabase.from("class_co_teachers").select("class_id").eq("teacher_id", context.userId),
       ]);
       if (classesError) throw new Error(`Could not load teacher classes: ${classesError.message}`);
       if (profileError) throw new Error(`Could not load teacher profile: ${profileError.message}`);
+      if (coTeachersError) throw new Error(`Could not load co-taught classes: ${coTeachersError.message}`);
 
+      const coTaughtClassIds = new Set((coTeachers ?? []).map((row) => row.class_id));
       const teacherName = (profile?.full_name ?? "").trim().toLocaleLowerCase();
       const teacherClasses = (classes ?? []).filter(
         (schoolClass) => schoolClass.teacher_id === context.userId
+          || coTaughtClassIds.has(schoolClass.id)
           || (!!teacherName && schoolClass.teacher_name.trim().toLocaleLowerCase() === teacherName),
       );
       const classIds = teacherClasses.map((schoolClass) => schoolClass.id);

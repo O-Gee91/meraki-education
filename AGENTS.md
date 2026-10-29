@@ -21,3 +21,4 @@
 - Run unit tests with the dedicated Vitest configuration rather than the app's RPC transform; this allows mocked server handlers to execute directly without deployment routing.
 - Keep calendar category, color and audience transitions in shared calendar-form helpers; this lets regression tests cover every holiday visibility path used by the form.
 - Global "View as student" lives in useAuth (previewingStudent/realStaff) with student-owned data scoped via useSelfStudents/useTeacherScope; staff RLS reads every row, so preview screens must filter explicitly and block writes.
+- Wellbeing feeds use the active staff hat and verified co-teacher membership, with snapshot caches keyed by viewer and hat; this preserves admin visibility and co-teacher access without sharing cached role scopes.

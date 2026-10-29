@@ -1,5 +1,9 @@
 # Roadmap
 
+## Class snapshot wellbeing access
+- [x] Respect the active admin/teacher hat and include verified co-taught classes in wellbeing feed scope
+- [ ] Run access regression tests and verify the signed-in class snapshot
+
 ## Grade-clear email correction
 - [x] Skip cleared scores at both alert boundaries; preserve notifications for zero, special marks and real posted corrections; 12 regression tests pass
 - [ ] Educator end-to-end grading check — restored preview opens as Student Tester, not an educator
