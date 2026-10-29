@@ -61,6 +61,9 @@ type Score = { post_id: string; author_id: string; points: number; max_points: n
 const COLS =
   "id, class_id, title, prompt, due_date, due_at, available_from, required_replies, graded, points_possible, response_points, reply_points, closed, assignment_id, share_group, thread_id, edited_at, created_by, created_at";
 
+const SELECT_CLS =
+  "mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 /** Max points for a main response / a reply (legacy discussions fall back to the whole total). */
 function maxFor(d: Discussion, isReply: boolean) {
   if (d.response_points === 0 && d.reply_points === 0) return isReply ? 0 : Number(d.points_possible);
@@ -89,7 +92,7 @@ export function DiscussionBoard({
 
   const draftKey = `discussion-new:${classId}`;
   const saved = readDraft<{
-    title: string; prompt: string; dueDate: string; dueTime?: string; opensAt?: string; required: string; graded: boolean; responsePts: string; replyPts: string;
+    title: string; prompt: string; dueDate: string; dueTime?: string; opensAt?: string; required: string; graded: boolean; responsePts: string; replyPts: string; category?: string;
   }>(draftKey);
   const [title, setTitle] = useState(saved?.title ?? "");
   const [prompt, setPrompt] = useState(saved?.prompt ?? "");
@@ -104,10 +107,13 @@ export function DiscussionBoard({
   const [pickedClasses, setPickedClasses] = useState<Set<string>>(new Set([classId]));
   const [grade, setGrade] = useState<string>("");
   const [sharedThread, setSharedThread] = useState(false);
+  const defaultCategory = categories.find((c) => /discussion|participation/i.test(c)) ?? categories[0] ?? "Homework";
+  const [category, setCategory] = useState(saved?.category ?? defaultCategory);
+  const effectiveCategory = categories.includes(category) ? category : defaultCategory;
   const dirty = title.trim().length > 0 || prompt.trim().length > 0;
   const draft = useAutosaveDraft(
     draftKey,
-    { title, prompt, dueDate, dueTime, opensAt, required, graded, responsePts, replyPts },
+    { title, prompt, dueDate, dueTime, opensAt, required, graded, responsePts, replyPts, category },
     { dirty, enabled: isStaff },
   );
 
@@ -168,7 +174,7 @@ export function DiscussionBoard({
             .insert({
               class_id: cid,
               title: t,
-              category: categories.find((c) => /discussion/i.test(c)) ?? categories[0] ?? "Homework",
+              category: effectiveCategory,
               points_possible: pts,
               due_date: dueDate || null,
               available_from: openIso,
@@ -348,6 +354,13 @@ export function DiscussionBoard({
                     <Label>Points per reply</Label>
                     <Input type="number" min={0} value={replyPts} onChange={(e) => setReplyPts(e.target.value)} />
                   </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="disc-category">Grading category</Label>
+                    <select id="disc-category" className={SELECT_CLS} value={effectiveCategory} onChange={(e) => setCategory(e.target.value)}>
+                      {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <p className="mt-1 text-xs text-muted-foreground">Points count toward this category's weight in each class gradebook.</p>
+                  </div>
                   <p className="text-sm md:col-span-2">
                     Total: <span className="font-semibold">{totalPossible} pts</span>
                     <span className="text-muted-foreground"> (response {Number(responsePts) || 0} + {Number(required) || 0} × {Number(replyPts) || 0} per reply)</span>
@@ -379,6 +392,9 @@ export function DiscussionBoard({
                   {d.graded ? <Badge variant="secondary">{d.points_possible} pts</Badge> : <Badge variant="outline">Ungraded</Badge>}
                   {isLocked(d) ? (
                     <Badge variant="outline">{isStaff ? "Scheduled" : "Locked"} · Opens {formatZoned(d.available_from, timeZone)}</Badge>
+                  ) : null}
+                  {d.graded && d.assignment_id && categoryById[d.assignment_id] ? (
+                    <Badge variant="secondary">{categoryById[d.assignment_id]} · {formatPoints(Number(d.points_possible))} pts</Badge>
                   ) : null}
                   {d.due_at ? (
                     <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> Due {formatZoned(d.due_at, timeZone)}</span>
@@ -424,12 +440,20 @@ export function DiscussionBoard({
         ))
       )}
 
-      {editing && <EditDiscussionDialog discussion={editing} timeZone={timeZone} onClose={() => setEditing(null)} />}
+      {editing && (
+        <EditDiscussionDialog
+          discussion={editing}
+          timeZone={timeZone}
+          categories={categories}
+          currentCategory={editing.assignment_id ? categoryById[editing.assignment_id] : undefined}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
 
-function EditDiscussionDialog({ discussion: d, timeZone, onClose }: { discussion: Discussion; timeZone: string; onClose: () => void }) {
+function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCategory, onClose }: { discussion: Discussion; timeZone: string; categories: string[]; currentCategory?: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(d.title);
   const [prompt, setPrompt] = useState(d.prompt);
@@ -441,6 +465,8 @@ function EditDiscussionDialog({ discussion: d, timeZone, onClose }: { discussion
   const [responsePts, setResponsePts] = useState(String(legacy ? d.points_possible : d.response_points));
   const [replyPts, setReplyPts] = useState(String(d.reply_points));
   const [allLinked, setAllLinked] = useState(!!d.share_group);
+  const [category, setCategory] = useState(currentCategory ?? "");
+  const categoryOptions = currentCategory && !categories.includes(currentCategory) ? [currentCategory, ...categories] : categories;
 
   const save = useMutation({
     mutationFn: async () => {
@@ -470,7 +496,7 @@ function EditDiscussionDialog({ discussion: d, timeZone, onClose }: { discussion
         if (x.assignment_id) {
           const { error: aErr } = await supabase
             .from("assignments")
-            .update({ title: t, description: p, due_date: dueDate || null, available_from: openIso, points_possible: pts })
+            .update({ title: t, description: p, due_date: dueDate || null, available_from: openIso, points_possible: pts, ...(category ? { category } : {}) })
             .eq("id", x.assignment_id);
           if (aErr) throw aErr;
         }
@@ -509,6 +535,14 @@ function EditDiscussionDialog({ discussion: d, timeZone, onClose }: { discussion
             <>
               <div><Label>Points for main response</Label><Input type="number" min={0} value={responsePts} onChange={(e) => setResponsePts(e.target.value)} /></div>
               <div><Label>Points per reply</Label><Input type="number" min={0} value={replyPts} onChange={(e) => setReplyPts(e.target.value)} /></div>
+              {d.assignment_id && (
+                <div className="sm:col-span-2">
+                  <Label htmlFor="edit-disc-category">Grading category</Label>
+                  <select id="edit-disc-category" className={SELECT_CLS} value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
               <p className="text-sm sm:col-span-2">Total: <span className="font-semibold">{discussionTotalPossible(Number(responsePts) || 0, Number(replyPts) || 0, Number(required) || 0)} pts</span></p>
             </>
           )}
