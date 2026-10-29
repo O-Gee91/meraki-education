@@ -1,31 +1,61 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, MessageSquare, Plus, Reply, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Link2, MessageSquare, Pencil, Plus, Reply, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { POST_MAX_LENGTH } from "@/lib/feed-safety";
+import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
+import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
 
 type Discussion = {
   id: string;
+  class_id: string;
   title: string;
   prompt: string;
   due_date: string | null;
   required_replies: number;
   graded: boolean;
   points_possible: number;
+  response_points: number;
+  reply_points: number;
   closed: boolean;
   assignment_id: string | null;
+  share_group: string | null;
+  thread_id: string | null;
+  edited_at: string | null;
+  created_by: string | null;
   created_at: string;
 };
+
+type Post = { id: string; body: string; author_id: string; parent_id: string | null; created_at: string };
+type Score = { post_id: string; author_id: string; points: number; max_points: number };
+
+const COLS =
+  "id, class_id, title, prompt, due_date, required_replies, graded, points_possible, response_points, reply_points, closed, assignment_id, share_group, thread_id, edited_at, created_by, created_at";
+
+/** Max points for a main response / a reply (legacy discussions fall back to the whole total). */
+function maxFor(d: Discussion, isReply: boolean) {
+  if (d.response_points === 0 && d.reply_points === 0) return isReply ? 0 : Number(d.points_possible);
+  return Number(isReply ? d.reply_points : d.response_points);
+}
+
+type Scope = "class" | "classes" | "grade";
 
 export function DiscussionBoard({
   classId,
@@ -36,46 +66,65 @@ export function DiscussionBoard({
   isStaff: boolean;
   categories: string[];
 }) {
+  const { user, isAdmin } = useAuth();
+  const coTaught = useCoTaughtClassIds();
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Discussion | null>(null);
 
   const draftKey = `discussion-new:${classId}`;
   const saved = readDraft<{
-    title: string;
-    prompt: string;
-    dueDate: string;
-    required: string;
-    graded: boolean;
-    points: string;
+    title: string; prompt: string; dueDate: string; required: string; graded: boolean; responsePts: string; replyPts: string;
   }>(draftKey);
   const [title, setTitle] = useState(saved?.title ?? "");
   const [prompt, setPrompt] = useState(saved?.prompt ?? "");
   const [dueDate, setDueDate] = useState(saved?.dueDate ?? "");
   const [required, setRequired] = useState(saved?.required ?? "1");
   const [graded, setGraded] = useState(saved?.graded ?? true);
-  const [points, setPoints] = useState(saved?.points ?? "10");
+  const [responsePts, setResponsePts] = useState(saved?.responsePts ?? "6");
+  const [replyPts, setReplyPts] = useState(saved?.replyPts ?? "2");
+  const [scope, setScope] = useState<Scope>("class");
+  const [pickedClasses, setPickedClasses] = useState<Set<string>>(new Set([classId]));
+  const [grade, setGrade] = useState<string>("");
+  const [sharedThread, setSharedThread] = useState(false);
   const dirty = title.trim().length > 0 || prompt.trim().length > 0;
   const draft = useAutosaveDraft(
     draftKey,
-    { title, prompt, dueDate, required, graded, points },
+    { title, prompt, dueDate, required, graded, responsePts, replyPts },
     { dirty, enabled: isStaff },
   );
+
+  const totalPossible = discussionTotalPossible(Number(responsePts) || 0, Number(replyPts) || 0, Number(required) || 0);
 
   const { data: discussions = [] } = useQuery({
     queryKey: ["discussions", classId],
     queryFn: async (): Promise<Discussion[]> => {
-      const { data, error } = await supabase
-        .from("discussions")
-        .select(
-          "id, title, prompt, due_date, required_replies, graded, points_possible, closed, assignment_id, created_at",
-        )
-        .eq("class_id", classId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("discussions").select(COLS).eq("class_id", classId).order("created_at", { ascending: false });
       if (error) throw error;
       return data as Discussion[];
     },
   });
+
+  // Classes this educator can post into (own, co-taught; admins: all).
+  const { data: myClasses = [] } = useQuery({
+    queryKey: ["discussion-target-classes", user?.id, isAdmin, [...coTaught].join(",")],
+    enabled: isStaff && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("classes").select("id, name, period, grade_level, teacher_id").order("name");
+      if (error) throw error;
+      return (data ?? []).filter((c) => isAdmin || c.teacher_id === user!.id || coTaught.has(c.id) || c.id === classId);
+    },
+  });
+  const grades = useMemo(
+    () => [...new Set(myClasses.map((c) => c.grade_level).filter((g): g is number => g != null))].sort((a, b) => a - b),
+    [myClasses],
+  );
+  const targetIds = useMemo(() => {
+    if (scope === "class") return [classId];
+    if (scope === "classes") return [...pickedClasses];
+    return myClasses.filter((c) => String(c.grade_level) === grade).map((c) => c.id);
+  }, [scope, classId, pickedClasses, myClasses, grade]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -83,60 +132,73 @@ export function DiscussionBoard({
       const p = prompt.trim();
       if (t.length < 3) throw new Error("Give the discussion a title");
       if (p.length < 5) throw new Error("Write the discussion prompt");
-      const pts = graded ? Number(points) || 0 : 0;
-
-      let assignmentId: string | null = null;
-      if (graded) {
-        const { data: assignment, error: aErr } = await supabase
-          .from("assignments")
+      if (targetIds.length === 0) throw new Error("Choose at least one class to post to");
+      const rp = graded ? Math.max(0, Number(responsePts) || 0) : 0;
+      const yp = graded ? Math.max(0, Number(replyPts) || 0) : 0;
+      const req = Math.max(0, Number(required) || 0);
+      const pts = graded ? discussionTotalPossible(rp, yp, req) : 0;
+      const shareGroup = targetIds.length > 1 ? crypto.randomUUID() : null;
+      let hostId: string | null = null;
+      // Post to the current class first so it hosts a shared thread.
+      const ordered = [...targetIds].sort((a, b) => (a === classId ? -1 : b === classId ? 1 : 0));
+      for (const cid of ordered) {
+        let assignmentId: string | null = null;
+        if (graded) {
+          const { data: a, error: aErr } = await supabase
+            .from("assignments")
+            .insert({
+              class_id: cid,
+              title: t,
+              category: categories.find((c) => /discussion/i.test(c)) ?? categories[0] ?? "Homework",
+              points_possible: pts,
+              due_date: dueDate || null,
+              description: p,
+              submission_mode: "collected",
+            })
+            .select("id")
+            .single();
+          if (aErr) throw aErr;
+          assignmentId = a.id;
+        }
+        const { data: d, error } = await supabase
+          .from("discussions")
           .insert({
-            class_id: classId,
+            class_id: cid,
+            assignment_id: assignmentId,
             title: t,
-            category: categories.find((c) => /discussion/i.test(c)) ?? categories[0] ?? "Homework",
-            points_possible: pts,
+            prompt: p,
             due_date: dueDate || null,
-            description: p,
-            submission_mode: "collected",
+            required_replies: req,
+            graded,
+            points_possible: pts,
+            response_points: rp,
+            reply_points: yp,
+            share_group: shareGroup,
+            thread_id: sharedThread && hostId ? hostId : null,
+            created_by: user!.id,
           })
           .select("id")
           .single();
-        if (aErr) throw aErr;
-        assignmentId = assignment.id;
+        if (error) throw error;
+        if (!hostId) hostId = d.id;
       }
-
-      const { error } = await supabase.from("discussions").insert({
-        class_id: classId,
-        assignment_id: assignmentId,
-        title: t,
-        prompt: p,
-        due_date: dueDate || null,
-        required_replies: Math.max(0, Number(required) || 0),
-        graded,
-        points_possible: pts,
-      });
-      if (error) throw error;
+      return ordered.length;
     },
-    onSuccess: () => {
-      setTitle("");
-      setPrompt("");
-      setDueDate("");
-      setRequired("1");
-      setPoints("10");
+    onSuccess: (n) => {
+      setTitle(""); setPrompt(""); setDueDate(""); setRequired("1");
+      setScope("class"); setPickedClasses(new Set([classId])); setSharedThread(false);
       draft.clear();
       setCreating(false);
-      queryClient.invalidateQueries({ queryKey: ["discussions", classId] });
-      queryClient.invalidateQueries({ queryKey: ["assignments", classId] });
-      toast.success("Discussion posted to the class");
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      toast.success(n > 1 ? `Discussion posted to ${n} classes` : "Discussion posted to the class");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const toggleClosed = useMutation({
     mutationFn: async (d: Discussion) => {
-      const { error } = await supabase
-        .from("discussions")
-        .update({ closed: !d.closed })
-        .eq("id", d.id);
+      const { error } = await supabase.from("discussions").update({ closed: !d.closed }).eq("id", d.id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["discussions", classId] }),
@@ -155,6 +217,9 @@ export function DiscussionBoard({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const chip = (active: boolean) =>
+    `rounded-full border px-3 py-1 text-xs transition-colors ${active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-muted"}`;
+
   return (
     <div className="mt-4 space-y-4">
       {isStaff && (
@@ -163,8 +228,7 @@ export function DiscussionBoard({
             <div>
               <h3 className="text-sm font-semibold">Discussion board</h3>
               <p className="text-xs text-muted-foreground">
-                Post a prompt as an assignment — students reply in threads and graded discussions
-                appear in the gradebook.
+                Post a prompt to this class, several classes or a whole grade. Each post and reply can be scored.
               </p>
             </div>
             <Button size="sm" variant={creating ? "outline" : "default"} onClick={() => setCreating((v) => !v)}>
@@ -173,69 +237,97 @@ export function DiscussionBoard({
           </div>
 
           {creating && (
-            <div className="mt-4 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <Label>Title</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Theme of chapter 4 — what does the light symbolize?"
-                />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Theme of chapter 4 — what does the light symbolize?" />
               </div>
               <div className="md:col-span-2">
                 <Label>Prompt / instructions</Label>
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                  placeholder="Explain your thinking with evidence from the text, then respond to a classmate."
-                />
+                <FormattedEditor value={prompt} onChange={setPrompt} rows={4} ariaLabel="Discussion prompt" placeholder="Explain your thinking with evidence from the text, then respond to a classmate." />
               </div>
+
+              <fieldset className="md:col-span-2 space-y-2 rounded-md border border-border p-3">
+                <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Post to</legend>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className={chip(scope === "class")} onClick={() => setScope("class")} aria-pressed={scope === "class"}>This class only</button>
+                  <button type="button" className={chip(scope === "classes")} onClick={() => setScope("classes")} aria-pressed={scope === "classes"}>Selected classes</button>
+                  <button type="button" className={chip(scope === "grade")} onClick={() => setScope("grade")} aria-pressed={scope === "grade"} disabled={grades.length === 0}>A whole grade</button>
+                </div>
+                {scope === "classes" && (
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {myClasses.map((c) => (
+                      <label key={c.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[hsl(var(--primary))]"
+                          checked={pickedClasses.has(c.id)}
+                          onChange={(e) => {
+                            const n = new Set(pickedClasses);
+                            if (e.target.checked) n.add(c.id); else n.delete(c.id);
+                            setPickedClasses(n);
+                          }}
+                        />
+                        {c.name}{c.period ? ` · ${c.period}` : ""}{c.grade_level ? ` · Grade ${c.grade_level}` : ""}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {scope === "grade" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {grades.map((g) => (
+                      <button key={g} type="button" className={chip(grade === String(g))} onClick={() => setGrade(String(g))} aria-pressed={grade === String(g)}>Grade {g}</button>
+                    ))}
+                    {grade && <span className="text-xs text-muted-foreground">{targetIds.length} of your classes</span>}
+                  </div>
+                )}
+                {targetIds.length > 1 && (
+                  <div className="space-y-1 border-t border-border pt-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="thread-mode" checked={!sharedThread} onChange={() => setSharedThread(false)} className="accent-[hsl(var(--primary))]" />
+                      Separate thread per class — students only see classmates in their own period
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="thread-mode" checked={sharedThread} onChange={() => setSharedThread(true)} className="accent-[hsl(var(--primary))]" />
+                      One shared thread — students across these classes discuss together
+                    </label>
+                    <p className="text-xs text-muted-foreground">Grades always stay in each class's own gradebook.</p>
+                  </div>
+                )}
+              </fieldset>
+
               <div>
                 <Label>Due date</Label>
                 <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
               </div>
               <div>
                 <Label>Replies required</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={required}
-                  onChange={(e) => setRequired(e.target.value)}
-                />
+                <Input type="number" min={0} value={required} onChange={(e) => setRequired(e.target.value)} />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="disc-graded"
-                  type="checkbox"
-                  className="size-4 accent-[hsl(var(--primary))]"
-                  checked={graded}
-                  onChange={(e) => setGraded(e.target.checked)}
-                />
-                <Label htmlFor="disc-graded" className="cursor-pointer">
-                  Graded assignment
-                </Label>
+              <div className="flex items-center gap-2 md:col-span-2">
+                <input id="disc-graded" type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={graded} onChange={(e) => setGraded(e.target.checked)} />
+                <Label htmlFor="disc-graded" className="cursor-pointer">Graded assignment</Label>
               </div>
               {graded && (
-                <div>
-                  <Label>Points possible</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={points}
-                    onChange={(e) => setPoints(e.target.value)}
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label>Points for main response</Label>
+                    <Input type="number" min={0} value={responsePts} onChange={(e) => setResponsePts(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Points per reply</Label>
+                    <Input type="number" min={0} value={replyPts} onChange={(e) => setReplyPts(e.target.value)} />
+                  </div>
+                  <p className="text-sm md:col-span-2">
+                    Total: <span className="font-semibold">{totalPossible} pts</span>
+                    <span className="text-muted-foreground"> (response {Number(responsePts) || 0} + {Number(required) || 0} × {Number(replyPts) || 0} per reply)</span>
+                  </p>
+                </>
               )}
               <div className="flex items-center gap-3 md:col-span-2">
                 <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={dirty} />
-                <Button
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => create.mutate()}
-                  disabled={create.isPending}
-                >
-                  Post discussion
+                <Button size="sm" className="ml-auto" onClick={() => create.mutate()} disabled={create.isPending}>
+                  {targetIds.length > 1 ? `Post to ${targetIds.length} classes` : "Post discussion"}
                 </Button>
               </div>
             </div>
@@ -245,8 +337,7 @@ export function DiscussionBoard({
 
       {discussions.length === 0 ? (
         <p className="panel p-6 text-sm text-muted-foreground">
-          No discussions yet.{" "}
-          {isStaff ? "Create one to get the class talking." : "Your teacher hasn't posted one yet."}
+          No discussions yet. {isStaff ? "Create one to get the class talking." : "Your teacher hasn't posted one yet."}
         </p>
       ) : (
         [...discussions].sort((a, b) => Number(a.closed) - Number(b.closed)).map((d) => (
@@ -255,22 +346,19 @@ export function DiscussionBoard({
               <div className="min-w-0">
                 <h3 className="font-semibold">{d.title}</h3>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {d.graded ? (
-                    <Badge variant="secondary">{d.points_possible} pts</Badge>
-                  ) : (
-                    <Badge variant="outline">Ungraded</Badge>
-                  )}
+                  {d.graded ? <Badge variant="secondary">{d.points_possible} pts</Badge> : <Badge variant="outline">Ungraded</Badge>}
                   {d.due_date ? (
-                    <span className="inline-flex items-center gap-1">
-                      <CalendarDays className="size-3.5" /> Due {formatDate(d.due_date)}
-                    </span>
+                    <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> Due {formatDate(d.due_date)}</span>
                   ) : null}
                   {d.required_replies > 0 ? (
                     <span className="inline-flex items-center gap-1">
-                      <Reply className="size-3.5" /> {d.required_replies} repl
-                      {d.required_replies === 1 ? "y" : "ies"} required
+                      <Reply className="size-3.5" /> {d.required_replies} repl{d.required_replies === 1 ? "y" : "ies"} required
                     </span>
                   ) : null}
+                  {isStaff && d.share_group ? (
+                    <span className="inline-flex items-center gap-1"><Link2 className="size-3.5" /> {d.thread_id ? "Shared thread" : "Posted to several classes"}</span>
+                  ) : null}
+                  {d.edited_at ? <span>Edited {formatDate(d.edited_at)}</span> : null}
                   {d.closed ? <Badge variant="outline">Closed to new posts</Badge> : null}
                 </div>
               </div>
@@ -281,9 +369,10 @@ export function DiscussionBoard({
                 </Button>
                 {isStaff && (
                   <>
-                    <Button size="sm" variant="ghost" onClick={() => toggleClosed.mutate(d)}>
-                      {d.closed ? "Reopen" : "Close"}
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(d)}>
+                      <Pencil className="mr-1.5 size-4" /> Edit prompt
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => toggleClosed.mutate(d)}>{d.closed ? "Reopen" : "Close"}</Button>
                     <ConfirmDeleteButton
                       label="Delete"
                       title="Delete this discussion?"
@@ -294,46 +383,146 @@ export function DiscussionBoard({
                 )}
               </div>
             </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm">{d.prompt}</p>
+            <FormattedText text={d.prompt} className="mt-3 max-w-prose" />
             {openId === d.id && <Thread discussion={d} isStaff={isStaff} />}
           </article>
         ))
       )}
+
+      {editing && <EditDiscussionDialog discussion={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function EditDiscussionDialog({ discussion: d, onClose }: { discussion: Discussion; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState(d.title);
+  const [prompt, setPrompt] = useState(d.prompt);
+  const [dueDate, setDueDate] = useState(d.due_date ?? "");
+  const [required, setRequired] = useState(String(d.required_replies));
+  const legacy = d.response_points === 0 && d.reply_points === 0;
+  const [responsePts, setResponsePts] = useState(String(legacy ? d.points_possible : d.response_points));
+  const [replyPts, setReplyPts] = useState(String(d.reply_points));
+  const [allLinked, setAllLinked] = useState(!!d.share_group);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const t = title.trim();
+      const p = prompt.trim();
+      if (t.length < 3) throw new Error("Give the discussion a title");
+      if (p.length < 5) throw new Error("Write the discussion prompt");
+      const req = Math.max(0, Number(required) || 0);
+      const rp = d.graded ? Math.max(0, Number(responsePts) || 0) : 0;
+      const yp = d.graded ? Math.max(0, Number(replyPts) || 0) : 0;
+      const pts = d.graded ? discussionTotalPossible(rp, yp, req) : 0;
+      let targets: { id: string; assignment_id: string | null }[] = [{ id: d.id, assignment_id: d.assignment_id }];
+      if (allLinked && d.share_group) {
+        const { data, error } = await supabase.from("discussions").select("id, assignment_id").eq("share_group", d.share_group);
+        if (error) throw error;
+        targets = data ?? targets;
+      }
+      for (const x of targets) {
+        const { error } = await supabase
+          .from("discussions")
+          .update({ title: t, prompt: p, due_date: dueDate || null, required_replies: req, response_points: rp, reply_points: yp, points_possible: pts, edited_at: new Date().toISOString() })
+          .eq("id", x.id);
+        if (error) throw error;
+        if (x.assignment_id) {
+          const { error: aErr } = await supabase
+            .from("assignments")
+            .update({ title: t, description: p, due_date: dueDate || null, points_possible: pts })
+            .eq("id", x.assignment_id);
+          if (aErr) throw aErr;
+        }
+      }
+      return targets.length;
+    },
+    onSuccess: (n) => {
+      queryClient.invalidateQueries({ queryKey: ["discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      toast.success(n > 1 ? `Prompt updated in ${n} classes` : "Prompt updated — replies were kept");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader><DialogTitle>Edit prompt</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+          <div className="sm:col-span-2"><Label>Prompt / instructions</Label><FormattedEditor value={prompt} onChange={setPrompt} rows={5} ariaLabel="Discussion prompt" /></div>
+          <div><Label>Due date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+          <div><Label>Replies required</Label><Input type="number" min={0} value={required} onChange={(e) => setRequired(e.target.value)} /></div>
+          {d.graded && (
+            <>
+              <div><Label>Points for main response</Label><Input type="number" min={0} value={responsePts} onChange={(e) => setResponsePts(e.target.value)} /></div>
+              <div><Label>Points per reply</Label><Input type="number" min={0} value={replyPts} onChange={(e) => setReplyPts(e.target.value)} /></div>
+              <p className="text-sm sm:col-span-2">Total: <span className="font-semibold">{discussionTotalPossible(Number(responsePts) || 0, Number(replyPts) || 0, Number(required) || 0)} pts</span></p>
+            </>
+          )}
+          {d.share_group && (
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={allLinked} onChange={(e) => setAllLinked(e.target.checked)} />
+              Apply to every class this discussion was posted to
+            </label>
+          )}
+          <p className="text-xs text-muted-foreground sm:col-span-2">Student responses, replies and scores are kept. Students see an "Edited" note.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: boolean }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const key = ["discussion-posts", discussion.id];
-  const draftKey = `discussion-post:${discussion.id}`;
+  const threadId = discussion.thread_id ?? discussion.id;
+  const key = ["discussion-posts", threadId];
+  const draftKey = `discussion-post:${threadId}`;
   const [body, setBody] = useState(() => readDraft<string>(draftKey) ?? "");
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [view, setView] = useState<"thread" | "grade">("thread");
   const draft = useAutosaveDraft(draftKey, body, { dirty: body.trim().length > 0 });
 
   const { data: posts = [] } = useQuery({
     queryKey: key,
-    queryFn: async () => {
+    queryFn: async (): Promise<Post[]> => {
       const { data, error } = await supabase
         .from("discussion_posts")
         .select("id, body, author_id, parent_id, created_at")
-        .eq("discussion_id", discussion.id)
+        .eq("discussion_id", threadId)
         .order("created_at");
       if (error) throw error;
       return data;
     },
   });
 
+  // RLS returns only the viewer's own scores to students; staff see all.
+  const { data: scores = [] } = useQuery({
+    queryKey: ["discussion-scores", threadId],
+    enabled: discussion.graded,
+    queryFn: async (): Promise<Score[]> => {
+      const { data, error } = await supabase
+        .from("discussion_post_scores")
+        .select("post_id, author_id, points, max_points")
+        .eq("discussion_id", threadId);
+      if (error) throw error;
+      return data as Score[];
+    },
+  });
+
   const authorIds = [...new Set(posts.map((p) => p.author_id))];
   const { data: authors = [] } = useQuery({
-    queryKey: ["discussion-authors", discussion.id, authorIds.join(",")],
+    queryKey: ["discussion-authors", threadId, authorIds.join(",")],
     enabled: authorIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", authorIds);
+      const { data, error } = await supabase.from("profiles").select("id, full_name, email").in("id", authorIds);
       if (error) throw error;
       return data;
     },
@@ -347,18 +536,11 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
     mutationFn: async () => {
       const text = body.trim();
       if (text.length < 2) throw new Error("Write your response first");
-      const { error } = await supabase.from("discussion_posts").insert({
-        discussion_id: discussion.id,
-        parent_id: replyTo,
-        author_id: user!.id,
-        body: text,
-      });
+      const { error } = await supabase.from("discussion_posts").insert({ discussion_id: threadId, parent_id: replyTo, author_id: user!.id, body: text });
       if (error) throw error;
     },
     onSuccess: () => {
-      setBody("");
-      setReplyTo(null);
-      draft.clear();
+      setBody(""); setReplyTo(null); draft.clear();
       queryClient.invalidateQueries({ queryKey: key });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -375,128 +557,302 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
 
   const roots = posts.filter((p) => !p.parent_id);
   const repliesOf = (id: string) => posts.filter((p) => p.parent_id === id);
+  const scoreOf = (postId: string) => scores.find((s) => s.post_id === postId);
+  const myScores = scores.filter((s) => s.author_id === user?.id);
+  const myTotal = studentDiscussionTotal(myScores);
 
-  const participation = isStaff
-    ? [...new Set(posts.map((p) => p.author_id))].map((id) => ({
-        id,
-        name: nameFor(id),
-        count: posts.filter((p) => p.author_id === id).length,
-      }))
-    : [];
+  const ScoreTag = ({ post }: { post: Post }) => {
+    const s = scoreOf(post.id);
+    if (!discussion.graded || !s) return null;
+    if (!isStaff && post.author_id !== user?.id) return null;
+    return <Badge variant="secondary" className="ml-2 font-semibold">{formatPoints(Number(s.points), Number(s.max_points))}</Badge>;
+  };
 
   return (
     <div className="mt-4 border-t border-border pt-4">
-      {isStaff && participation.length > 0 && (
-        <div className="mb-4 rounded-md bg-secondary/50 p-3 text-xs">
-          <p className="flex items-center gap-2 font-medium uppercase tracking-wide text-muted-foreground">
-            <Users className="size-3.5" /> Participation
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {participation.map((p) => (
-              <Badge
-                key={p.id}
-                variant={p.count >= Math.max(1, discussion.required_replies) ? "secondary" : "outline"}
-              >
-                {p.name}: {p.count}
-              </Badge>
-            ))}
-          </div>
+      {isStaff && discussion.graded && (
+        <div className="mb-4 inline-flex rounded-md border border-border p-0.5 text-sm" role="tablist">
+          <button role="tab" aria-selected={view === "thread"} onClick={() => setView("thread")} className={`rounded px-3 py-1 ${view === "thread" ? "bg-muted font-medium" : "text-muted-foreground"}`}>
+            <MessageSquare className="mr-1.5 inline size-3.5" /> Thread
+          </button>
+          <button role="tab" aria-selected={view === "grade"} onClick={() => setView("grade")} className={`rounded px-3 py-1 ${view === "grade" ? "bg-muted font-medium" : "text-muted-foreground"}`}>
+            <ClipboardCheck className="mr-1.5 inline size-3.5" /> Grade by student
+          </button>
         </div>
       )}
 
-      <div className="space-y-3">
-        {roots.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No responses yet — be the first to post.</p>
-        ) : (
-          roots.map((p) => (
-            <div key={p.id} className="rounded-md border border-border p-3">
-              <p className="text-xs font-semibold">
-                {nameFor(p.author_id)}
-                <span className="ml-2 font-normal text-muted-foreground">
-                  {formatDate(p.created_at)}
-                </span>
+      {!isStaff && discussion.graded && myTotal !== null && (
+        <div className="mb-4 rounded-md border border-border bg-secondary/40 p-3 text-sm">
+          Your points: <span className="text-base font-semibold">{formatPoints(myTotal, Number(discussion.points_possible))}</span>
+        </div>
+      )}
+
+      {view === "grade" && isStaff ? (
+        <GradeByStudent discussion={discussion} threadId={threadId} posts={posts} scores={scores} />
+      ) : (
+        <>
+          {isStaff && authorIds.length > 0 && (
+            <div className="mb-4 rounded-md bg-secondary/50 p-3 text-xs">
+              <p className="flex items-center gap-2 font-medium uppercase tracking-wide text-muted-foreground"><Users className="size-3.5" /> Participation</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {authorIds.map((id) => {
+                  const count = posts.filter((p) => p.author_id === id).length;
+                  return (
+                    <Badge key={id} variant={count >= Math.max(1, discussion.required_replies) ? "secondary" : "outline"}>
+                      {nameFor(id)}: {count}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {roots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No responses yet — be the first to post.</p>
+            ) : (
+              roots.map((p) => (
+                <div key={p.id} className="rounded-md border border-border p-3">
+                  <p className="flex items-center text-xs font-semibold">
+                    {nameFor(p.author_id)}
+                    <span className="ml-2 font-normal text-muted-foreground">{formatDate(p.created_at)}</span>
+                    <ScoreTag post={p} />
+                  </p>
+                  <FormattedText text={p.body} className="mt-1" />
+                  <div className="mt-2 flex gap-3 text-xs">
+                    {!discussion.closed || isStaff ? (
+                      <button onClick={() => setReplyTo(replyTo === p.id ? null : p.id)} className="text-muted-foreground hover:text-accent">
+                        {replyTo === p.id ? "Cancel reply" : "Reply"}
+                      </button>
+                    ) : null}
+                    {(isStaff || p.author_id === user?.id) && (
+                      <button onClick={() => { if (window.confirm("Remove this response and its replies?")) remove.mutate(p.id); }} className="text-muted-foreground hover:text-destructive">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {repliesOf(p.id).length > 0 && (
+                    <div className="mt-3 space-y-2 border-l-2 border-border pl-3">
+                      {repliesOf(p.id).map((r) => (
+                        <div key={r.id} className="py-1">
+                          <p className="flex items-center text-xs font-semibold">
+                            {nameFor(r.author_id)}
+                            <span className="ml-2 font-normal text-muted-foreground">{formatDate(r.created_at)}</span>
+                            <ScoreTag post={r} />
+                          </p>
+                          <FormattedText text={r.body} className="mt-1" />
+                          {(isStaff || r.author_id === user?.id) && (
+                            <button onClick={() => { if (window.confirm("Remove this reply?")) remove.mutate(r.id); }} className="mt-1 text-xs text-muted-foreground hover:text-destructive">
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {!discussion.closed || isStaff ? (
+            <div className="mt-4">
+              <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
+                Respond to ideas, not people. Keep personal details private — your name shows on every post.
               </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm">{p.body}</p>
-              <div className="mt-2 flex gap-3 text-xs">
-                {!discussion.closed || isStaff ? (
-                  <button
-                    onClick={() => setReplyTo(replyTo === p.id ? null : p.id)}
-                    className="text-muted-foreground hover:text-accent"
-                  >
-                    {replyTo === p.id ? "Cancel reply" : "Reply"}
-                  </button>
-                ) : null}
-                {(isStaff || p.author_id === user?.id) && (
-                  <button
-                    onClick={() => { if (window.confirm("Remove this response and its replies?")) remove.mutate(p.id); }}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    Remove
-                  </button>
+              {replyTo ? (
+                <p className="mb-1 text-xs text-muted-foreground">Replying to {nameFor(posts.find((p) => p.id === replyTo)?.author_id ?? "")}</p>
+              ) : null}
+              <FormattedEditor
+                value={body}
+                onChange={setBody}
+                maxLength={POST_MAX_LENGTH}
+                rows={3}
+                ariaLabel={replyTo ? "Your reply" : "Your response"}
+                placeholder={replyTo ? "Write your reply…" : "Post your response to the prompt…"}
+              />
+              <div className="mt-2 flex items-center gap-3">
+                <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={body.trim().length > 0} />
+                <Button size="sm" className="ml-auto" onClick={() => add.mutate()} disabled={add.isPending}>
+                  {replyTo ? "Reply" : "Post response"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">This discussion is closed.</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function GradeByStudent({
+  discussion: d,
+  threadId,
+  posts,
+  scores,
+}: {
+  discussion: Discussion;
+  threadId: string;
+  posts: Post[];
+  scores: Score[];
+}) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState<Record<string, string>>({});
+
+  const { data: roster = [] } = useQuery({
+    queryKey: ["discussion-roster", d.class_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("students(id, first_name, last_name, user_id, is_tester)")
+        .eq("class_id", d.class_id);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r) => r.students)
+        .filter((s): s is NonNullable<typeof s> => !!s)
+        .sort((a, b) => Number(a.is_tester) - Number(b.is_tester) || a.last_name.localeCompare(b.last_name));
+    },
+  });
+
+  const parentAuthor = (p: Post) => posts.find((x) => x.id === p.parent_id)?.author_id;
+
+  const saveStudent = useMutation({
+    mutationFn: async (student: { id: string; user_id: string | null }) => {
+      if (!student.user_id) throw new Error("This student has no account yet");
+      const mine = posts.filter((p) => p.author_id === student.user_id);
+      for (const p of mine) {
+        const raw = pending[p.id];
+        if (raw === undefined) continue;
+        const max = maxFor(d, !!p.parent_id);
+        if (raw.trim() === "") {
+          const { error } = await supabase.from("discussion_post_scores").delete().eq("post_id", p.id);
+          if (error) throw error;
+          continue;
+        }
+        const pts = Number(raw);
+        if (!Number.isFinite(pts) || pts < 0) throw new Error("Scores must be 0 or more");
+        const { error } = await supabase.from("discussion_post_scores").upsert(
+          { post_id: p.id, discussion_id: threadId, author_id: student.user_id, points: pts, max_points: max, graded_by: user!.id },
+          { onConflict: "post_id" },
+        );
+        if (error) throw error;
+      }
+      // Recompute the total from saved scores and sync to this class's gradebook.
+      const { data: saved, error: sErr } = await supabase
+        .from("discussion_post_scores")
+        .select("points, post_id")
+        .eq("discussion_id", threadId)
+        .eq("author_id", student.user_id);
+      if (sErr) throw sErr;
+      const total = studentDiscussionTotal(saved ?? []);
+      if (d.assignment_id && total !== null) {
+        const { error } = await supabase.from("grades").upsert(
+          { assignment_id: d.assignment_id, student_id: student.id, points_earned: total, is_draft: false, posted_at: new Date().toISOString(), posted_by: user!.id },
+          { onConflict: "assignment_id,student_id" },
+        );
+        if (error) throw error;
+      }
+      return { ids: mine.map((p) => p.id), total };
+    },
+    onSuccess: ({ ids, total }) => {
+      setPending((prev) => {
+        const n = { ...prev };
+        ids.forEach((i) => delete n[i]);
+        return n;
+      });
+      queryClient.invalidateQueries({ queryKey: ["discussion-scores", threadId] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+      toast.success(total !== null ? `Saved — ${formatPoints(total, Number(d.points_possible))} posted to the gradebook` : "Saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const ScoreInput = ({ post }: { post: Post }) => {
+    const s = scores.find((x) => x.post_id === post.id);
+    const max = maxFor(d, !!post.parent_id);
+    const value = pending[post.id] ?? (s ? String(s.points) : "");
+    return (
+      <div className="flex shrink-0 items-center gap-1 text-sm">
+        <Input
+          type="number"
+          min={0}
+          step="0.5"
+          value={value}
+          onChange={(e) => setPending((p) => ({ ...p, [post.id]: e.target.value }))}
+          className="h-8 w-16 text-right"
+          aria-label={post.parent_id ? "Reply score" : "Response score"}
+        />
+        <span className="text-muted-foreground">/ {max}</span>
+      </div>
+    );
+  };
+
+  if (roster.length === 0) return <p className="text-sm text-muted-foreground">No students enrolled in this class.</p>;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Main response up to {maxFor(d, false)} pts · each reply up to {maxFor(d, true)} pts · {d.required_replies} repl{d.required_replies === 1 ? "y" : "ies"} required. Saving posts the total to the gradebook.
+      </p>
+      {roster.map((st) => {
+        const mine = posts.filter((p) => p.author_id === st.user_id);
+        const main = mine.filter((p) => !p.parent_id);
+        const replies = mine.filter((p) => p.parent_id);
+        const saved = scores.filter((s) => s.author_id === st.user_id);
+        const total = studentDiscussionTotal(saved);
+        const status = main.length === 0 ? "Missing" : replies.length >= d.required_replies ? "Complete" : "Partial";
+        const dirty = mine.some((p) => pending[p.id] !== undefined);
+        return (
+          <section key={st.id} className="rounded-md border border-border p-3">
+            <header className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold">{st.last_name}, {st.first_name}</h4>
+                <Badge variant={status === "Complete" ? "secondary" : "outline"}>{status}</Badge>
+                {st.is_tester ? <Badge variant="outline">Test account</Badge> : null}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm">Total <span className="text-base font-semibold">{formatPoints(total, Number(d.points_possible))}</span></span>
+                {mine.length > 0 && (
+                  <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || saveStudent.isPending} onClick={() => saveStudent.mutate(st)}>
+                    Save scores
+                  </Button>
                 )}
               </div>
-
-              {repliesOf(p.id).length > 0 && (
-                <div className="mt-3 space-y-2 border-l-2 border-border pl-3">
-                  {repliesOf(p.id).map((r) => (
-                    <div key={r.id} className="py-1">
-                      <p className="text-xs font-semibold">
-                        {nameFor(r.author_id)}
-                        <span className="ml-2 font-normal text-muted-foreground">
-                          {formatDate(r.created_at)}
-                        </span>
-                      </p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm">{r.body}</p>
-                      {(isStaff || r.author_id === user?.id) && (
-                        <button
-                          onClick={() => { if (window.confirm("Remove this reply?")) remove.mutate(r.id); }}
-                          className="mt-1 text-xs text-muted-foreground hover:text-destructive"
-                        >
-                          Remove
-                        </button>
-                      )}
+            </header>
+            {mine.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">No posts yet.</p>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {main.map((p) => (
+                  <div key={p.id} className="flex items-start gap-3 rounded bg-secondary/40 p-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Response · {formatDate(p.created_at)}</p>
+                      <FormattedText text={p.body} className="mt-1" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {!discussion.closed || isStaff ? (
-        <div className="mt-4">
-          <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="size-3.5" aria-hidden="true" />
-            Respond to ideas, not people. Keep personal details private — your name shows on every post.
-          </p>
-          {replyTo ? (
-            <p className="mb-1 text-xs text-muted-foreground">
-              Replying to {nameFor(posts.find((p) => p.id === replyTo)?.author_id ?? "")}
-            </p>
-          ) : null}
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            maxLength={POST_MAX_LENGTH}
-            rows={3}
-            placeholder={replyTo ? "Write your reply…" : "Post your response to the prompt…"}
-          />
-          <div className="mt-2 flex items-center gap-3">
-            <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={body.trim().length > 0} />
-            <Button
-              size="sm"
-              className="ml-auto"
-              onClick={() => add.mutate()}
-              disabled={add.isPending}
-            >
-              {replyTo ? "Reply" : "Post response"}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-4 text-sm text-muted-foreground">This discussion is closed.</p>
-      )}
+                    <ScoreInput post={p} />
+                  </div>
+                ))}
+                {replies.map((p) => (
+                  <div key={p.id} className="flex items-start gap-3 border-l-2 border-border pl-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Reply{parentAuthor(p) ? "" : ""} · {formatDate(p.created_at)}
+                      </p>
+                      <FormattedText text={p.body} className="mt-1" />
+                    </div>
+                    <ScoreInput post={p} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
