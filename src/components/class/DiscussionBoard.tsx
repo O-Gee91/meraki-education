@@ -561,7 +561,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
   const myScores = scores.filter((s) => s.author_id === user?.id);
   const myTotal = studentDiscussionTotal(myScores);
 
-  const ScoreTag = ({ post }: { post: Post }) => {
+  const scoreTag = (post: Post) => {
     const s = scoreOf(post.id);
     if (!discussion.graded || !s) return null;
     if (!isStaff && post.author_id !== user?.id) return null;
@@ -616,7 +616,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                   <p className="flex items-center text-xs font-semibold">
                     {nameFor(p.author_id)}
                     <span className="ml-2 font-normal text-muted-foreground">{formatDate(p.created_at)}</span>
-                    <ScoreTag post={p} />
+                    {scoreTag(p)}
                   </p>
                   <FormattedText text={p.body} className="mt-1" />
                   <div className="mt-2 flex gap-3 text-xs">
@@ -639,7 +639,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                           <p className="flex items-center text-xs font-semibold">
                             {nameFor(r.author_id)}
                             <span className="ml-2 font-normal text-muted-foreground">{formatDate(r.created_at)}</span>
-                            <ScoreTag post={r} />
+                            {scoreTag(r)}
                           </p>
                           <FormattedText text={r.body} className="mt-1" />
                           {(isStaff || r.author_id === user?.id) && (
@@ -719,7 +719,6 @@ function GradeByStudent({
     },
   });
 
-  const parentAuthor = (p: Post) => posts.find((x) => x.id === p.parent_id)?.author_id;
 
   const saveStudent = useMutation({
     mutationFn: async (student: { id: string; user_id: string | null }) => {
@@ -772,12 +771,12 @@ function GradeByStudent({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const ScoreInput = ({ post }: { post: Post }) => {
+  const scoreInput = (post: Post) => {
     const s = scores.find((x) => x.post_id === post.id);
     const max = maxFor(d, !!post.parent_id);
     const value = pending[post.id] ?? (s ? String(s.points) : "");
     return (
-      <div className="flex shrink-0 items-center gap-1 text-sm">
+      <div key={post.id} className="flex shrink-0 items-center gap-1 text-sm">
         <Input
           type="number"
           min={0}
@@ -834,18 +833,18 @@ function GradeByStudent({
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Response · {formatDate(p.created_at)}</p>
                       <FormattedText text={p.body} className="mt-1" />
                     </div>
-                    <ScoreInput post={p} />
+                    {scoreInput(p)}
                   </div>
                 ))}
                 {replies.map((p) => (
                   <div key={p.id} className="flex items-start gap-3 border-l-2 border-border pl-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Reply{parentAuthor(p) ? "" : ""} · {formatDate(p.created_at)}
+                        Reply · {formatDate(p.created_at)}
                       </p>
                       <FormattedText text={p.body} className="mt-1" />
                     </div>
-                    <ScoreInput post={p} />
+                    {scoreInput(p)}
                   </div>
                 ))}
               </div>
