@@ -36,7 +36,7 @@ function classOf(work: WorkRef) {
  */
 export const listMyFeedback = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { previewStudentId?: string | null } | undefined) => ({
+  .inputValidator((input: { previewStudentId?: string | null }) => ({
     previewStudentId: input?.previewStudentId?.trim() || null,
   }))
   .handler(async ({ data: input, context }): Promise<FeedbackItem[]> => {
