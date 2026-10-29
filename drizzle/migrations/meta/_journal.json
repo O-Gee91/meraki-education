@@ -169,6 +169,13 @@
       "when": 1793241681258,
       "tag": "0023_discussion_sharing_and_post_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793244211639,
+      "tag": "0024_discussion_open_and_due_times",
+      "breakpoints": true
     }
   ]
 }
