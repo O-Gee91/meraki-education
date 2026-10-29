@@ -465,7 +465,7 @@ export function DiscussionBoard({
   );
 }
 
-function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCategory, onClose }: { discussion: Discussion; timeZone: string; categories: string[]; currentCategory?: string; onClose: () => void }) {
+function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCategory, onClose }: { discussion: Discussion; timeZone: string; categories: string[]; currentCategory?: string | undefined; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(d.title);
   const [prompt, setPrompt] = useState(d.prompt);
