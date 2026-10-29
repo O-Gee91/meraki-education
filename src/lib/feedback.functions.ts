@@ -36,15 +36,29 @@ function classOf(work: WorkRef) {
  */
 export const listMyFeedback = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<FeedbackItem[]> => {
+  .inputValidator((input: { previewStudentId?: string | null } | undefined) => ({
+    previewStudentId: input?.previewStudentId?.trim() || null,
+  }))
+  .handler(async ({ data: input, context }): Promise<FeedbackItem[]> => {
     const { data: students, error: sErr } = await context.supabase
       .from("students")
-      .select("id, first_name, last_name, user_id, guardian_user_id");
+      .select("id, first_name, last_name, user_id, guardian_user_id, is_tester");
     if (sErr) throw sErr;
 
-    const mine = (students ?? []).filter(
+    let mine = (students ?? []).filter(
       (s) => s.user_id === context.userId || s.guardian_user_id === context.userId,
     );
+    // Staff using "View as student" see the demo Student Tester's feedback.
+    // Only staff may ask, and only for a tester record.
+    if (input.previewStudentId) {
+      const { data: roleRows } = await context.supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId);
+      const roles = new Set((roleRows ?? []).map((r) => r.role as string));
+      if (!roles.has("teacher") && !roles.has("admin")) return [];
+      mine = (students ?? []).filter((s) => s.id === input.previewStudentId && s.is_tester);
+    }
     if (mine.length === 0) return [];
 
     const ids = mine.map((s) => s.id);

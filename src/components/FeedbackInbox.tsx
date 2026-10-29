@@ -5,6 +5,7 @@ import { MessageSquareText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/school";
+import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { listMyFeedback, type FeedbackItem } from "@/lib/feedback.functions";
 
 const SEEN_KEY = "meraki.feedback-seen";
@@ -18,12 +19,12 @@ const KIND_LABEL: Record<FeedbackItem["kind"], string> = {
 };
 
 /** Teacher feedback from every class, in one place a student actually checks. */
-export function useMyFeedback(enabled: boolean) {
+export function useMyFeedback(enabled: boolean, previewStudentId?: string | null) {
   const load = useServerFn(listMyFeedback);
   return useQuery({
-    queryKey: ["my-feedback"],
+    queryKey: ["my-feedback", previewStudentId ?? null],
     enabled,
-    queryFn: () => load(),
+    queryFn: () => load({ data: { previewStudentId: previewStudentId ?? null } }),
   });
 }
 
@@ -46,7 +47,8 @@ export function useUnreadFeedback(items: FeedbackItem[]) {
 }
 
 export function FeedbackInbox({ classId }: { classId?: string }) {
-  const { data = [], isLoading } = useMyFeedback(true);
+  const previewStudentId = useStudentPreviewId();
+  const { data = [], isLoading } = useMyFeedback(true, previewStudentId);
   const items = classId ? data.filter((i) => i.classId === classId) : data;
   const { unread, seenAt, markSeen } = useUnreadFeedback(items);
   const [expanded, setExpanded] = useState(false);
