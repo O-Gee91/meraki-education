@@ -444,7 +444,7 @@ export function DiscussionBoard({
                     <ConfirmDeleteButton
                       label="Delete"
                       title="Delete this discussion?"
-                      description="All messages in the thread will be removed. The gradebook column stays unless you delete the assignment too."
+                      description={d.thread_id || d.share_group ? "This removes the discussion from this class only. If other classes share the thread, their posts and scores are kept. The gradebook column stays unless you delete the assignment too." : "All messages in the thread will be removed. The gradebook column stays unless you delete the assignment too."}
                       onConfirm={() => remove.mutate(d.id)}
                     />
                   </>
