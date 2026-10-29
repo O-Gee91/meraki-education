@@ -1611,7 +1611,7 @@ function EditAssignment({
         supabase.from("class_co_teachers").select("class_id, permission_level").eq("teacher_id", user!.id),
       ]);
       if (error) throw error;
-      const coIds = new Set((co ?? []).filter((r) => r.permission_level !== "view").map((r) => r.class_id));
+      const coIds = new Set((co ?? []).filter((r) => r.permission_level !== "view_only").map((r) => r.class_id));
       return (data ?? []).filter(
         (c) => c.id !== classId && (isAdmin || c.teacher_id === user!.id || coIds.has(c.id)),
       );
