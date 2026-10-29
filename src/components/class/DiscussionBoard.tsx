@@ -238,7 +238,12 @@ export function DiscussionBoard({
 
   const toggleClosed = useMutation({
     mutationFn: async (d: Discussion) => {
-      const { error } = await supabase.from("discussions").update({ closed: !d.closed }).eq("id", d.id);
+      // A shared thread has one set of posts, so open/closed must match in every class using it.
+      const hostId = d.thread_id ?? d.id;
+      const { error } = await supabase
+        .from("discussions")
+        .update({ closed: !d.closed })
+        .or(`id.eq.${hostId},thread_id.eq.${hostId}`);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["discussions", classId] }),
@@ -439,7 +444,7 @@ export function DiscussionBoard({
                     <ConfirmDeleteButton
                       label="Delete"
                       title="Delete this discussion?"
-                      description="All messages in the thread will be removed. The gradebook column stays unless you delete the assignment too."
+                      description={d.thread_id || d.share_group ? "This removes the discussion from this class only. If other classes share the thread, their posts and scores are kept. The gradebook column stays unless you delete the assignment too." : "All messages in the thread will be removed. The gradebook column stays unless you delete the assignment too."}
                       onConfirm={() => remove.mutate(d.id)}
                     />
                   </>
@@ -513,6 +518,13 @@ function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCate
           if (aErr) throw aErr;
         }
       }
+      // Classes sharing one thread must always share the same opening time.
+      const hostId = d.thread_id ?? d.id;
+      const { error: syncErr } = await supabase
+        .from("discussions")
+        .update({ available_from: openIso })
+        .or(`id.eq.${hostId},thread_id.eq.${hostId}`);
+      if (syncErr) throw syncErr;
       return targets.length;
     },
     onSuccess: (n) => {
