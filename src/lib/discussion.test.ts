@@ -20,8 +20,8 @@ describe("discussion formatting", () => {
   it("parses bold, italic, large and bullet lines", () => {
     const b = parseFormatted("# Title\n- **bold** and *it*");
     expect(b[0]).toEqual({ kind: "large", parts: [{ text: "Title" }] });
-    expect(b[1].kind).toBe("bullet");
-    expect(b[1].parts).toEqual([{ text: "bold", bold: true }, { text: " and " }, { text: "it", italic: true }]);
+    expect(b[1]?.kind).toBe("bullet");
+    expect(b[1]?.parts).toEqual([{ text: "bold", bold: true }, { text: " and " }, { text: "it", italic: true }]);
   });
   it("wraps the selected text with a marker", () => {
     expect(wrapSelection("hello world", 6, 11, "**").value).toBe("hello **world**");

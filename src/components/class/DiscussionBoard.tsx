@@ -160,7 +160,7 @@ export function DiscussionBoard({
           if (aErr) throw aErr;
           assignmentId = a.id;
         }
-        const { data: d, error } = await supabase
+        const { data: d, error }: { data: { id: string } | null; error: unknown } = await supabase
           .from("discussions")
           .insert({
             class_id: cid,
@@ -180,7 +180,7 @@ export function DiscussionBoard({
           .select("id")
           .single();
         if (error) throw error;
-        if (!hostId) hostId = d.id;
+        if (!hostId && d) hostId = d.id;
       }
       return ordered.length;
     },

@@ -20,7 +20,7 @@ export function parseInline(line: string): InlineToken[] {
   while ((m = re.exec(line))) {
     if (m.index > last) out.push({ text: line.slice(last, m.index) });
     if (m[1] !== undefined) out.push({ text: m[1], bold: true });
-    else out.push({ text: m[2], italic: true });
+    else out.push({ text: m[2] ?? "", italic: true });
     last = m.index + m[0].length;
   }
   if (last < line.length) out.push({ text: line.slice(last) });
