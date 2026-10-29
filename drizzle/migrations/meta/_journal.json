@@ -162,6 +162,13 @@
       "when": 1793142129536,
       "tag": "0022_detentions_permanent_record",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793241681258,
+      "tag": "0023_discussion_sharing_and_post_scores",
+      "breakpoints": true
     }
   ]
 }

@@ -897,6 +897,57 @@ export type Database = {
           },
         ]
       }
+      discussion_post_scores: {
+        Row: {
+          author_id: string
+          created_at: string
+          discussion_id: string
+          graded_by: string | null
+          id: string
+          max_points: number
+          points: number
+          post_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          discussion_id: string
+          graded_by?: string | null
+          id?: string
+          max_points?: number
+          points: number
+          post_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          discussion_id?: string
+          graded_by?: string | null
+          id?: string
+          max_points?: number
+          points?: number
+          post_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_post_scores_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_post_scores_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discussion_posts: {
         Row: {
           author_id: string
@@ -950,11 +1001,16 @@ export type Database = {
           created_at: string
           created_by: string | null
           due_date: string | null
+          edited_at: string | null
           graded: boolean
           id: string
           points_possible: number
           prompt: string
+          reply_points: number
           required_replies: number
+          response_points: number
+          share_group: string | null
+          thread_id: string | null
           title: string
           updated_at: string
         }
@@ -965,11 +1021,16 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date?: string | null
+          edited_at?: string | null
           graded?: boolean
           id?: string
           points_possible?: number
           prompt: string
+          reply_points?: number
           required_replies?: number
+          response_points?: number
+          share_group?: string | null
+          thread_id?: string | null
           title: string
           updated_at?: string
         }
@@ -980,11 +1041,16 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date?: string | null
+          edited_at?: string | null
           graded?: boolean
           id?: string
           points_possible?: number
           prompt?: string
+          reply_points?: number
           required_replies?: number
+          response_points?: number
+          share_group?: string | null
+          thread_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -1001,6 +1067,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussions_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
             referencedColumns: ["id"]
           },
         ]
@@ -2314,6 +2387,10 @@ export type Database = {
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      can_manage_discussion_thread: {
+        Args: { _discussion_id: string }
+        Returns: boolean
+      }
       can_manage_student: { Args: { _student_id: string }; Returns: boolean }
       can_see_audience: {
         Args: { _audience: Database["public"]["Enums"]["post_audience"] }
@@ -2324,6 +2401,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_class: { Args: { _class_id: string }; Returns: boolean }
+      can_view_discussion_thread: {
+        Args: { _discussion_id: string }
+        Returns: boolean
+      }
       can_view_grade: { Args: { _grade: number }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
