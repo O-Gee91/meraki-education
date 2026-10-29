@@ -104,7 +104,7 @@ export function PulseDashboard({
   useIds: boolean;
   studentAverage: (studentId: string) => number | null;
 }) {
-  const { user } = useAuth();
+  const { user, teacherMode } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const [sortMode, setSortMode] = useStudentSort(`pulse-${classId}`);
   const [open, setOpen] = useState(false);
@@ -209,11 +209,11 @@ export function PulseDashboard({
   });
 
   const { data: wellbeingRows = [] } = useQuery({
-    queryKey: ["pulse-wellbeing", classId],
+    queryKey: ["pulse-wellbeing", classId, user?.id, teacherMode],
     enabled: isStaff,
     queryFn: async () => {
       try {
-        return await listWellbeingFeed({ data: { teacherMode: true } });
+        return await listWellbeingFeed({ data: { teacherMode } });
       } catch {
         return [];
       }
