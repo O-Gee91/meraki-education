@@ -2,7 +2,8 @@
 
 ## Class snapshot wellbeing access
 - [x] Respect the active admin/teacher hat and include verified co-taught classes in wellbeing feed scope
-- [ ] Run access regression tests and verify the signed-in class snapshot
+- [x] Run access regression tests — 16 wellbeing tests pass, including admin, dual-role, co-teacher and student/guardian privacy cases
+- [ ] Verify live admin/co-teacher snapshot — restored educator session opens as Student Tester in the preview, so staff-only snapshot cannot be exercised
 
 ## Grade-clear email correction
 - [x] Skip cleared scores at both alert boundaries; preserve notifications for zero, special marks and real posted corrections; 12 regression tests pass
