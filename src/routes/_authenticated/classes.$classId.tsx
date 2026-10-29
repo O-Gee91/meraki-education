@@ -845,6 +845,7 @@ function ClassDetailPage() {
             classId={classId}
             isStaff={isStaff}
             categories={categoryNames.length ? categoryNames : ["Homework"]}
+            timeZone={timeZone}
           />
         </TabsContent>
 

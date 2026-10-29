@@ -996,10 +996,12 @@ export type Database = {
       discussions: {
         Row: {
           assignment_id: string | null
+          available_from: string | null
           class_id: string
           closed: boolean
           created_at: string
           created_by: string | null
+          due_at: string | null
           due_date: string | null
           edited_at: string | null
           graded: boolean
@@ -1016,10 +1018,12 @@ export type Database = {
         }
         Insert: {
           assignment_id?: string | null
+          available_from?: string | null
           class_id: string
           closed?: boolean
           created_at?: string
           created_by?: string | null
+          due_at?: string | null
           due_date?: string | null
           edited_at?: string | null
           graded?: boolean
@@ -1036,10 +1040,12 @@ export type Database = {
         }
         Update: {
           assignment_id?: string | null
+          available_from?: string | null
           class_id?: string
           closed?: boolean
           created_at?: string
           created_by?: string | null
+          due_at?: string | null
           due_date?: string | null
           edited_at?: string | null
           graded?: boolean

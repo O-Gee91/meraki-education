@@ -22,6 +22,16 @@ import { POST_MAX_LENGTH } from "@/lib/feed-safety";
 import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
+import { formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+
+const DEFAULT_DUE_TIME = "23:59";
+/** Builds the exact due instant from a date + time typed in the class time zone. */
+function dueInstant(date: string, time: string, tz: string) {
+  return date ? zonedInputToIso(`${date}T${time || DEFAULT_DUE_TIME}`, tz) : null;
+}
+function isLocked(d: { available_from: string | null }) {
+  return !!d.available_from && Date.parse(d.available_from) > Date.now();
+}
 
 type Discussion = {
   id: string;
@@ -29,6 +39,8 @@ type Discussion = {
   title: string;
   prompt: string;
   due_date: string | null;
+  due_at: string | null;
+  available_from: string | null;
   required_replies: number;
   graded: boolean;
   points_possible: number;
@@ -47,7 +59,7 @@ type Post = { id: string; body: string; author_id: string; parent_id: string | n
 type Score = { post_id: string; author_id: string; points: number; max_points: number };
 
 const COLS =
-  "id, class_id, title, prompt, due_date, required_replies, graded, points_possible, response_points, reply_points, closed, assignment_id, share_group, thread_id, edited_at, created_by, created_at";
+  "id, class_id, title, prompt, due_date, due_at, available_from, required_replies, graded, points_possible, response_points, reply_points, closed, assignment_id, share_group, thread_id, edited_at, created_by, created_at";
 
 /** Max points for a main response / a reply (legacy discussions fall back to the whole total). */
 function maxFor(d: Discussion, isReply: boolean) {
@@ -61,10 +73,12 @@ export function DiscussionBoard({
   classId,
   isStaff,
   categories,
+  timeZone = "Asia/Shanghai",
 }: {
   classId: string;
   isStaff: boolean;
   categories: string[];
+  timeZone?: string;
 }) {
   const { user, isAdmin } = useAuth();
   const coTaught = useCoTaughtClassIds();
@@ -75,11 +89,13 @@ export function DiscussionBoard({
 
   const draftKey = `discussion-new:${classId}`;
   const saved = readDraft<{
-    title: string; prompt: string; dueDate: string; required: string; graded: boolean; responsePts: string; replyPts: string;
+    title: string; prompt: string; dueDate: string; dueTime?: string; opensAt?: string; required: string; graded: boolean; responsePts: string; replyPts: string;
   }>(draftKey);
   const [title, setTitle] = useState(saved?.title ?? "");
   const [prompt, setPrompt] = useState(saved?.prompt ?? "");
   const [dueDate, setDueDate] = useState(saved?.dueDate ?? "");
+  const [dueTime, setDueTime] = useState(saved?.dueTime ?? DEFAULT_DUE_TIME);
+  const [opensAt, setOpensAt] = useState(saved?.opensAt ?? "");
   const [required, setRequired] = useState(saved?.required ?? "1");
   const [graded, setGraded] = useState(saved?.graded ?? true);
   const [responsePts, setResponsePts] = useState(saved?.responsePts ?? "6");
@@ -91,7 +107,7 @@ export function DiscussionBoard({
   const dirty = title.trim().length > 0 || prompt.trim().length > 0;
   const draft = useAutosaveDraft(
     draftKey,
-    { title, prompt, dueDate, required, graded, responsePts, replyPts },
+    { title, prompt, dueDate, dueTime, opensAt, required, graded, responsePts, replyPts },
     { dirty, enabled: isStaff },
   );
 
@@ -133,6 +149,9 @@ export function DiscussionBoard({
       if (t.length < 3) throw new Error("Give the discussion a title");
       if (p.length < 5) throw new Error("Write the discussion prompt");
       if (targetIds.length === 0) throw new Error("Choose at least one class to post to");
+      const dueAt = dueInstant(dueDate, dueTime, timeZone);
+      const openIso = zonedInputToIso(opensAt, timeZone);
+      if (openIso && dueAt && Date.parse(dueAt) <= Date.parse(openIso)) throw new Error("The due time must be after the opening time");
       const rp = graded ? Math.max(0, Number(responsePts) || 0) : 0;
       const yp = graded ? Math.max(0, Number(replyPts) || 0) : 0;
       const req = Math.max(0, Number(required) || 0);
@@ -152,6 +171,7 @@ export function DiscussionBoard({
               category: categories.find((c) => /discussion/i.test(c)) ?? categories[0] ?? "Homework",
               points_possible: pts,
               due_date: dueDate || null,
+              available_from: openIso,
               description: p,
               submission_mode: "collected",
             })
@@ -168,6 +188,8 @@ export function DiscussionBoard({
             title: t,
             prompt: p,
             due_date: dueDate || null,
+            due_at: dueAt,
+            available_from: openIso,
             required_replies: req,
             graded,
             points_possible: pts,
@@ -185,7 +207,7 @@ export function DiscussionBoard({
       return ordered.length;
     },
     onSuccess: (n) => {
-      setTitle(""); setPrompt(""); setDueDate(""); setRequired("1");
+      setTitle(""); setPrompt(""); setDueDate(""); setDueTime(DEFAULT_DUE_TIME); setOpensAt(""); setRequired("1");
       setScope("class"); setPickedClasses(new Set([classId])); setSharedThread(false);
       draft.clear();
       setCreating(false);
@@ -297,8 +319,16 @@ export function DiscussionBoard({
               </fieldset>
 
               <div>
-                <Label>Due date</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                <Label>Due date and time</Label>
+                <div className="flex gap-2">
+                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" />
+                  <Input type="time" className="w-32" value={dueTime} onChange={(e) => setDueTime(e.target.value)} disabled={!dueDate} aria-label="Due time" />
+                </div>
+              </div>
+              <div>
+                <Label>Opens for students (optional)</Label>
+                <Input type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} aria-label="Opens for students" />
+                <p className="mt-1 text-xs text-muted-foreground">Leave blank to open right away. Students see it locked until then.</p>
               </div>
               <div>
                 <Label>Replies required</Label>
@@ -347,7 +377,12 @@ export function DiscussionBoard({
                 <h3 className="font-semibold">{d.title}</h3>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {d.graded ? <Badge variant="secondary">{d.points_possible} pts</Badge> : <Badge variant="outline">Ungraded</Badge>}
-                  {d.due_date ? (
+                  {isLocked(d) ? (
+                    <Badge variant="outline">{isStaff ? "Scheduled" : "Locked"} · Opens {formatZoned(d.available_from, timeZone)}</Badge>
+                  ) : null}
+                  {d.due_at ? (
+                    <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> Due {formatZoned(d.due_at, timeZone)}</span>
+                  ) : d.due_date ? (
                     <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> Due {formatDate(d.due_date)}</span>
                   ) : null}
                   {d.required_replies > 0 ? (
@@ -363,7 +398,7 @@ export function DiscussionBoard({
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setOpenId(openId === d.id ? null : d.id)}>
+                <Button size="sm" variant="outline" disabled={!isStaff && isLocked(d)} onClick={() => setOpenId(openId === d.id ? null : d.id)}>
                   <MessageSquare className="mr-2 size-4" />
                   {openId === d.id ? "Hide thread" : "Open thread"}
                 </Button>
@@ -384,21 +419,23 @@ export function DiscussionBoard({
               </div>
             </div>
             <FormattedText text={d.prompt} className="mt-3 max-w-prose" />
-            {openId === d.id && <Thread discussion={d} isStaff={isStaff} />}
+            {openId === d.id && (isStaff || !isLocked(d)) && <Thread discussion={d} isStaff={isStaff} />}
           </article>
         ))
       )}
 
-      {editing && <EditDiscussionDialog discussion={editing} onClose={() => setEditing(null)} />}
+      {editing && <EditDiscussionDialog discussion={editing} timeZone={timeZone} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-function EditDiscussionDialog({ discussion: d, onClose }: { discussion: Discussion; onClose: () => void }) {
+function EditDiscussionDialog({ discussion: d, timeZone, onClose }: { discussion: Discussion; timeZone: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(d.title);
   const [prompt, setPrompt] = useState(d.prompt);
   const [dueDate, setDueDate] = useState(d.due_date ?? "");
+  const [dueTime, setDueTime] = useState(d.due_at ? isoToZonedInput(d.due_at, timeZone).slice(11, 16) : DEFAULT_DUE_TIME);
+  const [opensAt, setOpensAt] = useState(isoToZonedInput(d.available_from, timeZone));
   const [required, setRequired] = useState(String(d.required_replies));
   const legacy = d.response_points === 0 && d.reply_points === 0;
   const [responsePts, setResponsePts] = useState(String(legacy ? d.points_possible : d.response_points));
@@ -415,6 +452,9 @@ function EditDiscussionDialog({ discussion: d, onClose }: { discussion: Discussi
       const rp = d.graded ? Math.max(0, Number(responsePts) || 0) : 0;
       const yp = d.graded ? Math.max(0, Number(replyPts) || 0) : 0;
       const pts = d.graded ? discussionTotalPossible(rp, yp, req) : 0;
+      const dueAt = dueInstant(dueDate, dueTime, timeZone);
+      const openIso = zonedInputToIso(opensAt, timeZone);
+      if (openIso && dueAt && Date.parse(dueAt) <= Date.parse(openIso)) throw new Error("The due time must be after the opening time");
       let targets: { id: string; assignment_id: string | null }[] = [{ id: d.id, assignment_id: d.assignment_id }];
       if (allLinked && d.share_group) {
         const { data, error } = await supabase.from("discussions").select("id, assignment_id").eq("share_group", d.share_group);
@@ -424,13 +464,13 @@ function EditDiscussionDialog({ discussion: d, onClose }: { discussion: Discussi
       for (const x of targets) {
         const { error } = await supabase
           .from("discussions")
-          .update({ title: t, prompt: p, due_date: dueDate || null, required_replies: req, response_points: rp, reply_points: yp, points_possible: pts, edited_at: new Date().toISOString() })
+          .update({ title: t, prompt: p, due_date: dueDate || null, due_at: dueAt, available_from: openIso, required_replies: req, response_points: rp, reply_points: yp, points_possible: pts, edited_at: new Date().toISOString() })
           .eq("id", x.id);
         if (error) throw error;
         if (x.assignment_id) {
           const { error: aErr } = await supabase
             .from("assignments")
-            .update({ title: t, description: p, due_date: dueDate || null, points_possible: pts })
+            .update({ title: t, description: p, due_date: dueDate || null, available_from: openIso, points_possible: pts })
             .eq("id", x.assignment_id);
           if (aErr) throw aErr;
         }
@@ -453,7 +493,17 @@ function EditDiscussionDialog({ discussion: d, onClose }: { discussion: Discussi
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="sm:col-span-2"><Label>Prompt / instructions</Label><FormattedEditor value={prompt} onChange={setPrompt} rows={5} ariaLabel="Discussion prompt" /></div>
-          <div><Label>Due date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+          <div>
+            <Label>Due date and time</Label>
+            <div className="flex gap-2">
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" />
+              <Input type="time" className="w-32" value={dueTime} onChange={(e) => setDueTime(e.target.value)} disabled={!dueDate} aria-label="Due time" />
+            </div>
+          </div>
+          <div>
+            <Label>Opens for students</Label>
+            <Input type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} aria-label="Opens for students" />
+          </div>
           <div><Label>Replies required</Label><Input type="number" min={0} value={required} onChange={(e) => setRequired(e.target.value)} /></div>
           {d.graded && (
             <>
