@@ -406,7 +406,7 @@ export function DiscussionBoard({
                     <Badge variant="outline">{isStaff ? "Scheduled" : "Locked"} · Opens {formatZoned(d.available_from, timeZone)}</Badge>
                   ) : null}
                   {d.graded && d.assignment_id && categoryById[d.assignment_id] ? (
-                    <Badge variant="secondary">{categoryById[d.assignment_id]} · {formatPoints(Number(d.points_possible))} pts</Badge>
+                    <Badge variant="secondary">{categoryById[d.assignment_id]} · {Number(d.points_possible)} pts</Badge>
                   ) : null}
                   {d.due_at ? (
                     <span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> Due {formatZoned(d.due_at, timeZone)}</span>
