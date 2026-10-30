@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
-import { shouldAutoFlag } from "@/lib/assignment-status";
+import { isMissingWork } from "@/lib/missing-work";
 
 type RosterRow = {
   id: string;
@@ -249,13 +249,13 @@ export function PulseDashboard({
   }, [attendanceRows, behaviorRows, wellbeingRows, rosterIds.join(","), todayKey, since7]);
 
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
-    // Backdated assignments are never auto-flagged.
-    if (!shouldAutoFlag(assignment, todayKey)) return false;
     const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
-    if (g?.points_earned != null) return false;
-    return !submissions.some(
-      (s) => s.assignment_id === assignment.id && s.student_id === studentId,
-    );
+    return isMissingWork({
+      assignment,
+      grade: g,
+      submitted: submissions.some((s) => s.assignment_id === assignment.id && s.student_id === studentId),
+      today: todayKey,
+    });
   };
 
   const sortedVisibleRoster = useMemo(
@@ -264,7 +264,7 @@ export function PulseDashboard({
   );
 
   const cards = useMemo(() => {
-    const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
+    const pastDue = assignments;
     return sortedVisibleRoster.map((r) => {
       const avg = studentAverage(r.student_id);
       const missing = pastDue.filter((a) => isMissing(r.student_id, a)).length;
@@ -286,7 +286,7 @@ export function PulseDashboard({
   );
 
   const missingList = useMemo(() => {
-    const pastDue = assignments.filter((a) => a.due_date && a.due_date < todayKey);
+    const pastDue = assignments;
     const rows = sortedVisibleRoster
       .map((r) => {
         const items = pastDue.filter((a) => isMissing(r.student_id, a));

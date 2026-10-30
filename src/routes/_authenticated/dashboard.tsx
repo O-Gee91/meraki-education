@@ -1,3 +1,4 @@
+import { isMissingWork } from "@/lib/missing-work";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
@@ -507,9 +508,21 @@ function DashboardPage() {
 
 /** Student/guardian summary: published work past its due date with nothing turned in. */
 function MissingWorkCard() {
-  const today = new Date().toISOString().slice(0, 10);
   const { students: selfStudents } = useSelfStudents();
-  const me = selfStudents[0] ?? null;
+  if (selfStudents.length === 0) return null;
+  // Guardians with several children get one line per child.
+  const named = selfStudents.length > 1;
+  return (
+    <>
+      {selfStudents.map((s) => (
+        <MissingWorkRow key={s.id} me={s} label={named ? `${s.first_name}: ` : ""} />
+      ))}
+    </>
+  );
+}
+
+function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
+  const today = new Date().toISOString().slice(0, 10);
   const { previewingStudent } = useAuth();
   const { classIds: scopeIds } = useTeacherScope();
   const scopeKey = previewingStudent ? [...(scopeIds ?? [])].sort().join(",") : "";
@@ -526,58 +539,58 @@ function MissingWorkCard() {
       let classIds = (enrols ?? []).map((e) => e.class_id);
       if (previewingStudent) classIds = classIds.filter((id) => scopeIds?.has(id));
       if (classIds.length === 0) return 0;
-      // RLS limits this to published assignments automatically.
+      // Same rule as Gradebook, Pulse and the Assignments hub.
       const { data: due, error: aErr } = await supabase
         .from("assignments")
-        .select("id")
+        .select("id, due_date, created_at, status")
         .in("class_id", classIds)
-        .not("due_date", "is", null)
-        .lt("due_date", today);
+        .eq("status", "published");
       if (aErr) throw aErr;
-      const ids = (due ?? []).map((a) => a.id);
+      const list = due ?? [];
+      const ids = list.map((a) => a.id);
       if (ids.length === 0) return 0;
       const [{ data: subs, error: sErr }, { data: graded, error: gErr }] = await Promise.all([
         supabase
           .from("assignment_submissions")
-          .select("assignment_id, status")
+          .select("assignment_id")
           .eq("student_id", me!.id)
           .in("assignment_id", ids),
         supabase
           .from("grades")
           .select("assignment_id, points_earned, comment")
           .eq("student_id", me!.id)
+          .eq("is_draft", false)
           .in("assignment_id", ids),
       ]);
       if (sErr) throw sErr;
       if (gErr) throw gErr;
-      const done = new Set<string>();
-      for (const s of subs ?? []) {
-        if (["submitted", "collected", "returned"].includes(s.status)) done.add(s.assignment_id);
-      }
-      for (const g of graded ?? []) {
-        if (g.points_earned != null || markCodeFromComment(g.comment)) done.add(g.assignment_id);
-      }
-      return ids.filter((id) => !done.has(id)).length;
+      const submitted = new Set((subs ?? []).map((x) => x.assignment_id));
+      return list.filter((a) =>
+        isMissingWork({
+          assignment: a,
+          grade: (graded ?? []).find((g) => g.assignment_id === a.id),
+          submitted: submitted.has(a.id),
+          today,
+        }),
+      ).length;
     },
   });
-
-  if (!me) return null;
 
   return (
     <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
       <span>
+        {label && <span className="font-medium">{label}</span>}
         {missingCount > 0 ? (
           <>
-            <span className="font-semibold text-destructive">{missingCount}</span>{" "}
-            {missingCount === 1 ? "assignment is" : "assignments are"} past due with nothing
-            turned in.
+            <span className="font-semibold text-warning">{missingCount}</span>{" "}
+            {missingCount === 1 ? "assignment is" : "assignments are"} missing.
           </>
         ) : (
-          "No missing work — you're all caught up."
+          "No missing work — all caught up."
         )}
       </span>
       <Button asChild variant="outline" className="h-11">
-        <Link to="/assignments">View my assignments</Link>
+        <Link to="/assignments">View assignments</Link>
       </Button>
     </section>
   );

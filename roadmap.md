@@ -48,3 +48,11 @@
 - [x] Header "View as student" toggle for staff, persistent banner with Exit, student navigation
 - [x] Dashboard, Classes, Assignments, Well-being, Behavior, Reports scoped to the demo Student Tester; staff-only pages blocked; messages/check-ins/portfolio read-only
 - [ ] Educator visual check of student view — needs an educator preview session
+
+## Consistency & reliability pass (Joe Doyle 2026-10-30)
+- [x] One shared missing-work rule (M mark, or published + past due + nothing turned in + no score; EX never) in Gradebook, Pulse/snapshot, Assignments hub, Overview
+- [x] Calendar: class filter, Calendar tab on class pages, instant refresh after coursework saves/edits/deletes
+- [x] Guardian Overview missing work shown per child
+- [x] Student discussion points visible once graded (own only) — confirmed in code
+- [x] No quest/XP/achievement wording remains
+- [ ] Signed-in educator and student browser checks (wellbeing badge, Student View, calendar, missing work)

@@ -1,3 +1,5 @@
+import { SchoolCalendar } from "@/components/SchoolCalendar";
+import { isMissingWork } from "@/lib/missing-work";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -270,6 +272,29 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
+  const { data: gradebookSubmissions = [] } = useQuery({
+    queryKey: ["gradebook-submissions", classId, assignmentIds.length],
+    enabled: assignmentIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignment_submissions")
+        .select("assignment_id, student_id")
+        .in("assignment_id", assignmentIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const submittedKeys = useMemo(
+    () => new Set(gradebookSubmissions.map((s) => `${s.student_id}:${s.assignment_id}`)),
+    [gradebookSubmissions],
+  );
+  const missingFor = (studentId: string, assignment: { id: string; due_date?: string | null; created_at?: string | null; status?: string | null }) =>
+    isMissingWork({
+      assignment,
+      grade: gradeFor(studentId, assignment.id),
+      submitted: submittedKeys.has(`${studentId}:${assignment.id}`),
+    });
+
   function studentAverage(studentId: string) {
     return computeAverage(
       assignments.map((a) => {
@@ -382,10 +407,7 @@ function ClassDetailPage() {
       .filter((row) => !testerIds.has(row.student_id))
       .map((row) => {
         const average = studentAverage(row.student_id);
-        const missingCount = gradebookRows.filter(({ assignment }) => {
-          const grade = gradeFor(row.student_id, assignment.id);
-          return markCodeFromComment(grade?.comment) === "M";
-        }).length;
+        const missingCount = gradebookRows.filter(({ assignment }) => missingFor(row.student_id, assignment)).length;
         const cells = gradebookRows
           .map(({ assignment }) => {
             const grade = gradeFor(row.student_id, assignment.id);
@@ -415,7 +437,7 @@ function ClassDetailPage() {
       ])}
       <table><tr><th>Student</th><th>Current grade</th><th>Missing</th>${headerCells}</tr>
       ${bodyRows || `<tr><td colspan="${gradebookRows.length + 3}" class="muted">No students match.</td></tr>`}</table>
-      <p class="muted">M = missing · blank = not yet graded. Current grade follows the class grading setup.</p>`,
+      <p class="muted">Missing = marked M, or past due with nothing turned in · blank = not yet graded. Current grade follows the class grading setup.</p>`,
     );
     printHtml(html);
   }
@@ -513,6 +535,7 @@ function ClassDetailPage() {
           <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>
           <TabsTrigger value="attendance" className={UNDERLINE_TAB}>Attendance</TabsTrigger>
           <TabsTrigger value="files" className={UNDERLINE_TAB}>Files</TabsTrigger>
+          <TabsTrigger value="calendar" className={UNDERLINE_TAB}>Calendar</TabsTrigger>
           {isStaff && (
             <>
               <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
@@ -695,11 +718,7 @@ function ClassDetailPage() {
                        <tbody className="divide-y divide-border">
                          {visibleGradebookRoster.map((row, rowIndex) => {
                            const average = studentAverage(row.student_id);
-                           const missingCount = gradebookRows.filter(({ assignment }) => {
-                             const grade = gradeFor(row.student_id, assignment.id);
-                             const code = markCodeFromComment(grade?.comment);
-                             return code === "M";
-                           }).length;
+                           const missingCount = gradebookRows.filter(({ assignment }) => missingFor(row.student_id, assignment)).length;
                            return (
                               <tr key={row.id} className={`${rowIndex % 2 === 0 ? "bg-card hover:bg-muted/25" : "bg-muted/10 hover:bg-muted/25"}${testerIds.has(row.student_id) ? " opacity-70" : ""}`}>
                                 {isStaff && <td className="sticky left-0 z-10 border-r border-border/60 bg-inherit px-4 py-3">
@@ -881,6 +900,10 @@ function ClassDetailPage() {
 
         <TabsContent value="attendance">
           <AttendanceTab classId={classId} />
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-4">
+          <SchoolCalendar classId={classId} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-4">
