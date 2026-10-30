@@ -107,7 +107,7 @@ function AssignmentsHubPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, class_id, title, description, category, points_possible, due_date, submission_mode",
+          "id, class_id, title, description, category, points_possible, due_date, submission_mode, created_at, status",
         )
         .in("class_id", classIds)
         .eq("status", "published")
