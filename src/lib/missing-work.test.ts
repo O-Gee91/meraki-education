@@ -6,10 +6,10 @@ const pastDue = { due_date: "2026-10-20", created_at: "2026-10-10", status: "pub
 
 describe("isMissingWork", () => {
   it("counts a teacher M mark even before the due date", () => {
-    expect(isMissingWork({ assignment: { due_date: "2026-11-30" }, grade: { comment: "M" }, today })).toBe(true);
+    expect(isMissingWork({ assignment: { due_date: "2026-11-30" }, grade: { comment: "MARK:M" }, today })).toBe(true);
   });
   it("never counts excused work", () => {
-    expect(isMissingWork({ assignment: pastDue, grade: { comment: "EX" }, today })).toBe(false);
+    expect(isMissingWork({ assignment: pastDue, grade: { comment: "MARK:EX" }, today })).toBe(false);
   });
   it("counts past-due published work with nothing turned in", () => {
     expect(isMissingWork({ assignment: pastDue, today })).toBe(true);
