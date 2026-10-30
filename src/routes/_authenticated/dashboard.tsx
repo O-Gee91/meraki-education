@@ -508,9 +508,21 @@ function DashboardPage() {
 
 /** Student/guardian summary: published work past its due date with nothing turned in. */
 function MissingWorkCard() {
-  const today = new Date().toISOString().slice(0, 10);
   const { students: selfStudents } = useSelfStudents();
-  const me = selfStudents[0] ?? null;
+  if (selfStudents.length === 0) return null;
+  // Guardians with several children get one line per child.
+  const named = selfStudents.length > 1;
+  return (
+    <>
+      {selfStudents.map((s) => (
+        <MissingWorkRow key={s.id} me={s} label={named ? `${s.first_name}: ` : ""} />
+      ))}
+    </>
+  );
+}
+
+function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
+  const today = new Date().toISOString().slice(0, 10);
   const { previewingStudent } = useAuth();
   const { classIds: scopeIds } = useTeacherScope();
   const scopeKey = previewingStudent ? [...(scopeIds ?? [])].sort().join(",") : "";
@@ -564,23 +576,21 @@ function MissingWorkCard() {
     },
   });
 
-  if (!me) return null;
-
   return (
     <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
       <span>
+        {label && <span className="font-medium">{label}</span>}
         {missingCount > 0 ? (
           <>
-            <span className="font-semibold text-destructive">{missingCount}</span>{" "}
-            {missingCount === 1 ? "assignment is" : "assignments are"} past due with nothing
-            turned in.
+            <span className="font-semibold text-warning">{missingCount}</span>{" "}
+            {missingCount === 1 ? "assignment is" : "assignments are"} missing.
           </>
         ) : (
-          "No missing work — you're all caught up."
+          "No missing work — all caught up."
         )}
       </span>
       <Button asChild variant="outline" className="h-11">
-        <Link to="/assignments">View my assignments</Link>
+        <Link to="/assignments">View assignments</Link>
       </Button>
     </section>
   );
