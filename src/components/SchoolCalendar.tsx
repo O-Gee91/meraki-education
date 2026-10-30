@@ -17,6 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { withCalendarAudience, withCalendarCategory, withCalendarColor } from "@/lib/calendar-form";
 import { useAuth } from "@/hooks/useAuth";
+import { useCalendarCoursework } from "@/hooks/useCalendarCoursework";
+import type { CourseworkItem } from "@/lib/calendar-coursework";
+import { CheckCircle2 } from "lucide-react";
 
 const CATEGORIES = [
   { value: "event", label: "Event" },
@@ -251,6 +254,19 @@ export function SchoolCalendar() {
     },
   });
 
+  const { data: coursework = [] } = useCalendarCoursework(monthStart, monthEnd);
+  const showCoursework = colorFilter.length === 0 || colorFilter.includes("red");
+  const workByDate = useMemo(() => {
+    const map = new Map<string, CourseworkItem[]>();
+    if (!showCoursework) return map;
+    for (const w of coursework) {
+      const list = map.get(w.date) ?? [];
+      list.push(w);
+      map.set(w.date, list);
+    }
+    return map;
+  }, [coursework, showCoursework]);
+
   const events = useMemo(
     () =>
       colorFilter.length === 0
@@ -385,6 +401,8 @@ export function SchoolCalendar() {
   });
 
   const dayEvents = byDate.get(selectedDate) ?? [];
+  const dayWork = workByDate.get(selectedDate) ?? [];
+  const monthWorkCount = showCoursework ? coursework.length : 0;
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   return (
@@ -443,11 +461,12 @@ export function SchoolCalendar() {
         <div className="mt-4 flex items-center justify-between rounded-md border border-border bg-muted/30 p-4">
           <div className="text-sm">
             <p className="font-medium">
-              {events.length} event{events.length === 1 ? "" : "s"} this month
+              {events.length} event{events.length === 1 ? "" : "s"}
+              {monthWorkCount ? ` · ${monthWorkCount} due date${monthWorkCount === 1 ? "" : "s"}` : ""} this month
             </p>
             <p className="text-muted-foreground">
-              {dayEvents.length
-                ? `${dayEvents.length} on ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
+              {dayEvents.length + dayWork.length
+                ? `${dayEvents.length + dayWork.length} on ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
                 : "Nothing scheduled for the selected day."}
             </p>
           </div>
@@ -510,6 +529,7 @@ export function SchoolCalendar() {
                   if (!date) return <div key={`pad-${i}`} />;
                   const key = toKey(date);
                   const list = byDate.get(key) ?? [];
+                  const work = workByDate.get(key) ?? [];
                   const isSelected = key === selectedDate;
                   const isToday = key === toKey(today);
                   return (
@@ -535,6 +555,11 @@ export function SchoolCalendar() {
                             className={`size-1.5 rounded-full ${colorOption(e.color).dot}`}
                           />
                         ))}
+                        {work.length > 0 && (
+                          <span className="rounded-sm bg-destructive/15 px-1 text-[10px] font-medium leading-tight text-destructive">
+                            {work.length} due
+                          </span>
+                        )}
                       </span>
                     </button>
                   );
@@ -808,7 +833,34 @@ export function SchoolCalendar() {
               )}
 
               <div className="mt-3 space-y-3">
-                {dayEvents.length === 0 ? (
+                {dayWork.map((w) => (
+                  <article
+                    key={`${w.kind}-${w.id}`}
+                    className={`rounded-md border border-border border-l-4 p-3 ${w.completed ? "border-l-success" : colorOption("red").edge}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${colorOption("red").chip}`}>
+                        <span className={`size-2 rounded-full ${colorOption("red").dot}`} />
+                        {w.kind === "assignment" ? "Assignment due" : w.kind === "assessment" ? "Assessment due" : "Discussion due"}
+                      </span>
+                      {w.completed && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                          <CheckCircle2 className="size-3" /> Completed
+                        </span>
+                      )}
+                      {w.draft && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Draft</span>
+                      )}
+                    </div>
+                    <h4 className="mt-1 text-sm font-semibold">{w.title}</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {w.className} · Due {w.time ?? "end of day"}
+                    </p>
+                  </article>
+                ))}
+                {dayEvents.length === 0 && dayWork.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
+                ) : dayEvents.length === 0 ? null : (
                   <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
                 ) : (
                   dayEvents.map((e) => (
