@@ -1,3 +1,4 @@
+import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { isMissingWork } from "@/lib/missing-work";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -534,6 +535,7 @@ function ClassDetailPage() {
           <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>
           <TabsTrigger value="attendance" className={UNDERLINE_TAB}>Attendance</TabsTrigger>
           <TabsTrigger value="files" className={UNDERLINE_TAB}>Files</TabsTrigger>
+          <TabsTrigger value="calendar" className={UNDERLINE_TAB}>Calendar</TabsTrigger>
           {isStaff && (
             <>
               <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
@@ -898,6 +900,10 @@ function ClassDetailPage() {
 
         <TabsContent value="attendance">
           <AttendanceTab classId={classId} />
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-4">
+          <SchoolCalendar classId={classId} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-4">

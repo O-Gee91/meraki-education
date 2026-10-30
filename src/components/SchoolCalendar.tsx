@@ -152,7 +152,7 @@ function formatTime(value?: string | null) {
   return `${display}:${m} ${suffix}`;
 }
 
-export function SchoolCalendar() {
+export function SchoolCalendar({ classId }: { classId?: string } = {}) {
   const { isStaff, isAdmin, user, profile } = useAuth();
   const queryClient = useQueryClient();
   const today = new Date();
@@ -254,7 +254,17 @@ export function SchoolCalendar() {
     },
   });
 
-  const { data: coursework = [] } = useCalendarCoursework(monthStart, monthEnd);
+  const { data: allCoursework = [] } = useCalendarCoursework(monthStart, monthEnd);
+  const [classFilter, setClassFilter] = useState<string>(classId ?? "all");
+  const courseworkClasses = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const w of allCoursework) m.set(w.classId, w.className);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allCoursework]);
+  const coursework = useMemo(
+    () => (classFilter === "all" ? allCoursework : allCoursework.filter((w) => w.classId === classFilter)),
+    [allCoursework, classFilter],
+  );
   const showCoursework = colorFilter.length === 0 || colorFilter.includes("red");
   const workByDate = useMemo(() => {
     const map = new Map<string, CourseworkItem[]>();
@@ -409,7 +419,7 @@ export function SchoolCalendar() {
     <section className="panel mt-6 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">School calendar</h2>
+          <h2 className="text-lg font-semibold">{classId ? "Class calendar" : "School calendar"}</h2>
           <p className="text-sm text-muted-foreground">
             {isStaff
               ? "Post events, exams and deadlines for students and staff."
@@ -417,6 +427,19 @@ export function SchoolCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {!classId && courseworkClasses.length > 1 && (
+            <select
+              aria-label="Show due dates for"
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="all">All classes</option>
+              {courseworkClasses.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+          )}
           {!isStaff && (
             <Button
               variant="ghost"
