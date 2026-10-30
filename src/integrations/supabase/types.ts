@@ -1470,36 +1470,6 @@ export type Database = {
           },
         ]
       }
-      hero_profiles: {
-        Row: {
-          class_changes: number
-          created_at: string
-          hero_class: string
-          id: string
-          quest_started_at: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          class_changes?: number
-          created_at?: string
-          hero_class: string
-          id?: string
-          quest_started_at?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          class_changes?: number
-          created_at?: string
-          hero_class?: string
-          id?: string
-          quest_started_at?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       integrity_strike_reversals: {
         Row: {
           behavior_note_id: string
