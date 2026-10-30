@@ -18,7 +18,7 @@ import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { withCalendarAudience, withCalendarCategory, withCalendarColor } from "@/lib/calendar-form";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendarCoursework } from "@/hooks/useCalendarCoursework";
-import type { CourseworkItem } from "@/lib/calendar-coursework";
+import { isUpcoming, type CourseworkItem } from "@/lib/calendar-coursework";
 import { CheckCircle2 } from "lucide-react";
 
 const CATEGORIES = [
@@ -255,15 +255,21 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
   });
 
   const { data: allCoursework = [] } = useCalendarCoursework(monthStart, monthEnd);
-  const [classFilter, setClassFilter] = useState<string>(classId ?? "all");
-  const courseworkClasses = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const w of allCoursework) m.set(w.classId, w.className);
-    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [allCoursework]);
+  const classFilter = classId ?? "all";
+  // Re-check once a minute so items drop off as their time passes.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const todayKey = toKey(new Date(nowTick));
+  const nowHHMM = new Date(nowTick).toTimeString().slice(0, 5);
   const coursework = useMemo(
-    () => (classFilter === "all" ? allCoursework : allCoursework.filter((w) => w.classId === classFilter)),
-    [allCoursework, classFilter],
+    () =>
+      allCoursework.filter(
+        (w) => (classFilter === "all" || w.classId === classFilter) && isUpcoming({ date: w.date }, todayKey, nowHHMM),
+      ),
+    [allCoursework, classFilter, todayKey, nowHHMM],
   );
   const showCoursework = colorFilter.length === 0 || colorFilter.includes("red");
   const workByDate = useMemo(() => {
@@ -279,10 +285,12 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
 
   const events = useMemo(
     () =>
-      colorFilter.length === 0
-        ? allEvents
-        : allEvents.filter((e) => colorFilter.includes(e.color)),
-    [allEvents, colorFilter],
+      allEvents.filter(
+        (e) =>
+          (colorFilter.length === 0 || colorFilter.includes(e.color)) &&
+          isUpcoming({ date: e.event_date, endTime: e.end_time ?? e.start_time }, todayKey, nowHHMM),
+      ),
+    [allEvents, colorFilter, todayKey, nowHHMM],
   );
 
 
@@ -427,19 +435,6 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!classId && courseworkClasses.length > 1 && (
-            <select
-              aria-label="Show due dates for"
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-            >
-              <option value="all">All classes</option>
-              {courseworkClasses.map(([id, name]) => (
-                <option key={id} value={id}>{name}</option>
-              ))}
-            </select>
-          )}
           {!isStaff && (
             <Button
               variant="ghost"

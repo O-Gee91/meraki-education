@@ -42,3 +42,17 @@ export function dedupeLinkedAssignments<T extends { id: string; kind: Coursework
 ): T[] {
   return items.filter((i) => !(i.kind === "assignment" && linkedAssignmentIds.has(i.id)));
 }
+
+/**
+ * Past items drop off the calendar automatically: anything dated before today
+ * is hidden, and a timed event today is hidden once its end (or start) time passes.
+ */
+export function isUpcoming(
+  item: { date: string; endTime?: string | null },
+  todayKey: string,
+  nowHHMM: string,
+): boolean {
+  if (item.date < todayKey) return false;
+  if (item.date > todayKey || !item.endTime) return true;
+  return item.endTime.slice(0, 5) > nowHHMM;
+}
