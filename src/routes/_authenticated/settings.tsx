@@ -92,11 +92,6 @@ function SettingsPage() {
       return;
     }
     toast.success("Password updated");
-    if (!isStaff) {
-      toast("Next: choose your character class on your Overview page to begin your quest.", {
-        action: { label: "Choose class", onClick: () => navigate({ to: "/dashboard" }) },
-      });
-    }
     setCurrent("");
     setNext("");
     setConfirm("");

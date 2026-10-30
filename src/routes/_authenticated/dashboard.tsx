@@ -4,7 +4,6 @@ import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lu
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
-import { HeroProfilePanel } from "@/components/HeroProfilePanel";
 import { FeedbackInbox, useMyFeedback, useUnreadFeedback } from "@/components/FeedbackInbox";
 import { TeacherTodo } from "@/components/TeacherTodo";
 
@@ -496,7 +495,6 @@ function DashboardPage() {
       )}
 
       <SchoolCalendar />
-      {!isStaff && !previewingStudent && <div className="mt-6"><HeroProfilePanel /></div>}
 
       {primaryRole === "parent" && (
         <p className="mt-6 text-sm text-muted-foreground">

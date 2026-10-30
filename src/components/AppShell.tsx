@@ -27,7 +27,6 @@ import { setStudentPreviewMode } from "@/hooks/useStudentPreview";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RegisterEmailGate, needsEmailRegistration } from "@/components/RegisterEmailGate";
-import { HeroClassGate } from "@/components/HeroClassGate";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
@@ -251,8 +250,6 @@ export function AppShell({
             setEmailSkipped(true);
           }}
         />
-      ) : primaryRole === "student" && !previewingStudent ? (
-        <HeroClassGate />
       ) : null}
 
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
