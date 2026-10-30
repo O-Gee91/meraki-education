@@ -183,6 +183,13 @@
       "when": 1793317973378,
       "tag": "0025_shared_thread_host_handoff",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793357810549,
+      "tag": "0026_scope_standards_read",
+      "breakpoints": true
     }
   ]
 }
