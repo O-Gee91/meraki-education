@@ -860,8 +860,6 @@ export function SchoolCalendar() {
                 ))}
                 {dayEvents.length === 0 && dayWork.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
-                ) : dayEvents.length === 0 ? null : (
-                  <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
                 ) : (
                   dayEvents.map((e) => (
                     <article
