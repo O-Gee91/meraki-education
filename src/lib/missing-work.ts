@@ -11,12 +11,12 @@ import { shouldAutoFlag, todayKey } from "@/lib/assignment-status";
  */
 export interface MissingInput {
   assignment: {
-    due_date?: string | null;
-    created_at?: string | null;
-    status?: string | null;
+    due_date?: string | null | undefined;
+    created_at?: string | null | undefined;
+    status?: string | null | undefined;
   };
   /** Posted (non-draft) grade for this student, if any. */
-  grade?: { points_earned?: number | string | null; comment?: string | null } | null;
+  grade?: { points_earned?: number | string | null; comment?: string | null } | null | undefined;
   /** Whether the student has any submission row for this assignment. */
   submitted?: boolean;
   today?: string;
