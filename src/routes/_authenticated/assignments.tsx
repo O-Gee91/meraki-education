@@ -1,3 +1,4 @@
+import { isMissingWork } from "@/lib/missing-work";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -162,9 +163,15 @@ function AssignmentsHubPage() {
         sub != null && ["submitted", "collected", "returned"].includes(sub.status);
       const graded = grade != null && (grade.points_earned != null || !!markCodeFromComment(grade.comment));
       let status: HubRow["status"];
-      if (graded) status = "graded";
+      const missing = isMissingWork({
+        assignment: a,
+        grade,
+        submitted: sub != null,
+        today,
+      });
+      if (missing) status = "missing";
+      else if (graded) status = "graded";
       else if (turnedIn) status = "submitted";
-      else if (a.due_date && a.due_date < today) status = "missing";
       else if (a.due_date && a.due_date <= soon) status = "due";
       else status = "upcoming";
       const feedback =
