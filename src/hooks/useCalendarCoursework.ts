@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
@@ -22,6 +23,17 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
   const { ids: selfIds } = useSelfStudents();
   const studentView = !isStaff || previewingStudent;
   const scopeKey = scope.classIds ? [...scope.classIds].sort().join(",") : "all";
+  const queryClient = useQueryClient();
+
+  // Refresh right after this browser saves, edits or deletes coursework.
+  useEffect(() => {
+    const watched = new Set(["assignments", "assessments", "discussions"]);
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" || event.action.type !== "invalidate") return;
+      if (!watched.has(String(event.query.queryKey[0]))) return;
+      void queryClient.invalidateQueries({ queryKey: ["calendar-coursework"] });
+    });
+  }, [queryClient]);
 
   return useQuery({
     queryKey: ["calendar-coursework", monthStart, user?.id, studentView, selfIds.join(","), scopeKey],
