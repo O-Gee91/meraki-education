@@ -133,6 +133,19 @@ export function FileLibrary({
     },
   });
 
+  // Colleagues' classes in the same grade as this class.
+  const currentGrade = myClasses.find((c) => c.id === classId)?.grade_level ?? null;
+  const { data: gradeTargets = [] } = useQuery({
+    queryKey: ["file-grade-targets", user?.id, currentGrade],
+    enabled: !!user && isStaff && !!classId && currentGrade != null,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("grade_file_targets", { _grade: currentGrade! });
+      if (error) throw error;
+      const mineIds = new Set(myClasses.map((c) => c.id));
+      return (data ?? []).filter((c) => !mineIds.has(c.id));
+    },
+  });
+
   const uploaderIds = [...new Set(files.map((f) => f.uploaded_by).filter(Boolean))] as string[];
   const { data: people = [] } = useQuery({
     queryKey: ["file-uploaders", uploaderIds.join(",")],
