@@ -2385,6 +2385,16 @@ export type Database = {
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
       co_teacher_level: { Args: { _class_id: string }; Returns: string }
+      grade_file_targets: {
+        Args: { _grade: number }
+        Returns: {
+          grade_level: number
+          id: string
+          name: string
+          teacher_id: string
+          teacher_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
