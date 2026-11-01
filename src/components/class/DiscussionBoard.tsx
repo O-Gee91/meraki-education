@@ -154,11 +154,16 @@ export function DiscussionBoard({
     () => [...new Set(myClasses.map((c) => c.grade_level).filter((g): g is number => g != null))].sort((a, b) => a - b),
     [myClasses],
   );
+  const [gradeExcluded, setGradeExcluded] = useState<Set<string>>(new Set());
+  const gradeClasses = useMemo(
+    () => myClasses.filter((c) => String(c.grade_level) === grade),
+    [myClasses, grade],
+  );
   const targetIds = useMemo(() => {
     if (scope === "class") return [classId];
     if (scope === "classes") return [...pickedClasses];
-    return myClasses.filter((c) => String(c.grade_level) === grade).map((c) => c.id);
-  }, [scope, classId, pickedClasses, myClasses, grade]);
+    return gradeClasses.filter((c) => !gradeExcluded.has(c.id)).map((c) => c.id);
+  }, [scope, classId, pickedClasses, gradeClasses, gradeExcluded]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -319,11 +324,36 @@ export function DiscussionBoard({
                   </div>
                 )}
                 {scope === "grade" && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {grades.map((g) => (
-                      <button key={g} type="button" className={chip(grade === String(g))} onClick={() => setGrade(String(g))} aria-pressed={grade === String(g)}>Grade {g}</button>
-                    ))}
-                    {grade && <span className="text-xs text-muted-foreground">{targetIds.length} of your classes</span>}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground">1. Pick a grade</span>
+                      {grades.map((g) => (
+                        <button key={g} type="button" className={chip(grade === String(g))} onClick={() => { setGrade(String(g)); setGradeExcluded(new Set()); }} aria-pressed={grade === String(g)}>Grade {g}</button>
+                      ))}
+                    </div>
+                    {grade && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">2. Choose classes ({targetIds.length} selected)</p>
+                        <div className="grid gap-1 sm:grid-cols-2">
+                          {gradeClasses.map((c) => (
+                            <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted">
+                              <input
+                                type="checkbox"
+                                className="size-4 accent-[hsl(var(--primary))]"
+                                checked={!gradeExcluded.has(c.id)}
+                                disabled={c.id === classId}
+                                onChange={(e) => {
+                                  const n = new Set(gradeExcluded);
+                                  if (e.target.checked) n.delete(c.id); else n.add(c.id);
+                                  setGradeExcluded(n);
+                                }}
+                              />
+                              {c.name}{c.period ? ` · ${c.period}` : ""}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {targetIds.length > 1 && (

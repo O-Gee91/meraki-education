@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendarCoursework } from "@/hooks/useCalendarCoursework";
 import { isUpcoming, type CourseworkItem } from "@/lib/calendar-coursework";
 import { CheckCircle2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const CATEGORIES = [
   { value: "event", label: "Event" },
@@ -870,7 +871,11 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Draft</span>
                       )}
                     </div>
-                    <h4 className="mt-1 text-sm font-semibold">{w.title}</h4>
+                    <h4 className="mt-1 text-sm font-semibold">
+                      <Link to="/classes/$classId" params={{ classId: w.classId }} className="hover:underline">
+                        {w.title}
+                      </Link>
+                    </h4>
                     <p className="text-xs text-muted-foreground">
                       {w.className} · Due {w.time ?? "end of day"}
                     </p>
