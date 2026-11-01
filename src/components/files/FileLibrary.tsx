@@ -133,6 +133,19 @@ export function FileLibrary({
     },
   });
 
+  // Colleagues' classes in the same grade as this class.
+  const currentGrade = myClasses.find((c) => c.id === classId)?.grade_level ?? null;
+  const { data: gradeTargets = [] } = useQuery({
+    queryKey: ["file-grade-targets", user?.id, currentGrade],
+    enabled: !!user && isStaff && !!classId && currentGrade != null,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("grade_file_targets", { _grade: currentGrade! });
+      if (error) throw error;
+      const mineIds = new Set(myClasses.map((c) => c.id));
+      return (data ?? []).filter((c) => !mineIds.has(c.id));
+    },
+  });
+
   const uploaderIds = [...new Set(files.map((f) => f.uploaded_by).filter(Boolean))] as string[];
   const { data: people = [] } = useQuery({
     queryKey: ["file-uploaders", uploaderIds.join(",")],
@@ -161,7 +174,9 @@ export function FileLibrary({
   const shown = [...grouped.values()].map((rows) => rows[0]!);
 
   const classNameFor = (id: string | null) =>
-    myClasses.find((c) => c.id === id)?.name ?? null;
+    myClasses.find((c) => c.id === id)?.name ??
+    gradeTargets.find((c) => c.id === id)?.name ??
+    null;
 
   function toggleTarget(id: string) {
     setTargetClasses((prev) =>
@@ -191,7 +206,9 @@ export function FileLibrary({
       // copy never affect the copies shared with other classes.
       let fileOk = true;
       for (const cid of targets) {
-        const path = `${cid ?? "school"}/${user.id}/${crypto.randomUUID()}-${safeName(file.name)}`;
+        // Store under the current class folder (which the uploader can access);
+        // the row's class_id decides which class sees it.
+        const path = `${classId ?? cid ?? "school"}/${user.id}/${crypto.randomUUID()}-${safeName(file.name)}`;
         const { error: upErr } = await supabase.storage
           .from(BUCKET)
           .upload(path, file, { contentType: file.type || "application/octet-stream" });
@@ -315,7 +332,7 @@ export function FileLibrary({
 
         {isStaff && classId && myClasses.length > 0 && (
           <div className="mt-3 space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Share with classes</Label>
+            <Label className="text-xs text-muted-foreground">{gradeTargets.length > 0 ? "My classes" : "Share with classes"}</Label>
             <div className="flex flex-wrap gap-2">
               {myClasses.map((c) => {
                 const active = targetClasses.includes(c.id);
@@ -336,6 +353,51 @@ export function FileLibrary({
                 );
               })}
             </div>
+            {gradeTargets.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Other Grade {currentGrade} classes
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      const ids = [...myClasses.filter((c) => c.grade_level === currentGrade), ...gradeTargets].map((c) => c.id);
+                      const allOn = ids.every((id) => targetClasses.includes(id));
+                      setTargetClasses((prev) =>
+                        allOn ? prev.filter((id) => !ids.includes(id) || id === classId) : [...new Set([...prev, ...ids])],
+                      );
+                    }}
+                  >
+                    All Grade {currentGrade} classes
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {gradeTargets.map((c) => {
+                    const active = targetClasses.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleTarget(c.id)}
+                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                        }`}
+                      >
+                        {c.name}
+                        {c.teacher_name ? ` · ${c.teacher_name}` : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               The same file is shared with every selected class — each class sees it in its own
               Files tab.
