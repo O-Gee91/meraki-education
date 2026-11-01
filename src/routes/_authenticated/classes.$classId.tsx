@@ -296,6 +296,28 @@ function ClassDetailPage() {
       submitted: submittedKeys.has(`${studentId}:${assignment.id}`),
     });
 
+  // Per-assignment counts for the Coursework tab quick filters (test accounts excluded).
+  const { courseworkMissing, courseworkUngraded } = useMemo(() => {
+    const missing: Record<string, number> = {};
+    const ungraded: Record<string, number> = {};
+    const realStudents = gradebookRoster
+      .filter((r) => !isTestStudent(r.students))
+      .map((r) => r.student_id);
+    for (const a of assignments) {
+      let m = 0;
+      let u = 0;
+      for (const sid of realStudents) {
+        const g = grades.find((x) => x.student_id === sid && x.assignment_id === a.id);
+        const submitted = submittedKeys.has(`${sid}:${a.id}`);
+        if (isMissingWork({ assignment: a, grade: g, submitted })) m++;
+        if (submitted && (g?.points_earned == null) && !markCodeFromComment(g?.comment)) u++;
+      }
+      missing[a.id] = m;
+      ungraded[a.id] = u;
+    }
+    return { courseworkMissing: missing, courseworkUngraded: ungraded };
+  }, [assignments, grades, gradebookRoster, submittedKeys]);
+
   function studentAverage(studentId: string) {
     return computeAverage(
       assignments.map((a) => {
@@ -826,27 +848,41 @@ function ClassDetailPage() {
         </TabsContent>
 
         <TabsContent value="coursework">
-
-          <AssignmentsTab
-            classId={classId}
-            isStaff={isStaff}
-            assignments={assignments}
-            grades={grades}
-            roster={gradebookRoster}
-            categories={assignmentCategories}
-            gradeLevel={klass?.grade_level ?? null}
-            subject={klass?.subject ?? null}
-            timeZone={timeZone}
-          />
-          <AssessmentsTab
-            classId={classId}
-            isStaff={isStaff}
-            assignments={assignments}
-            categories={assignmentCategories}
-            gradeLevel={klass?.grade_level ?? null}
-            timeZone={timeZone}
-          />
-
+          <Tabs defaultValue="assignments" className="mt-2">
+            <TabsList className="h-auto bg-transparent p-0 gap-1">
+              <TabsTrigger value="assignments" className={UNDERLINE_TAB}>
+                Assignments ({assignments.length})
+              </TabsTrigger>
+              <TabsTrigger value="online" className={UNDERLINE_TAB}>
+                Online quizzes &amp; essays
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="assignments">
+              <AssignmentsTab
+                classId={classId}
+                isStaff={isStaff}
+                assignments={assignments}
+                grades={grades}
+                roster={gradebookRoster}
+                categories={assignmentCategories}
+                gradeLevel={klass?.grade_level ?? null}
+                subject={klass?.subject ?? null}
+                timeZone={timeZone}
+                missingCounts={courseworkMissing}
+                ungradedCounts={courseworkUngraded}
+              />
+            </TabsContent>
+            <TabsContent value="online">
+              <AssessmentsTab
+                classId={classId}
+                isStaff={isStaff}
+                assignments={assignments}
+                categories={assignmentCategories}
+                gradeLevel={klass?.grade_level ?? null}
+                timeZone={timeZone}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
 
