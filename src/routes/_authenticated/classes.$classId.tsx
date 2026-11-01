@@ -279,6 +279,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignment_submissions")
         .select("assignment_id, student_id")
+        .in("status", ["submitted", "collected", "returned"])
         .in("assignment_id", assignmentIds);
       if (error) throw error;
       return data ?? [];

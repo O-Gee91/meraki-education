@@ -166,7 +166,7 @@ function AssignmentsHubPage() {
       const missing = isMissingWork({
         assignment: a,
         grade,
-        submitted: sub != null,
+        submitted: turnedIn,
         today,
       });
       if (missing) status = "missing";
