@@ -1,9 +1,11 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { isMissingWork } from "@/lib/missing-work";
+import { courseworkBucket, isDueSoon } from "@/lib/coursework-view";
+import { todayKey } from "@/lib/assignment-status";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsUpDown, History, MoreVertical, Printer, Search } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ClipboardList, Clock, History, MoreVertical, Printer, Search } from "lucide-react";
 
 const UNDERLINE_TAB =
   "-mb-px rounded-none border-b-2 border-transparent px-3 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none";
