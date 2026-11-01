@@ -1081,6 +1081,8 @@ function AssignmentsTab({
   gradeLevel,
   subject,
   timeZone,
+  missingCounts,
+  ungradedCounts,
 }: {
   classId: string;
   isStaff: boolean;
