@@ -17,7 +17,7 @@ export interface MissingInput {
   };
   /** Posted (non-draft) grade for this student, if any. */
   grade?: { points_earned?: number | string | null; comment?: string | null } | null | undefined;
-  /** Whether the student has any submission row for this assignment. */
+  /** Whether the student turned it in (submitted/collected/returned — never a saved draft). */
   submitted?: boolean;
   today?: string;
 }

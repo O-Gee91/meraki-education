@@ -101,7 +101,7 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
         const sIds = (s.data ?? []).map((x) => x.id);
         const [subs, grades, aSubs] = await Promise.all([
           aIds.length
-            ? supabase.from("assignment_submissions").select("assignment_id").in("assignment_id", aIds).in("student_id", selfIds)
+            ? supabase.from("assignment_submissions").select("assignment_id").in("assignment_id", aIds).in("student_id", selfIds).in("status", ["submitted", "collected", "returned"])
             : Promise.resolve({ data: [] as { assignment_id: string }[] }),
           aIds.length
             ? supabase.from("grades").select("assignment_id").in("assignment_id", aIds).in("student_id", selfIds).eq("is_draft", false)

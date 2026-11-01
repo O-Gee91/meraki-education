@@ -554,6 +554,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
           .from("assignment_submissions")
           .select("assignment_id")
           .eq("student_id", me!.id)
+          .in("status", ["submitted", "collected", "returned"])
           .in("assignment_id", ids),
         supabase
           .from("grades")
