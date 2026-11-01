@@ -1055,6 +1055,20 @@ type AssignmentRow = {
   status?: string;
 };
 
+type TimelineKey = "current" | "upcoming" | "past" | "all";
+type QuickKey = "ungraded" | "missing" | "draft";
+const TIMELINE: Array<[TimelineKey, string]> = [
+  ["current", "Current"],
+  ["upcoming", "Upcoming"],
+  ["past", "Past / Graded"],
+  ["all", "All"],
+];
+const QUICK: Array<[QuickKey, string]> = [
+  ["ungraded", "Ungraded"],
+  ["missing", "Missing"],
+  ["draft", "Draft"],
+];
+
 function AssignmentsTab({
   classId,
   isStaff,
@@ -1080,11 +1094,15 @@ function AssignmentsTab({
   gradeLevel?: number | null;
   subject?: string | null;
   timeZone: string;
+  missingCounts: Record<string, number>;
+  ungradedCounts: Record<string, number>;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [assignmentSearch, setAssignmentSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [timeline, setTimeline] = useState<TimelineKey>("current");
+  const [quick, setQuick] = useState<QuickKey | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const draftKey = `new-assignment:${classId}`;
   const blank = {
     title: "",
@@ -1129,32 +1147,80 @@ function AssignmentsTab({
     .filter((s): s is NonNullable<typeof s> => !!s)
     .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }));
 
-  const categoryCounts = useMemo(
-    () =>
-      assignments.reduce<Record<string, number>>((counts, assignment) => {
-        counts[assignment.category] = (counts[assignment.category] ?? 0) + 1;
-        return counts;
-      }, {}),
-    [assignments],
-  );
+  const today = todayKey();
+  const draftGradeCount = (id: string) =>
+    grades.filter((g) => g.assignment_id === id && g.is_draft).length;
+  const bucketOf = (a: AssignmentRow) =>
+    courseworkBucket(
+      a.due_date,
+      today,
+      isStaff && ((ungradedCounts[a.id] ?? 0) > 0 || draftGradeCount(a.id) > 0),
+    );
+  const matchesQuick = (a: AssignmentRow, key: QuickKey) =>
+    key === "ungraded"
+      ? (ungradedCounts[a.id] ?? 0) > 0
+      : key === "missing"
+        ? (missingCounts[a.id] ?? 0) > 0
+        : a.status === "draft";
 
-  const visibleAssignments = useMemo(() => {
+  const searched = useMemo(() => {
     const needle = assignmentSearch.trim().toLocaleLowerCase();
-    return assignments
-      .filter((assignment) => categoryFilter === "all" || assignment.category === categoryFilter)
-      .filter(
-        (assignment) =>
-          !needle ||
-          assignment.title.toLocaleLowerCase().includes(needle) ||
-          assignment.category.toLocaleLowerCase().includes(needle),
-      )
-      .sort((a, b) => {
-        if (!a.due_date && !b.due_date) return a.title.localeCompare(b.title);
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return b.due_date.localeCompare(a.due_date) || a.title.localeCompare(b.title);
-      });
-  }, [assignmentSearch, assignments, categoryFilter]);
+    return assignments.filter(
+      (assignment) =>
+        !needle ||
+        assignment.title.toLocaleLowerCase().includes(needle) ||
+        assignment.category.toLocaleLowerCase().includes(needle),
+    );
+  }, [assignmentSearch, assignments]);
+
+  const timelineCounts = {
+    current: searched.filter((a) => bucketOf(a) === "current").length,
+    upcoming: searched.filter((a) => bucketOf(a) === "upcoming").length,
+    past: searched.filter((a) => bucketOf(a) === "past").length,
+    all: searched.length,
+  };
+  const inTimeline = searched.filter((a) => timeline === "all" || bucketOf(a) === timeline);
+  const quickCounts = {
+    ungraded: inTimeline.filter((a) => matchesQuick(a, "ungraded")).length,
+    missing: inTimeline.filter((a) => matchesQuick(a, "missing")).length,
+    draft: inTimeline.filter((a) => matchesQuick(a, "draft")).length,
+  };
+
+  const visibleAssignments = inTimeline
+    .filter((a) => !quick || matchesQuick(a, quick))
+    .sort((a, b) => {
+      if (!a.due_date && !b.due_date) return a.title.localeCompare(b.title);
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return b.due_date.localeCompare(a.due_date) || a.title.localeCompare(b.title);
+    });
+
+  const groups = Object.entries(
+    visibleAssignments.reduce<Record<string, AssignmentRow[]>>((acc, a) => {
+      (acc[a.category] ??= []).push(a);
+      return acc;
+    }, {}),
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, items]) => {
+      const currentCount = items.filter((a) => bucketOf(a) === "current").length;
+      return {
+        category,
+        items,
+        currentCount,
+        // Auto-open only categories with current work, unless a filter/search narrows the list.
+        autoOpen: timeline !== "current" || !!quick || !!assignmentSearch.trim() || currentCount > 0,
+      };
+    });
+
+  const dueSoonCount = assignments.filter(
+    (a) => (isStaff || a.status !== "draft") && isDueSoon(a.due_date, today),
+  ).length;
+  const attentionCount = assignments.filter((a) =>
+    isStaff
+      ? (ungradedCounts[a.id] ?? 0) > 0 || draftGradeCount(a.id) > 0
+      : (missingCounts[a.id] ?? 0) > 0,
+  ).length;
 
   const create = useMutation({
     mutationFn: async (status: "draft" | "published") => {
@@ -1406,88 +1472,127 @@ function AssignmentsTab({
         onConfirm={(v) => publishTarget && publishAssignment.mutate({ id: publishTarget.id, notify: v })}
       />
 
+      {assignments.length > 0 ? (
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => { setTimeline("current"); setQuick(null); }}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40"
+          >
+            <Clock className="size-4 text-primary" />
+            <span className="text-sm">
+              <span className="font-semibold">Due soon:</span>{" "}
+              {dueSoonCount === 0
+                ? "nothing due in the next 7 days"
+                : `${dueSoonCount} ${dueSoonCount === 1 ? "item" : "items"} due in the next 7 days`}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTimeline("all"); setQuick(isStaff ? "ungraded" : "missing"); }}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-warning/60"
+          >
+            <ClipboardList className={`size-4 ${attentionCount > 0 ? "text-warning" : "text-muted-foreground"}`} />
+            <span className="text-sm">
+              <span className="font-semibold">Needs attention:</span>{" "}
+              {attentionCount === 0
+                ? "all caught up"
+                : isStaff
+                  ? `${attentionCount} ${attentionCount === 1 ? "item has" : "items have"} work to grade or draft grades to post`
+                  : `${attentionCount} missing ${attentionCount === 1 ? "item" : "items"}`}
+            </span>
+          </button>
+        </div>
+      ) : null}
+
       <section className="coursework-ledger mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-panel)]">
         {assignments.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No assignments yet.</p>
         ) : (
-          <div className="grid min-h-[28rem] lg:grid-cols-[13rem_minmax(0,1fr)]">
-            <aside className="hidden border-r border-border bg-secondary/35 p-3 lg:block">
-              <p className="px-2 pb-2 text-xs font-semibold uppercase text-muted-foreground">
-                Categories
-              </p>
-              <div className="space-y-1">
-                <Button
-                  type="button"
-                  variant={categoryFilter === "all" ? "secondary" : "ghost"}
-                  className="w-full justify-between"
-                  onClick={() => setCategoryFilter("all")}
-                >
-                  <span>All coursework</span>
-                  <span className="text-xs opacity-70">{assignments.length}</span>
-                </Button>
-                {Object.entries(categoryCounts)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([category, count]) => (
-                    <Button
-                      key={category}
-                      type="button"
-                      variant={categoryFilter === category ? "secondary" : "ghost"}
-                      className="w-full justify-between"
-                      onClick={() => setCategoryFilter(category)}
-                    >
-                      <span className="truncate">{category}</span>
-                      <span className="text-xs opacity-70">{count}</span>
-                    </Button>
-                  ))}
+          <div className="min-w-0">
+            <header className="border-b border-border bg-card p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-1 border-b border-border" role="tablist" aria-label="Coursework timeline">
+                {TIMELINE.map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={timeline === key}
+                    onClick={() => setTimeline(key)}
+                    className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+                      timeline === key
+                        ? "border-primary font-semibold text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label} <span className="text-xs opacity-70">({timelineCounts[key]})</span>
+                  </button>
+                ))}
               </div>
-            </aside>
-
-            <div className="min-w-0">
-              <header className="sticky top-0 z-10 border-b border-border bg-card/95 p-4 backdrop-blur">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold">Course assignments</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {visibleAssignments.length} of {assignments.length} shown · newest due dates first
-                    </p>
-                  </div>
-                  <div className="relative w-full sm:w-72">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={assignmentSearch}
-                      onChange={(event) => setAssignmentSearch(event.target.value)}
-                      placeholder="Find an assignment"
-                      aria-label="Find an assignment"
-                      className="pl-9"
-                    />
-                  </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full sm:w-72">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={assignmentSearch}
+                    onChange={(event) => setAssignmentSearch(event.target.value)}
+                    placeholder="Find an assignment"
+                    aria-label="Find an assignment"
+                    className="pl-9"
+                  />
                 </div>
-                <div className="mt-3 lg:hidden">
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger aria-label="Filter assignments by category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All coursework ({assignments.length})</SelectItem>
-                      {Object.entries(categoryCounts)
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([category, count]) => (
-                          <SelectItem key={category} value={category}>
-                            {category} ({count})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                {QUICK.filter(([key]) => isStaff || key === "missing").map(([key, label]) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    size="sm"
+                    variant={quick === key ? "secondary" : "ghost"}
+                    aria-pressed={quick === key}
+                    onClick={() => setQuick(quick === key ? null : key)}
+                  >
+                    {label} <span className="ml-1 text-xs opacity-70">{quickCounts[key]}</span>
+                  </Button>
+                ))}
+                <div className="ml-auto flex gap-1">
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded(Object.fromEntries(groups.map((g) => [g.category, true])))}>
+                    Expand all
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded(Object.fromEntries(groups.map((g) => [g.category, false])))}>
+                    Collapse all
+                  </Button>
                 </div>
-              </header>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {visibleAssignments.length} of {assignments.length} shown · newest due dates first
+              </p>
+            </header>
 
-              <div className="max-h-[70vh] space-y-2 overflow-y-auto bg-secondary/15 p-3 sm:p-4">
-                {visibleAssignments.length === 0 ? (
-                  <p className="p-8 text-center text-sm text-muted-foreground">
-                    No assignments match this search.
-                  </p>
-                ) : (
-                  visibleAssignments.map((a) => {
+            {visibleAssignments.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                Nothing here. Try another tab or clear a filter.
+              </p>
+            ) : (
+              groups.map((group) => {
+                const isOpen = expanded[group.category] ?? group.autoOpen;
+                return (
+                  <div key={group.category} className="border-b border-border last:border-b-0">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setExpanded((prev) => ({ ...prev, [group.category]: !isOpen }))}
+                      className="flex w-full items-center justify-between gap-3 bg-secondary/30 px-4 py-2.5 text-left hover:bg-secondary/50"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                        {group.category}
+                        <Badge variant="outline" className="font-normal">{group.items.length}</Badge>
+                      </span>
+                      {!isOpen && group.currentCount === 0 ? (
+                        <span className="text-xs text-muted-foreground">No current items</span>
+                      ) : null}
+                    </button>
+                    {isOpen ? (
+                      <div className="space-y-2 bg-secondary/15 p-3 sm:p-4">
+                  {group.items.map((a) => {
                     const testerIds = new Set(
                       roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id),
                     );
@@ -1624,10 +1729,13 @@ function AssignmentsTab({
                         </div>
                       </article>
                     );
-                  })
-                )}
-              </div>
-            </div>
+                  })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </section>
