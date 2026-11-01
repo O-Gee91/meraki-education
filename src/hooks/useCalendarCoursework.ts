@@ -27,7 +27,12 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
 
   // Refresh right after this browser saves, edits or deletes coursework.
   useEffect(() => {
-    const watched = new Set(["assignments", "assessments", "discussions"]);
+    const watched = new Set([
+      "assignments", "assessments", "discussions",
+      // Hand-ins and grading change the "Completed" badge.
+      "assignment-submissions", "assessment-submissions", "grades", "assignment-grades",
+      "discussion-posts", "posts",
+    ]);
     return queryClient.getQueryCache().subscribe((event) => {
       if (event.type !== "updated" || event.action.type !== "invalidate") return;
       if (!watched.has(String(event.query.queryKey[0]))) return;
