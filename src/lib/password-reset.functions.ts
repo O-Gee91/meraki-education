@@ -21,7 +21,7 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name, email, username")
       .ilike("email", data.email)
       .maybeSingle();
 
@@ -44,6 +44,7 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
     await sendTemplateEmail("password-reset", profile.email ?? data.email, {
       templateData: {
         recipientName: profile.full_name ?? undefined,
+        username: profile.username ?? undefined,
         resetUrl: actionLink,
       },
     }).catch(() => undefined);
