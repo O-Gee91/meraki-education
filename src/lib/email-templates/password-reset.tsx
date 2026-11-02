@@ -17,9 +17,10 @@ import type { TemplateEntry } from './registry'
 interface PasswordResetProps {
   recipientName?: string
   resetUrl?: string
+  username?: string
 }
 
-export const PasswordResetEmail = ({ recipientName, resetUrl }: PasswordResetProps) => (
+export const PasswordResetEmail = ({ recipientName, resetUrl, username }: PasswordResetProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Reset your Meraki Education password</Preview>
@@ -32,6 +33,11 @@ export const PasswordResetEmail = ({ recipientName, resetUrl }: PasswordResetPro
           password for your Meraki Education account. Use the button below to choose a new
           password — the link works once and expires shortly.
         </Text>
+        {username ? (
+          <Text style={text}>
+            Your username is: <strong>{username}</strong>
+          </Text>
+        ) : null}
         <Section>
           <Button style={button} href={resetUrl ?? '#'}>
             Choose a new password
@@ -57,6 +63,7 @@ export const template = {
   displayName: 'Password reset',
   previewData: {
     recipientName: 'Jordan Reyes',
+    username: 'jordan.reyes',
     resetUrl: 'https://meraki-education.lovable.app/reset-password',
   },
 } satisfies TemplateEntry
