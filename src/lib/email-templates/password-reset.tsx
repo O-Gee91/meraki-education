@@ -63,6 +63,7 @@ export const template = {
   displayName: 'Password reset',
   previewData: {
     recipientName: 'Jordan Reyes',
+    username: 'jordan.reyes',
     resetUrl: 'https://meraki-education.lovable.app/reset-password',
   },
 } satisfies TemplateEntry
