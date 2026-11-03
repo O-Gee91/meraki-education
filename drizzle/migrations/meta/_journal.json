@@ -211,6 +211,13 @@
       "when": 1793685269538,
       "tag": "0029_server_side_login_events",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793688672665,
+      "tag": "0030_discussion_post_audits",
+      "breakpoints": true
     }
   ]
 }
