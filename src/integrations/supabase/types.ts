@@ -897,6 +897,48 @@ export type Database = {
           },
         ]
       }
+      discussion_post_audits: {
+        Row: {
+          acted_at: string
+          acted_by: string | null
+          action: string
+          author_id: string | null
+          discussion_id: string | null
+          id: string
+          new_body: string | null
+          old_body: string | null
+          parent_id: string | null
+          post_created_at: string | null
+          post_id: string
+        }
+        Insert: {
+          acted_at?: string
+          acted_by?: string | null
+          action: string
+          author_id?: string | null
+          discussion_id?: string | null
+          id?: string
+          new_body?: string | null
+          old_body?: string | null
+          parent_id?: string | null
+          post_created_at?: string | null
+          post_id: string
+        }
+        Update: {
+          acted_at?: string
+          acted_by?: string | null
+          action?: string
+          author_id?: string | null
+          discussion_id?: string | null
+          id?: string
+          new_body?: string | null
+          old_body?: string | null
+          parent_id?: string | null
+          post_created_at?: string | null
+          post_id?: string
+        }
+        Relationships: []
+      }
       discussion_post_scores: {
         Row: {
           author_id: string
