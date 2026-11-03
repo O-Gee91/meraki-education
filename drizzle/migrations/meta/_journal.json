@@ -204,6 +204,13 @@
       "when": 1793528599280,
       "tag": "0028_grade_file_sharing",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793685269538,
+      "tag": "0029_server_side_login_events",
+      "breakpoints": true
     }
   ]
 }

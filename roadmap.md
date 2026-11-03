@@ -56,3 +56,6 @@
 - [x] Student discussion points visible once graded (own only) — confirmed in code
 - [x] No quest/XP/achievement wording remains
 - [ ] Signed-in educator and student browser checks (wellbeing badge, Student View, calendar, missing work)
+
+## Login accountability (Joe Doyle 2026-11-03)
+- [x] Sign-ins recorded by the database on every authentication, so "Invisible session" clients cannot skip the log
