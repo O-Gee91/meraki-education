@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatDateTime } from "@/lib/school";
+import { formatDateTime } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { POST_MAX_LENGTH, REPLY_MAX_LENGTH, safeLink, splitPinned } from "@/lib/feed-safety";
 
