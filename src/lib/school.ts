@@ -32,6 +32,14 @@ export function formatDate(value?: string | null) {
   });
 }
 
+/** "Nov 2, 2026, 8:03 PM" in the viewer's local time. */
+export function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 export const ATTENDANCE_STATUSES = ["present", "tardy", "absent", "excused"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 

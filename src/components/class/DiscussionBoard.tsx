@@ -17,7 +17,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/school";
+import { formatDate, formatDateTime } from "@/lib/school";
 import { POST_MAX_LENGTH } from "@/lib/feed-safety";
 import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
@@ -456,7 +456,7 @@ export function DiscussionBoard({
                   {isStaff && d.share_group ? (
                     <span className="inline-flex items-center gap-1"><Link2 className="size-3.5" /> {d.thread_id ? "Shared thread" : "Posted to several classes"}</span>
                   ) : null}
-                  {d.edited_at ? <span>Edited {formatDate(d.edited_at)}</span> : null}
+                  {d.edited_at ? <span>Edited {formatDateTime(d.edited_at)}</span> : null}
                   {d.closed ? <Badge variant="outline">Closed to new posts</Badge> : null}
                 </div>
               </div>
@@ -753,7 +753,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                 <div key={p.id} className="rounded-md border border-border p-3">
                   <p className="flex items-center text-xs font-semibold">
                     {nameFor(p.author_id)}
-                    <span className="ml-2 font-normal text-muted-foreground">{formatDate(p.created_at)}</span>
+                    <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(p.created_at)}</span>
                     {scoreTag(p)}
                   </p>
                   <FormattedText text={p.body} className="mt-1" />
@@ -776,7 +776,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                         <div key={r.id} className="py-1">
                           <p className="flex items-center text-xs font-semibold">
                             {nameFor(r.author_id)}
-                            <span className="ml-2 font-normal text-muted-foreground">{formatDate(r.created_at)}</span>
+                            <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(r.created_at)}</span>
                             {scoreTag(r)}
                           </p>
                           <FormattedText text={r.body} className="mt-1" />
@@ -968,7 +968,7 @@ function GradeByStudent({
                 {main.map((p) => (
                   <div key={p.id} className="flex items-start gap-3 rounded bg-secondary/40 p-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Response · {formatDate(p.created_at)}</p>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Response · {formatDateTime(p.created_at)}</p>
                       <FormattedText text={p.body} className="mt-1" />
                     </div>
                     {scoreInput(p)}
@@ -978,7 +978,7 @@ function GradeByStudent({
                   <div key={p.id} className="flex items-start gap-3 border-l-2 border-border pl-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Reply · {formatDate(p.created_at)}
+                        Reply · {formatDateTime(p.created_at)}
                       </p>
                       <FormattedText text={p.body} className="mt-1" />
                     </div>

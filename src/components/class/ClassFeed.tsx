@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/school";
+import { formatDateTime } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { POST_MAX_LENGTH, REPLY_MAX_LENGTH, safeLink, splitPinned } from "@/lib/feed-safety";
 
@@ -132,7 +132,7 @@ export function ClassFeed({ scope, canPost = true, desktopReview = false }: { sc
                 </span>
               ) : null}
             </p>
-            <p className="text-xs text-muted-foreground">{formatDate(post.created_at)}</p>
+            <p className="text-xs text-muted-foreground">{formatDateTime(post.created_at)}</p>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">
             {isStaff && (
@@ -326,7 +326,7 @@ function Comments({
           <div key={c.id} className={desktopReview ? "min-w-0 border-l border-border pl-3 py-2 text-sm" : "rounded-md bg-secondary/50 px-3 py-2 text-sm"}>
             <p className="text-xs font-semibold">
               {nameFor(c.author_id)}
-              <span className="ml-2 font-normal text-muted-foreground">{formatDate(c.created_at)}</span>
+              <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(c.created_at)}</span>
             </p>
             <p className="mt-1 max-w-prose whitespace-pre-wrap leading-relaxed">{c.body}</p>
             {(isStaff || c.author_id === user?.id) && (
