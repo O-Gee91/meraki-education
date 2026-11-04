@@ -130,6 +130,18 @@ function ClassDetailPage() {
   const [previewRequested, setPreviewing] = useState(false);
   const [classTab, setClassTab] = useState("gradebook");
   const [previewTab, setPreviewTab] = useState("gradebook");
+  // Coursework cards for discussion assignments can jump to the Discussion board tab.
+  useEffect(() => {
+    const open = (event: Event) => {
+      const tab = (event as CustomEvent<string>).detail;
+      if (!tab) return;
+      setClassTab(tab);
+      setPreviewTab(tab);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("meraki:open-class-tab", open);
+    return () => window.removeEventListener("meraki:open-class-tab", open);
+  }, []);
   useEffect(() => {
     setClassTab("gradebook");
     setPreviewTab("gradebook");

@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { ProofreadEditor, ProofreadNotes } from "@/components/class/ProofreadPanel";
+import { DiscussionWorkPreview, OpenDiscussionButton, useLinkedDiscussion } from "@/components/class/DiscussionWorkPreview";
 import {
   QuickScoreBar,
   QuickScoreEditButton,
@@ -194,6 +195,7 @@ function StudentWorkPanel({
   const me = previewId ? { id: previewId } : ownRecord;
 
   const { data: submissions = [] } = useSubmissions(assignment.id);
+  const { data: linkedDiscussion } = useLinkedDiscussion(assignment.id);
   const mine = me ? submissions.find((s) => s.student_id === me.id) : undefined;
 
   const { data: grade } = useQuery({
@@ -301,9 +303,18 @@ function StudentWorkPanel({
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="outline">
-          {assignment.submission_mode === "other" ? "Scored by your teacher" : "Collected in class"}
+          {linkedDiscussion
+            ? "Discussion"
+            : assignment.submission_mode === "other"
+              ? "Scored by your teacher"
+              : "Collected in class"}
         </Badge>
-        {mine?.status === "collected" || mine?.status === "returned" ? (
+        {linkedDiscussion ? (
+          <>
+            <span className="text-muted-foreground">Post and reply on the Discussion board.</span>
+            <OpenDiscussionButton label="Go to Discussion" />
+          </>
+        ) : mine?.status === "collected" || mine?.status === "returned" ? (
           <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
             <CheckCircle2 className="h-3 w-3" /> Checked in by teacher
           </Badge>
@@ -515,6 +526,7 @@ function StaffCollectPanel({
   const [confirmClose, setConfirmClose] = useState(false);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
+  const { data: linkedDiscussion } = useLinkedDiscussion(assignment.id);
 
 
   const { data: setup } = useQuery({
@@ -1144,12 +1156,15 @@ function StaffCollectPanel({
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <Badge variant="outline">
-        {assignment.submission_mode === "online"
-          ? "Complete online"
-          : assignment.submission_mode === "other"
-            ? "Other — scored by teacher"
-            : "Collected in class"}
+        {linkedDiscussion
+          ? "Discussion"
+          : assignment.submission_mode === "online"
+            ? "Complete online"
+            : assignment.submission_mode === "other"
+              ? "Other — scored by teacher"
+              : "Collected in class"}
       </Badge>
+      {linkedDiscussion ? <OpenDiscussionButton /> : null}
       {assignment.submission_mode === "collected" ? (
         <>
           <WorkStateBadge
@@ -1679,8 +1694,12 @@ function StaffCollectPanel({
                       </div>
 
                       <div className="space-y-2">
-                        <h4 className="text-sm font-semibold uppercase text-muted-foreground">Submission</h4>
-                        {activeSubmission?.body ? (
+                        <h4 className="text-sm font-semibold uppercase text-muted-foreground">
+                          {linkedDiscussion ? "Discussion posts" : "Submission"}
+                        </h4>
+                        {linkedDiscussion ? (
+                          <DiscussionWorkPreview discussion={linkedDiscussion} studentId={activeStudent.id} />
+                        ) : activeSubmission?.body ? (
                           <div className="max-h-72 overflow-y-auto whitespace-pre-wrap border-l-2 border-primary pl-4 text-base leading-7">
                             {activeSubmission.body}
                           </div>
