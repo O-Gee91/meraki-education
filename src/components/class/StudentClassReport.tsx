@@ -217,7 +217,7 @@ export function StudentClassReport({
           pointsPossible: Number(submission?.total_points ?? 0),
           score,
           markCode: null,
-          status: submission ? (submission.status === "needs_review" ? "Needs review" : "Graded") : missing ? "Not completed" : "Not started",
+          status: submission ? (submission.status === "needs_review" ? "Needs review" : "Graded") : missing ? "Missing" : "Not started",
           completed: Boolean(submission),
         };
       });
@@ -376,7 +376,7 @@ export function StudentClassReport({
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-4">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Needs attention</p>
-            <p className="mt-1 text-2xl font-semibold">{rows.filter((row) => row.status === "Missing" || row.status === "Not completed").length}</p>
+            <p className="mt-1 text-2xl font-semibold">{rows.filter((row) => row.status === "Missing").length}</p>
             <p className="text-sm text-muted-foreground">Missing or incomplete</p>
           </div>
         </div>
@@ -395,7 +395,7 @@ export function StudentClassReport({
                     <td className="px-3 py-3"><p className="font-semibold">{row.title}</p><p className="text-xs text-muted-foreground">{row.kind}</p></td>
                     <td className="px-3 py-3"><Badge variant="secondary">{row.category}</Badge></td>
                     <td className="px-3 py-3 text-muted-foreground">{row.dueDate ? formatDate(row.dueDate) : "No due date"}</td>
-                    <td className="px-3 py-3"><Badge variant={row.status === "Missing" || row.status === "Not completed" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
+                    <td className="px-3 py-3"><Badge variant={row.status === "Missing" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <Input
