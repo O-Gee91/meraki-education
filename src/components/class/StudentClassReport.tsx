@@ -152,7 +152,10 @@ export function StudentClassReport({
       const mark = findMark(markCodeFromComment(grade?.comment), setup.marks);
       const score = grade?.points_earned == null ? null : Number(grade.points_earned);
       const dueDate = assessment?.due_at?.slice(0, 10) ?? assignment.due_date;
-      const handedIn = Boolean(submission || assessmentSubmission);
+      // Saved drafts are not handed in; only submitted/collected/returned count.
+      const turnedIn =
+        submission != null && ["submitted", "collected", "returned"].includes(submission.status);
+      const handedIn = Boolean(turnedIn || assessmentSubmission);
       // Only auto-flag Missing when the item existed before its due date and the
       // grace period has passed; backdated work stays neutral ("Assigned").
       const autoFlag = assessment
@@ -164,7 +167,9 @@ export function StudentClassReport({
         (score != null
           ? "Graded"
           : handedIn
-            ? "Not completed"
+            ? submission?.status === "collected"
+              ? "Collected · not graded"
+              : "Turned in · not graded"
             : missing
               ? "Missing"
               : dueDate && dueDate < today
