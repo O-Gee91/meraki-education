@@ -152,7 +152,10 @@ export function StudentClassReport({
       const mark = findMark(markCodeFromComment(grade?.comment), setup.marks);
       const score = grade?.points_earned == null ? null : Number(grade.points_earned);
       const dueDate = assessment?.due_at?.slice(0, 10) ?? assignment.due_date;
-      const handedIn = Boolean(submission || assessmentSubmission);
+      // Saved drafts are not handed in; only submitted/collected/returned count.
+      const turnedIn =
+        submission != null && ["submitted", "collected", "returned"].includes(submission.status);
+      const handedIn = Boolean(turnedIn || assessmentSubmission);
       // Only auto-flag Missing when the item existed before its due date and the
       // grace period has passed; backdated work stays neutral ("Assigned").
       const autoFlag = assessment
@@ -164,7 +167,9 @@ export function StudentClassReport({
         (score != null
           ? "Graded"
           : handedIn
-            ? "Not completed"
+            ? submission?.status === "collected"
+              ? "Collected · not graded"
+              : "Turned in · not graded"
             : missing
               ? "Missing"
               : dueDate && dueDate < today
@@ -212,7 +217,7 @@ export function StudentClassReport({
           pointsPossible: Number(submission?.total_points ?? 0),
           score,
           markCode: null,
-          status: submission ? (submission.status === "needs_review" ? "Needs review" : "Graded") : missing ? "Not completed" : "Not started",
+          status: submission ? (submission.status === "needs_review" ? "Needs review" : "Graded") : missing ? "Missing" : "Not started",
           completed: Boolean(submission),
         };
       });
@@ -371,7 +376,7 @@ export function StudentClassReport({
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-4">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Needs attention</p>
-            <p className="mt-1 text-2xl font-semibold">{rows.filter((row) => row.status === "Missing" || row.status === "Not completed").length}</p>
+            <p className="mt-1 text-2xl font-semibold">{rows.filter((row) => row.status === "Missing").length}</p>
             <p className="text-sm text-muted-foreground">Missing or incomplete</p>
           </div>
         </div>
@@ -390,7 +395,7 @@ export function StudentClassReport({
                     <td className="px-3 py-3"><p className="font-semibold">{row.title}</p><p className="text-xs text-muted-foreground">{row.kind}</p></td>
                     <td className="px-3 py-3"><Badge variant="secondary">{row.category}</Badge></td>
                     <td className="px-3 py-3 text-muted-foreground">{row.dueDate ? formatDate(row.dueDate) : "No due date"}</td>
-                    <td className="px-3 py-3"><Badge variant={row.status === "Missing" || row.status === "Not completed" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
+                    <td className="px-3 py-3"><Badge variant={row.status === "Missing" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <Input
