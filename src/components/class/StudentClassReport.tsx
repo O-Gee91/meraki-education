@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { isHandedIn, resolveWorkState } from "@/lib/coursework-state";
 import {
   computeAverage,
   findMark,
@@ -153,28 +154,21 @@ export function StudentClassReport({
       const score = grade?.points_earned == null ? null : Number(grade.points_earned);
       const dueDate = assessment?.due_at?.slice(0, 10) ?? assignment.due_date;
       // Saved drafts are not handed in; only submitted/collected/returned count.
-      const turnedIn =
-        submission != null && ["submitted", "collected", "returned"].includes(submission.status);
-      const handedIn = Boolean(turnedIn || assessmentSubmission);
+      const handedIn = Boolean(isHandedIn(submission?.status) || assessmentSubmission);
       // Only auto-flag Missing when the item existed before its due date and the
       // grace period has passed; backdated work stays neutral ("Assigned").
       const autoFlag = assessment
         ? Boolean(dueDate && dueDate < today)
         : shouldAutoFlag({ created_at: assignment.created_at, due_date: dueDate }, today);
       const missing = Boolean(autoFlag && score == null && !mark && !handedIn);
-      const status =
-        mark?.label ??
-        (score != null
-          ? "Graded"
-          : handedIn
-            ? submission?.status === "collected"
-              ? "Collected · not graded"
-              : "Turned in · not graded"
-            : missing
-              ? "Missing"
-              : dueDate && dueDate < today
-                ? "Assigned"
-                : "Not started");
+      const status = resolveWorkState({
+        score,
+        markLabel: mark?.label,
+        submissionStatus: submission?.status,
+        handedInElsewhere: Boolean(assessmentSubmission),
+        missing,
+        pastDue: Boolean(dueDate && dueDate < today),
+      }).label;
       return {
         key: assignment.id,
         assignmentId: assignment.id,
