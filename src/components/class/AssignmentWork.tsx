@@ -949,7 +949,10 @@ function StaffCollectPanel({
     const ws = resolveWorkState({
       score: g?.points_earned == null ? null : Number(g.points_earned),
       markLabel: mark || null,
-      submissionStatus: sub?.status === "collected" || !onlineEmpty ? sub?.status : null,
+      submissionStatus:
+        sub?.status === "collected" || (assignment.submission_mode === "online" && !onlineEmpty)
+          ? sub?.status
+          : null,
       missing: false,
       pastDue: false,
     });
