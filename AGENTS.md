@@ -25,3 +25,4 @@
 
 - Rule: Discussion sharing uses one discussion row per class (linked by share_group); shared threads point thread_id at a host discussion so posts live in one place while each class keeps its own gradebook assignment. Per-post scores live in discussion_post_scores and their sum is synced to grades.
 - Missing work is decided only by `isMissingWork` in src/lib/missing-work.ts; every screen counting missing work must use it so counts agree.
+- Derive coursework status labels through resolveWorkState in src/lib/coursework-state.ts; one precedence order keeps every screen's status wording consistent.
