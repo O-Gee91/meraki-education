@@ -1,3 +1,4 @@
+import { StudentMfaGate } from "@/components/settings/StudentMfaGate";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -457,7 +458,9 @@ export function AppShell({
               Students can't open this page. Exit student view to use it.
             </p>
           ) : (
-            children
+            <StudentMfaGate enforce={primaryRole === "student" && !previewingStudent && !realStaff}>
+              {children}
+            </StudentMfaGate>
           )}
         </main>
       </div>
