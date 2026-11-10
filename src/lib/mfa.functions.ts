@@ -162,7 +162,13 @@ export const adminResetMfa = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ userId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin");
-    if (!isAdmin) throw new Error("Only administrators can reset two-step verification");
+    if (!isAdmin) {
+      const { data: isStaff } = await context.supabase.rpc("is_staff");
+      const sbCheck = await admin();
+      const { data: roles } = await sbCheck.from("user_roles").select("role").eq("user_id", data.userId);
+      const onlyStudent = (roles ?? []).length > 0 && (roles ?? []).every((r) => r.role === "student");
+      if (!isStaff || !onlyStudent) throw new Error("Only administrators can reset two-step verification for staff");
+    }
     await removeAllFactors(data.userId);
     const sb = await admin();
     const { data: profile } = await sb.from("profiles").select("full_name, email").eq("id", data.userId).maybeSingle();
