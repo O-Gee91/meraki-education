@@ -18,6 +18,7 @@ import { isMissingWork } from "@/lib/missing-work";
 type RosterRow = {
   id: string;
   student_id: string;
+  created_at?: string | null;
   students: {
     id: string;
     first_name: string;
@@ -255,6 +256,7 @@ export function PulseDashboard({
       grade: g,
       submitted: submissions.some((s) => s.assignment_id === assignment.id && s.student_id === studentId),
       today: todayKey,
+      enrolledAt: roster.find((r) => r.student_id === studentId)?.created_at ?? null,
     });
   };
 
