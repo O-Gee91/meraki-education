@@ -1,3 +1,4 @@
+import { resolveDiscussionState } from "@/lib/discussion-state";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -942,7 +943,7 @@ function GradeByStudent({
         const replies = mine.filter((p) => p.parent_id);
         const saved = scores.filter((s) => s.author_id === st.user_id);
         const total = studentDiscussionTotal(saved);
-        const status = main.length === 0 ? "Missing" : replies.length >= d.required_replies ? "Complete" : "Partial";
+        const status = resolveDiscussionState({ rootCount: main.length, replyCount: replies.length, requiredReplies: d.required_replies }).label;
         const dirty = mine.some((p) => pending[p.id] !== undefined);
         return (
           <section key={st.id} className="rounded-md border border-border p-3">

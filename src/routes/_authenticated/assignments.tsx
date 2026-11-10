@@ -1,3 +1,4 @@
+import { resolveWorkState } from "@/lib/coursework-state";
 import { isMissingWork } from "@/lib/missing-work";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -161,7 +162,6 @@ function AssignmentsHubPage() {
       );
       const turnedIn =
         sub != null && ["submitted", "collected", "returned"].includes(sub.status);
-      const graded = grade != null && (grade.points_earned != null || !!markCodeFromComment(grade.comment));
       let status: HubRow["status"];
       const missing = isMissingWork({
         assignment: a,
@@ -169,9 +169,18 @@ function AssignmentsHubPage() {
         submitted: turnedIn,
         today,
       });
-      if (missing) status = "missing";
-      else if (graded) status = "graded";
-      else if (turnedIn) status = "submitted";
+      const mark = markCodeFromComment(grade?.comment);
+      const ws = resolveWorkState({
+        score: grade?.points_earned == null ? null : Number(grade.points_earned),
+        markLabel: mark && mark !== "M" ? mark : null,
+        submissionStatus: sub?.status,
+        missing,
+        pastDue: !!a.due_date && a.due_date < today,
+      });
+      // An explicit "M" mark always reads as missing for students.
+      if (missing || mark === "M") status = "missing";
+      else if (ws.state === "graded" || ws.state === "marked") status = "graded";
+      else if (ws.state === "collected" || ws.state === "turned_in") status = "submitted";
       else if (a.due_date && a.due_date <= soon) status = "due";
       else status = "upcoming";
       const feedback =

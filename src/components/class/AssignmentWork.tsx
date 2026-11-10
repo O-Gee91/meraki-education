@@ -1,3 +1,4 @@
+import { resolveWorkState } from "@/lib/coursework-state";
 import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -940,14 +941,23 @@ function StaffCollectPanel({
   const workState = (studentId: string): "graded" | "missing" | "collected" | "none" => {
     const sub = submissions.find((x) => x.student_id === studentId);
     const g = grades.find((x) => x.student_id === studentId);
-    if (markCodeFromComment(g?.comment) === "M") return "missing";
-    if (g && (g.points_earned != null || markCodeFromComment(g.comment))) return "graded";
-    if (!sub) return "none";
-    if (sub.status === "collected") return "collected";
-    if (assignment.submission_mode === "online") {
-      const hasWork = Boolean(sub.body?.trim() || sub.file_upload_id);
-      if ((sub.status === "submitted" || sub.status === "returned") && hasWork) return "collected";
-    }
+    const mark = markCodeFromComment(g?.comment);
+    if (mark === "M") return "missing";
+    // Online hand-ins only count when they contain actual work.
+    const onlineEmpty =
+      assignment.submission_mode === "online" && !(sub?.body?.trim() || sub?.file_upload_id);
+    const ws = resolveWorkState({
+      score: g?.points_earned == null ? null : Number(g.points_earned),
+      markLabel: mark || null,
+      submissionStatus:
+        sub?.status === "collected" || (assignment.submission_mode === "online" && !onlineEmpty)
+          ? sub?.status
+          : null,
+      missing: false,
+      pastDue: false,
+    });
+    if (ws.state === "graded" || ws.state === "marked") return "graded";
+    if (ws.state === "collected" || ws.state === "turned_in") return "collected";
     return "none";
   };
 
