@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MfaChallenge } from "@/components/auth/MfaChallenge";
+import { needsSecondFactor } from "@/lib/mfa-client";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { GraduationCap } from "lucide-react";
 import { toast } from "sonner";
@@ -75,6 +77,12 @@ function AuthPage() {
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [staffNote, setStaffNote] = useState("");
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [mfaStep, setMfaStep] = useState(false);
+
+  // Returning with a password-only session on an account with 2FA: ask for the code.
+  useEffect(() => {
+    void needsSecondFactor().then((need) => need && setMfaStep(true));
+  }, []);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -104,6 +112,10 @@ function AuthPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) break;
       await new Promise((r) => setTimeout(r, 300));
+    }
+    if (await needsSecondFactor()) {
+      setMfaStep(true);
+      return;
     }
     await recordLogin();
     goToApp();
@@ -195,7 +207,19 @@ function AuthPage() {
           <h1 className="text-2xl font-semibold tracking-normal">Welcome to Meraki</h1>
         </div>
         <div className="min-w-0">
-          {pendingApproval ? (
+          {mfaStep ? (
+            <MfaChallenge
+              onDone={() => {
+                setMfaStep(false);
+                void recordLogin();
+                goToApp();
+              }}
+              onCancel={async () => {
+                await supabase.auth.signOut();
+                setMfaStep(false);
+              }}
+            />
+          ) : pendingApproval ? (
             <div className="panel p-6 text-center">
               <h2 className="text-xl font-semibold tracking-normal">Waiting for administrator approval</h2>
               <p className="mt-3 text-sm text-muted-foreground">
