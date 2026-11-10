@@ -4,6 +4,7 @@ import { template as messageNotificationTemplate } from './message-notification'
 import { template as passwordResetTemplate } from './password-reset'
 import { template as courseworkPostedTemplate } from './coursework-posted'
 import { template as gradePostedTemplate } from './grade-posted'
+import { template as mfaCodeTemplate } from './mfa-code'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -27,4 +28,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'password-reset': passwordResetTemplate,
   'coursework-posted': courseworkPostedTemplate,
   'grade-posted': gradePostedTemplate,
+  'mfa-code': mfaCodeTemplate,
 }
