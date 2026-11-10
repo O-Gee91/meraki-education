@@ -1,3 +1,4 @@
+import { resolveWorkState } from "@/lib/coursework-state";
 import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

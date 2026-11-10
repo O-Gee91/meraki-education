@@ -1,3 +1,4 @@
+import { resolveWorkState } from "@/lib/coursework-state";
 import { isMissingWork } from "@/lib/missing-work";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
