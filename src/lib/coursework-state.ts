@@ -27,10 +27,10 @@ export function isHandedIn(status: string | null | undefined): boolean {
 
 export interface WorkStateInput {
   score: number | null;
-  markLabel?: string | null;
-  submissionStatus?: string | null;
+  markLabel?: string | null | undefined;
+  submissionStatus?: string | null | undefined;
   /** Handed in through another channel (e.g. an online assessment submission). */
-  handedInElsewhere?: boolean;
+  handedInElsewhere?: boolean | undefined;
   missing: boolean;
   pastDue: boolean;
 }
