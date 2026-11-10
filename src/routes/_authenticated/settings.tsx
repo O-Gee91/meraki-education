@@ -7,6 +7,7 @@ import { KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
+import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,6 +106,7 @@ function SettingsPage() {
       description="Keep your sign-in details up to date."
     >
       <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:gap-12">
+      <div className="min-w-0 space-y-10">
       <form onSubmit={submit} className="w-full min-w-0 max-w-lg space-y-5">
         <div>
           <h2 className="text-lg font-semibold">Change password</h2>
@@ -155,6 +157,10 @@ function SettingsPage() {
           {busy ? "Saving…" : "Update password"}
         </Button>
       </form>
+      <div className="border-t border-border pt-8">
+        <TwoFactorCard suggest={isStaff} />
+      </div>
+      </div>
 
       <section aria-labelledby="recent-sign-ins" className="min-w-0 border-t border-border pt-8 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-12">
         <div className="max-w-lg">

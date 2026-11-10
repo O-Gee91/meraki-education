@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { adminResetMfa, listMfaStatus } from "@/lib/mfa.functions";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -56,6 +58,13 @@ function PeoplePage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const mfaStatusFn = useServerFn(listMfaStatus);
+  const resetMfaFn = useServerFn(adminResetMfa);
+  const { data: mfaOn = new Set<string>() } = useQuery({
+    queryKey: ["mfa-status"],
+    enabled: isAdmin,
+    queryFn: async () => new Set((await mfaStatusFn()).enabled),
+  });
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ["people"],
@@ -186,6 +195,30 @@ function PeoplePage() {
                   <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                     <span>{p.full_name || "Unnamed"}</span>
                     {p.id === user?.id ? <Badge variant="secondary">you</Badge> : null}
+                    {mfaOn.has(p.id) ? (
+                      <Badge variant="outline" className="font-normal">2FA on</Badge>
+                    ) : p.roles.some((r) => r === "teacher" || r === "admin") ? (
+                      <span className="text-xs font-normal text-muted-foreground">2FA off</span>
+                    ) : null}
+                    {mfaOn.has(p.id) && p.id !== user?.id ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs font-normal"
+                        onClick={async () => {
+                          if (!window.confirm(`Turn off two-step verification for ${p.full_name || "this account"}? They'll get an email and can set it up again.`)) return;
+                          try {
+                            await resetMfaFn({ data: { userId: p.id } });
+                            toast.success("Two-step verification reset");
+                            void queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
+                          } catch {
+                            toast.error("Couldn't reset two-step verification");
+                          }
+                        }}
+                      >
+                        Reset 2FA
+                      </Button>
+                    ) : null}
                   </div>
 
                   <p className="mt-1 text-xs text-muted-foreground">

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { recordLogin } from "@/lib/login-tracking";
+import { needsSecondFactor } from "@/lib/mfa-client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIntegrityGuard } from "@/hooks/useIntegrityGuard";
 
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
       ({ data, error } = await supabase.auth.getUser());
     }
     if (error || !data.user) throw redirect({ to: "/auth" });
+    if (await needsSecondFactor()) throw redirect({ to: "/auth" });
     return { user: data.user };
   },
   component: AuthenticatedLayout,
