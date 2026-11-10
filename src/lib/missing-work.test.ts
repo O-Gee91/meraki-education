@@ -23,6 +23,15 @@ describe("isMissingWork", () => {
   it("does not count draft assignments", () => {
     expect(isMissingWork({ assignment: { ...pastDue, status: "draft" }, today })).toBe(false);
   });
+  it("does not count work due before a transferred student joined", () => {
+    expect(isMissingWork({ assignment: pastDue, enrolledAt: "2026-10-25T03:00:00Z", today })).toBe(false);
+  });
+  it("still counts work due after the student joined", () => {
+    expect(isMissingWork({ assignment: pastDue, enrolledAt: "2026-10-15T03:00:00Z", today })).toBe(true);
+  });
+  it("still counts an explicit M mark for a transferred student", () => {
+    expect(isMissingWork({ assignment: pastDue, grade: { comment: "MARK:M" }, enrolledAt: "2026-10-25", today })).toBe(true);
+  });
   it("does not count backdated work", () => {
     expect(isMissingWork({ assignment: { ...pastDue, created_at: "2026-10-25" }, today })).toBe(false);
   });
