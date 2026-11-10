@@ -27,3 +27,5 @@
 - Missing work is decided only by `isMissingWork` in src/lib/missing-work.ts; every screen counting missing work must use it so counts agree.
 - Derive coursework status labels through resolveWorkState in src/lib/coursework-state.ts; one precedence order keeps every screen's status wording consistent.
 - Derive discussion participation labels through resolveDiscussionState in src/lib/discussion-state.ts; grading views share one completeness rule.
+
+- Two-factor sign-in uses built-in Auth MFA for TOTP; backup and email recovery codes are hashed server-side and, when used, remove the authenticator (Auth cannot grant aal2 from custom codes).

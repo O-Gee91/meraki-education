@@ -120,7 +120,7 @@ export const sendMfaEmailCode = createServerFn({ method: "POST" })
       templateData: { recipientName: profile?.full_name ?? undefined, code },
     }).catch(() => undefined);
     const [name, domain] = to.split("@");
-    return { ok: true as const, sentTo: `${name.slice(0, 2)}•••@${domain}` };
+    return { ok: true as const, sentTo: `${(name ?? "").slice(0, 2)}•••@${domain}` };
   });
 
 export const recoverWithEmailCode = createServerFn({ method: "POST" })
