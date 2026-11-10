@@ -213,7 +213,7 @@ function ClassDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("id, student_id, students(id, first_name, last_name, grade_level, student_number, is_tester)")
+        .select("id, student_id, created_at, students(id, first_name, last_name, grade_level, student_number, is_tester)")
         .eq("class_id", classId);
       if (error) throw error;
       return (data ?? []).filter((r) => r.students);
@@ -303,11 +303,14 @@ function ClassDetailPage() {
     () => new Set(gradebookSubmissions.map((s) => `${s.student_id}:${s.assignment_id}`)),
     [gradebookSubmissions],
   );
+  const enrolledAtFor = (studentId: string) =>
+    fullRoster.find((r) => r.student_id === studentId)?.created_at ?? null;
   const missingFor = (studentId: string, assignment: { id: string; due_date?: string | null; created_at?: string | null; status?: string | null }) =>
     isMissingWork({
       assignment,
       grade: gradeFor(studentId, assignment.id),
       submitted: submittedKeys.has(`${studentId}:${assignment.id}`),
+      enrolledAt: enrolledAtFor(studentId),
     });
 
   // Per-assignment counts for the Coursework tab quick filters (test accounts excluded).
@@ -323,7 +326,7 @@ function ClassDetailPage() {
       for (const sid of realStudents) {
         const g = grades.find((x) => x.student_id === sid && x.assignment_id === a.id);
         const submitted = submittedKeys.has(`${sid}:${a.id}`);
-        if (isMissingWork({ assignment: a, grade: g, submitted })) m++;
+        if (isMissingWork({ assignment: a, grade: g, submitted, enrolledAt: enrolledAtFor(sid) })) m++;
         if (submitted && (g?.points_earned == null) && !markCodeFromComment(g?.comment)) u++;
       }
       missing[a.id] = m;

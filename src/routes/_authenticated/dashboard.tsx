@@ -533,7 +533,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
     queryFn: async () => {
       const { data: enrols, error: eErr } = await supabase
         .from("enrollments")
-        .select("class_id")
+        .select("class_id, created_at")
         .eq("student_id", me!.id);
       if (eErr) throw eErr;
       let classIds = (enrols ?? []).map((e) => e.class_id);
@@ -542,7 +542,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
       // Same rule as Gradebook, Pulse and the Assignments hub.
       const { data: due, error: aErr } = await supabase
         .from("assignments")
-        .select("id, due_date, created_at, status")
+        .select("id, class_id, due_date, created_at, status")
         .in("class_id", classIds)
         .eq("status", "published");
       if (aErr) throw aErr;
@@ -572,6 +572,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
           grade: (graded ?? []).find((g) => g.assignment_id === a.id),
           submitted: submitted.has(a.id),
           today,
+          enrolledAt: (enrols ?? []).find((e) => e.class_id === a.class_id)?.created_at ?? null,
         }),
       ).length;
     },

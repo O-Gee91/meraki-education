@@ -20,12 +20,17 @@ export interface MissingInput {
   /** Whether the student turned it in (submitted/collected/returned — never a saved draft). */
   submitted?: boolean;
   today?: string;
+  /** When the student joined this class; work due on or before that day is never auto-missing. */
+  enrolledAt?: string | null;
 }
 
-export function isMissingWork({ assignment, grade, submitted, today = todayKey() }: MissingInput): boolean {
+export function isMissingWork({ assignment, grade, submitted, today = todayKey(), enrolledAt }: MissingInput): boolean {
   const code = markCodeFromComment(grade?.comment);
   if (code === "M") return true;
   if (code) return false; // EX, INC, L… are teacher decisions, not missing
+  const due = assignment.due_date?.slice(0, 10);
+  const joined = enrolledAt?.slice(0, 10);
+  if (due && joined && due <= joined) return false; // due before the student joined (e.g. transfer)
   if (assignment.status && assignment.status !== "published") return false;
   if (grade?.points_earned != null && grade.points_earned !== "") return false;
   if (submitted) return false;

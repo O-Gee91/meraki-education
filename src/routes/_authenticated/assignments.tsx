@@ -88,7 +88,7 @@ function AssignmentsHubPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("student_id, class_id, classes(id, name)")
+        .select("student_id, class_id, created_at, classes(id, name)")
         .in("student_id", studentIds);
       if (error) throw error;
       return data ?? [];
@@ -168,6 +168,7 @@ function AssignmentsHubPage() {
         grade,
         submitted: turnedIn,
         today,
+        enrolledAt: enrollments.find((e) => e.class_id === a.class_id)?.created_at ?? null,
       });
       const mark = markCodeFromComment(grade?.comment);
       const ws = resolveWorkState({
@@ -202,7 +203,7 @@ function AssignmentsHubPage() {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, submissions, grades, studentIds, today]);
+  }, [assignments, submissions, grades, studentIds, today, enrollments]);
 
   const counts = useMemo(
     () => ({
