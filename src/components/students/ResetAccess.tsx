@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { resetStudentAccess } from "@/lib/accounts.functions";
+import { adminResetMfa } from "@/lib/mfa.functions";
 import { USERNAME_RULES } from "@/lib/usernames";
 
 type Props = {
@@ -35,6 +36,12 @@ export function ResetAccess({
   onDone,
 }: Props) {
   const reset = useServerFn(resetStudentAccess);
+  const resetMfa = useServerFn(adminResetMfa);
+  const mfa = useMutation({
+    mutationFn: () => resetMfa({ data: { userId } }),
+    onSuccess: () => toast.success("Two-step verification reset. They'll set it up again at next sign-in."),
+    onError: (e: Error) => toast.error(e.message),
+  });
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -115,6 +122,13 @@ export function ResetAccess({
             Leave blank to keep the current address. Messages are delivered here as well as in the
             site.
           </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3 text-sm">
+          <span className="text-muted-foreground">Lost their phone? Reset two-step verification.</span>
+          <Button type="button" size="sm" variant="outline" disabled={mfa.isPending} onClick={() => mfa.mutate()}>
+            {mfa.isPending ? "Resetting…" : "Reset 2FA"}
+          </Button>
         </div>
 
         {result ? (
