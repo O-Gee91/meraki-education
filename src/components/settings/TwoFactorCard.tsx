@@ -25,7 +25,7 @@ function CodeInput({ value, onChange, disabled }: { value: string; onChange: (v:
   );
 }
 
-export function TwoFactorCard({ suggest }: { suggest: boolean }) {
+export function TwoFactorCard({ suggest, onDone }: { suggest: boolean; onDone?: () => void }) {
   const qc = useQueryClient();
   const regenFn = useServerFn(regenerateBackupCodes);
   const remainingFn = useServerFn(backupCodesRemaining);
@@ -241,7 +241,7 @@ export function TwoFactorCard({ suggest }: { suggest: boolean }) {
                 I saved these codes
               </label>
               <DialogFooter>
-                <Button disabled={!saved} onClick={() => { setStep("closed"); toast.success("Two-step verification is on."); }}>
+                <Button disabled={!saved} onClick={() => { setStep("closed"); toast.success("Two-step verification is on."); onDone?.(); }}>
                   Done
                 </Button>
               </DialogFooter>
