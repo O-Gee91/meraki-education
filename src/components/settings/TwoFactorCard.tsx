@@ -164,8 +164,8 @@ export function TwoFactorCard({ suggest, onDone }: { suggest: boolean; onDone?: 
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Add a second step when you sign in: a 6-digit code from an app on your phone, such as
-            Google Authenticator, Microsoft Authenticator or 1Password.
+            Add a second step when you sign in: a 6-digit code from an authenticator, such as
+            Microsoft Authenticator, Apple Passwords, or a browser extension on your computer.
           </p>
           {suggest && (
             <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">

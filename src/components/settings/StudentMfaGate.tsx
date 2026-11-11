@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorCard } from "./TwoFactorCard";
+import { MfaSetupGuide } from "./MfaSetupGuide";
 
 /** Students must turn on an authenticator before using the app. */
 export function StudentMfaGate({ enforce, children }: { enforce: boolean; children: ReactNode }) {
@@ -34,10 +35,13 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
           It takes about two minutes. Once it's done, you can use Meraki as usual.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-          <li>Install an authenticator app (like Google or Microsoft Authenticator).</li>
+          <li>Get an authenticator: Microsoft Authenticator on a phone, Apple Passwords on iPhone/Mac, or an option for your computer browser.</li>
           <li>Scan the code and type the 6 numbers it shows.</li>
           <li>Save your backup codes somewhere safe. Lost your phone? Ask your teacher to reset it.</li>
         </ol>
+        <div className="mt-4">
+          <MfaSetupGuide />
+        </div>
       </div>
       <TwoFactorCard suggest={false} onDone={() => setRequired(false)} />
     </div>
