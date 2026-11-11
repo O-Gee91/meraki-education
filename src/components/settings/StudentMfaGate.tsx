@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorCard } from "./TwoFactorCard";
@@ -7,6 +7,7 @@ import { MfaSetupGuide } from "./MfaSetupGuide";
 
 /** Students must turn on an authenticator before using the app. */
 export function StudentMfaGate({ enforce, children }: { enforce: boolean; children: ReactNode }) {
+  const qc = useQueryClient();
   const [required, setRequired] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["mfa-gate-factor"],
@@ -43,7 +44,11 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
           <MfaSetupGuide />
         </div>
       </div>
-      <TwoFactorCard suggest={false} onDone={() => setRequired(false)} />
+      <TwoFactorCard suggest={false} onDone={() => {
+          // Record the finished setup so the gate stays open after navigating.
+          qc.setQueryData(["mfa-gate-factor"], { has: true });
+          setRequired(false);
+        }} />
     </div>
   );
 }
