@@ -38,7 +38,7 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
         supabase.auth.mfa.listFactors(),
         supabase.auth.getUser(),
       ]);
-      const optedOut = u.user?.user_metadata?.mfa_opt_out === true;
+      const optedOut = u.user?.user_metadata?.["mfa_opt_out"] === true;
       return { has: optedOut || !!data?.totp.some((f) => f.status === "verified") };
     },
   });
