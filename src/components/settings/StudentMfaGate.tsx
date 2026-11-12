@@ -1,6 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorCard } from "./TwoFactorCard";
 import { MfaSetupGuide } from "./MfaSetupGuide";
@@ -9,12 +13,33 @@ import { MfaSetupGuide } from "./MfaSetupGuide";
 export function StudentMfaGate({ enforce, children }: { enforce: boolean; children: ReactNode }) {
   const qc = useQueryClient();
   const [required, setRequired] = useState(false);
+  const [warnOpen, setWarnOpen] = useState(false);
+  const [understood, setUnderstood] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function skip() {
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ data: { mfa_opt_out: true, mfa_opt_out_at: new Date().toISOString() } });
+    setBusy(false);
+    if (error) {
+      toast.error("Couldn't save your choice. Try again.");
+      return;
+    }
+    qc.setQueryData(["mfa-gate-factor"], { has: true });
+    setWarnOpen(false);
+    setRequired(false);
+    toast("Two-step verification is off. You can turn it on anytime in Settings.");
+  }
   const { data, isLoading } = useQuery({
     queryKey: ["mfa-gate-factor"],
     enabled: enforce,
     queryFn: async () => {
-      const { data } = await supabase.auth.mfa.listFactors();
-      return { has: !!data?.totp.some((f) => f.status === "verified") };
+      const [{ data }, { data: u }] = await Promise.all([
+        supabase.auth.mfa.listFactors(),
+        supabase.auth.getUser(),
+      ]);
+      const optedOut = u.user?.user_metadata?.mfa_opt_out === true;
+      return { has: optedOut || !!data?.totp.some((f) => f.status === "verified") };
     },
   });
   useEffect(() => {
@@ -49,6 +74,36 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
           qc.setQueryData(["mfa-gate-factor"], { has: true });
           setRequired(false);
         }} />
+      <div className="text-center">
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setUnderstood(false); setWarnOpen(true); }}>
+          I can't or don't want to use an authenticator · 暂不使用验证器
+        </Button>
+      </div>
+      <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TriangleAlert className="size-5 text-warning" />
+              Continue without two-step verification? · 不使用双重验证？
+            </DialogTitle>
+            <DialogDescription>Your account will be protected by your password only. 您的账号将只受密码保护。</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-3 text-sm">
+            <li><span className="font-medium">Someone could pretend to be you.</span> Anyone who learns your password can post, reply or send messages in your name, and it will be recorded as you.<br /><span className="text-muted-foreground">他人可能冒充您发帖或发消息，记录会显示为您本人。</span></li>
+            <li><span className="font-medium">Your grades and private notes are less protected.</span> Feedback, grades and wellbeing check-ins are behind one password.<br /><span className="text-muted-foreground">成绩、反馈和心情记录只靠一个密码保护。</span></li>
+            <li><span className="font-medium">You could be locked out.</span> If someone changes your password, you'll need a teacher to reset your account.<br /><span className="text-muted-foreground">如果密码被他人修改，需要老师帮您重置账号。</span></li>
+            <li className="text-muted-foreground">Having trouble with codes? Delete the old Meraki entry in your app and scan the newest code. 验证码不对？请删除旧的 Meraki 条目并重新扫描最新二维码。</li>
+          </ul>
+          <label className="flex items-start gap-2 text-sm">
+            <Checkbox checked={understood} onCheckedChange={(v) => setUnderstood(v === true)} className="mt-0.5" />
+            <span>I understand these risks and will keep my password private. 我了解这些风险，并会保管好密码。</span>
+          </label>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" disabled={!understood || busy} onClick={skip}>Continue without it · 继续</Button>
+            <Button onClick={() => setWarnOpen(false)}>Set up authenticator · 设置验证器</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
