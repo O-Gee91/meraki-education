@@ -59,3 +59,7 @@
 
 ## Login accountability (Joe Doyle 2026-11-03)
 - [x] Sign-ins recorded by the database on every authentication, so "Invisible session" clients cannot skip the log
+
+## Student 2FA opt-out (Joe Doyle 2026-11-12)
+- [x] Optional skip with bilingual risk warning and confirmation checkbox
+- [x] Clearer code-mismatch message (old app entry / device time)

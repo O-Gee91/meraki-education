@@ -85,7 +85,7 @@ export function TwoFactorCard({ suggest, onDone }: { suggest: boolean; onDone?: 
     if (error) {
       setBusy(false);
       setCode("");
-      toast.error("That code didn't match. Wait for a new code in your app and try again.");
+      toast.error("That code didn't match. Delete any old Meraki entry in your app, scan this newest code, and check your device time is set to automatic.");
       return;
     }
     try {
