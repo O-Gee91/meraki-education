@@ -1,4 +1,5 @@
-import { BookOpen, Download } from "lucide-react";
+import { BookOpen, Download, PlayCircle } from "lucide-react";
+import setupVideo from "@/assets/student-2fa-setup.mp4.asset.json";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,11 +41,16 @@ export function MfaSetupGuide() {
         <DialogTrigger asChild>
           <Button variant="outline" size="sm"><BookOpen aria-hidden="true" />Setup guide · 设置指引</Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>How to set up two-step verification</DialogTitle>
             <DialogDescription>Pick one tool. None of these need a VPN. 以下工具均无需VPN。</DialogDescription>
           </DialogHeader>
+          <div className="space-y-2">
+            <h3 className="flex items-center gap-1.5 text-sm font-medium"><PlayCircle className="size-4" aria-hidden="true" />Watch how · 观看视频教程 (1 min)</h3>
+            <video src={setupVideo.url} controls preload="metadata" playsInline className="w-full rounded-md border bg-muted" />
+            <a href={setupVideo.url} download="Meraki-2FA-Setup-Video.mp4" className="text-xs text-muted-foreground underline underline-offset-2">Download video · 下载视频</a>
+          </div>
           <Tabs defaultValue="phone">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="phone">Phone or tablet</TabsTrigger>
