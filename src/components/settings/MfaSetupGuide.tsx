@@ -1,5 +1,6 @@
 import { BookOpen, Download, PlayCircle } from "lucide-react";
 import setupVideo from "@/assets/student-2fa-setup.mp4.asset.json";
+import phoneVideo from "@/assets/student-2fa-phone-walkthrough.mp4.asset.json";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,7 +57,14 @@ export function MfaSetupGuide() {
               <TabsTrigger value="phone">Phone or tablet</TabsTrigger>
               <TabsTrigger value="computer">Computer browser</TabsTrigger>
             </TabsList>
-            <TabsContent value="phone"><Rows rows={phone} /></TabsContent>
+            <TabsContent value="phone" className="space-y-3">
+              <div className="space-y-2">
+                <h3 className="flex items-center gap-1.5 text-sm font-medium"><PlayCircle className="size-4" aria-hidden="true" />On your phone · 手机操作演示 (30 sec)</h3>
+                <video src={phoneVideo.url} controls preload="metadata" playsInline className="mx-auto max-h-[60vh] rounded-md border bg-muted" />
+                <a href={phoneVideo.url} download="Meraki-2FA-Phone-Walkthrough.mp4" className="block text-center text-xs text-muted-foreground underline underline-offset-2">Download phone video · 下载手机视频</a>
+              </div>
+              <Rows rows={phone} />
+            </TabsContent>
             <TabsContent value="computer"><Rows rows={computer} /></TabsContent>
           </Tabs>
           <div className="space-y-3 text-sm">
