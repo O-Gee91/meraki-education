@@ -592,7 +592,7 @@ function ClassDetailPage() {
             <div className="space-y-2">
               <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
                 {groups.map((g) => (
-                  <TabsTrigger key={g.key} value={g.key === active.key ? current : g.tabs[0].value} className={UNDERLINE_TAB} data-state={g.key === active.key ? "active" : "inactive"} onClick={() => go(g.tabs[0].value)}>
+                  <TabsTrigger key={g.key} value={g.key === active.key ? current : g.tabs[0].value} className={UNDERLINE_TAB} onClick={() => go(g.tabs[0].value)}>
                     {g.label}
                   </TabsTrigger>
                 ))}
