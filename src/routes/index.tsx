@@ -89,7 +89,7 @@ const AUDIENCES = [
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background [&_h1]:tracking-normal [&_h2]:tracking-normal [&_h3]:tracking-normal">
+    <div className="min-h-dvh bg-background [&_h1]:tracking-normal [&_h2]:tracking-normal [&_h3]:tracking-normal">
       <header className="border-b border-border/60 bg-card">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-5">
           <Link to="/" className="flex min-w-0 items-center gap-2">
