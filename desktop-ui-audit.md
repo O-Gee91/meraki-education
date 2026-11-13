@@ -80,6 +80,7 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 3. Medium — Tabs used wrapping within a fixed-height bar. Changed the class tab bar to auto-height with wrapping, consistent gaps and a quiet divider; grading setup uses semantic theme colors.
 4. Medium — Teacher filters competed with the heading and print control. Moved filter controls into their own full-width aligned grid beneath a divider.
 5. Medium — Student feedback appeared ahead of the grade ledger. Moved it below the ledger and removed the ledger's floating-card shadow; retained all feedback and existing progress/missing-work controls.
+6. Medium — Two "View as student" buttons sat side by side in the class header: a class-only preview and the whole-site toggle in the shared shell. Removed the class-only button and its local banner; the whole-site toggle is the single entry point.
 
 ### Class page verification
 - Signed-in student class with 11 real assignments: all 11 unique headers reachable across four pages; Previous and Next work, last-page Next disabled.
@@ -88,6 +89,7 @@ Auth, landing, dashboard, class page, Students, Reports, Behavior, Well-being, M
 - Coursework, discussion, roster, attendance, files and gradebook tabs open without page overflow at 1280px.
 - Preview build OK; final populated screenshot inspected at 1280×1800.
 - Staff filter layout, full roster, grading dialogs and print behavior were source-reviewed only; available requesting-user session is student-only. Staff visual verification remains open, not claimed complete.
+- Class header shows exactly one "View as student" control; activating it shows the shared "Viewing as student" banner, hides staff-only controls (Co-teachers, Show student IDs, Behavior log) and "Exit student view" restores the staff header.
 - Safari/macOS rendering remains unverified; no next page started.
 
 ## Students ranked issues and fixes
