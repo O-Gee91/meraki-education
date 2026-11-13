@@ -64,7 +64,7 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       for (const key of await fetchDiscussionCompletions(aIds)) {
         const [sid, aid] = key.split(":");
         const k = `${aid}:${sid}`;
-        if (!scored.has(k) && !pending.has(k)) bump(toGrade, aClass.get(aid));
+        if (!scored.has(k) && !pending.has(k)) bump(toGrade, aClass.get(aid ?? ""));
       }
       for (const a of attempts.data ?? []) bump(toReview, sClass.get(a.assessment_id));
 

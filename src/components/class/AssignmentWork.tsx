@@ -1471,7 +1471,7 @@ function StaffCollectPanel({
                                 if (state === "graded")
                                   return <WorkStateBadge state="graded" />;
                                 if (state === "collected")
-                                  return <WorkStateBadge state="collected" label={`${handedInLabel} · not graded`} />;
+                                  return <WorkStateBadge state="collected" label={`${handedInLabel} · needs grading`} />;
                                 if (!online && submission?.status !== "draft")
                                   return <WorkStateBadge state="none" />;
                                 if (submission?.status === "draft")
@@ -1877,7 +1877,7 @@ function WorkStateBadge({
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-medium text-foreground">
         <Inbox className="h-3.5 w-3.5 text-primary" aria-hidden />
-        {label ?? "Collected · not graded"}
+        {label ?? "Collected · needs grading"}
       </span>
     );
   return (
