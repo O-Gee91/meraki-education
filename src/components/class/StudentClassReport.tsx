@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { isHandedIn, resolveWorkState } from "@/lib/coursework-state";
-import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import {
   computeAverage,
   findMark,

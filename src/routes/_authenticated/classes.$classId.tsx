@@ -1,6 +1,6 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { isMissingWork } from "@/lib/missing-work";
-import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { courseworkBucket, isDueSoon } from "@/lib/coursework-view";
 import { todayKey } from "@/lib/assignment-status";
 import { useEffect, useMemo, useState } from "react";

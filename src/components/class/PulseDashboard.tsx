@@ -14,7 +14,7 @@ import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { isMissingWork } from "@/lib/missing-work";
-import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 
 type RosterRow = {
   id: string;

@@ -1,5 +1,5 @@
 import { isMissingWork } from "@/lib/missing-work";
-import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
+import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
