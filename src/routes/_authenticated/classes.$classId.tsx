@@ -1,5 +1,6 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { isMissingWork } from "@/lib/missing-work";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { courseworkBucket, isDueSoon } from "@/lib/coursework-view";
 import { todayKey } from "@/lib/assignment-status";
 import { useEffect, useMemo, useState } from "react";
@@ -296,7 +297,7 @@ function ClassDetailPage() {
         .in("status", ["submitted", "collected", "returned"])
         .in("assignment_id", assignmentIds);
       if (error) throw error;
-      return data ?? [];
+      return withDiscussionSubmissions(data ?? [], assignmentIds);
     },
   });
   const submittedKeys = useMemo(

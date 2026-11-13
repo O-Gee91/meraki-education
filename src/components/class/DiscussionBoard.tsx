@@ -943,14 +943,17 @@ function GradeByStudent({
         const replies = mine.filter((p) => p.parent_id);
         const saved = scores.filter((s) => s.author_id === st.user_id);
         const total = studentDiscussionTotal(saved);
-        const status = resolveDiscussionState({ rootCount: main.length, replyCount: replies.length, requiredReplies: d.required_replies }).label;
+        const dueKey = d.due_at ?? (d.due_date ? `${d.due_date}T23:59:59` : null);
+        const pastDue = !!dueKey && new Date(dueKey).getTime() < Date.now();
+        const ds = resolveDiscussionState({ rootCount: main.length, replyCount: replies.length, requiredReplies: d.required_replies, pastDue, graded: total !== null });
+        const status = ds.label;
         const dirty = mine.some((p) => pending[p.id] !== undefined);
         return (
           <section key={st.id} className="rounded-md border border-border p-3">
             <header className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-semibold">{st.last_name}, {st.first_name}</h4>
-                <Badge variant={status === "Complete" ? "secondary" : "outline"}>{status}</Badge>
+                <Badge variant={ds.state === "graded" || ds.state === "complete" ? "secondary" : "outline"} className={ds.state === "missing" || (pastDue && ds.state !== "graded" && ds.state !== "complete") ? "border-warning text-foreground" : undefined}>{status}</Badge>
                 {st.is_tester ? <Badge variant="outline">Test account</Badge> : null}
               </div>
               <div className="flex items-center gap-3">

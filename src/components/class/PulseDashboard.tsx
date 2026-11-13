@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { isMissingWork } from "@/lib/missing-work";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 
 type RosterRow = {
   id: string;
@@ -170,7 +171,7 @@ export function PulseDashboard({
         .select("id, submitted_at, assignment_id, student_id")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
-      return data ?? [];
+      return withDiscussionSubmissions(data ?? [], assignmentIds);
     },
   });
 

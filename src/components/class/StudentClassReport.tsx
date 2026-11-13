@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { isHandedIn, resolveWorkState } from "@/lib/coursework-state";
+import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import {
   computeAverage,
   findMark,
@@ -87,7 +88,8 @@ export function StudentClassReport({
         .eq("student_id", student?.id ?? "")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
-      return data ?? [];
+      const rows = (data ?? []).map((r) => ({ ...r, student_id: student?.id ?? "" }));
+      return withDiscussionSubmissions(rows, assignmentIds, student ? [student.id] : undefined);
     },
   });
 
