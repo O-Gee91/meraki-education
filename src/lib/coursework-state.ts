@@ -43,8 +43,8 @@ export interface WorkStateResult {
 
 export const WORK_STATE_META: Record<Exclude<WorkState, "marked">, { label: string; tone: WorkTone }> = {
   graded: { label: "Graded", tone: "success" },
-  collected: { label: "Collected · not graded", tone: "info" },
-  turned_in: { label: "Turned in · not graded", tone: "info" },
+  collected: { label: "Collected · needs grading", tone: "info" },
+  turned_in: { label: "Turned in · needs grading", tone: "info" },
   missing: { label: "Missing", tone: "attention" },
   assigned: { label: "Assigned", tone: "neutral" },
   not_started: { label: "Not started", tone: "neutral" },

@@ -573,7 +573,7 @@ function ClassDetailPage() {
           <TabsTrigger value="discussions" className={UNDERLINE_TAB}>Discussion board</TabsTrigger>
           {isStaff && <TabsTrigger value="rubrics" className={UNDERLINE_TAB}>Rubrics</TabsTrigger>}
           {isStaff && <TabsTrigger value="shared" className={UNDERLINE_TAB}>Shared library</TabsTrigger>}
-          <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>
+          {isStaff && <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>}
           <TabsTrigger value="attendance" className={UNDERLINE_TAB}>Attendance</TabsTrigger>
           <TabsTrigger value="files" className={UNDERLINE_TAB}>Files</TabsTrigger>
           <TabsTrigger value="calendar" className={UNDERLINE_TAB}>Calendar</TabsTrigger>

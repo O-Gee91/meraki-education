@@ -73,6 +73,7 @@ function AssignmentsHubPage() {
   const previewScope = useTeacherScope();
   const isGuardian = primaryRole === "parent";
   const [filter, setFilter] = useState<Filter>("all");
+  const [classFilter, setClassFilter] = useState<string>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -206,16 +207,14 @@ function AssignmentsHubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments, submissions, grades, studentIds, today, enrollments]);
 
-  const counts = useMemo(
-    () => ({
-      all: rows.length,
-      due: rows.filter((r) => r.status === "due").length,
-      missing: rows.filter((r) => r.status === "missing").length,
-      graded: rows.filter((r) => r.status === "graded").length,
-    }),
-    [rows],
-  );
-  const visible = rows.filter((r) => filter === "all" || r.status === filter);
+  const classRows = rows.filter((r) => classFilter === "all" || r.classId === classFilter);
+  const counts = {
+    all: classRows.length,
+    due: classRows.filter((r) => r.status === "due").length,
+    missing: classRows.filter((r) => r.status === "missing").length,
+    graded: classRows.filter((r) => r.status === "graded").length,
+  };
+  const visible = classRows.filter((r) => filter === "all" || r.status === filter);
 
   return (
     <AppShell
@@ -251,7 +250,20 @@ function AssignmentsHubPage() {
               ))}
             </div>
           )}
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter assignments">
+          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter assignments">
+            {classIds.length > 1 && (
+              <select
+                aria-label="Filter by class"
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+              >
+                <option value="all">All classes</option>
+                {classIds.map((id) => (
+                  <option key={id} value={id}>{className(id)}</option>
+                ))}
+              </select>
+            )}
             {FILTERS.map((f) => (
               <Button
                 key={f.id}
