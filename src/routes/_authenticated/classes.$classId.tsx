@@ -1540,13 +1540,12 @@ function AssignmentsTab({
         ) : (
           <div className="min-w-0">
             <header className="border-b border-border bg-card p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-1 border-b border-border" role="tablist" aria-label="Coursework timeline">
+              <div className="flex flex-wrap items-center gap-1 border-b border-border" role="group" aria-label="Coursework timeline">
                 {TIMELINE.map(([key, label]) => (
                   <button
                     key={key}
                     type="button"
-                    role="tab"
-                    aria-selected={timeline === key}
+                    aria-pressed={timeline === key}
                     onClick={() => setTimeline(key)}
                     className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
                       timeline === key
