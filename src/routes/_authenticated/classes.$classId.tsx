@@ -567,25 +567,48 @@ function ClassDetailPage() {
         </div>
       )}
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
-          <TabsTrigger value="gradebook" className={UNDERLINE_TAB}>{isStaff ? "Gradebook" : "My grades"}</TabsTrigger>
-          <TabsTrigger value="coursework" className={UNDERLINE_TAB}>Coursework</TabsTrigger>
-          <TabsTrigger value="discussions" className={UNDERLINE_TAB}>Discussion board</TabsTrigger>
-          {isStaff && <TabsTrigger value="rubrics" className={UNDERLINE_TAB}>Rubrics</TabsTrigger>}
-          {isStaff && <TabsTrigger value="shared" className={UNDERLINE_TAB}>Shared library</TabsTrigger>}
-          {isStaff && <TabsTrigger value="roster" className={UNDERLINE_TAB}>Roster</TabsTrigger>}
-          <TabsTrigger value="attendance" className={UNDERLINE_TAB}>Attendance</TabsTrigger>
-          <TabsTrigger value="files" className={UNDERLINE_TAB}>Files</TabsTrigger>
-          <TabsTrigger value="calendar" className={UNDERLINE_TAB}>Calendar</TabsTrigger>
-          {isStaff && (
-            <>
-              <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-              <TabsTrigger value="grading" className={UNDERLINE_TAB}>
-                Grading setup
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
+        {(() => {
+          const current = previewing ? previewTab : classTab;
+          const go = previewing ? setPreviewTab : setClassTab;
+          const groups: { key: string; label: string; tabs: { value: string; label: string }[] }[] = [
+            { key: "grades", label: isStaff ? "Gradebook" : "My grades", tabs: [{ value: "gradebook", label: isStaff ? "Gradebook" : "My grades" }] },
+            { key: "work", label: "Coursework", tabs: [{ value: "coursework", label: "Coursework" }, { value: "calendar", label: "Calendar" }] },
+            { key: "talk", label: "Discussions", tabs: [{ value: "discussions", label: "Discussion board" }] },
+            { key: "people", label: isStaff ? "Students" : "Attendance", tabs: [
+              ...(isStaff ? [{ value: "roster", label: "Roster" }] : []),
+              { value: "attendance", label: "Attendance" },
+            ] },
+            { key: "more", label: isStaff ? "Settings & files" : "Files", tabs: [
+              { value: "files", label: "Files" },
+              ...(isStaff ? [
+                { value: "grading", label: "Grading setup" },
+                { value: "rubrics", label: "Rubrics" },
+                { value: "shared", label: "Shared library" },
+              ] : []),
+            ] },
+          ];
+          const active = groups.find((g) => g.tabs.some((t) => t.value === current)) ?? groups[0];
+          return (
+            <div className="space-y-2">
+              <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+                {groups.map((g) => (
+                  <TabsTrigger key={g.key} value={g.key === active.key ? current : g.tabs[0].value} className={UNDERLINE_TAB} data-state={g.key === active.key ? "active" : "inactive"} onClick={() => go(g.tabs[0].value)}>
+                    {g.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {active.tabs.length > 1 && (
+                <div role="group" aria-label={`${active.label} sections`} className="flex flex-wrap gap-1">
+                  {active.tabs.map((t) => (
+                    <Button key={t.value} size="sm" variant={t.value === current ? "secondary" : "ghost"} aria-pressed={t.value === current} onClick={() => go(t.value)}>
+                      {t.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
 
 
