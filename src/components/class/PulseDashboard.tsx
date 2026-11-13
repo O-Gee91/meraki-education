@@ -534,6 +534,7 @@ export function PulseDashboard({
               <button
                 key={row.id}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setSelected(active ? null : row.student_id)}
                 className={`group flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md ${meta.ring} ${
                   active ? "ring-2 ring-accent" : ""
@@ -549,6 +550,7 @@ export function PulseDashboard({
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card ${meta.dot}`}
                   />
+                  <span className="sr-only">{meta.label}</span>
                 </span>
                 <span className="w-full truncate text-xs font-medium">
                   {studentLabel(row.students, useIds)}
