@@ -136,6 +136,7 @@ export function ManageMarksDialog() {
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label={`Edit mark ${m.code}`}
                   className="h-7 w-7"
                   onClick={() => {
                     setEditingId(m.id);
@@ -153,6 +154,7 @@ export function ManageMarksDialog() {
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label={`Remove mark ${m.code}`}
                   className="h-7 w-7 text-destructive"
                   onClick={() => remove.mutate(m.id)}
                 >

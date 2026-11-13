@@ -175,6 +175,7 @@ function EditQuickScores({ classId, setup }: { classId: string; setup: GradingSe
                 type="button"
                 size="icon"
                 variant="ghost"
+                aria-label={`Remove row ${i + 1}`}
                 className="h-8 w-8"
                 onClick={() => setRows(rows.filter((_, idx) => idx !== i))}
               >

@@ -452,7 +452,7 @@ export function AppShell({
           ))}
         </nav>
 
-        <main className={cn("flex-1 px-6 py-6", desktopReview && "mx-auto w-full max-w-6xl")}>
+        <main id="main-content" tabIndex={-1} className={cn("flex-1 px-6 py-6 focus:outline-none", desktopReview && "mx-auto w-full max-w-6xl")}>
           {previewingStudent && STAFF_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) ? (
             <p className="text-sm text-muted-foreground">
               Students can't open this page. Exit student view to use it.
