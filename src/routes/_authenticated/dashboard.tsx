@@ -1,4 +1,5 @@
 import { isMissingWork } from "@/lib/missing-work";
+import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
@@ -566,6 +567,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
       if (sErr) throw sErr;
       if (gErr) throw gErr;
       const submitted = new Set((subs ?? []).map((x) => x.assignment_id));
+      for (const k of await fetchDiscussionCompletions(ids, [me!.id])) submitted.add(k.split(":")[1]);
       return list.filter((a) =>
         isMissingWork({
           assignment: a,

@@ -58,7 +58,6 @@ export async function withDiscussionSubmissions<T extends { assignment_id: strin
   for (const key of done) {
     if (have.has(key)) continue;
     const [student_id, assignment_id] = key.split(":");
-    if (studentIds?.length === 1 && !rows.some(() => true) && student_id !== studentIds[0]) continue;
     extra.push({ assignment_id, student_id, status: "submitted", submitted_at: null, id: `discussion-${key}` } as unknown as T);
   }
   return [...rows, ...extra];

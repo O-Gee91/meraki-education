@@ -1,5 +1,6 @@
 import { resolveWorkState } from "@/lib/coursework-state";
 import { isMissingWork } from "@/lib/missing-work";
+import { withDiscussionSubmissions, fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -91,7 +92,7 @@ function AssignmentsHubPage() {
         .select("student_id, class_id, created_at, classes(id, name)")
         .in("student_id", studentIds);
       if (error) throw error;
-      return data ?? [];
+      return withDiscussionSubmissions(data ?? [], assignmentIds, studentIds);
     },
   });
   // Staff previewing as a student only see their own classes.
