@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardCheck, FileClock, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { markCodeFromComment } from "@/lib/grading";
 
 type Item = { key: string; classId: string; className: string; kind: string; count: number; icon: typeof ListChecks };
@@ -57,6 +58,13 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       }
       for (const s of subs.data ?? []) {
         if (!scored.has(`${s.assignment_id}:${s.student_id}`)) bump(toGrade, aClass.get(s.assignment_id));
+      }
+      // Discussions keep work in posts; count finished ones still waiting for scores.
+      const pending = new Set((subs.data ?? []).map((s) => `${s.assignment_id}:${s.student_id}`));
+      for (const key of await fetchDiscussionCompletions(aIds)) {
+        const [sid, aid] = key.split(":");
+        const k = `${aid}:${sid}`;
+        if (!scored.has(k) && !pending.has(k)) bump(toGrade, aClass.get(aid));
       }
       for (const a of attempts.data ?? []) bump(toReview, sClass.get(a.assessment_id));
 

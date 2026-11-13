@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
@@ -118,17 +119,27 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
         for (const r of subs.data ?? []) done.add(`assignment-${r.assignment_id}`);
         for (const r of grades.data ?? []) done.add(`assignment-${r.assignment_id}`);
         for (const r of aSubs.data ?? []) done.add(`assessment-${r.assessment_id}`);
-        if (!previewingStudent && user) {
-          const hostIds = (d.data ?? []).map((x) => x.thread_id ?? x.id);
-          if (hostIds.length) {
+        // Graded discussions: same post + required-replies rule as every other screen.
+        const discAssignIds = (d.data ?? []).map((x) => x.assignment_id).filter((v): v is string => !!v);
+        if (discAssignIds.length) {
+          const completed = await fetchDiscussionCompletions(discAssignIds, selfIds);
+          const doneAssign = new Set([...completed].map((k) => k.split(":")[1]));
+          for (const x of d.data ?? []) if (x.assignment_id && doneAssign.has(x.assignment_id)) done.add(`discussion-${x.id}`);
+        }
+        // Ungraded discussions: a main post counts as done.
+        const loose = (d.data ?? []).filter((x) => !x.assignment_id);
+        if (loose.length) {
+          const { data: me } = await supabase.from("students").select("user_id").in("id", selfIds);
+          const authorIds = (me ?? []).map((m) => m.user_id).filter((v): v is string => !!v);
+          if (authorIds.length) {
             const { data: posts } = await supabase
               .from("discussion_posts")
               .select("discussion_id")
-              .in("discussion_id", hostIds)
-              .eq("author_id", user.id)
+              .in("discussion_id", loose.map((x) => x.thread_id ?? x.id))
+              .in("author_id", authorIds)
               .is("parent_id", null);
             const posted = new Set((posts ?? []).map((p) => p.discussion_id));
-            for (const x of d.data ?? []) if (posted.has(x.thread_id ?? x.id)) done.add(`discussion-${x.id}`);
+            for (const x of loose) if (posted.has(x.thread_id ?? x.id)) done.add(`discussion-${x.id}`);
           }
         }
       }
