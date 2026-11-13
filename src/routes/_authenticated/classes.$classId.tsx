@@ -128,7 +128,6 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { realStaff, previewingStudent, isAdmin, user, profile } = useAuth();
-  const [previewRequested, setPreviewing] = useState(false);
   const [classTab, setClassTab] = useState("gradebook");
   const [previewTab, setPreviewTab] = useState("gradebook");
   // Coursework cards for discussion assignments can jump to the Discussion board tab.
@@ -146,7 +145,7 @@ function ClassDetailPage() {
   useEffect(() => {
     setClassTab("gradebook");
     setPreviewTab("gradebook");
-  }, [previewRequested]);
+  }, [previewingStudent]);
   const queryClient = useQueryClient();
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
@@ -221,7 +220,7 @@ function ClassDetailPage() {
     },
   });
   const testerId = fullRoster.find((r) => isTestStudent(r.students))?.student_id ?? null;
-  const previewing = (previewRequested || previewingStudent) && realStaff && !!testerId;
+  const previewing = previewingStudent && realStaff && !!testerId;
   const isStaff = realStaff && !previewing;
   const roster = previewing ? fullRoster.filter((r) => r.student_id === testerId) : fullRoster;
   // Demo/test accounts stay visible but never count toward class statistics.
@@ -536,11 +535,6 @@ function ClassDetailPage() {
       }
       actions={
         <div className="flex flex-wrap gap-2">
-          {isStaff && testerId && (
-            <Button variant="outline" size="sm" onClick={() => setPreviewing(true)}>
-              View as student
-            </Button>
-          )}
           {isStaff && <CoTeachersPanel classId={classId} />}
           {isStaff && (
             <Button variant="outline" size="sm" onClick={toggleIds}>
@@ -558,14 +552,6 @@ function ClassDetailPage() {
         </div>
       }
     >
-      {previewing && !previewingStudent && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
-          <span>
-            <strong>Student view preview</strong> — you're seeing this class as the demo Student Tester sees it. Nothing here affects real grades.
-          </span>
-          {!previewingStudent && <Button size="sm" onClick={() => setPreviewing(false)}>Exit student view</Button>}
-        </div>
-      )}
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
         {(() => {
           const current = previewing ? previewTab : classTab;
