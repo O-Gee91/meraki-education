@@ -567,7 +567,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
       if (sErr) throw sErr;
       if (gErr) throw gErr;
       const submitted = new Set((subs ?? []).map((x) => x.assignment_id));
-      for (const k of await fetchDiscussionCompletions(ids, [me!.id])) submitted.add(k.split(":")[1]);
+      for (const k of await fetchDiscussionCompletions(ids, [me!.id])) submitted.add(k.split(":")[1] ?? "");
       return list.filter((a) =>
         isMissingWork({
           assignment: a,
