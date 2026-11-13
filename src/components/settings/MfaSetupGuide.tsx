@@ -49,7 +49,7 @@ export function MfaSetupGuide() {
           </DialogHeader>
           <div className="space-y-2">
             <h3 className="flex items-center gap-1.5 text-sm font-medium"><PlayCircle className="size-4" aria-hidden="true" />Watch how · 观看视频教程 (1 min)</h3>
-            <video src={setupVideo.url} controls preload="metadata" playsInline className="w-full rounded-md border bg-muted" />
+            <video src={setupVideo.url} aria-label="Video: setting up 2FA on a computer. The same steps are written out under Computer browser below." controls preload="metadata" playsInline className="w-full rounded-md border bg-muted" />
             <a href={setupVideo.url} download="Meraki-2FA-Setup-Video.mp4" className="text-xs text-muted-foreground underline underline-offset-2">Download video · 下载视频</a>
           </div>
           <Tabs defaultValue="phone">
@@ -60,7 +60,7 @@ export function MfaSetupGuide() {
             <TabsContent value="phone" className="space-y-3">
               <div className="space-y-2">
                 <h3 className="flex items-center gap-1.5 text-sm font-medium"><PlayCircle className="size-4" aria-hidden="true" />On your phone · 手机操作演示 (30 sec)</h3>
-                <video src={phoneVideo.url} controls preload="metadata" playsInline className="mx-auto max-h-[60vh] rounded-md border bg-muted" />
+                <video src={phoneVideo.url} aria-label="Video: adding Meraki to an authenticator app on a phone. The same steps are written out below." controls preload="metadata" playsInline className="mx-auto max-h-[60vh] rounded-md border bg-muted" />
                 <a href={phoneVideo.url} download="Meraki-2FA-Phone-Walkthrough.mp4" className="block text-center text-xs text-muted-foreground underline underline-offset-2">Download phone video · 下载手机视频</a>
               </div>
               <Rows rows={phone} />
