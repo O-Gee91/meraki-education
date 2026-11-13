@@ -953,7 +953,7 @@ function GradeByStudent({
             <header className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-semibold">{st.last_name}, {st.first_name}</h4>
-                <Badge variant={ds.state === "graded" || ds.state === "complete" ? "secondary" : "outline"} className={ds.state === "missing" || (pastDue && ds.state !== "graded" && ds.state !== "complete") ? "border-warning/50 text-warning-foreground" : undefined}>{status}</Badge>
+                <Badge variant={ds.state === "graded" || ds.state === "complete" ? "secondary" : "outline"} className={ds.state === "missing" || (pastDue && ds.state !== "graded" && ds.state !== "complete") ? "border-warning text-foreground" : undefined}>{status}</Badge>
                 {st.is_tester ? <Badge variant="outline">Test account</Badge> : null}
               </div>
               <div className="flex items-center gap-3">
