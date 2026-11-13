@@ -247,6 +247,11 @@
 }
 
 @layer base {
+  html {
+    /* Keep focused items clear of sticky top bars (WCAG 2.4.11). */
+    scroll-padding-top: 6rem;
+  }
+
   * {
     border-color: var(--color-border);
   }

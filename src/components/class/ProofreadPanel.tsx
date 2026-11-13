@@ -247,6 +247,7 @@ export function ProofreadEditor({
               <Button
                 size="icon"
                 variant="ghost"
+                aria-label="Remove comment"
                 className="h-6 w-6 shrink-0 text-destructive"
                 onClick={() => removeAnnotation.mutate(a.id)}
               >

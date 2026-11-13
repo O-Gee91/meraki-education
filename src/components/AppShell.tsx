@@ -243,7 +243,13 @@ export function AppShell({
   const suggestEmail = !!profile && needsEmailRegistration(profile.email) && !emailSkipped;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-dvh bg-background">
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to main content
+      </a>
       {suggestEmail ? (
         <RegisterEmailGate
           onSkip={() => {
@@ -452,7 +458,7 @@ export function AppShell({
           ))}
         </nav>
 
-        <main className={cn("flex-1 px-6 py-6", desktopReview && "mx-auto w-full max-w-6xl")}>
+        <main id="main-content" tabIndex={-1} className={cn("flex-1 px-6 py-6 focus:outline-none", desktopReview && "mx-auto w-full max-w-6xl")}>
           {previewingStudent && STAFF_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) ? (
             <p className="text-sm text-muted-foreground">
               Students can't open this page. Exit student view to use it.
