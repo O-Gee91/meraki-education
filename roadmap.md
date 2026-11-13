@@ -63,3 +63,8 @@
 ## Student 2FA opt-out (Joe Doyle 2026-11-12)
 - [x] Optional skip with bilingual risk warning and confirmation checkbox
 - [x] Clearer code-mismatch message (old app entry / device time)
+
+## Professional audit follow-up (Nov 13, 2026)
+- [x] Class page: 10 tabs grouped into 5 sections with sub-section buttons
+- [ ] Live click-through as each role (needs approved test sessions)
+- [ ] Simplify Coursework controls; Needs-grading counts on gradebook columns; deleted-post admin viewer; behavior Filters popover; guardian child picker on class pages; staff dashboard focus
