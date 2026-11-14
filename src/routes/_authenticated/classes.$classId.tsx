@@ -129,6 +129,7 @@ function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { realStaff, previewingStudent, isAdmin, user, profile } = useAuth();
   const [classTab, setClassTab] = useState("gradebook");
+  const [guardianChildId, setGuardianChildId] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState("gradebook");
   // Coursework cards for discussion assignments can jump to the Discussion board tab.
   useEffect(() => {
@@ -222,7 +223,16 @@ function ClassDetailPage() {
   const testerId = fullRoster.find((r) => isTestStudent(r.students))?.student_id ?? null;
   const previewing = previewingStudent && realStaff && !!testerId;
   const isStaff = realStaff && !previewing;
-  const roster = previewing ? fullRoster.filter((r) => r.student_id === testerId) : fullRoster;
+  // Guardians with several children in this class pick one child at a time.
+  const guardianChildren = !realStaff && !previewing && fullRoster.length > 1 ? fullRoster : [];
+  const activeGuardianChild = guardianChildren.length
+    ? (guardianChildren.find((r) => r.student_id === guardianChildId) ?? guardianChildren[0]!).student_id
+    : null;
+  const roster = previewing
+    ? fullRoster.filter((r) => r.student_id === testerId)
+    : activeGuardianChild
+      ? fullRoster.filter((r) => r.student_id === activeGuardianChild)
+      : fullRoster;
   // Demo/test accounts stay visible but never count toward class statistics.
   const testerIds = useMemo(
     () => new Set(roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id)),
@@ -552,6 +562,22 @@ function ClassDetailPage() {
         </div>
       }
     >
+      {guardianChildren.length > 0 && (
+        <div role="group" aria-label="Choose child" className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Showing:</span>
+          {guardianChildren.map((r) => (
+            <Button
+              key={r.student_id}
+              size="sm"
+              variant={r.student_id === activeGuardianChild ? "secondary" : "ghost"}
+              aria-pressed={r.student_id === activeGuardianChild}
+              onClick={() => setGuardianChildId(r.student_id)}
+            >
+              {r.students?.first_name} {r.students?.last_name}
+            </Button>
+          ))}
+        </div>
+      )}
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
         {(() => {
           const current = previewing ? previewTab : classTab;
@@ -755,6 +781,16 @@ function ClassDetailPage() {
                                <span className="mt-1 block font-normal tabular-nums text-muted-foreground">
                                  {Number(assignment.points_possible)} pts{average == null ? "" : ` · ${average.toFixed(1)}% avg`}
                                </span>
+                               {isStaff && (courseworkUngraded[assignment.id] ?? 0) > 0 && (
+                                 <button
+                                   type="button"
+                                   onClick={() => setClassTab("coursework")}
+                                   className="mt-1 block w-full rounded-full border border-border bg-muted px-2 py-px text-[11px] font-medium text-foreground hover:border-primary/50"
+                                   aria-label={`${courseworkUngraded[assignment.id]} submissions need grading for ${assignment.title}. Open Coursework`}
+                                 >
+                                   {courseworkUngraded[assignment.id]} need grading
+                                 </button>
+                               )}
                                {drafts > 0 && (
                                  <span className="mt-1 inline-block rounded-full border border-warning/50 bg-warning/15 px-2 py-px text-[11px] font-medium text-warning-foreground">
                                    {drafts} {drafts === 1 ? "draft" : "drafts"} not posted
