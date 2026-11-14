@@ -14,7 +14,7 @@ export function DeletedPostsLog({ threadId }: { threadId: string }) {
         .from("discussion_post_audits")
         .select("id, post_id, parent_id, author_id, acted_by, old_body, post_created_at, acted_at")
         .eq("discussion_id", threadId)
-        .eq("action", "delete")
+        .eq("action", "deleted")
         .order("acted_at", { ascending: false });
       if (error) throw error;
       const ids = [...new Set(data.flatMap((r) => [r.author_id, r.acted_by]).filter(Boolean))] as string[];
