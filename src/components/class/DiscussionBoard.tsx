@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DeletedPostsLog } from "@/components/class/DeletedPostsLog";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
@@ -709,6 +710,11 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
 
   return (
     <div className="mt-4 border-t border-border pt-4">
+      {isStaff && (
+        <div className="mb-2 flex justify-end">
+          <DeletedPostsLog threadId={threadId} />
+        </div>
+      )}
       {isStaff && discussion.graded && (
         <div className="mb-4 inline-flex rounded-md border border-border p-0.5 text-sm" role="tablist">
           <button role="tab" aria-selected={view === "thread"} onClick={() => setView("thread")} className={`rounded px-3 py-1 ${view === "thread" ? "bg-muted font-medium" : "text-muted-foreground"}`}>
