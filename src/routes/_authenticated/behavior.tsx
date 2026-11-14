@@ -1,3 +1,5 @@
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -560,9 +562,22 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
                 />
               </div>
             )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <SlidersHorizontal className="size-4" aria-hidden />
+                  Filters
+                  {(classFilter !== "all" ? 1 : 0) + (gradeFilter !== "all" ? 1 : 0) + (kindFilter !== "all" ? 1 : 0) > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
+                      {(classFilter !== "all" ? 1 : 0) + (gradeFilter !== "all" ? 1 : 0) + (kindFilter !== "all" ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 space-y-3">
             {isStaff && classOptions.length > 0 && (
               <Select value={classFilter} onValueChange={setClassFilter}>
-                <SelectTrigger className="w-48" aria-label="Filter by class">
+                <SelectTrigger className="w-full" aria-label="Filter by class">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -576,7 +591,7 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
               </Select>
             )}
             <Select value={gradeFilter} onValueChange={setGradeFilter}>
-              <SelectTrigger className="w-36" aria-label="Filter by grade">
+              <SelectTrigger className="w-full" aria-label="Filter by grade">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -589,7 +604,7 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
               </SelectContent>
             </Select>
             <Select value={kindFilter} onValueChange={setKindFilter}>
-              <SelectTrigger className="w-36" aria-label="Filter by type">
+              <SelectTrigger className="w-full" aria-label="Filter by type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -601,6 +616,18 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
                 ))}
               </SelectContent>
             </Select>
+                {(classFilter !== "all" ? 1 : 0) + (gradeFilter !== "all" ? 1 : 0) + (kindFilter !== "all" ? 1 : 0) > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => { setClassFilter("all"); setGradeFilter("all"); setKindFilter("all"); }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
           <p className="text-xs text-muted-foreground">
             Showing {visibleNotes.length} of {notes.length} notes
