@@ -18,6 +18,7 @@ import {
   Users2,
   LogOut,
   KeyRound,
+  Settings,
   Eye,
 } from "lucide-react";
 
@@ -334,7 +335,7 @@ export function AppShell({
               to="/settings"
               className="flex items-center gap-2 text-xs font-medium text-sidebar-foreground/80 hover:text-sidebar-primary"
             >
-              <KeyRound className="size-3.5" /> Change password
+              <Settings className="size-3.5" /> Settings
             </Link>
             <button
               onClick={signOut}
@@ -430,7 +431,7 @@ export function AppShell({
             ) : null}
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm" className="lg:hidden">
-              <Link to="/settings">Password</Link>
+              <Link to="/settings">Settings</Link>
             </Button>
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={signOut}>
               Sign out
