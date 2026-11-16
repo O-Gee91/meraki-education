@@ -41,7 +41,7 @@ export function PasskeysCard({ onAdded }: { onAdded?: () => void }) {
     try {
       const { optionsJson } = await optionsFn();
       const response = await startRegistration({ optionsJSON: JSON.parse(optionsJson) });
-      const res = await verifyFn({ data: { response: JSON.stringify(response), deviceName: name || undefined } });
+      const res = await verifyFn({ data: { response: JSON.stringify(response), deviceName: name.trim() } });
       if (!res.ok) {
         toast.error(res.message);
         return;
