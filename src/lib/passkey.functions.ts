@@ -16,6 +16,7 @@ function party() {
 
 function sessionId(claims: unknown): string {
   const id = (claims as { session_id?: string }).session_id;
+  console.log("PKDEBUG claims keys", Object.keys(claims as object));
   if (!id) throw new Error("Session not found");
   return id;
 }
@@ -120,7 +121,8 @@ export const verifyPasskeyRegistration = createServerFn({ method: "POST" })
     });
     if (error) return { ok: false as const, message: "This device is already added." };
     // The person just proved it's them on this device, so this sign-in counts as verified.
-    await sb.from("passkey_sessions").upsert({ session_id: sessionId(context.claims), user_id: context.userId });
+    const up = await sb.from("passkey_sessions").upsert({ session_id: sessionId(context.claims), user_id: context.userId });
+    console.log("PKDEBUG upsert", up.error);
     return { ok: true as const };
   });
 
