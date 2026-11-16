@@ -32,6 +32,8 @@ export default defineConfig({
           "node_modules/entities/lib/encode.js",
         ),
         entities: path.resolve(import.meta.dirname, "node_modules/entities"),
+        // Pin tslib to its ESM build; the CJS build crashes the server bundle at boot.
+        tslib: path.resolve(import.meta.dirname, "node_modules/tslib/tslib.es6.mjs"),
       },
     },
   },
