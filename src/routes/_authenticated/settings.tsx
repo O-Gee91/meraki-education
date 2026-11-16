@@ -105,7 +105,7 @@ function SettingsPage() {
     <AppShell
       desktopReview
       title="Account settings"
-      description="Keep your sign-in details up to date."
+      description="Your password, two-step verification and passkeys."
     >
       <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:gap-12">
       <div className="min-w-0 space-y-10">
