@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorCard } from "./TwoFactorCard";
 import { MfaSetupGuide } from "./MfaSetupGuide";
+import { PasskeysCard } from "./PasskeysCard";
 
 /** Students must turn on an authenticator before using the app. */
 export function StudentMfaGate({ enforce, children }: { enforce: boolean; children: ReactNode }) {
@@ -34,12 +35,13 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
     queryKey: ["mfa-gate-factor"],
     enabled: enforce,
     queryFn: async () => {
-      const [{ data }, { data: u }] = await Promise.all([
+      const [{ data }, { data: u }, { count }] = await Promise.all([
         supabase.auth.mfa.listFactors(),
         supabase.auth.getUser(),
+        supabase.from("passkey_credentials").select("id", { count: "exact", head: true }),
       ]);
       const optedOut = u.user?.user_metadata?.["mfa_opt_out"] === true;
-      return { has: optedOut || !!data?.totp.some((f) => f.status === "verified") };
+      return { has: optedOut || (count ?? 0) > 0 || !!data?.totp.some((f) => f.status === "verified") };
     },
   });
   useEffect(() => {
@@ -61,7 +63,8 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
           It takes about two minutes. Once it's done, you can use Meraki as usual.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-          <li>Get an authenticator: Microsoft Authenticator on a phone, Apple Passwords on iPhone/Mac, or an option for your computer browser.</li>
+          <li>Quickest: on your own Mac, iPhone, iPad or Windows laptop, choose "Add this device" below to use your fingerprint or face. 最快：在自己的设备上点击“添加此设备”。</li>
+          <li>Or get an authenticator: Microsoft Authenticator on a phone, Apple Passwords on iPhone/Mac, or an option for your computer browser.</li>
           <li>Scan the code and type the 6 numbers it shows.</li>
           <li>Save your backup codes somewhere safe. Lost your phone? Ask your teacher to reset it.</li>
         </ol>
@@ -69,6 +72,11 @@ export function StudentMfaGate({ enforce, children }: { enforce: boolean; childr
           <MfaSetupGuide />
         </div>
       </div>
+      <PasskeysCard onAdded={() => {
+          qc.setQueryData(["mfa-gate-factor"], { has: true });
+          setRequired(false);
+        }} />
+      <p className="text-center text-xs text-muted-foreground">Or use an authenticator app · 或使用验证器应用</p>
       <TwoFactorCard suggest={false} onDone={() => {
           // Record the finished setup so the gate stays open after navigating.
           qc.setQueryData(["mfa-gate-factor"], { has: true });
