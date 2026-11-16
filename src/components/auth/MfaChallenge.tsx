@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { Fingerprint } from "lucide-react";
+import { passkeyAuthOptions, passkeyStatus, verifyPasskeyAuth } from "@/lib/passkey.functions";
+import { passkeyErrorMessage } from "@/lib/passkey-browser";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -10,10 +14,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type Mode = "totp" | "backup" | "email";
+type Mode = "loading" | "passkey" | "totp" | "backup" | "email";
 
 export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
-  const [mode, setMode] = useState<Mode>("totp");
+  const [mode, setMode] = useState<Mode>("loading");
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [hasTotp, setHasTotp] = useState(false);
+  const statusFn = useServerFn(passkeyStatus);
+  const pkOptionsFn = useServerFn(passkeyAuthOptions);
+  const pkVerifyFn = useServerFn(verifyPasskeyAuth);
+
+  useEffect(() => {
+    void Promise.all([statusFn().catch(() => ({ has: false, verified: false })), verifiedTotpFactor()]).then(([pk, totp]) => {
+      setHasPasskey(pk.has);
+      setHasTotp(!!totp);
+      setMode(pk.has ? "passkey" : "totp");
+    });
+  }, [statusFn]);
+
+  async function usePasskey() {
+    setBusy(true);
+    try {
+      const { options } = await pkOptionsFn();
+      const response = await startAuthentication({ optionsJSON: options as never });
+      const res = await pkVerifyFn({ data: { response: response as unknown as Record<string, unknown> } });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      onDone();
+    } catch (e) {
+      toast.error(passkeyErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [emailSentTo, setEmailSentTo] = useState<string | null>(null);
@@ -77,6 +112,7 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
   }
 
   function switchTo(m: Mode) {
+    void hasPasskey;
     setMode(m);
     setCode("");
     if (m === "email" && !emailSentTo) void sendEmail();
@@ -89,7 +125,36 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
         <h2 className="text-xl font-semibold tracking-normal">Two-step verification</h2>
       </div>
 
-      {mode === "totp" ? (
+      {mode === "loading" ? (
+        <p className="mt-4 text-sm text-muted-foreground">Checking your sign-in options…</p>
+      ) : mode === "passkey" ? (
+        <div className="mt-4 space-y-5">
+          <p className="text-sm text-muted-foreground">
+            Confirm it's you with this device's fingerprint, face, or screen-lock PIN.
+            <br />请用本设备的指纹、面容或锁屏密码确认身份。
+          </p>
+          <Button type="button" onClick={usePasskey} disabled={busy} autoFocus>
+            <Fingerprint aria-hidden="true" />
+            {busy ? "Waiting for your device…" : "Verify with Touch ID / Face ID / Windows Hello"}
+          </Button>
+          <div className="space-y-1 text-sm">
+            <p className="text-muted-foreground">On a different device?</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {hasTotp && (
+                <button type="button" className="text-primary underline-offset-4 hover:underline" onClick={() => switchTo("totp")}>
+                  Use a 6-digit authenticator code
+                </button>
+              )}
+              <button type="button" className="text-primary underline-offset-4 hover:underline" onClick={() => switchTo("backup")}>
+                Use a backup code
+              </button>
+              <button type="button" className="text-primary underline-offset-4 hover:underline" onClick={() => switchTo("email")}>
+                Email me a code
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : mode === "totp" ? (
         <div className="mt-4 space-y-5">
           <p className="text-sm text-muted-foreground">
             Open your authenticator app and enter the 6-digit code for Meraki Education.
@@ -157,8 +222,8 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
                 Send a new code
               </Button>
             )}
-            <Button type="button" variant="ghost" onClick={() => switchTo("totp")}>
-              Back to authenticator
+            <Button type="button" variant="ghost" onClick={() => switchTo(hasPasskey ? "passkey" : "totp")}>
+              Back
             </Button>
           </div>
         </form>
