@@ -112,7 +112,6 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
   }
 
   function switchTo(m: Mode) {
-    void hasPasskey;
     setMode(m);
     setCode("");
     if (m === "email" && !emailSentTo) void sendEmail();
@@ -211,7 +210,7 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Using this will turn off two-step verification so you can set up your authenticator again.
+            Using this will turn off two-step verification (including saved passkeys) so you can set it up again.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={busy || code.trim().length < 6}>
