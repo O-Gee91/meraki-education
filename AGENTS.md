@@ -31,3 +31,4 @@
 - Two-factor sign-in uses built-in Auth MFA for TOTP; backup and email recovery codes are hashed server-side and, when used, remove the authenticator (Auth cannot grant aal2 from custom codes).
 - Discussion completion (main post + required replies) counts as turned in via withDiscussionSubmissions/fetchDiscussionCompletions in src/lib/discussion-completion.ts; discussions store work in posts, not assignment submissions, so the shared missing rule needs it.
 - Passkey second-step state lives in passkey_sessions keyed by the auth session_id; Auth MFA cannot grant aal2 from WebAuthn, so needsSecondFactor and the student gate check passkeys alongside TOTP.
+- Keep the tslib alias to its ESM build in vite.config.ts; the CJS build breaks server bundle interop (passkey libraries) and takes the live site down.
