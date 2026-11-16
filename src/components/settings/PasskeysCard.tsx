@@ -39,9 +39,9 @@ export function PasskeysCard({ onAdded }: { onAdded?: () => void }) {
   async function add() {
     setBusy(true);
     try {
-      const { options } = await optionsFn();
-      const response = await startRegistration({ optionsJSON: options as never });
-      const res = await verifyFn({ data: { response: response as unknown as Record<string, unknown>, deviceName: name || undefined } });
+      const { optionsJson } = await optionsFn();
+      const response = await startRegistration({ optionsJSON: JSON.parse(optionsJson) });
+      const res = await verifyFn({ data: { response: JSON.stringify(response), deviceName: name || undefined } });
       if (!res.ok) {
         toast.error(res.message);
         return;

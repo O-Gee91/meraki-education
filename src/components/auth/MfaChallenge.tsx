@@ -35,9 +35,9 @@ export function MfaChallenge({ onDone, onCancel }: { onDone: () => void; onCance
   async function usePasskey() {
     setBusy(true);
     try {
-      const { options } = await pkOptionsFn();
-      const response = await startAuthentication({ optionsJSON: options as never });
-      const res = await pkVerifyFn({ data: { response: response as unknown as Record<string, unknown> } });
+      const { optionsJson } = await pkOptionsFn();
+      const response = await startAuthentication({ optionsJSON: JSON.parse(optionsJson) });
+      const res = await pkVerifyFn({ data: { response: JSON.stringify(response) } });
       if (!res.ok) {
         toast.error(res.message);
         return;

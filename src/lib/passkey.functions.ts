@@ -80,13 +80,13 @@ export const passkeyRegistrationOptions = createServerFn({ method: "POST" })
       authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
     });
     await saveChallenge(context.userId, "register", options.challenge);
-    return { options: JSON.parse(JSON.stringify(options)) as Record<string, unknown> };
+    return { optionsJson: JSON.stringify(options) };
   });
 
 export const verifyPasskeyRegistration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { response: Record<string, unknown>; deviceName?: string }) =>
-    z.object({ response: z.record(z.string(), z.unknown()), deviceName: z.string().max(60).optional() }).parse(i),
+  .inputValidator((i: { response: string; deviceName?: string }) =>
+    z.object({ response: z.string().max(20000), deviceName: z.string().max(60).optional() }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { verifyRegistrationResponse } = await import("@simplewebauthn/server");
@@ -96,7 +96,7 @@ export const verifyPasskeyRegistration = createServerFn({ method: "POST" })
     let result;
     try {
       result = await verifyRegistrationResponse({
-        response: data.response as never,
+        response: JSON.parse(data.response) as never,
         expectedChallenge: expected,
         expectedOrigin: rp.origin,
         expectedRPID: rp.rpID,
@@ -138,12 +138,12 @@ export const passkeyAuthOptions = createServerFn({ method: "POST" })
       allowCredentials: creds.map((c) => ({ id: c.credential_id, transports: c.transports as never })),
     });
     await saveChallenge(context.userId, "auth", options.challenge);
-    return { options: JSON.parse(JSON.stringify(options)) as Record<string, unknown> };
+    return { optionsJson: JSON.stringify(options) };
   });
 
 export const verifyPasskeyAuth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { response: Record<string, unknown> }) => z.object({ response: z.record(z.string(), z.unknown()) }).parse(i))
+  .inputValidator((i: { response: string }) => z.object({ response: z.string().max(20000) }).parse(i))
   .handler(async ({ data, context }) => {
     const { verifyAuthenticationResponse } = await import("@simplewebauthn/server");
     const { isoBase64URL } = await import("@simplewebauthn/server/helpers");
@@ -151,7 +151,7 @@ export const verifyPasskeyAuth = createServerFn({ method: "POST" })
     const expected = await takeChallenge(context.userId, "auth");
     if (!expected) return { ok: false as const, message: "That took too long. Please try again." };
     const sb = await admin();
-    const credId = String(data.response["id"] ?? "");
+    const credId = String((JSON.parse(data.response) as { id?: string }).id ?? "");
     const { data: cred } = await sb
       .from("passkey_credentials")
       .select("id, credential_id, public_key, counter, transports")
@@ -162,7 +162,7 @@ export const verifyPasskeyAuth = createServerFn({ method: "POST" })
     let result;
     try {
       result = await verifyAuthenticationResponse({
-        response: data.response as never,
+        response: JSON.parse(data.response) as never,
         expectedChallenge: expected,
         expectedOrigin: rp.origin,
         expectedRPID: rp.rpID,
