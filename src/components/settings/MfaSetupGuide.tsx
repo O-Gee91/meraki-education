@@ -12,6 +12,13 @@ const phone = [
   ["iPhone or iPad", "Apple Passwords (built in)", "No download: Settings → Passwords. 设置 → 密码。"],
   ["No account wanted", "2FAS, Ente Auth, or Aegis (Android)", "App Store or the app's official website."],
 ];
+const passkey = [
+  ["Mac", "Touch ID", "Settings → Touch ID must have a fingerprint. Safari, Chrome, Edge and Firefox all work."],
+  ["iPhone or iPad", "Face ID or Touch ID", "Saved in Apple Passwords (iCloud Keychain), so it also works on your other Apple devices."],
+  ["Windows laptop", "Windows Hello", "Fingerprint, face camera, or your Windows PIN. Set it up in Settings → Accounts → Sign-in options."],
+  ["Android phone", "Fingerprint or screen lock", "Chrome or Edge. Saved in your phone's password manager."],
+  ["Shared school computer", "Don't add a passkey", "Use your authenticator app or a backup code instead. 公用电脑请勿添加通行密钥。"],
+];
 const computer = [
   ["Safari (Mac)", "Apple Passwords (built in)", "Already on your Mac."],
   ["Microsoft Edge", "Authenticator extension", "Edge Add-ons store."],
@@ -52,8 +59,9 @@ export function MfaSetupGuide() {
             <video src={setupVideo.url} aria-label="Video: setting up 2FA on a computer. The same steps are written out under Computer browser below." controls preload="metadata" playsInline className="w-full rounded-md border bg-muted" />
             <a href={setupVideo.url} download="Meraki-2FA-Setup-Video.mp4" className="text-xs text-muted-foreground underline underline-offset-2">Download video · 下载视频</a>
           </div>
-          <Tabs defaultValue="phone">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="passkey">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="passkey">Passkey · 通行密钥</TabsTrigger>
               <TabsTrigger value="phone">Phone or tablet</TabsTrigger>
               <TabsTrigger value="computer">Computer browser</TabsTrigger>
             </TabsList>
@@ -66,6 +74,22 @@ export function MfaSetupGuide() {
               <Rows rows={phone} />
             </TabsContent>
             <TabsContent value="computer"><Rows rows={computer} /></TabsContent>
+            <TabsContent value="passkey" className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                A passkey lets your own device confirm it's you with your fingerprint, face or PIN. No app, no 6-digit code, and no clock settings to fix.
+                <br />通行密钥让您的设备用指纹、面容或密码确认身份，无需应用或验证码。
+              </p>
+              <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+                <li>Choose <span className="text-foreground">Add this device · 添加此设备</span>.</li>
+                <li>Your device asks for your fingerprint, face or PIN. Confirm it.</li>
+                <li>Next time you sign in, choose <span className="text-foreground">Verify with Touch ID / Face ID / Windows Hello</span>.</li>
+                <li>Using a new device? Sign in with a backup code or your authenticator, then add the new device in Settings.</li>
+              </ol>
+              <Rows rows={passkey} />
+              <p className="rounded-md bg-muted px-3 py-2">
+                Fingerprint not recognised? Use your device PIN or password instead. 指纹无法识别？可改用设备密码。
+              </p>
+            </TabsContent>
           </Tabs>
           <div className="space-y-3 text-sm">
             <p className="rounded-md bg-muted px-3 py-2">
