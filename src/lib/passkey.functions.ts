@@ -16,8 +16,7 @@ function party() {
 
 function sessionId(claims: unknown): string {
   const id = (claims as { session_id?: string }).session_id;
-  console.log("PKDEBUG claims keys", Object.keys(claims as object));
-  if (!id) throw new Error("Session not found");
+  if (!id) throw new Error("Please sign out and sign in again, then retry.");
   return id;
 }
 
@@ -108,6 +107,7 @@ export const verifyPasskeyRegistration = createServerFn({ method: "POST" })
     }
     if (!result.verified || !result.registrationInfo) return { ok: false as const, message: "This device couldn't be added." };
     const { credential, credentialBackedUp } = result.registrationInfo;
+    const sid = sessionId(context.claims);
     const { isoBase64URL } = await import("@simplewebauthn/server/helpers");
     const sb = await admin();
     const { error } = await sb.from("passkey_credentials").insert({
@@ -121,8 +121,7 @@ export const verifyPasskeyRegistration = createServerFn({ method: "POST" })
     });
     if (error) return { ok: false as const, message: "This device is already added." };
     // The person just proved it's them on this device, so this sign-in counts as verified.
-    const up = await sb.from("passkey_sessions").upsert({ session_id: sessionId(context.claims), user_id: context.userId });
-    console.log("PKDEBUG upsert", up.error);
+    await sb.from("passkey_sessions").upsert({ session_id: sid, user_id: context.userId });
     return { ok: true as const };
   });
 
