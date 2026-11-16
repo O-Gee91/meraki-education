@@ -70,3 +70,11 @@
 - [x] Needs-grading counts on gradebook columns; deleted-post viewer (staff only); behavior Filters popover; guardian child picker on class pages
 - [ ] Simplify Coursework controls; staff dashboard focus
 - [ ] Guardian child picker live check — no parent account chosen to test with
+
+## Passkeys as second step (Joe Doyle 2026-11-16)
+- [x] Cross-checked against MDN Web Authentication API (dynamic site ID, base64url, feature detection, preferred verification, no attestation, single-use 5-min challenges)
+- [x] Add/remove passkeys in Settings and on the student setup screen; fingerprint/face button at sign-in with code fallbacks
+- [x] Bilingual Passkey tab in the setup guide
+- [x] Tested end to end with a simulated fingerprint device on a temporary account (deleted after)
+- [ ] Real-device check on an iPhone/Mac/Windows laptop on the published site
+- [ ] Student PDF guide not yet updated with the passkey section

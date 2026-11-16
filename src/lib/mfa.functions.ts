@@ -23,14 +23,20 @@ async function removeAllFactors(userId: string) {
   }
   await sb.from("mfa_backup_codes").delete().eq("user_id", userId);
   await sb.from("mfa_email_codes").delete().eq("user_id", userId);
+  await sb.from("passkey_credentials").delete().eq("user_id", userId);
+  await sb.from("passkey_sessions").delete().eq("user_id", userId);
 }
 
 /** Creates a fresh set of backup codes. Only callable after passing 2FA (aal2). */
 export const regenerateBackupCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    if ((context.claims as { aal?: string }).aal !== "aal2") throw new Error("Verify your authenticator first");
     const sb = await admin();
+    if ((context.claims as { aal?: string }).aal !== "aal2") {
+      const sid = (context.claims as { session_id?: string }).session_id ?? "";
+      const { data: pk } = await sb.from("passkey_sessions").select("session_id").eq("session_id", sid).eq("user_id", context.userId).maybeSingle();
+      if (!pk) throw new Error("Verify your authenticator first");
+    }
     const codes = Array.from({ length: BACKUP_CODE_COUNT }, generateBackupCode);
     const rows = await Promise.all(
       codes.map(async (c) => ({ user_id: context.userId, code_hash: await hashCode(c) })),

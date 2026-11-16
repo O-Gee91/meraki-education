@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
+import { PasskeysCard } from "@/components/settings/PasskeysCard";
+import { MfaSetupGuide } from "@/components/settings/MfaSetupGuide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -159,6 +161,8 @@ function SettingsPage() {
       </form>
       <div className="border-t border-border pt-8">
         <TwoFactorCard suggest={isStaff} />
+        <div className="mt-4"><PasskeysCard /></div>
+        <div className="mt-3"><MfaSetupGuide /></div>
       </div>
       </div>
 
