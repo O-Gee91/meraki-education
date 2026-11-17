@@ -78,3 +78,8 @@
 - [x] Tested end to end with a simulated fingerprint device on a temporary account (deleted after)
 - [ ] Real-device check on an iPhone/Mac/Windows laptop on the published site
 - [ ] Student PDF guide not yet updated with the passkey section
+
+## Report comments & feedback suggestions (Joe Doyle 2026-11-17)
+- [x] Printed student report includes assignment comments (toggle, on by default; mark codes hidden)
+- [x] "Suggest comment" drafts editable feedback from score, rubric results and teacher notes (rubric + proofread boxes)
+- [ ] Educator check of both in a signed-in session

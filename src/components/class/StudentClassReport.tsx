@@ -21,6 +21,7 @@ import {
   computeAverage,
   findMark,
   letterFor,
+  isAutoGradeComment,
   markCodeFromComment,
   type GradingSetup,
 } from "@/lib/grading";
@@ -75,6 +76,7 @@ export function StudentClassReport({
 }) {
   const queryClient = useQueryClient();
   const [showBehavior, setShowBehavior] = useState(false);
+  const [showComments, setShowComments] = useState(true);
   const today = new Date().toISOString().slice(0, 10);
   const assignmentIds = assignments.map((assignment) => assignment.id);
 
@@ -84,7 +86,7 @@ export function StudentClassReport({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignment_submissions")
-        .select("assignment_id, status, submitted_at")
+        .select("assignment_id, status, submitted_at, teacher_note")
         .eq("student_id", student?.id ?? "")
         .in("assignment_id", assignmentIds);
       if (error) throw error;
@@ -163,6 +165,10 @@ export function StudentClassReport({
         ? Boolean(dueDate && dueDate < today)
         : shouldAutoFlag({ created_at: assignment.created_at, due_date: dueDate }, today);
       const missing = Boolean(autoFlag && score == null && !mark && !handedIn);
+      const gradeComment =
+        grade?.comment && !isAutoGradeComment(grade.comment) ? grade.comment.trim() : "";
+      const note = ((submission as { teacher_note?: string | null } | undefined)?.teacher_note ?? "").trim();
+      const comment = [gradeComment, note && note !== gradeComment ? note : ""].filter(Boolean).join("\n\n");
       const status = resolveWorkState({
         score,
         markLabel: mark?.label,
@@ -185,6 +191,7 @@ export function StudentClassReport({
         score,
         markCode: mark?.code ?? null,
         status,
+        comment,
         completed: Boolean(score != null || mark || handedIn),
       };
     });
@@ -213,6 +220,7 @@ export function StudentClassReport({
           pointsPossible: Number(submission?.total_points ?? 0),
           score,
           markCode: null,
+          comment: "",
           status: submission ? (submission.status === "needs_review" ? "Needs review" : "Graded") : missing ? "Missing" : "Not started",
           completed: Boolean(submission),
         };
@@ -325,7 +333,10 @@ export function StudentClassReport({
           : row.score == null
             ? row.status
             : `${row.score}/${row.pointsPossible} (${row.pointsPossible ? ((row.score / row.pointsPossible) * 100).toFixed(1) : "0.0"}%)`;
-        return `<tr><td>${escapeHtml(row.title)}</td><td>${escapeHtml(row.category)}</td><td>${escapeHtml(row.dueDate ? formatDate(row.dueDate) : "No due date")}</td><td>${escapeHtml(score)}</td></tr>`;
+        const commentCell = showComments
+          ? `<td>${row.comment ? escapeHtml(row.comment).replace(/\n/g, "<br />") : "<span class='muted'>—</span>"}</td>`
+          : "";
+        return `<tr><td>${escapeHtml(row.title)}</td><td>${escapeHtml(row.category)}</td><td>${escapeHtml(row.dueDate ? formatDate(row.dueDate) : "No due date")}</td><td>${escapeHtml(score)}</td>${commentCell}</tr>`;
       })
       .join("");
     const behavior = showBehavior
@@ -337,7 +348,7 @@ export function StudentClassReport({
         `${docHeader("Student progress report", [displayName, className, `Grade ${student.grade_level}`])}
         <table><tr><th>Current grade</th><th>Letter</th><th>Completion</th><th>Completed items</th></tr>
         <tr><td class="num">${studentAverage == null ? "—" : `${studentAverage.toFixed(1)}%`}</td><td>${studentAverage == null ? "—" : escapeHtml(letterFor(studentAverage, setup.scale))}</td><td class="num">${completionRate.toFixed(0)}%</td><td class="num">${completedCount}/${rows.length}</td></tr></table>
-        <h2>Assignments and assessments</h2><table><tr><th>Item</th><th>Category</th><th>Due date</th><th>Score / status</th></tr>${itemRows}</table>${behavior}`,
+        <h2>Assignments and assessments</h2><table><tr><th>Item</th><th>Category</th><th>Due date</th><th>Score / status</th>${showComments ? "<th>Teacher comments</th>" : ""}</tr>${itemRows}</table>${behavior}`,
       ),
     );
   }
@@ -388,7 +399,7 @@ export function StudentClassReport({
                 const initialValue = row.markCode ?? (row.score == null ? "" : String(row.score));
                 return (
                   <tr key={row.key} className="border-t border-border odd:bg-card even:bg-secondary/20">
-                    <td className="px-3 py-3"><p className="font-semibold">{row.title}</p><p className="text-xs text-muted-foreground">{row.kind}</p></td>
+                    <td className="px-3 py-3"><p className="font-semibold">{row.title}</p><p className="text-xs text-muted-foreground">{row.kind}</p>{showComments && row.comment ? <p className="mt-1 whitespace-pre-line rounded-md border border-border bg-secondary/30 p-2 text-xs text-foreground"><span className="font-medium">Comment: </span>{row.comment}</p> : null}</td>
                     <td className="px-3 py-3"><Badge variant="secondary">{row.category}</Badge></td>
                     <td className="px-3 py-3 text-muted-foreground">{row.dueDate ? formatDate(row.dueDate) : "No due date"}</td>
                     <td className="px-3 py-3"><Badge variant={row.status === "Missing" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
@@ -423,6 +434,16 @@ export function StudentClassReport({
             </tbody>
           </table>
         </div>
+
+        <section className="rounded-md border border-border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label htmlFor="show-comments">Include assignment comments</Label>
+              <p className="text-xs text-muted-foreground">Shows your written feedback on each item, here and on the printed copy.</p>
+            </div>
+            <Switch id="show-comments" checked={showComments} onCheckedChange={setShowComments} />
+          </div>
+        </section>
 
         <section className="rounded-md border border-border p-4">
           <div className="flex items-center justify-between gap-3">
