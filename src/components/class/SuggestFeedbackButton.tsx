@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { suggestFeedback } from "@/lib/feedback-ai.functions";
 
-type Input = Parameters<typeof suggestFeedback>[0]["data"];
+type Input = {
+  assignmentTitle: string;
+  studentFirstName?: string;
+  gradeLevel?: number;
+  score?: number | null;
+  pointsPossible?: number | null;
+  rubric?: { criterion: string; level?: string; descriptor?: string; earned?: number; max?: number }[];
+  teacherNotes?: string;
+};
 
 /** Drafts an editable comment from score, rubric and the teacher's own notes. Never saves on its own. */
 export function SuggestFeedbackButton({
