@@ -11,7 +11,7 @@ type Input = {
   gradeLevel?: number;
   score?: number | null;
   pointsPossible?: number | null;
-  rubric?: { criterion: string; level?: string; descriptor?: string; earned?: number; max?: number }[];
+  rubric?: { criterion: string; level?: string | undefined; descriptor?: string | undefined; earned?: number; max?: number }[];
   teacherNotes?: string;
 };
 
