@@ -346,7 +346,7 @@ export function StudentClassReport({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] max-w-6xl overflow-y-auto print:max-w-none">
+      <DialogContent className="max-h-[94vh] w-[calc(100%-2rem)] max-w-6xl overflow-y-auto print:max-w-none">
         <DialogHeader>
           <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
             <div>
@@ -378,7 +378,7 @@ export function StudentClassReport({
         </div>
 
         <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[48rem] text-sm">
+          <table className="w-full text-sm [overflow-wrap:anywhere]">
             <thead className="bg-secondary text-left text-xs uppercase text-muted-foreground">
               <tr><th className="px-3 py-3">Item</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Due</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Score</th></tr>
             </thead>

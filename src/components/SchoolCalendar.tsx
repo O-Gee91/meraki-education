@@ -534,8 +534,8 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
             )}
           </div>
 
-          <div className="mt-5 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-            <div>
+          <div className="mt-5 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+            <div className="min-w-0">
               <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wide text-muted-foreground">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
                   <span key={d} className="py-1">

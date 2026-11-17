@@ -269,7 +269,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
               : "No report cards have been published for you yet."}
           </p>
         ) : (
-          <table className="w-full table-fixed text-sm">
+          <div className="overflow-x-auto"><table className="w-full min-w-[40rem] table-fixed text-sm">
             <colgroup>
               <col className="w-[22%]" />
               <col className="w-[25%]" />
@@ -334,7 +334,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

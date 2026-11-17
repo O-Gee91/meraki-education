@@ -152,6 +152,15 @@ function ClassDetailPage() {
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookSearch, setGradebookSearch] = useState("");
   const [assignmentPage, setAssignmentPage] = useState(0);
+  // Fewer assignment columns on laptops/tablets so scores never get squeezed.
+  const [gradebookPerPage, setGradebookPerPage] = useState(3);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const sync = () => setGradebookPerPage(mq.matches ? 3 : 2);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const [gradebookReportStudentId, setGradebookReportStudentId] = useState<string | null>(null);
   const [gradebookCategory, setGradebookCategory] = useState("all");
   const [gradebookDueFrom, setGradebookDueFrom] = useState("");
@@ -440,9 +449,10 @@ function ClassDetailPage() {
     testerIds,
   ]);
 
-  const assignmentPageCount = Math.max(1, Math.ceil(gradebookRows.length / 3));
+  const perPage = gradebookPerPage;
+  const assignmentPageCount = Math.max(1, Math.ceil(gradebookRows.length / perPage));
   const currentAssignmentPage = Math.min(assignmentPage, assignmentPageCount - 1);
-  const pageAssignments = gradebookRows.slice(currentAssignmentPage * 3, currentAssignmentPage * 3 + 3);
+  const pageAssignments = gradebookRows.slice(currentAssignmentPage * perPage, currentAssignmentPage * perPage + perPage);
 
   function printGradebook() {
     const headerCells = gradebookRows
@@ -718,7 +728,7 @@ function ClassDetailPage() {
                 ) : (
                      <div>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-                      <p className="text-xs text-muted-foreground">Assignments {currentAssignmentPage * 3 + 1}–{Math.min((currentAssignmentPage + 1) * 3, gradebookRows.length)} of {gradebookRows.length}</p>
+                      <p className="text-xs text-muted-foreground">Assignments {currentAssignmentPage * perPage + 1}–{Math.min((currentAssignmentPage + 1) * perPage, gradebookRows.length)} of {gradebookRows.length}</p>
                       <div className="flex items-center gap-2">
                         {isStaff && (
                           <Select
@@ -748,9 +758,9 @@ function ClassDetailPage() {
                         <Button variant="outline" size="icon" aria-label="Next assignments" disabled={currentAssignmentPage >= assignmentPageCount - 1} onClick={() => setAssignmentPage(currentAssignmentPage + 1)}><ChevronRight className="size-4" /></Button>
                       </div>
                     </div>
-                    <div className="max-h-[68vh] overflow-y-auto">
+                    <div className="max-h-[68vh] overflow-auto">
 
-                     <table className="w-full table-fixed border-collapse text-sm">
+                     <table className="w-full min-w-[36rem] table-fixed border-collapse text-sm">
                        <thead className="sticky top-0 z-20 border-b border-border/60 bg-muted/50 text-xs uppercase text-muted-foreground">
                         <tr>
                             {isStaff && (

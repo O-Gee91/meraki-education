@@ -123,7 +123,7 @@ function useFeed(filterDate: string) {
 
 function MoodPicker({ mood, setMood }: { mood: number | null; setMood: (n: number) => void }) {
   return (
-    <div className="mt-2 grid grid-cols-5 gap-2" role="radiogroup" aria-label="How are you feeling?">
+    <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5" role="radiogroup" aria-label="How are you feeling?">
       {MOODS.map((m) => (
         <button
           type="button"

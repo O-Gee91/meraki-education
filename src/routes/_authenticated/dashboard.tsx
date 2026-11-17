@@ -284,7 +284,7 @@ function DashboardPage() {
       {!isStaff && <MissingWorkCard />}
 
 
-      <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "xl:grid-cols-5"}`}>
+      <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "md:grid-cols-3 xl:grid-cols-5"}`}>
 
         <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
         {isStaff ? (
@@ -366,8 +366,8 @@ function DashboardPage() {
         )}
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <section className="min-w-0 lg:col-span-2">
+      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+        <section className="min-w-0 xl:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Classes</h2>
             <Link to="/classes" className="text-sm text-accent hover:underline">
@@ -404,7 +404,7 @@ function DashboardPage() {
           </div>
         </section>
 
-        <section className="min-w-0 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <section className="min-w-0 border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
           <h2 className="text-lg font-semibold">Announcements</h2>
           <div className="mt-4 space-y-4">
             {announcements.length === 0 ? (

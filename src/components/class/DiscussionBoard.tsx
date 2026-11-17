@@ -758,7 +758,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
             ) : (
               roots.map((p) => (
                 <div key={p.id} className="rounded-md border border-border p-3">
-                  <p className="flex items-center text-xs font-semibold">
+                  <p className="flex flex-wrap items-center gap-x-2 text-xs font-semibold">
                     {nameFor(p.author_id)}
                     <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(p.created_at)}</span>
                     {scoreTag(p)}
@@ -781,7 +781,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                     <div className="mt-3 space-y-2 border-l-2 border-border pl-3">
                       {repliesOf(p.id).map((r) => (
                         <div key={r.id} className="py-1">
-                          <p className="flex items-center text-xs font-semibold">
+                          <p className="flex flex-wrap items-center gap-x-2 text-xs font-semibold">
                             {nameFor(r.author_id)}
                             <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(r.created_at)}</span>
                             {scoreTag(r)}
@@ -957,12 +957,12 @@ function GradeByStudent({
         return (
           <section key={st.id} className="rounded-md border border-border p-3">
             <header className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h4 className="text-sm font-semibold">{st.last_name}, {st.first_name}</h4>
                 <Badge variant={ds.state === "graded" || ds.state === "complete" ? "secondary" : "outline"} className={ds.state === "missing" || (pastDue && ds.state !== "graded" && ds.state !== "complete") ? "border-warning text-foreground" : undefined}>{status}</Badge>
                 {st.is_tester ? <Badge variant="outline">Test account</Badge> : null}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm">Total <span className="text-base font-semibold">{formatPoints(total, Number(d.points_possible))}</span></span>
                 {mine.length > 0 && (
                   <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || saveStudent.isPending} onClick={() => saveStudent.mutate(st)}>
