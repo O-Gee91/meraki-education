@@ -5,7 +5,9 @@ import { passkeyStatus } from "@/lib/passkey.functions";
 export async function needsSecondFactor(): Promise<boolean> {
   const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error || !data) return false;
-  const totpPending = data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+  // An authenticator code already raised this session to aal2: fully verified.
+  if (data.currentLevel === "aal2") return false;
+  const totpPending = data.nextLevel === "aal2";
   let pk = { has: false, verified: false };
   try {
     pk = await passkeyStatus();
