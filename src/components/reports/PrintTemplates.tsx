@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, letterGrade, percent } from "@/lib/school";
+import { isAutoGradeComment } from "@/lib/grading";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
 import { sortStudents } from "@/lib/student-sort";
 import {
@@ -223,7 +224,7 @@ export function PrintTemplates() {
             <td class="num">${pts == null ? "—" : pts}</td>
             <td class="num">${Number(a.points_possible)}</td>
             <td class="num">${pts == null ? "—" : `${percent(pts, Number(a.points_possible)).toFixed(0)}%`}</td>
-            <td>${escapeHtml(g?.comment ?? "")}</td></tr>`;
+            <td>${escapeHtml(g?.comment && !isAutoGradeComment(g.comment) ? g.comment.trim() : "")}</td></tr>`;
         });
         const pct = possible ? percent(earned, possible) : null;
         return `<section class="page">
