@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ManageMarksDialog, useProofreadMarks } from "@/components/class/ProofreadMarks";
+import { SuggestFeedbackButton } from "@/components/class/SuggestFeedbackButton";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export type Annotation = {
@@ -270,6 +271,16 @@ export function ProofreadEditor({
           <Button size="sm" variant="outline" onClick={() => saveNote.mutate()} disabled={saveNote.isPending}>
             Save comment
           </Button>
+          <SuggestFeedbackButton
+            build={() => ({
+              assignmentTitle: "this assignment",
+              teacherNotes: [note, ...(annotations ?? []).map((a) => [a.mark_label, a.comment].filter(Boolean).join(": "))]
+                .filter((t) => t && t.trim())
+                .join("\n")
+                .slice(0, 3000),
+            })}
+            onSuggest={(text) => setNote(text)}
+          />
           <DraftStatus
             state={noteDraft.state}
             savedAt={noteDraft.savedAt}

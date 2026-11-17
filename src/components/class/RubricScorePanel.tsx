@@ -21,6 +21,7 @@ import {
   type RubricSelections,
 } from "@/lib/rubrics";
 import { cn } from "@/lib/utils";
+import { SuggestFeedbackButton } from "@/components/class/SuggestFeedbackButton";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
 export function RubricScorePanel({
@@ -265,6 +266,29 @@ export function RubricScorePanel({
             >
               {save.isPending ? "Saving…" : "Save rubric score"}
             </Button>
+            <SuggestFeedbackButton
+              build={() => ({
+                assignmentTitle: rubric.title,
+                score: scaled,
+                pointsPossible,
+                teacherNotes: comment,
+                rubric: criteria.map((c) => {
+                  const v = Number(selections[c.id]);
+                  const lv = Number.isFinite(v) ? c.levels.find((l) => v >= levelMin(l) && v <= levelMax(l)) : undefined;
+                  return {
+                    criterion: c.title || "Untitled row",
+                    level: lv?.label,
+                    descriptor: lv?.descriptor || undefined,
+                    earned: criterionEarned(c, selections),
+                    max: criterionMax(c),
+                  };
+                }),
+              })}
+              onSuggest={(text) => {
+                commentEdited.current = true;
+                setComment(text.slice(0, 2000));
+              }}
+            />
             <DraftStatus
               state={commentDraft.state}
               savedAt={commentDraft.savedAt}
