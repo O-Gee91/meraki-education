@@ -314,7 +314,7 @@ function StudentsPage() {
         ) : null}
       </div>
       <div>
-        <table className="w-full table-fixed text-sm">
+        <div className="overflow-x-auto"><table className="w-full min-w-[40rem] table-fixed text-sm">
           <colgroup>
             {isStaff ? <col className="w-[5%]" /> : null}
             <col className={isStaff ? "w-[26%]" : "w-[30%]"} />
@@ -437,7 +437,7 @@ function StudentsPage() {
               ])
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
       {isStaff ? <UnlinkedAccounts students={students} /> : null}
       <StudentProfile

@@ -1354,8 +1354,8 @@ function StaffCollectPanel({
               />
               <QuickScoreEditButton classId={classId} />
             </div>
-            <div className="grid gap-2 border-t border-border bg-secondary/30 px-4 py-3 md:grid-cols-[minmax(13rem,1fr)_auto_auto_auto_auto] md:items-center lg:px-6">
-              <div className="relative min-w-0">
+            <div className="grid gap-2 border-t border-border bg-secondary/30 px-4 py-3 sm:flex sm:flex-wrap sm:items-center lg:px-6">
+              <div className="relative min-w-0 sm:w-64">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="h-10 pl-9 text-sm"
@@ -1378,7 +1378,7 @@ function StaffCollectPanel({
               <span className="text-sm text-muted-foreground">
                 {selected.length} selected of {idsInView.length} shown
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
                   disabled={selected.length === 0 || collectSelected.isPending}
@@ -1416,7 +1416,7 @@ function StaffCollectPanel({
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] xl:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
             <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r-2 border-border bg-secondary/20 lg:flex`}>
               <div className="flex items-center justify-between border-b border-border bg-background px-5 py-3">
                 <p className="text-sm font-bold">Student roster</p>

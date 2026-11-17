@@ -183,7 +183,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
                 <span className="font-medium">
                   {r.students?.last_name}, {r.students?.first_name}
                 </span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {STATUSES.map((s) => (
                     <Button
                       key={s}
