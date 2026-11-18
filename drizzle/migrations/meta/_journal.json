@@ -232,6 +232,13 @@
       "when": 1794803220135,
       "tag": "0032_passkeys",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794981811115,
+      "tag": "0033_dropped_enrollments",
+      "breakpoints": true
     }
   ]
 }

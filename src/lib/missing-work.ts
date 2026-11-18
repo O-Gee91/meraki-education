@@ -31,6 +31,9 @@ export function isMissingWork({ assignment, grade, submitted, today = todayKey()
   const due = assignment.due_date?.slice(0, 10);
   const joined = enrolledAt?.slice(0, 10);
   if (due && joined && due <= joined) return false; // due before the student joined (e.g. transfer)
+  const created = assignment.created_at?.slice(0, 10);
+  if (created && joined && created < joined) return false; // created before the student joined
+
   if (assignment.status && assignment.status !== "published") return false;
   if (grade?.points_earned != null && grade.points_earned !== "") return false;
   if (submitted) return false;

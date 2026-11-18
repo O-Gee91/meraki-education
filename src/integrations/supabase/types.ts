@@ -1126,6 +1126,48 @@ export type Database = {
           },
         ]
       }
+      dropped_enrollments: {
+        Row: {
+          class_id: string
+          dropped_at: string
+          dropped_by: string | null
+          enrolled_at: string | null
+          id: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          dropped_at?: string
+          dropped_by?: string | null
+          enrolled_at?: string | null
+          id?: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          dropped_at?: string
+          dropped_by?: string | null
+          enrolled_at?: string | null
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dropped_enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dropped_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           class_id: string

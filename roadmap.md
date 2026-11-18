@@ -83,3 +83,4 @@
 - [x] Printed student report includes assignment comments (toggle, on by default; mark codes hidden)
 - [x] "Suggest comment" drafts editable feedback from score, rubric results and teacher notes (rubric + proofread boxes)
 - [ ] Educator check of both in a signed-in session
+- Dropped/moved students: past class records kept in dropped_enrollments (trigger on enrollment delete); missing work ignores assignments created before joining.

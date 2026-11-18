@@ -229,6 +229,21 @@ function ClassDetailPage() {
       return (data ?? []).filter((r) => r.students);
     },
   });
+  const [showDropped, setShowDropped] = useState(false);
+  const { data: droppedRoster = [] } = useQuery({
+    queryKey: ["dropped-roster", classId],
+    enabled: realStaff && showDropped,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dropped_enrollments")
+        .select("id, student_id, enrolled_at, dropped_at, students(id, first_name, last_name, grade_level, student_number, is_tester)")
+        .eq("class_id", classId);
+      if (error) throw error;
+      return (data ?? [])
+        .filter((r) => r.students)
+        .map((r) => ({ id: r.id, student_id: r.student_id, created_at: r.enrolled_at ?? r.dropped_at, students: r.students, droppedAt: r.dropped_at as string | null }));
+    },
+  });
   const testerId = fullRoster.find((r) => isTestStudent(r.students))?.student_id ?? null;
   const previewing = previewingStudent && realStaff && !!testerId;
   const isStaff = realStaff && !previewing;
@@ -247,7 +262,14 @@ function ClassDetailPage() {
     () => new Set(roster.filter((r) => isTestStudent(r.students)).map((r) => r.student_id)),
     [roster],
   );
-  const gradebookRoster = sortStudents(roster, gradebookSort, (row) => row.students);
+  const gradebookRoster = sortStudents(
+    [
+      ...roster.map((r) => ({ ...r, droppedAt: null as string | null })),
+      ...(realStaff && !previewing && showDropped ? droppedRoster.filter((d) => !roster.some((r) => r.student_id === d.student_id)) : []),
+    ],
+    gradebookSort,
+    (row) => row.students,
+  );
   const visibleGradebookRoster = gradebookRoster.filter((row) => {
     const query = gradebookSearch.trim().toLocaleLowerCase();
     if (!query) return true;
@@ -337,7 +359,7 @@ function ClassDetailPage() {
     const missing: Record<string, number> = {};
     const ungraded: Record<string, number> = {};
     const realStudents = gradebookRoster
-      .filter((r) => !isTestStudent(r.students))
+      .filter((r) => !isTestStudent(r.students) && !r.droppedAt)
       .map((r) => r.student_id);
     for (const a of assignments) {
       let m = 0;
@@ -713,6 +735,10 @@ function ClassDetailPage() {
                             ))}
                         </SelectContent>
                       </Select>
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox checked={showDropped} onCheckedChange={(v) => setShowDropped(v === true)} aria-label="Show dropped students" />
+                        Show dropped students
+                      </label>
                     </div>}
                   </div>
                 </header>
@@ -827,6 +853,9 @@ function ClassDetailPage() {
                                    {studentLabel(row.students, useIds)}
                                  </Button>
                                  <TestAccountBadge student={row.students} />
+                                 {row.droppedAt && (
+                                   <p className="mt-0.5 text-xs text-muted-foreground">Dropped {new Date(row.droppedAt).toLocaleDateString()}</p>
+                                 )}
                                  {!useIds && row.students?.student_number && (
                                    <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
                                  )}
