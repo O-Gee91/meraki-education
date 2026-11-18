@@ -1,3 +1,5 @@
+import { useServerFn } from "@tanstack/react-start";
+import { getStudentEarlierWork } from "@/lib/earlier-work.functions";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Printer } from "lucide-react";
@@ -139,28 +141,18 @@ export function StudentClassReport({
     },
   });
 
+  const fetchEarlierWork = useServerFn(getStudentEarlierWork);
   const { data: previousClasses = [] } = useQuery({
     queryKey: ["student-class-report-previous", classId, student?.id],
     enabled: open && !!student,
     queryFn: async () => {
-      const { data: drops, error } = await supabase
-        .from("dropped_enrollments")
-        .select("class_id, dropped_at, classes(name)")
-        .eq("student_id", student?.id ?? "")
-        .neq("class_id", classId);
-      if (error) throw error;
-      if (!drops?.length) return [];
-      const ids = drops.map((d) => d.class_id);
-      const [{ data: items, error: aErr }, { data: marks, error: gErr }] = await Promise.all([
-        supabase.from("assignments").select("id, class_id, title, category, points_possible, due_date").in("class_id", ids).eq("status", "published"),
-        supabase.from("grades").select("assignment_id, points_earned, comment, is_draft").eq("student_id", student?.id ?? ""),
-      ]);
-      if (aErr) throw aErr;
-      if (gErr) throw gErr;
-      const gradeBy = new Map((marks ?? []).filter((g) => !g.is_draft).map((g) => [g.assignment_id, g]));
+      const { classes: drops } = await fetchEarlierWork({ data: { studentId: student?.id ?? "", excludeClassId: classId } });
+      if (!drops.length) return [];
+      const items = drops.flatMap((d) => d.assignments.map((a) => ({ ...a, class_id: d.classId })));
+      const gradeBy = new Map(drops.flatMap((d) => d.grades).map((g) => [g.assignment_id, g]));
       return drops.map((d) => {
-        const list = (items ?? [])
-          .filter((a) => a.class_id === d.class_id && gradeBy.has(a.id))
+        const list = items
+          .filter((a) => a.class_id === d.classId && gradeBy.has(a.id))
           .sort((l, r) => (l.due_date ?? "").localeCompare(r.due_date ?? ""))
           .map((a) => {
             const g = gradeBy.get(a.id)!;
@@ -170,7 +162,7 @@ export function StudentClassReport({
           list.map((a) => ({ category: a.category, pointsPossible: Number(a.points_possible), pointsEarned: a.score, markCode: a.mark })),
           setup,
         );
-        return { classId: d.class_id, name: (d.classes as { name?: string } | null)?.name ?? "Previous class", droppedAt: d.dropped_at, items: list, average: avg };
+        return { classId: d.classId, name: d.name, droppedAt: d.droppedAt, items: list, average: avg };
       }).filter((c) => c.items.length > 0);
     },
   });
