@@ -944,6 +944,7 @@ function ClassDetailPage() {
                 grades={grades.filter((g) => !g.is_draft)}
                setup={setup}
                displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
+               enrolledAt={enrolledAtFor(gradebookReportStudentId ?? "")}
              />
            )}
           {!isStaff && <FeedbackInbox classId={classId} />}
@@ -2679,6 +2680,7 @@ function RosterTab({
         grades={grades}
         setup={setup}
         displayName={studentLabel(reportStudent, useIds)}
+        enrolledAt={(roster.find((r) => r.student_id === reportStudentId) as { created_at?: string | null } | undefined)?.created_at ?? null}
       />
     </div>
   );

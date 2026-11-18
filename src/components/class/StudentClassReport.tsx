@@ -63,6 +63,7 @@ export function StudentClassReport({
   grades,
   setup,
   displayName,
+  enrolledAt,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -73,6 +74,8 @@ export function StudentClassReport({
   grades: Grade[];
   setup: GradingSetup;
   displayName: string;
+  /** When the student joined this class; older ungraded work is left out (transfers). */
+  enrolledAt?: string | null;
 }) {
   const queryClient = useQueryClient();
   const [showBehavior, setShowBehavior] = useState(false);
@@ -136,6 +139,42 @@ export function StudentClassReport({
     },
   });
 
+  const { data: previousClasses = [] } = useQuery({
+    queryKey: ["student-class-report-previous", classId, student?.id],
+    enabled: open && !!student,
+    queryFn: async () => {
+      const { data: drops, error } = await supabase
+        .from("dropped_enrollments")
+        .select("class_id, dropped_at, classes(name)")
+        .eq("student_id", student?.id ?? "")
+        .neq("class_id", classId);
+      if (error) throw error;
+      if (!drops?.length) return [];
+      const ids = drops.map((d) => d.class_id);
+      const [{ data: items, error: aErr }, { data: marks, error: gErr }] = await Promise.all([
+        supabase.from("assignments").select("id, class_id, title, category, points_possible, due_date").in("class_id", ids).eq("status", "published"),
+        supabase.from("grades").select("assignment_id, points_earned, comment, is_draft").eq("student_id", student?.id ?? ""),
+      ]);
+      if (aErr) throw aErr;
+      if (gErr) throw gErr;
+      const gradeBy = new Map((marks ?? []).filter((g) => !g.is_draft).map((g) => [g.assignment_id, g]));
+      return drops.map((d) => {
+        const list = (items ?? [])
+          .filter((a) => a.class_id === d.class_id && gradeBy.has(a.id))
+          .sort((l, r) => (l.due_date ?? "").localeCompare(r.due_date ?? ""))
+          .map((a) => {
+            const g = gradeBy.get(a.id)!;
+            return { ...a, score: g.points_earned == null ? null : Number(g.points_earned), mark: markCodeFromComment(g.comment) };
+          });
+        const avg = computeAverage(
+          list.map((a) => ({ category: a.category, pointsPossible: Number(a.points_possible), pointsEarned: a.score, markCode: a.mark })),
+          setup,
+        );
+        return { classId: d.class_id, name: (d.classes as { name?: string } | null)?.name ?? "Previous class", droppedAt: d.dropped_at, items: list, average: avg };
+      }).filter((c) => c.items.length > 0);
+    },
+  });
+
   const assessmentByAssignment = new Map(
     assessments.filter((assessment) => assessment.assignment_id).map((assessment) => [assessment.assignment_id, assessment]),
   );
@@ -177,7 +216,13 @@ export function StudentClassReport({
         missing,
         pastDue: Boolean(dueDate && dueDate < today),
       }).label;
+      const joined = enrolledAt?.slice(0, 10);
+      const created = assignment.created_at?.slice(0, 10);
+      const beforeJoin = Boolean(
+        joined && ((created && created < joined) || (dueDate && dueDate <= joined)) && score == null && !mark && !handedIn,
+      );
       return {
+        beforeJoin,
         key: assignment.id,
         assignmentId: assignment.id,
         assessmentId: assessment?.id ?? null,
@@ -225,7 +270,7 @@ export function StudentClassReport({
           completed: Boolean(submission),
         };
       });
-    return [...assignmentRows, ...unlinkedRows].sort((left, right) => {
+    return [...assignmentRows.filter((row) => !row.beforeJoin), ...unlinkedRows].sort((left, right) => {
       if (!left.dueDate && !right.dueDate) return left.title.localeCompare(right.title);
       if (!left.dueDate) return 1;
       if (!right.dueDate) return -1;
@@ -241,6 +286,7 @@ export function StudentClassReport({
     student,
     submissions,
     today,
+    enrolledAt,
   ]);
 
   const studentAverage = student
@@ -434,6 +480,28 @@ export function StudentClassReport({
             </tbody>
           </table>
         </div>
+
+        {previousClasses.map((prev) => (
+          <section key={prev.classId} className="rounded-md border border-border">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-secondary/30 px-3 py-2">
+              <p className="text-sm font-semibold">Earlier work · {prev.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {prev.average == null ? "No graded work" : `${prev.average.toFixed(1)}% ${letterFor(prev.average, setup.scale)}`} · moved {formatDate(prev.droppedAt.slice(0, 10))}
+              </p>
+            </div>
+            <table className="w-full text-sm [overflow-wrap:anywhere]">
+              <tbody>
+                {prev.items.map((item) => (
+                  <tr key={item.id} className="border-t border-border first:border-t-0">
+                    <td className="px-3 py-2">{item.title}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{item.due_date ? formatDate(item.due_date) : "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{item.mark ?? (item.score == null ? "—" : `${item.score} / ${item.points_possible}`)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
 
         <section className="rounded-md border border-border p-4">
           <div className="flex items-center justify-between gap-3">
