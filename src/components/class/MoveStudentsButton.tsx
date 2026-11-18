@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { carryTransferGrades } from "@/lib/transfer-grade";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -96,6 +97,11 @@ export function MoveStudentsButton({
       if (dropAfter && enrollmentIds.length > 0) {
         const { error } = await supabase.from("enrollments").delete().in("id", enrollmentIds);
         if (error) throw error;
+        try {
+          await carryTransferGrades(classId, studentIds, targets);
+        } catch {
+          toast.warning("Moved, but the transfer grade could not be added.");
+        }
       }
 
       return rows.length;
