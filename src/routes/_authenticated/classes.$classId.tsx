@@ -1128,11 +1128,10 @@ type AssignmentRow = {
   status?: string;
 };
 
-type TimelineKey = "current" | "upcoming" | "past" | "all";
+type TimelineKey = "current" | "past" | "all";
 type QuickKey = "ungraded" | "missing" | "draft";
 const TIMELINE: Array<[TimelineKey, string]> = [
   ["current", "Current"],
-  ["upcoming", "Upcoming"],
   ["past", "Past / Graded"],
   ["all", "All"],
 ];
@@ -1250,7 +1249,6 @@ function AssignmentsTab({
 
   const timelineCounts = {
     current: searched.filter((a) => bucketOf(a) === "current").length,
-    upcoming: searched.filter((a) => bucketOf(a) === "upcoming").length,
     past: searched.filter((a) => bucketOf(a) === "past").length,
     all: searched.length,
   };

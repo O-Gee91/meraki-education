@@ -7,8 +7,8 @@ describe("courseworkBucket", () => {
   it("work due within the next 7 days is current", () => {
     expect(courseworkBucket("2026-11-08", today)).toBe("current");
   });
-  it("work due more than 7 days out is upcoming", () => {
-    expect(courseworkBucket("2026-11-09", today)).toBe("upcoming");
+  it("work due more than 7 days out is current", () => {
+    expect(courseworkBucket("2026-12-15", today)).toBe("current");
   });
   it("work due more than 7 days ago is past", () => {
     expect(courseworkBucket("2026-10-24", today)).toBe("past");
