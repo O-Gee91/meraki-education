@@ -153,6 +153,9 @@ export function RubricScorePanel({
           {earned}/{max} · {scaled} of {pointsPossible} points
         </Badge>
       </div>
+      {!readOnly && criteria.some((c) => c.levels.some((l) => levelOptions(l).length > 1)) ? (
+        <p className="mt-1 text-xs text-muted-foreground">Click a selected level again to adjust its points.</p>
+      ) : null}
 
       <div className="mt-2 space-y-2">
         {criteria.map((c) => (
@@ -223,11 +226,6 @@ export function RubricScorePanel({
                         options[0]
                       )}
                     </span>
-                    {options.length > 1 && !readOnly && (
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        Click again to change the points
-                      </span>
-                    )}
                     {lv.descriptor && (
                       <span className="mt-0.5 block text-muted-foreground">
                         {lv.descriptor}

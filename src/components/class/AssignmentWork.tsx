@@ -19,7 +19,10 @@ import {
   Search,
   TriangleAlert,
   Users,
+  X as CloseIcon,
+  SlidersHorizontal,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -1275,6 +1278,7 @@ function StaffCollectPanel({
           </Button>
         </DialogTrigger>
         <DialogContent
+          hideClose
           className="inset-0 left-0 top-0 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden border-0 p-0 sm:rounded-none"
           onKeyDown={(event) => {
             const target = event.target as HTMLElement;
@@ -1289,7 +1293,7 @@ function StaffCollectPanel({
             }
           }}
         >
-          <header className="shrink-0 border-b border-border bg-background px-4 py-3 pr-14 lg:px-6">
+          <header className="shrink-0 border-b border-border bg-background px-4 py-3 lg:px-6">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
               <DialogHeader className="min-w-0 space-y-1 text-left">
                 <DialogTitle className="truncate text-xl lg:text-2xl">{assignment.title}</DialogTitle>
@@ -1306,7 +1310,9 @@ function StaffCollectPanel({
                   </Button>
                 ) : null}
                 <DialogClose asChild>
-                  <Button variant="outline" size="sm">Close</Button>
+                  <Button variant="ghost" size="sm" className="gap-1.5" aria-label="Close grading view" title="Close (Esc)">
+                    <CloseIcon className="h-4 w-4" /> Close
+                  </Button>
                 </DialogClose>
               </div>
               <AlertDialog open={confirmPostAll} onOpenChange={setConfirmPostAll}>
@@ -1337,24 +1343,7 @@ function StaffCollectPanel({
           </header>
 
           <div className="shrink-0 border-b border-border bg-background">
-            <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 lg:px-6">
-              <BulkFillBar
-                classId={classId}
-                pointsPossible={Number(assignment.points_possible)}
-                marks={marks}
-                pending={bulkFill.isPending}
-                selectedCount={selected.length}
-                onFill={(value, onlyBlank) =>
-                  bulkFill.mutate({
-                    value,
-                    onlyBlank,
-                    ...(selected.length ? { studentIds: selected } : {}),
-                  })
-                }
-              />
-              <QuickScoreEditButton classId={classId} />
-            </div>
-            <div className="grid gap-2 border-t border-border bg-secondary/30 px-4 py-3 sm:flex sm:flex-wrap sm:items-center lg:px-6">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 lg:px-6">
               <div className="relative min-w-0 sm:w-64">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -1366,6 +1355,33 @@ function StaffCollectPanel({
                 />
               </div>
               <StudentSortControl value={sortMode} onChange={setSortMode} className="w-44" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {selected.length > 0 ? `Fill ${selected.length} selected` : "Bulk fill"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(32rem,calc(100vw-2rem))] space-y-3">
+                  <BulkFillBar
+                    classId={classId}
+                    pointsPossible={Number(assignment.points_possible)}
+                    marks={marks}
+                    pending={bulkFill.isPending}
+                    selectedCount={selected.length}
+                    onFill={(value, onlyBlank) =>
+                      bulkFill.mutate({
+                        value,
+                        onlyBlank,
+                        ...(selected.length ? { studentIds: selected } : {}),
+                      })
+                    }
+                  />
+                  <div className="flex justify-end border-t border-border pt-2">
+                    <QuickScoreEditButton classId={classId} />
+                  </div>
+                </PopoverContent>
+              </Popover>
               <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
                 <Checkbox
                   className="h-5 w-5"
@@ -1373,8 +1389,10 @@ function StaffCollectPanel({
                   disabled={idsInView.length === 0}
                   onCheckedChange={(value) => toggleMaster(value === true)}
                 />
-                Select all students
+                Select all
               </label>
+              {selected.length > 0 ? (
+              <>
               <span className="text-sm text-muted-foreground">
                 {selected.length} selected of {idsInView.length} shown
               </span>
@@ -1413,11 +1431,13 @@ function StaffCollectPanel({
                   Clear selection
                 </Button>
               </div>
+              </>
+              ) : null}
             </div>
           </div>
 
           <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] xl:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
-            <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r-2 border-border bg-secondary/20 lg:flex`}>
+            <section className={`${showMobileDetail ? "hidden" : "flex"} min-h-0 flex-col border-r border-border bg-background lg:flex`}>
               <div className="flex items-center justify-between border-b border-border bg-background px-5 py-3">
                 <p className="text-sm font-bold">Student roster</p>
                 <p className="text-xs text-muted-foreground">{visibleRoster.length} shown</p>
@@ -1428,7 +1448,7 @@ function StaffCollectPanel({
                 ) : visibleRoster.length === 0 ? (
                   <p className="p-6 text-sm text-muted-foreground">No students match that filter.</p>
                 ) : (
-                  visibleRoster.map((student, index) => {
+                  visibleRoster.map((student) => {
                     const submission = submissions.find((row) => row.student_id === student.id);
                     const grade = grades.find((row) => row.student_id === student.id);
                     const collected = isCollected(student.id);
@@ -1437,11 +1457,11 @@ function StaffCollectPanel({
                     return (
                       <div
                         key={student.id}
-                        className={`grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border border-l-4 px-4 py-3 transition-colors ${
+                        className={`grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border/60 border-l-2 px-4 py-3 transition-colors ${
                           isActive
-                            ? "border-l-primary bg-primary/10"
-                            : `border-l-transparent ${index % 2 ? "bg-secondary/20" : "bg-background"}`
-                        } hover:bg-secondary/50`}
+                            ? "border-l-primary bg-primary/5"
+                            : "border-l-transparent bg-background"
+                        } hover:bg-secondary/40`}
                       >
                         <Checkbox
                           checked={selected.includes(student.id)}
@@ -1814,6 +1834,7 @@ function BulkFillBar({
             {q.label}
           </Button>
         ))}
+        {quick.some((q) => /full credit/i.test(q.label)) ? null : (
         <Button
           type="button"
           size="sm"
@@ -1824,6 +1845,7 @@ function BulkFillBar({
         >
           Full credit ({pointsPossible})
         </Button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Input
