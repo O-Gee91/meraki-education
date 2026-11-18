@@ -1,14 +1,14 @@
 /**
  * Timeline buckets for the class Coursework tab.
- * Current: due within the past 7 days through the next 14 days, undated work,
- * or older work still waiting on grading. Upcoming: due more than 14 days out.
+ * Current: due within the past 7 days through the next 7 days, undated work,
+ * or older work still waiting on grading. Upcoming: due more than 7 days out.
  * Past: due more than 7 days ago with nothing left to grade.
  */
 export type CourseworkBucket = "current" | "upcoming" | "past";
 
-export const CURRENT_LOOKBACK_DAYS = 7;
-export const CURRENT_LOOKAHEAD_DAYS = 14;
 export const DUE_SOON_DAYS = 7;
+export const CURRENT_LOOKBACK_DAYS = 7;
+export const CURRENT_LOOKAHEAD_DAYS = DUE_SOON_DAYS;
 
 function shift(day: string, days: number): string {
   const d = new Date(`${day}T00:00:00Z`);
