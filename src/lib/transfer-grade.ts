@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import { computeAverage, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
+import { computeAverage, markCodeFromComment, parseGradingSetup, TRANSFER_CATEGORY } from "@/lib/grading";
 
 /** Points possible on a carried-over transfer grade; earned points equal the old class percentage. */
 export const TRANSFER_POINTS = 100;
-export const TRANSFER_CATEGORY = "Transfer";
+export { TRANSFER_CATEGORY };
 
 export function transferTitle(fromClassName: string) {
   return `Transfer grade · ${fromClassName}`;

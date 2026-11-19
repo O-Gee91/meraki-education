@@ -84,3 +84,8 @@
 - [x] "Suggest comment" drafts editable feedback from score, rubric results and teacher notes (rubric + proofread boxes)
 - [ ] Educator check of both in a signed-in session
 - Dropped/moved students: past class records kept in dropped_enrollments (trigger on enrollment delete); missing work ignores assignments created before joining.
+
+## Project monitoring transfer fixes (Joe Doyle 2026-11-19)
+- [x] Count carried-over Transfer grades in fully weighted classes without changing teacher category weights
+- [x] Exclude work created or due after a student's departure from dropped-student missing counts
+- [x] Regression coverage: 19 transfer-grade and missing-work checks pass

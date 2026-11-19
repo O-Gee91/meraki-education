@@ -156,9 +156,15 @@ type ScoreInput = {
 
 /** Category name reserved for bonus work: points earned add on top, nothing counts against. */
 export const EXTRA_CREDIT_CATEGORY = "Extra credit";
+/** Category name reserved for the single overall score carried into a student's new class. */
+export const TRANSFER_CATEGORY = "Transfer";
 
 export function isExtraCredit(category?: string | null) {
   return (category ?? "").trim().toLowerCase() === EXTRA_CREDIT_CATEGORY.toLowerCase();
+}
+
+export function isTransferGrade(category?: string | null) {
+  return (category ?? "").trim().toLowerCase() === TRANSFER_CATEGORY.toLowerCase();
 }
 
 /** Returns the class percentage for one student, honoring weights and special marks. */
@@ -166,6 +172,9 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
   const buckets = new Map<string, { earned: number; possible: number }>();
   let bonusEarned = 0;
   let bonusPossible = 0;
+  // A carried-over grade must count even when the teacher's categories already
+  // total 100%. It joins the first weighted category rather than changing weights.
+  const transferCategory = setup.categories.find((c) => Number(c.weight || 0) > 0)?.name;
 
   for (const row of rows) {
     const mark = findMark(row.markCode, setup.marks);
@@ -186,7 +195,11 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
       continue;
     }
 
-    const key = setup.mode === "weighted" ? row.category : "__all__";
+    const key = setup.mode === "weighted"
+      ? isTransferGrade(row.category) && transferCategory
+        ? transferCategory
+        : row.category
+      : "__all__";
     const bucket = buckets.get(key) ?? { earned: 0, possible: 0 };
     bucket.earned += Number(earned);
     bucket.possible += Number(row.pointsPossible);

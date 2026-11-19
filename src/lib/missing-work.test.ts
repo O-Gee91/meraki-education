@@ -38,4 +38,16 @@ describe("isMissingWork", () => {
   it("never counts work created before a transferred student joined", () => {
     expect(isMissingWork({ assignment: { due_date: "2026-11-12", created_at: "2026-11-01T00:00:00Z", status: "published" }, enrolledAt: "2026-11-10T03:00:00Z", today: "2026-11-18" })).toBe(false);
   });
+  it("never counts work created after a student left", () => {
+    expect(isMissingWork({ assignment: pastDue, droppedAt: "2026-10-15T03:00:00Z", today })).toBe(false);
+  });
+  it("never counts work due after a student left", () => {
+    expect(isMissingWork({ assignment: pastDue, droppedAt: "2026-10-19T03:00:00Z", today })).toBe(false);
+  });
+  it("still counts unfinished work that was due before a student left", () => {
+    expect(isMissingWork({ assignment: pastDue, droppedAt: "2026-10-21T03:00:00Z", today })).toBe(true);
+  });
+  it("still counts an explicit M mark after a student left", () => {
+    expect(isMissingWork({ assignment: pastDue, grade: { comment: "MARK:M" }, droppedAt: "2026-10-15T03:00:00Z", today })).toBe(true);
+  });
 });

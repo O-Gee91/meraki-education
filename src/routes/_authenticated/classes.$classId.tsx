@@ -344,14 +344,17 @@ function ClassDetailPage() {
     () => new Set(gradebookSubmissions.map((s) => `${s.student_id}:${s.assignment_id}`)),
     [gradebookSubmissions],
   );
+  const gradebookEnrollmentFor = (studentId: string) =>
+    gradebookRoster.find((r) => r.student_id === studentId);
   const enrolledAtFor = (studentId: string) =>
-    fullRoster.find((r) => r.student_id === studentId)?.created_at ?? null;
+    gradebookEnrollmentFor(studentId)?.created_at ?? null;
   const missingFor = (studentId: string, assignment: { id: string; due_date?: string | null; created_at?: string | null; status?: string | null }) =>
     isMissingWork({
       assignment,
       grade: gradeFor(studentId, assignment.id),
       submitted: submittedKeys.has(`${studentId}:${assignment.id}`),
       enrolledAt: enrolledAtFor(studentId),
+      droppedAt: gradebookEnrollmentFor(studentId)?.droppedAt ?? null,
     });
 
   // Per-assignment counts for the Coursework tab quick filters (test accounts excluded).
