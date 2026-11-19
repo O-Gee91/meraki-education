@@ -1,10 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 export type EarlierWorkClass = {
   classId: string;
   name: string;
   droppedAt: string;
+  weights: Json;
   assignments: { id: string; title: string; category: string; points_possible: number; due_date: string | null }[];
   grades: { assignment_id: string; points_earned: number | null; comment: string | null }[];
 };
@@ -23,7 +25,7 @@ export const getStudentEarlierWork = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: drops, error } = await supabaseAdmin
       .from("dropped_enrollments")
-      .select("class_id, dropped_at, classes(name)")
+      .select("class_id, dropped_at, classes(name, weights)")
       .eq("student_id", data.studentId)
       .neq("class_id", data.excludeClassId);
     if (error) throw new Error("Could not load earlier work");
@@ -48,6 +50,7 @@ export const getStudentEarlierWork = createServerFn({ method: "POST" })
         classId: d.class_id,
         name: (d.classes as { name?: string } | null)?.name ?? "Previous class",
         droppedAt: d.dropped_at,
+        weights: (d.classes as { weights?: Json } | null)?.weights ?? null,
         assignments: (items ?? [])
           .filter((a) => a.class_id === d.class_id)
           .map((a) => ({ id: a.id, title: a.title, category: a.category, points_possible: Number(a.points_possible), due_date: a.due_date })),

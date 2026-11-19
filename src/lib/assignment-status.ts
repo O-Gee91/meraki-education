@@ -15,6 +15,20 @@ const dayKey = (value?: string | null) => (value ? value.slice(0, 10) : null);
 
 export const todayKey = () => new Date().toISOString().slice(0, 10);
 
+/** Whether work belonged to the student's active period in the class. */
+export function isWithinEnrollmentWindow(
+  assignment: { created_at?: string | null | undefined; due_date?: string | null | undefined },
+  enrollment: { enrolledAt?: string | null | undefined; droppedAt?: string | null | undefined },
+): boolean {
+  const due = dayKey(assignment.due_date);
+  const created = dayKey(assignment.created_at);
+  const joined = dayKey(enrollment.enrolledAt);
+  const left = dayKey(enrollment.droppedAt);
+  if (joined && ((due && due <= joined) || (created && created < joined))) return false;
+  if (left && ((due && due > left) || (created && created > left))) return false;
+  return true;
+}
+
 /** Created after its own due date — a backdated / retroactive assignment. */
 export function isBackdatedAssignment(
   createdAt?: string | null,

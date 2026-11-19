@@ -1,5 +1,5 @@
 import { markCodeFromComment } from "@/lib/grading";
-import { shouldAutoFlag, todayKey } from "@/lib/assignment-status";
+import { isWithinEnrollmentWindow, shouldAutoFlag, todayKey } from "@/lib/assignment-status";
 
 /**
  * The single "missing work" rule shared by Gradebook, class snapshot, Pulse,
@@ -30,14 +30,7 @@ export function isMissingWork({ assignment, grade, submitted, today = todayKey()
   const code = markCodeFromComment(grade?.comment);
   if (code === "M") return true;
   if (code) return false; // EX, INC, L… are teacher decisions, not missing
-  const due = assignment.due_date?.slice(0, 10);
-  const joined = enrolledAt?.slice(0, 10);
-  if (due && joined && due <= joined) return false; // due before the student joined (e.g. transfer)
-  const created = assignment.created_at?.slice(0, 10);
-  if (created && joined && created < joined) return false; // created before the student joined
-  const left = droppedAt?.slice(0, 10);
-  if (due && left && due > left) return false; // due after the student left
-  if (created && left && created > left) return false; // created after the student left
+  if (!isWithinEnrollmentWindow(assignment, { enrolledAt, droppedAt })) return false;
 
   if (assignment.status && assignment.status !== "published") return false;
   if (grade?.points_earned != null && grade.points_earned !== "") return false;

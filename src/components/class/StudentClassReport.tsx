@@ -25,11 +25,12 @@ import {
   letterFor,
   isAutoGradeComment,
   markCodeFromComment,
+  parseGradingSetup,
   type GradingSetup,
 } from "@/lib/grading";
 import { buildDocument, docHeader, escapeHtml, printHtml } from "@/lib/print-doc";
 import { formatDate } from "@/lib/school";
-import { shouldAutoFlag } from "@/lib/assignment-status";
+import { isWithinEnrollmentWindow, shouldAutoFlag } from "@/lib/assignment-status";
 
 type Assignment = {
   id: string;
@@ -66,6 +67,7 @@ export function StudentClassReport({
   setup,
   displayName,
   enrolledAt,
+  droppedAt,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -78,6 +80,8 @@ export function StudentClassReport({
   displayName: string;
   /** When the student joined this class; older ungraded work is left out (transfers). */
   enrolledAt?: string | null;
+  /** When the student left; later ungraded work is left out (dropped students). */
+  droppedAt?: string | null;
 }) {
   const queryClient = useQueryClient();
   const [showBehavior, setShowBehavior] = useState(false);
@@ -151,6 +155,7 @@ export function StudentClassReport({
       const items = drops.flatMap((d) => d.assignments.map((a) => ({ ...a, class_id: d.classId })));
       const gradeBy = new Map(drops.flatMap((d) => d.grades).map((g) => [g.assignment_id, g]));
       return drops.map((d) => {
+        const previousSetup = parseGradingSetup(d.weights);
         const list = items
           .filter((a) => a.class_id === d.classId && gradeBy.has(a.id))
           .sort((l, r) => (l.due_date ?? "").localeCompare(r.due_date ?? ""))
@@ -160,9 +165,9 @@ export function StudentClassReport({
           });
         const avg = computeAverage(
           list.map((a) => ({ category: a.category, pointsPossible: Number(a.points_possible), pointsEarned: a.score, markCode: a.mark })),
-          setup,
+          previousSetup,
         );
-        return { classId: d.classId, name: d.name, droppedAt: d.droppedAt, items: list, average: avg };
+        return { classId: d.classId, name: d.name, droppedAt: d.droppedAt, items: list, average: avg, scale: previousSetup.scale };
       }).filter((c) => c.items.length > 0);
     },
   });
@@ -208,13 +213,12 @@ export function StudentClassReport({
         missing,
         pastDue: Boolean(dueDate && dueDate < today),
       }).label;
-      const joined = enrolledAt?.slice(0, 10);
-      const created = assignment.created_at?.slice(0, 10);
-      const beforeJoin = Boolean(
-        joined && ((created && created < joined) || (dueDate && dueDate <= joined)) && score == null && !mark && !handedIn,
-      );
+      const outsideEnrollment = !isWithinEnrollmentWindow(
+        { created_at: assignment.created_at, due_date: dueDate },
+        { enrolledAt, droppedAt },
+      ) && score == null && !mark && !handedIn;
       return {
-        beforeJoin,
+        outsideEnrollment,
         key: assignment.id,
         assignmentId: assignment.id,
         assessmentId: assessment?.id ?? null,
@@ -244,7 +248,12 @@ export function StudentClassReport({
           : null;
         const dueDate = assessment.due_at?.slice(0, 10) ?? null;
         const missing = Boolean(dueDate && dueDate < today && !submission);
+        const outsideEnrollment = !isWithinEnrollmentWindow(
+          { due_date: dueDate },
+          { enrolledAt, droppedAt },
+        ) && !submission;
         return {
+          outsideEnrollment,
           key: `assessment-${assessment.id}`,
           assignmentId: null,
           assessmentId: assessment.id,
@@ -262,7 +271,7 @@ export function StudentClassReport({
           completed: Boolean(submission),
         };
       });
-    return [...assignmentRows.filter((row) => !row.beforeJoin), ...unlinkedRows].sort((left, right) => {
+    return [...assignmentRows.filter((row) => !row.outsideEnrollment), ...unlinkedRows.filter((row) => !row.outsideEnrollment)].sort((left, right) => {
       if (!left.dueDate && !right.dueDate) return left.title.localeCompare(right.title);
       if (!left.dueDate) return 1;
       if (!right.dueDate) return -1;
@@ -279,6 +288,7 @@ export function StudentClassReport({
     submissions,
     today,
     enrolledAt,
+    droppedAt,
   ]);
 
   const studentAverage = student
@@ -478,7 +488,7 @@ export function StudentClassReport({
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-secondary/30 px-3 py-2">
               <p className="text-sm font-semibold">Earlier work · {prev.name}</p>
               <p className="text-xs text-muted-foreground">
-                {prev.average == null ? "No graded work" : `${prev.average.toFixed(1)}% ${letterFor(prev.average, setup.scale)}`} · moved {formatDate(prev.droppedAt.slice(0, 10))}
+                {prev.average == null ? "No graded work" : `${prev.average.toFixed(1)}% ${letterFor(prev.average, prev.scale)}`} · moved {formatDate(prev.droppedAt.slice(0, 10))}
               </p>
             </div>
             <table className="w-full text-sm [overflow-wrap:anywhere]">

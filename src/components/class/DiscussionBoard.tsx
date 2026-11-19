@@ -25,6 +25,7 @@ import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
 import { formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import { isWithinEnrollmentWindow } from "@/lib/assignment-status";
 
 const DEFAULT_DUE_TIME = "23:59";
 /** Builds the exact due instant from a date + time typed in the class time zone. */
@@ -854,12 +855,12 @@ function GradeByStudent({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("students(id, first_name, last_name, user_id, is_tester)")
+        .select("created_at, students(id, first_name, last_name, user_id, is_tester)")
         .eq("class_id", d.class_id);
       if (error) throw error;
       return (data ?? [])
-        .map((r) => r.students)
-        .filter((s): s is NonNullable<typeof s> => !!s)
+        .filter((r) => r.students)
+        .map((r) => ({ ...r.students!, enrolled_at: r.created_at }))
         .sort((a, b) => Number(a.is_tester) - Number(b.is_tester) || a.last_name.localeCompare(b.last_name));
     },
   });
@@ -950,7 +951,10 @@ function GradeByStudent({
         const saved = scores.filter((s) => s.author_id === st.user_id);
         const total = studentDiscussionTotal(saved);
         const dueKey = d.due_at ?? (d.due_date ? `${d.due_date}T23:59:59` : null);
-        const pastDue = !!dueKey && new Date(dueKey).getTime() < Date.now();
+        const pastDue = !!dueKey && new Date(dueKey).getTime() < Date.now() && isWithinEnrollmentWindow(
+          { created_at: d.created_at, due_date: dueKey },
+          { enrolledAt: st.enrolled_at },
+        );
         const ds = resolveDiscussionState({ rootCount: main.length, replyCount: replies.length, requiredReplies: d.required_replies, pastDue, graded: total !== null });
         const status = ds.label;
         const dirty = mine.some((p) => pending[p.id] !== undefined);

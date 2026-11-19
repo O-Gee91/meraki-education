@@ -12,8 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, letterGrade, percent } from "@/lib/school";
-import { isAutoGradeComment } from "@/lib/grading";
+import { formatDate, percent } from "@/lib/school";
+import { computeAverage, isAutoGradeComment, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
 import { sortStudents } from "@/lib/student-sort";
 import {
@@ -83,7 +83,7 @@ export function PrintTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, term, room, period")
+        .select("id, name, subject, term, room, period, weights")
         .order("name");
       if (error) throw error;
       return data;
@@ -106,6 +106,7 @@ export function PrintTemplates() {
 
   const active = useMemo(() => TEMPLATES.find((t) => t.id === template)!, [template]);
   const klass = classes.find((c) => c.id === classId);
+  const setup = parseGradingSetup(klass?.weights);
 
   const needsAssessment = template === "assessment_paper";
 
@@ -147,9 +148,9 @@ export function PrintTemplates() {
       const { data: grades } = ids.length
         ? await supabase
             .from("grades")
-            .select("student_id, assignment_id, points_earned")
+            .select("student_id, assignment_id, points_earned, comment")
             .in("assignment_id", ids)
-        : { data: [] as { student_id: string; assignment_id: string; points_earned: number | null }[] };
+        : { data: [] as { student_id: string; assignment_id: string; points_earned: number | null; comment: string | null }[] };
 
       const pages = students.map((s) => {
         const card = (cards ?? []).find((c) => c.student_id === s.id);
@@ -162,7 +163,19 @@ export function PrintTemplates() {
           earned += Number(g.points_earned);
           possible += Number(a.points_possible);
         }
-        const pct = card?.grade_pct != null ? Number(card.grade_pct) : possible ? percent(earned, possible) : null;
+        const average = computeAverage(
+          (assignments ?? []).map((a) => {
+            const g = (grades ?? []).find((grade) => grade.student_id === s.id && grade.assignment_id === a.id);
+            return {
+              category: a.category,
+              pointsPossible: Number(a.points_possible),
+              pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
+              markCode: markCodeFromComment(g?.comment),
+            };
+          }),
+          setup,
+        );
+        const pct = card?.grade_pct != null ? Number(card.grade_pct) : average;
         return `<section class="page">
           ${docHeader("Term report card", headerMeta([`${s.last_name}, ${s.first_name}`]))}
           <table>
@@ -171,7 +184,7 @@ export function PrintTemplates() {
             <tr><th>Student #</th><td>${escapeHtml(s.student_number ?? "—")}</td>
               <th>Term</th><td>${escapeHtml(card?.term ?? klass?.term ?? "—")}</td></tr>
             <tr><th>Overall</th><td class="num">${pct == null ? "—" : `${pct.toFixed(1)}%`}</td>
-              <th>Letter</th><td>${escapeHtml(card?.letter ?? (pct == null ? "—" : letterGrade(pct)))}</td></tr>
+              <th>Letter</th><td>${escapeHtml(card?.letter ?? (pct == null ? "—" : letterFor(pct, setup.scale)))}</td></tr>
           </table>
           <h2>Points summary</h2>
           <table><tr><th>Points earned</th><th>Points possible</th><th>Assignments graded</th></tr>
@@ -210,15 +223,9 @@ export function PrintTemplates() {
         : { data: [] as { student_id: string; assignment_id: string; points_earned: number | null; comment: string | null }[] };
 
       const pages = students.map((s) => {
-        let earned = 0;
-        let possible = 0;
         const rows = (assignments ?? []).map((a) => {
           const g = (grades ?? []).find((x) => x.student_id === s.id && x.assignment_id === a.id);
           const pts = g?.points_earned == null ? null : Number(g.points_earned);
-          if (pts != null) {
-            earned += pts;
-            possible += Number(a.points_possible);
-          }
           return `<tr><td>${escapeHtml(a.title)}</td><td>${escapeHtml(a.category)}</td>
             <td>${escapeHtml(formatDate(a.due_date))}</td>
             <td class="num">${pts == null ? "—" : pts}</td>
@@ -226,11 +233,22 @@ export function PrintTemplates() {
             <td class="num">${pts == null ? "—" : `${percent(pts, Number(a.points_possible)).toFixed(0)}%`}</td>
             <td>${escapeHtml(g?.comment && !isAutoGradeComment(g.comment) ? g.comment.trim() : "")}</td></tr>`;
         });
-        const pct = possible ? percent(earned, possible) : null;
+        const pct = computeAverage(
+          (assignments ?? []).map((a) => {
+            const g = (grades ?? []).find((grade) => grade.student_id === s.id && grade.assignment_id === a.id);
+            return {
+              category: a.category,
+              pointsPossible: Number(a.points_possible),
+              pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
+              markCode: markCodeFromComment(g?.comment),
+            };
+          }),
+          setup,
+        );
         return `<section class="page">
           ${docHeader("Progress report", headerMeta([`${s.last_name}, ${s.first_name}`]))}
           <p class="muted">Grade ${s.grade_level} · current standing ${
-            pct == null ? "—" : `${pct.toFixed(1)}% (${letterGrade(pct)})`
+            pct == null ? "—" : `${pct.toFixed(1)}% (${letterFor(pct, setup.scale)})`
           }</p>
           <table><tr><th>Assignment</th><th>Category</th><th>Due</th><th>Score</th><th>Out of</th><th>%</th><th>Comment</th></tr>
           ${rows.join("") || "<tr><td colspan='7' class='muted'>No assignments yet.</td></tr>"}</table>

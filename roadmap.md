@@ -89,3 +89,7 @@
 - [x] Count carried-over Transfer grades in fully weighted classes without changing teacher category weights
 - [x] Exclude work created or due after a student's departure from dropped-student missing counts
 - [x] Regression coverage: 19 transfer-grade and missing-work checks pass
+- [x] Full-app sweep: Pulse, grading roster, discussions, individual reports, dashboards and hubs use the enrollment window
+- [x] Future report cards and print templates use computeAverage with each class's grading setup; saved report-card records unchanged
+- [x] Earlier-work averages use the previous class's own grading setup
+- [ ] Signed-in teacher walkthrough of the sweep — minted educator session redirected to /auth

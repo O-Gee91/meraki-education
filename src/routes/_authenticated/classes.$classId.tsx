@@ -370,7 +370,7 @@ function ClassDetailPage() {
       for (const sid of realStudents) {
         const g = grades.find((x) => x.student_id === sid && x.assignment_id === a.id);
         const submitted = submittedKeys.has(`${sid}:${a.id}`);
-        if (isMissingWork({ assignment: a, grade: g, submitted, enrolledAt: enrolledAtFor(sid) })) m++;
+        if (isMissingWork({ assignment: a, grade: g, submitted, enrolledAt: enrolledAtFor(sid), droppedAt: gradebookEnrollmentFor(sid)?.droppedAt ?? null })) m++;
         if (submitted && (g?.points_earned == null) && !markCodeFromComment(g?.comment)) u++;
       }
       missing[a.id] = m;
@@ -942,12 +942,13 @@ function ClassDetailPage() {
                }}
                classId={classId}
                className={klass?.name ?? "Class"}
-                student={roster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
+                student={gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
                 assignments={assignments}
                 grades={grades.filter((g) => !g.is_draft)}
                setup={setup}
-               displayName={studentLabel(roster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
+               displayName={studentLabel(gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
                enrolledAt={enrolledAtFor(gradebookReportStudentId ?? "")}
+               droppedAt={gradebookEnrollmentFor(gradebookReportStudentId ?? "")?.droppedAt ?? null}
              />
            )}
           {!isStaff && <FeedbackInbox classId={classId} />}
@@ -1250,9 +1251,14 @@ function AssignmentsTab({
   });
 
   const students = roster
-    .map((r) => r.students)
-    .filter((s): s is NonNullable<typeof s> => !!s)
-    .map((s) => ({ id: s.id, first_name: s.first_name, last_name: s.last_name }));
+    .filter((r) => r.students)
+    .map((r) => ({
+      id: r.student_id,
+      first_name: r.students!.first_name,
+      last_name: r.students!.last_name,
+      created_at: r.created_at ?? null,
+      droppedAt: r.droppedAt ?? null,
+    }));
 
   const today = todayKey();
   const draftGradeCount = (id: string) =>
@@ -2200,6 +2206,8 @@ function AssignmentStandards({
 type RosterRow = {
   id: string;
   student_id: string;
+  created_at?: string | null;
+  droppedAt?: string | null;
   students: {
     id: string;
     first_name: string;

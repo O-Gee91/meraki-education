@@ -20,6 +20,7 @@ type RosterRow = {
   id: string;
   student_id: string;
   created_at?: string | null;
+  droppedAt?: string | null;
   students: {
     id: string;
     first_name: string;
@@ -258,6 +259,7 @@ export function PulseDashboard({
       submitted: submissions.some((s) => s.assignment_id === assignment.id && s.student_id === studentId),
       today: todayKey,
       enrolledAt: roster.find((r) => r.student_id === studentId)?.created_at ?? null,
+      droppedAt: roster.find((r) => r.student_id === studentId)?.droppedAt ?? null,
     });
   };
 

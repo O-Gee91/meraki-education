@@ -64,7 +64,7 @@ import { StudentSortControl, useStudentSort } from "@/components/students/Studen
 import { sortStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { DEFAULT_TIME_ZONE } from "@/lib/coursework-window";
-import { shouldAutoFlag } from "@/lib/assignment-status";
+import { isMissingWork } from "@/lib/missing-work";
 import {
   findMark,
   hasGradeValue,
@@ -95,7 +95,13 @@ type SubmissionRow = {
   file_uploads: { id: string; file_name: string; storage_path: string } | null;
 };
 
-type Student = { id: string; first_name: string; last_name: string };
+type Student = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  created_at?: string | null;
+  droppedAt?: string | null;
+};
 
 function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(-80);
@@ -1499,7 +1505,13 @@ function StaffCollectPanel({
                                 if (online && assignment.due_date) {
                                   // Backdated assignments stay neutral until the
                                   // teacher records a status themselves.
-                                  if (shouldAutoFlag(assignment))
+                                  if (isMissingWork({
+                                    assignment,
+                                    grade,
+                                    submitted: false,
+                                    enrolledAt: student.created_at ?? null,
+                                    droppedAt: student.droppedAt ?? null,
+                                  }))
                                     return <span className="inline-flex items-center gap-1 font-medium"><span className="size-1.5 rounded-full bg-warning" aria-hidden />Missing</span>;
                                   return assignment.due_date < new Date().toISOString().slice(0, 10)
                                     ? <span>Assigned</span>

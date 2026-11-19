@@ -20,7 +20,8 @@ import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, gradeTone, letterGrade, percent } from "@/lib/school";
+import { formatDate, gradeTone } from "@/lib/school";
+import { computeAverage, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
 import { PrintTemplates } from "@/components/reports/PrintTemplates";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
@@ -103,7 +104,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
-        .select("id, name, subject, term")
+        .select("id, name, subject, term, weights")
         .order("name");
       if (error) throw error;
       return data;
@@ -161,13 +162,14 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     mutationFn: async () => {
       if (!classId) throw new Error("Choose a class first");
       const klass = classes.find((c) => c.id === classId);
+      const setup = parseGradingSetup(klass?.weights);
       const [{ data: rawRoster, error: rosterError }, { data: assignments, error: aError }] =
         await Promise.all([
           supabase
             .from("enrollments")
             .select("student_id, students(first_name, last_name, is_tester)")
             .eq("class_id", classId),
-          supabase.from("assignments").select("id, points_possible").eq("class_id", classId),
+          supabase.from("assignments").select("id, category, points_possible").eq("class_id", classId),
         ]);
       if (rosterError) throw rosterError;
       if (aError) throw aError;
@@ -178,28 +180,30 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       const { data: grades, error: gError } = assignmentIds.length
         ? await supabase
             .from("grades")
-            .select("student_id, assignment_id, points_earned")
+            .select("student_id, assignment_id, points_earned, comment")
             .in("assignment_id", assignmentIds)
         : { data: [], error: null };
       if (gError) throw gError;
 
       const rows = roster.map((r) => {
-        let earned = 0;
-        let possible = 0;
-        for (const g of grades ?? []) {
-          if (g.student_id !== r.student_id || g.points_earned == null) continue;
-          const assignment = (assignments ?? []).find((a) => a.id === g.assignment_id);
-          if (!assignment) continue;
-          earned += Number(g.points_earned);
-          possible += Number(assignment.points_possible);
-        }
-        const pct = possible ? percent(earned, possible) : null;
+        const pct = computeAverage(
+          (assignments ?? []).map((assignment) => {
+            const grade = (grades ?? []).find((g) => g.student_id === r.student_id && g.assignment_id === assignment.id);
+            return {
+              category: assignment.category,
+              pointsPossible: Number(assignment.points_possible),
+              pointsEarned: grade?.points_earned == null ? null : Number(grade.points_earned),
+              markCode: markCodeFromComment(grade?.comment),
+            };
+          }),
+          setup,
+        );
         return {
           student_id: r.student_id,
           class_id: classId,
           term: klass?.term ?? "Fall 2026",
           grade_pct: pct,
-          letter: pct == null ? null : letterGrade(pct),
+          letter: pct == null ? null : letterFor(pct, setup.scale),
           created_by: user!.id,
           updated_at: new Date().toISOString(),
         };
