@@ -2,7 +2,7 @@ import { resolveDiscussionState } from "@/lib/discussion-state";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, ClipboardCheck, Link2, MessageSquare, Pencil, Plus, Reply, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Search, ClipboardCheck, Link2, MessageSquare, Pencil, Plus, Reply, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -628,6 +628,10 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
   const draftKey = `discussion-post:${threadId}`;
   const [body, setBody] = useState(() => readDraft<string>(draftKey) ?? "");
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [nameFilter, setNameFilter] = useState("");
+  const [needsReplies, setNeedsReplies] = useState(false);
   const [view, setView] = useState<"thread" | "grade">("thread");
   const draft = useAutosaveDraft(draftKey, body, { dirty: body.trim().length > 0 });
 
@@ -674,14 +678,16 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
   };
 
   const add = useMutation({
-    mutationFn: async () => {
-      const text = body.trim();
-      if (text.length < 2) throw new Error("Write your response first");
-      const { error } = await supabase.from("discussion_posts").insert({ discussion_id: threadId, parent_id: replyTo, author_id: user!.id, body: text });
+    mutationFn: async (parentId: string | null) => {
+      const text = (parentId ? replyBody : body).trim();
+      if (text.length < 2) throw new Error(parentId ? "Write your reply first" : "Write your response first");
+      const { error } = await supabase.from("discussion_posts").insert({ discussion_id: threadId, parent_id: parentId, author_id: user!.id, body: text });
       if (error) throw error;
+      return parentId;
     },
-    onSuccess: () => {
-      setBody(""); setReplyTo(null); draft.clear();
+    onSuccess: (parentId) => {
+      if (parentId) { setReplyBody(""); setReplyTo(null); toast.success("Reply posted"); }
+      else { setBody(""); draft.clear(); }
       queryClient.invalidateQueries({ queryKey: key });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -696,7 +702,16 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const roots = posts.filter((p) => !p.parent_id);
+  const allRoots = posts.filter((p) => !p.parent_id);
+  const canWrite = !discussion.closed || isStaff;
+  const filterText = nameFilter.trim().toLowerCase();
+  const roots = focusId
+    ? allRoots.filter((p) => p.id === focusId)
+    : allRoots.filter((p) =>
+        (!filterText || nameFor(p.author_id).toLowerCase().includes(filterText)) &&
+        (!needsReplies || posts.every((r) => r.parent_id !== p.id)),
+      );
+  const openReply = (id: string) => { setReplyTo(replyTo === id ? null : id); setReplyBody(""); };
   const repliesOf = (id: string) => posts.filter((p) => p.parent_id === id);
   const scoreOf = (postId: string) => scores.find((s) => s.post_id === postId);
   const myScores = scores.filter((s) => s.author_id === user?.id);
@@ -753,9 +768,35 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
             </div>
           )}
 
+          {focusId ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setFocusId(null); setReplyTo(null); }}>
+                <ArrowLeft className="mr-1 size-4" /> Back to all {allRoots.length} responses
+              </Button>
+              {discussion.prompt ? (
+                <details className="w-full rounded-md bg-secondary/40 p-3 text-sm">
+                  <summary className="cursor-pointer font-medium">{discussion.title} · prompt</summary>
+                  <FormattedText text={discussion.prompt} className="mt-2" />
+                </details>
+              ) : null}
+            </div>
+          ) : allRoots.length > 3 ? (
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} placeholder="Find a classmate…" aria-label="Find a classmate" className="h-9 pl-8" />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={needsReplies} onChange={(e) => setNeedsReplies(e.target.checked)} />
+                No replies yet
+              </label>
+              <span className="text-xs text-muted-foreground">{roots.length} of {allRoots.length}</span>
+            </div>
+          ) : null}
+
           <div className="space-y-3">
             {roots.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No responses yet — be the first to post.</p>
+              <p className="text-sm text-muted-foreground">{allRoots.length === 0 ? "No responses yet — be the first to post." : "No responses match."}</p>
             ) : (
               roots.map((p) => (
                 <div key={p.id} className="rounded-md border border-border p-3">
@@ -766,11 +807,16 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                   </p>
                   <FormattedText text={p.body} className="mt-1" />
                   <div className="mt-2 flex gap-3 text-xs">
-                    {!discussion.closed || isStaff ? (
-                      <button onClick={() => setReplyTo(replyTo === p.id ? null : p.id)} className="text-muted-foreground hover:text-accent">
+                    {canWrite ? (
+                      <button onClick={() => openReply(p.id)} className="text-muted-foreground hover:text-accent">
                         {replyTo === p.id ? "Cancel reply" : "Reply"}
                       </button>
                     ) : null}
+                    {!focusId && (
+                      <button onClick={() => { setFocusId(p.id); window.scrollTo({ top: 0 }); }} className="text-muted-foreground hover:text-accent">
+                        Focus
+                      </button>
+                    )}
                     {(isStaff || p.author_id === user?.id) && (
                       <button onClick={() => { if (window.confirm("Remove this response and its replies?")) remove.mutate(p.id); }} className="text-muted-foreground hover:text-destructive">
                         Remove
@@ -797,32 +843,45 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                       ))}
                     </div>
                   )}
+
+                  {replyTo === p.id && canWrite && (
+                    <div className="mt-3 rounded-md border border-border bg-secondary/30 p-3">
+                      <p className="mb-1 text-xs text-muted-foreground">Replying to {nameFor(p.author_id)}</p>
+                      <div onKeyDown={(e) => {
+                        if (e.key === "Escape") setReplyTo(null);
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) add.mutate(p.id);
+                      }}>
+                        <FormattedEditor value={replyBody} onChange={setReplyBody} maxLength={POST_MAX_LENGTH} rows={3} ariaLabel="Your reply" placeholder="Write your reply…" />
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setReplyTo(null)}>Cancel</Button>
+                        <Button size="sm" onClick={() => add.mutate(p.id)} disabled={add.isPending}>Post reply</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
           </div>
 
-          {!discussion.closed || isStaff ? (
+          {focusId ? null : canWrite ? (
             <div className="mt-4">
               <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ShieldCheck className="size-3.5" aria-hidden="true" />
                 Respond to ideas, not people. Keep personal details private — your name shows on every post.
               </p>
-              {replyTo ? (
-                <p className="mb-1 text-xs text-muted-foreground">Replying to {nameFor(posts.find((p) => p.id === replyTo)?.author_id ?? "")}</p>
-              ) : null}
               <FormattedEditor
                 value={body}
                 onChange={setBody}
                 maxLength={POST_MAX_LENGTH}
                 rows={3}
-                ariaLabel={replyTo ? "Your reply" : "Your response"}
-                placeholder={replyTo ? "Write your reply…" : "Post your response to the prompt…"}
+                ariaLabel="Your response"
+                placeholder="Post your response to the prompt…"
               />
               <div className="mt-2 flex items-center gap-3">
                 <DraftStatus state={draft.state} savedAt={draft.savedAt} dirty={body.trim().length > 0} />
-                <Button size="sm" className="ml-auto" onClick={() => add.mutate()} disabled={add.isPending}>
-                  {replyTo ? "Reply" : "Post response"}
+                <Button size="sm" className="ml-auto" onClick={() => add.mutate(null)} disabled={add.isPending}>
+                  Post response
                 </Button>
               </div>
             </div>
