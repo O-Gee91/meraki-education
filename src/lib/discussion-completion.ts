@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { meetsDiscussionCriteria } from "@/lib/discussion-state";
 
 /**
@@ -16,10 +17,15 @@ export async function fetchDiscussionCompletions(assignmentIds: string[], studen
     .in("assignment_id", assignmentIds);
   if (!discs?.length) return done;
   const threadIds = [...new Set(discs.map((d) => d.thread_id ?? d.id))];
-  const { data: posts } = await supabase
-    .from("discussion_posts")
-    .select("discussion_id, author_id, parent_id")
-    .in("discussion_id", threadIds);
+  const posts = await fetchAll((from, to) =>
+    supabase
+      .from("discussion_posts")
+      .select("discussion_id, author_id, parent_id")
+      .in("discussion_id", threadIds)
+      .is("deleted_at", null)
+      .order("id")
+      .range(from, to),
+  );
   if (!posts?.length) return done;
   const authorIds = [...new Set(posts.map((p) => p.author_id))];
   let sq = supabase.from("students").select("id, user_id").in("user_id", authorIds);

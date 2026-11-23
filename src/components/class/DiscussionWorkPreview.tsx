@@ -57,6 +57,7 @@ export function DiscussionWorkPreview({
         .select("id, parent_id, body, created_at")
         .eq("discussion_id", threadId)
         .eq("author_id", student.user_id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return posts ?? [];

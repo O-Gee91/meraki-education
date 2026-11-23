@@ -33,3 +33,5 @@
 - Passkey second-step state lives in passkey_sessions keyed by the auth session_id; Auth MFA cannot grant aal2 from WebAuthn, so needsSecondFactor and the student gate check passkeys alongside TOTP.
 - Keep the tslib alias to its ESM build in vite.config.ts; the CJS build breaks server bundle interop (passkey libraries) and takes the live site down.
 - Dropping or moving a student archives the enrollment into dropped_enrollments via a delete trigger; active rosters stay unchanged while old grades remain viewable.
+- Lists feeding counts, averages or missing work load through `fetchAll` in src/lib/query.ts; the Data API silently caps responses at 1000 rows.
+- Discussion posts are soft-deleted via `soft_delete_discussion_post` (body cleared, original kept in discussion_post_audits); readers filter `deleted_at` so removed posts never count.

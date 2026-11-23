@@ -93,3 +93,9 @@
 - [x] Future report cards and print templates use computeAverage with each class's grading setup; saved report-card records unchanged
 - [x] Earlier-work averages use the previous class's own grading setup
 - [ ] Signed-in teacher walkthrough of the sweep — minted educator session redirected to /auth
+
+## Data loading pass 1 (done)
+- [x] Shared list helper (fetchAll / fetchPage / chunk) — gradebook, hub, Pulse, reports, print templates, discussion completion and threads read past 1000 rows
+- [x] Shared coursework status/due-window filters (coursework-filters.ts)
+- [x] Discussion posts soft delete with "Post removed" placeholder and audit copy
+- [ ] Later: paged loading for messages, behavior log, calendar, community feed; "Show more" UI; versioned partner endpoints (none exist)

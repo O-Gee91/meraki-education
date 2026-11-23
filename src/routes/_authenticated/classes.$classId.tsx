@@ -15,6 +15,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -309,12 +310,14 @@ function ClassDetailPage() {
     queryKey: ["grades", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("grades")
-        .select("id, assignment_id, student_id, points_earned, comment, is_draft, posted_at, updated_at")
-        .in("assignment_id", assignmentIds);
-      if (error) throw error;
-      return data;
+      return fetchAll((from, to) =>
+        supabase
+          .from("grades")
+          .select("id, assignment_id, student_id, points_earned, comment, is_draft, posted_at, updated_at")
+          .in("assignment_id", assignmentIds)
+          .order("id")
+          .range(from, to),
+      );
     },
   });
   // Students and guardians only ever see posted grades.
@@ -331,13 +334,16 @@ function ClassDetailPage() {
     queryKey: ["gradebook-submissions", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assignment_submissions")
-        .select("assignment_id, student_id")
-        .in("status", ["submitted", "collected", "returned"])
-        .in("assignment_id", assignmentIds);
-      if (error) throw error;
-      return withDiscussionSubmissions(data ?? [], assignmentIds);
+      const data = await fetchAll((from, to) =>
+        supabase
+          .from("assignment_submissions")
+          .select("assignment_id, student_id")
+          .in("status", ["submitted", "collected", "returned"])
+          .in("assignment_id", assignmentIds)
+          .order("id")
+          .range(from, to),
+      );
+      return withDiscussionSubmissions(data, assignmentIds);
     },
   });
   const submittedKeys = useMemo(

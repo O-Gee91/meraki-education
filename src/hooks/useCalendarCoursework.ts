@@ -137,7 +137,8 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
               .select("discussion_id")
               .in("discussion_id", loose.map((x) => x.thread_id ?? x.id))
               .in("author_id", authorIds)
-              .is("parent_id", null);
+              .is("parent_id", null)
+              .is("deleted_at", null);
             const posted = new Set((posts ?? []).map((p) => p.discussion_id));
             for (const x of loose) if (posted.has(x.thread_id ?? x.id)) done.add(`discussion-${x.id}`);
           }

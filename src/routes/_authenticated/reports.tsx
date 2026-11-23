@@ -20,6 +20,7 @@ import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { formatDate, gradeTone } from "@/lib/school";
 import { computeAverage, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
@@ -177,13 +178,16 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       const roster = (rawRoster ?? []).filter((r) => !isTestStudent(r.students));
       if (roster.length === 0) throw new Error("This class has no students yet");
       const assignmentIds = (assignments ?? []).map((a) => a.id);
-      const { data: grades, error: gError } = assignmentIds.length
-        ? await supabase
-            .from("grades")
-            .select("student_id, assignment_id, points_earned, comment")
-            .in("assignment_id", assignmentIds)
-        : { data: [], error: null };
-      if (gError) throw gError;
+      const grades = assignmentIds.length
+        ? await fetchAll((from, to) =>
+            supabase
+              .from("grades")
+              .select("student_id, assignment_id, points_earned, comment")
+              .in("assignment_id", assignmentIds)
+              .order("id")
+              .range(from, to),
+          )
+        : [];
 
       const rows = roster.map((r) => {
         const pct = computeAverage(

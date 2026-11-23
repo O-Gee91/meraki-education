@@ -995,6 +995,8 @@ export type Database = {
           author_id: string
           body: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           discussion_id: string
           id: string
           parent_id: string | null
@@ -1004,6 +1006,8 @@ export type Database = {
           author_id: string
           body: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           discussion_id: string
           id?: string
           parent_id?: string | null
@@ -1013,6 +1017,8 @@ export type Database = {
           author_id?: string
           body?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           discussion_id?: string
           id?: string
           parent_id?: string | null
@@ -2666,6 +2672,10 @@ export type Database = {
           option_index: number
           votes: number
         }[]
+      }
+      soft_delete_discussion_post: {
+        Args: { _post_id: string }
+        Returns: undefined
       }
       staff_mfa_status: {
         Args: never

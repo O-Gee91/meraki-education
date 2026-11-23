@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/school";
@@ -125,13 +126,16 @@ function AssignmentsHubPage() {
     queryKey: ["hub-submissions", assignmentIds, studentIds],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assignment_submissions")
-        .select("assignment_id, student_id, status, is_late, submitted_at")
-        .in("assignment_id", assignmentIds)
-        .in("student_id", studentIds);
-      if (error) throw error;
-      return withDiscussionSubmissions(data ?? [], assignmentIds, studentIds);
+      const data = await fetchAll((from, to) =>
+        supabase
+          .from("assignment_submissions")
+          .select("assignment_id, student_id, status, is_late, submitted_at")
+          .in("assignment_id", assignmentIds)
+          .in("student_id", studentIds)
+          .order("id")
+          .range(from, to),
+      );
+      return withDiscussionSubmissions(data, assignmentIds, studentIds);
     },
   });
 
@@ -140,14 +144,16 @@ function AssignmentsHubPage() {
     queryKey: ["hub-grades", assignmentIds, studentIds],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("grades")
-        .select("assignment_id, student_id, points_earned, comment")
-        .eq("is_draft", false)
-        .in("assignment_id", assignmentIds)
-        .in("student_id", studentIds);
-      if (error) throw error;
-      return data ?? [];
+      return fetchAll((from, to) =>
+        supabase
+          .from("grades")
+          .select("assignment_id, student_id, points_earned, comment")
+          .eq("is_draft", false)
+          .in("assignment_id", assignmentIds)
+          .in("student_id", studentIds)
+          .order("id")
+          .range(from, to),
+      );
     },
   });
 

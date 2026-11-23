@@ -19,6 +19,7 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { formatDate, formatDateTime } from "@/lib/school";
 import { POST_MAX_LENGTH } from "@/lib/feed-safety";
 import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
@@ -58,7 +59,7 @@ type Discussion = {
   created_at: string;
 };
 
-type Post = { id: string; body: string; author_id: string; parent_id: string | null; created_at: string };
+type Post = { id: string; body: string; author_id: string; parent_id: string | null; created_at: string; deleted_at?: string | null };
 type Score = { post_id: string; author_id: string; points: number; max_points: number };
 
 const COLS =
@@ -635,18 +636,26 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
   const [view, setView] = useState<"thread" | "grade">("thread");
   const draft = useAutosaveDraft(draftKey, body, { dirty: body.trim().length > 0 });
 
-  const { data: posts = [] } = useQuery({
+  const { data: threadPosts = [] } = useQuery({
     queryKey: key,
-    queryFn: async (): Promise<Post[]> => {
-      const { data, error } = await supabase
-        .from("discussion_posts")
-        .select("id, body, author_id, parent_id, created_at")
-        .eq("discussion_id", threadId)
-        .order("created_at");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: (): Promise<Post[]> =>
+      fetchAll<Post>((from, to) =>
+        supabase
+          .from("discussion_posts")
+          .select("id, body, author_id, parent_id, created_at, deleted_at")
+          .eq("discussion_id", threadId)
+          .order("created_at")
+          .order("id")
+          .range(from, to),
+      ),
   });
+  // Removed posts never count for grading or completion; a removed main post
+  // that still has replies stays as a "Post removed" placeholder.
+  const posts = useMemo(() => threadPosts.filter((p) => !p.deleted_at), [threadPosts]);
+  const removedRoots = useMemo(
+    () => threadPosts.filter((p) => p.deleted_at && !p.parent_id && posts.some((r) => r.parent_id === p.id)),
+    [threadPosts, posts],
+  );
 
   // RLS returns only the viewer's own scores to students; staff see all.
   const { data: scores = [] } = useQuery({
@@ -695,14 +704,14 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("discussion_posts").delete().eq("id", id);
+      const { error } = await supabase.rpc("soft_delete_discussion_post", { _post_id: id });
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const allRoots = posts.filter((p) => !p.parent_id);
+  const allRoots = [...posts.filter((p) => !p.parent_id), ...removedRoots].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const canWrite = !discussion.closed || isStaff;
   const filterText = nameFilter.trim().toLowerCase();
   const roots = focusId
@@ -805,7 +814,11 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                     <span className="ml-2 font-normal text-muted-foreground">{formatDateTime(p.created_at)}</span>
                     {scoreTag(p)}
                   </p>
-                  <FormattedText text={p.body} className="mt-1" />
+                  {p.deleted_at ? (
+                    <p className="mt-1 text-sm italic text-muted-foreground">Post removed</p>
+                  ) : (
+                    <FormattedText text={p.body} className="mt-1" />
+                  )}
                   <div className="mt-2 flex gap-3 text-xs">
                     {canWrite ? (
                       <button onClick={() => openReply(p.id)} className="text-muted-foreground hover:text-accent">
@@ -817,8 +830,8 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                         Focus
                       </button>
                     )}
-                    {(isStaff || p.author_id === user?.id) && (
-                      <button onClick={() => { if (window.confirm("Remove this response and its replies?")) remove.mutate(p.id); }} className="text-muted-foreground hover:text-destructive">
+                    {!p.deleted_at && (isStaff || p.author_id === user?.id) && (
+                      <button onClick={() => { if (window.confirm("Remove this response? Replies stay in the thread.")) remove.mutate(p.id); }} className="text-muted-foreground hover:text-destructive">
                         Remove
                       </button>
                     )}

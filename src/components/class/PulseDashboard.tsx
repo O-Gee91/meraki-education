@@ -6,6 +6,7 @@ import { listWellbeingFeed } from "@/lib/wellbeing.functions";
 type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { Button } from "@/components/ui/button";
 import { studentLabel } from "@/lib/student-display";
 import { letterFor, type GradingSetup } from "@/lib/grading";
@@ -167,12 +168,15 @@ export function PulseDashboard({
     queryKey: ["pulse-submission-times", classId, assignmentIds.length],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assignment_submissions")
-        .select("id, submitted_at, assignment_id, student_id")
-        .in("assignment_id", assignmentIds);
-      if (error) throw error;
-      return withDiscussionSubmissions(data ?? [], assignmentIds);
+      const data = await fetchAll((from, to) =>
+        supabase
+          .from("assignment_submissions")
+          .select("id, submitted_at, assignment_id, student_id")
+          .in("assignment_id", assignmentIds)
+          .order("id")
+          .range(from, to),
+      );
+      return withDiscussionSubmissions(data, assignmentIds);
     },
   });
 

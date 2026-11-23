@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { formatDate, percent } from "@/lib/school";
 import { computeAverage, isAutoGradeComment, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
@@ -145,12 +146,16 @@ export function PrintTemplates() {
         supabase.from("assignments").select("id, points_possible, category").eq("class_id", classId),
       ]);
       const ids = (assignments ?? []).map((a) => a.id);
-      const { data: grades } = ids.length
-        ? await supabase
-            .from("grades")
-            .select("student_id, assignment_id, points_earned, comment")
-            .in("assignment_id", ids)
-        : { data: [] as { student_id: string; assignment_id: string; points_earned: number | null; comment: string | null }[] };
+      const grades = ids.length
+        ? await fetchAll((from, to) =>
+            supabase
+              .from("grades")
+              .select("student_id, assignment_id, points_earned, comment")
+              .in("assignment_id", ids)
+              .order("id")
+              .range(from, to),
+          )
+        : [];
 
       const pages = students.map((s) => {
         const card = (cards ?? []).find((c) => c.student_id === s.id);
@@ -215,12 +220,16 @@ export function PrintTemplates() {
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
       const ids = (assignments ?? []).map((a) => a.id);
-      const { data: grades } = ids.length
-        ? await supabase
-            .from("grades")
-            .select("student_id, assignment_id, points_earned, comment")
-            .in("assignment_id", ids)
-        : { data: [] as { student_id: string; assignment_id: string; points_earned: number | null; comment: string | null }[] };
+      const grades = ids.length
+        ? await fetchAll((from, to) =>
+            supabase
+              .from("grades")
+              .select("student_id, assignment_id, points_earned, comment")
+              .in("assignment_id", ids)
+              .order("id")
+              .range(from, to),
+          )
+        : [];
 
       const pages = students.map((s) => {
         const rows = (assignments ?? []).map((a) => {
