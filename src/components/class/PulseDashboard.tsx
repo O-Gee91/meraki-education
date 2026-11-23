@@ -189,13 +189,15 @@ export function PulseDashboard({
     queryKey: ["pulse-attendance", classId, since14],
     enabled: isStaff,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("attendance")
-        .select("student_id, status, date")
-        .eq("class_id", classId)
-        .gte("date", since14);
-      if (error) throw error;
-      return data ?? [];
+      return fetchAll((from, to) =>
+        supabase
+          .from("attendance")
+          .select("id, student_id, status, date")
+          .eq("class_id", classId)
+          .gte("date", since14)
+          .order("id")
+          .range(from, to),
+      );
     },
   });
 

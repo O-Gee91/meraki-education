@@ -379,15 +379,23 @@ export function PrintTemplates() {
     const students = await roster();
     const studentIds = students.map((s) => s.id);
     const [{ data: attendance }, { data: notes }, { data: detentions }] = await Promise.all([
-      supabase.from("attendance").select("student_id, status").eq("class_id", classId),
+      fetchAll((from, to) =>
+        supabase.from("attendance").select("id, student_id, status").eq("class_id", classId).order("id").range(from, to),
+      ).then((data) => ({ data })),
       studentIds.length
-        ? supabase.from("behavior_notes").select("student_id, kind, severity").in("student_id", studentIds)
+        ? fetchAll((from, to) =>
+            supabase.from("behavior_notes").select("id, student_id, kind, severity").in("student_id", studentIds).order("id").range(from, to),
+          ).then((data) => ({ data }))
         : Promise.resolve({ data: [] as { student_id: string; kind: string; severity: number }[] }),
       studentIds.length
-        ? supabase
-            .from("detentions")
-            .select("student_id, status, scheduled_date")
-            .in("student_id", studentIds)
+        ? fetchAll((from, to) =>
+            supabase
+              .from("detentions")
+              .select("id, student_id, status, scheduled_date")
+              .in("student_id", studentIds)
+              .order("id")
+              .range(from, to),
+          ).then((data) => ({ data }))
         : Promise.resolve({ data: [] as { student_id: string; status: string; scheduled_date: string }[] }),
     ]);
     const rows = students.map((s) => {

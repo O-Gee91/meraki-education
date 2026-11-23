@@ -42,6 +42,7 @@ import {
 } from "@/lib/behavior-reasons";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+import { fetchAll } from "@/lib/query";
 
 
 export const Route = createFileRoute("/_authenticated/behavior")({
@@ -1129,10 +1130,10 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
           "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email, grade_level)",
         );
       if (previewIds) q = q.in("student_id", previewIds);
-      const { data, error } = await q
-        .order("scheduled_date", { ascending: false });
-      if (error) throw error;
-      return data;
+      const base = q;
+      return fetchAll((from, to) =>
+        base.order("scheduled_date", { ascending: false }).order("id").range(from, to),
+      );
     },
   });
 

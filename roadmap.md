@@ -99,3 +99,8 @@
 - [x] Shared coursework status/due-window filters (coursework-filters.ts)
 - [x] Discussion posts soft delete with "Post removed" placeholder and audit copy
 - [ ] Later: paged loading for messages, behavior log, calendar, community feed; "Show more" UI; versioned partner endpoints (none exist)
+
+## Data loading pass 2 (Joe Doyle 2026-11-23)
+- [x] Printed reports: full attendance, behavior and detention counts (no 1000-row cutoff)
+- [x] Pulse attendance and admin detention list load every row
+- [ ] Messages (latest 150), behavior log (latest 500) and wellbeing feed (latest 1000) remain intentional recent-only views; "Show more" controls not added
