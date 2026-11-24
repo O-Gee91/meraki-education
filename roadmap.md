@@ -104,3 +104,10 @@
 - [x] Printed reports: full attendance, behavior and detention counts (no 1000-row cutoff)
 - [x] Pulse attendance and admin detention list load every row
 - [ ] Messages (latest 150), behavior log (latest 500) and wellbeing feed (latest 1000) remain intentional recent-only views; "Show more" controls not added
+
+## Polish pass (Nov 24)
+- [x] Upcoming tab restored; categories collapsible
+- [x] Single close control on grading windows
+- [x] Discussion status labels separate submission vs grading
+- [x] Admin discussion moderation page
+- [ ] Signed-in tablet-width layout check (blocked: test sign-in redirects)

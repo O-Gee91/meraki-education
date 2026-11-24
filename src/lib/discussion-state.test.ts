@@ -26,4 +26,15 @@ describe("resolveDiscussionState", () => {
     expect(meetsDiscussionCriteria(1, 0, 0)).toBe(true);
     expect(meetsDiscussionCriteria(0, 5, 0)).toBe(false);
   });
+  it("complete work after the due date is submitted, not missing", () => {
+    const r = resolveDiscussionState({ rootCount: 1, replyCount: 2, requiredReplies: 2, pastDue: true });
+    expect(r.state).toBe("complete");
+    expect(r.label).toBe("Submitted · needs grading");
+  });
+  it("incomplete work after the due date is missing", () => {
+    expect(resolveDiscussionState({ rootCount: 0, replyCount: 0, requiredReplies: 2, pastDue: true }).state).toBe("missing");
+  });
+  it("graded label keeps submission status separate", () => {
+    expect(resolveDiscussionState({ rootCount: 1, replyCount: 2, requiredReplies: 2, graded: true }).label).toBe("Submitted · graded");
+  });
 });

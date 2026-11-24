@@ -104,10 +104,11 @@ const NAV: NavItem[] = [
     roles: ["admin", "teacher", "parent"],
   },
   { to: "/people", label: "People & roles", icon: ShieldCheck, roles: ["admin"] },
+  { to: "/moderation", label: "Discussion moderation", icon: Eye, roles: ["admin"] },
 ];
 
 /** Pages a student account can never open; blocked during "View as student". */
-const STAFF_ONLY_PATHS = ["/students", "/people", "/files", "/community"];
+const STAFF_ONLY_PATHS = ["/students", "/people", "/moderation", "/files", "/community"];
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: "School admin",
@@ -120,7 +121,7 @@ const STAFF_NAV_GROUPS = [
   { label: "Core Teaching", paths: ["/dashboard", "/classes", "/reports"] },
   { label: "Student Support", paths: ["/students", "/wellbeing", "/behavior"] },
   { label: "Communication", paths: ["/messages", "/community", "/files"] },
-  { label: "Admin", paths: ["/people"] },
+  { label: "Admin", paths: ["/people", "/moderation"] },
 ];
 
 function WellbeingBadge({ count }: { count: number }) {

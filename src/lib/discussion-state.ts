@@ -40,7 +40,13 @@ export function resolveDiscussionState(input: DiscussionStateInput): {
 } {
   const required = Math.max(0, input.requiredReplies);
   const replies = `${Math.min(input.replyCount, required)}/${required} replies`;
-  if (input.graded) return { state: "graded", label: "Graded" };
+  if (input.graded)
+    return {
+      state: "graded",
+      label: meetsDiscussionCriteria(input.rootCount, input.replyCount, required)
+        ? "Submitted · graded"
+        : `Graded · incomplete (${replies})`,
+    };
   if (meetsDiscussionCriteria(input.rootCount, input.replyCount, required))
     return { state: "complete", label: "Submitted · needs grading" };
   if (input.rootCount >= MIN_MAIN_POSTS)
