@@ -233,6 +233,28 @@ export const submitAssessment = createServerFn({ method: "POST" })
     };
   });
 
+type ScopedClient = { rpc: (fn: "can_manage_class", args: { _class_id: string }) => PromiseLike<{ data: unknown; error: unknown }> };
+type AdminClient = typeof import("@/integrations/supabase/client.server").supabaseAdmin;
+
+/** Throws unless the caller manages the class that owns this assessment. */
+async function assertManagesAssessment(scoped: ScopedClient, admin: AdminClient, assessmentId: string) {
+  const { data: a } = await admin.from("assessments").select("class_id").eq("id", assessmentId).maybeSingle();
+  if (!a?.class_id) throw new Error("Assessment not found");
+  const { data: ok, error } = await scoped.rpc("can_manage_class", { _class_id: a.class_id });
+  if (error || ok !== true) throw new Error("You can only manage assessments for your own classes");
+}
+
+/** Throws unless the caller manages the class that owns this answer. */
+async function assertManagesAnswer(scoped: ScopedClient, admin: AdminClient, answerId: string) {
+  const { data: ans } = await admin
+    .from("assessment_answers").select("submission_id").eq("id", answerId).maybeSingle();
+  if (!ans) throw new Error("Response not found");
+  const { data: sub } = await admin
+    .from("assessment_submissions").select("assessment_id").eq("id", ans.submission_id).maybeSingle();
+  if (!sub) throw new Error("Response not found");
+  await assertManagesAssessment(scoped, admin, sub.assessment_id);
+}
+
 /** Staff: release manual/essay scores and sync to the gradebook. */
 export const scoreEssayAnswer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -250,6 +272,7 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
     if (!isStaff) throw new Error("Only teachers and admins can grade responses");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertManagesAnswer(context.supabase as unknown as ScopedClient, supabaseAdmin, data.answerId);
 
     const { error } = await supabaseAdmin
       .from("assessment_answers")
@@ -349,6 +372,10 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
     if (!isStaff) throw new Error("Only teachers and admins can accept late work");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: target } = await supabaseAdmin
+      .from("assessment_submissions").select("assessment_id").eq("id", data.submissionId).maybeSingle();
+    if (!target) throw new Error("Submission not found");
+    await assertManagesAssessment(context.supabase as unknown as ScopedClient, supabaseAdmin, target.assessment_id);
 
     const { data: submission, error } = await supabaseAdmin
       .from("assessment_submissions")
@@ -409,6 +436,7 @@ export const proofreadEssay = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("AI is not configured for this school");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertManagesAnswer(context.supabase as unknown as ScopedClient, supabaseAdmin, data.answerId);
     const { data: answer, error } = await supabaseAdmin
       .from("assessment_answers")
       .select("id, response, question_id, assessment_questions(prompt, rubric, points)")
@@ -513,6 +541,8 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
     if (!isStaff) return { zeroed: 0, synced: 0 };
+    const { data: managesClass, error: scopeErr } = await context.supabase.rpc("can_manage_class", { _class_id: data.classId });
+    if (scopeErr || managesClass !== true) return { zeroed: 0, synced: 0 };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
