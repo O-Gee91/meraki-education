@@ -267,6 +267,13 @@
       "when": 1795581025272,
       "tag": "0037_guardian_discussion_read_only",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1795586310920,
+      "tag": "0038_feature_flags",
+      "breakpoints": true
     }
   ]
 }

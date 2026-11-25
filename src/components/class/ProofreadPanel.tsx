@@ -272,6 +272,7 @@ export function ProofreadEditor({
             Save comment
           </Button>
           <SuggestFeedbackButton
+            context={{ submissionId }}
             build={() => ({
               assignmentTitle: "this assignment",
               teacherNotes: [note, ...(annotations ?? []).map((a) => [a.mark_label, a.comment].filter(Boolean).join(": "))]

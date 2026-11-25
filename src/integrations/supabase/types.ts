@@ -1260,6 +1260,42 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          description: string
+          enabled: boolean
+          key: string
+          name: string
+          scope: string
+          target_class_ids: string[]
+          target_user_ids: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string
+          enabled?: boolean
+          key: string
+          name: string
+          scope?: string
+          target_class_ids?: string[]
+          target_user_ids?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string
+          enabled?: boolean
+          key?: string
+          name?: string
+          scope?: string
+          target_class_ids?: string[]
+          target_user_ids?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       file_uploads: {
         Row: {
           audience: Database["public"]["Enums"]["post_audience"]
@@ -2625,6 +2661,13 @@ export type Database = {
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
       co_teacher_level: { Args: { _class_id: string }; Returns: string }
+      evaluated_feature_flags: {
+        Args: { _assignment_id?: string; _submission_id?: string }
+        Returns: {
+          enabled: boolean
+          key: string
+        }[]
+      }
       grade_file_targets: {
         Args: { _grade: number }
         Returns: {

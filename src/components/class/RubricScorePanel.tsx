@@ -265,6 +265,7 @@ export function RubricScorePanel({
               {save.isPending ? "Saving…" : "Save rubric score"}
             </Button>
             <SuggestFeedbackButton
+              context={{ assignmentId }}
               build={() => ({
                 assignmentTitle: rubric.title,
                 score: scaled,

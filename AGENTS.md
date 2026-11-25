@@ -40,3 +40,4 @@
 - Password recovery validates return origins against this project's approved hosts before looking up an account or generating a link; this prevents caller-controlled external redirects.
 - Late-status controls do not edit penalties until deductions have an implemented scoring contract; preserve legacy override metadata and existing scores.
 - Missing-mark value under a late penalty comes only from src/lib/late-penalty.ts (passed to computeAverage as missingPoints); every average must use it so screens agree.
+- Feature rollout lists are admin-only; evaluate flags through the authenticated database helper and recheck AI flags at execution, because client switches are not authorization and cached states cannot enforce a kill switch.

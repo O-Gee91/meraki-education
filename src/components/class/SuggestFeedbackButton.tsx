@@ -4,8 +4,12 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { suggestFeedback } from "@/lib/feedback-ai.functions";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import type { FeatureContext } from "@/lib/feature-flags";
 
 type Input = {
+  assignmentId?: string;
+  submissionId?: string;
   assignmentTitle: string;
   studentFirstName?: string;
   gradeLevel?: number;
@@ -20,13 +24,17 @@ export function SuggestFeedbackButton({
   build,
   onSuggest,
   disabled,
+  context = {},
 }: {
   build: () => Input;
   onSuggest: (text: string) => void;
   disabled?: boolean;
+  context?: FeatureContext;
 }) {
   const run = useServerFn(suggestFeedback);
   const [busy, setBusy] = useState(false);
+  const enabled = useFeatureFlag("ai_feedback_suggestions", context);
+  if (!enabled) return null;
   return (
     <Button
       type="button"
@@ -37,7 +45,7 @@ export function SuggestFeedbackButton({
       onClick={async () => {
         setBusy(true);
         try {
-          const res = await run({ data: build() });
+          const res = await run({ data: { ...build(), ...context } });
           if (res.error) toast.error(res.error);
           else {
             onSuggest(res.suggestion);

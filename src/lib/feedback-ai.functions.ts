@@ -26,12 +26,21 @@ export const suggestFeedback = createServerFn({ method: "POST" })
           .max(20)
           .optional(),
         teacherNotes: z.string().max(3000).optional(),
+            assignmentId: z.uuid().optional(),
+            submissionId: z.uuid().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
     if (!isStaff) throw new Error("Only teachers and admins can draft feedback");
+    const { data: flags, error: flagError } = await context.supabase.rpc("evaluated_feature_flags", {
+      ...(data.assignmentId ? { _assignment_id: data.assignmentId } : {}),
+      ...(data.submissionId ? { _submission_id: data.submissionId } : {}),
+    });
+    if (flagError || !flags?.some((flag) => flag.key === "ai_feedback_suggestions" && flag.enabled)) {
+      return { suggestion: "", error: "AI comment suggestions are not enabled for this audience." };
+    }
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { suggestion: "", error: "AI is not configured for this school" };
 

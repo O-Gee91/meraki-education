@@ -10,6 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
 import { PasskeysCard } from "@/components/settings/PasskeysCard";
 import { MfaSetupGuide } from "@/components/settings/MfaSetupGuide";
+import { FeatureFlagsPanel } from "@/components/settings/FeatureFlagsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,14 +21,14 @@ export const Route = createFileRoute("/_authenticated/settings")({
       { title: "Account settings — Meraki Education Platform" },
       {
         name: "description",
-        content: "Change your Meraki Education account password.",
+        content: "Manage your Meraki Education password, two-step verification and administrator feature switches.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Account settings — Meraki Education Platform" },
       {
         property: "og:description",
-        content: "Change your Meraki Education account password.",
+        content: "Manage your Meraki Education password, two-step verification and administrator feature switches.",
       },
     ],
   }),
@@ -186,6 +187,7 @@ function SettingsPage() {
         </div>
       </section>
       </div>
+      <FeatureFlagsPanel />
     </AppShell>
   );
 }
