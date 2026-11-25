@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { missingPointsFor } from "@/lib/late-penalty";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -170,7 +171,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
             .from("enrollments")
             .select("student_id, students(first_name, last_name, is_tester)")
             .eq("class_id", classId),
-          supabase.from("assignments").select("id, category, points_possible").eq("class_id", classId),
+          supabase.from("assignments").select("id, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days").eq("class_id", classId),
         ]);
       if (rosterError) throw rosterError;
       if (aError) throw aError;
@@ -198,6 +199,7 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
               pointsPossible: Number(assignment.points_possible),
               pointsEarned: grade?.points_earned == null ? null : Number(grade.points_earned),
               markCode: markCodeFromComment(grade?.comment),
+              missingPoints: missingPointsFor(assignment),
             };
           }),
           setup,

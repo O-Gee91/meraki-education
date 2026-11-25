@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { missingPointsFor } from "@/lib/late-penalty";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -143,7 +144,7 @@ export function PrintTemplates() {
           .from("report_cards")
           .select("student_id, term, grade_pct, letter, comment")
           .eq("class_id", classId),
-        supabase.from("assignments").select("id, points_possible, category").eq("class_id", classId),
+        supabase.from("assignments").select("id, points_possible, category, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days").eq("class_id", classId),
       ]);
       const ids = (assignments ?? []).map((a) => a.id);
       const grades = ids.length
@@ -176,6 +177,7 @@ export function PrintTemplates() {
               pointsPossible: Number(a.points_possible),
               pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
               markCode: markCodeFromComment(g?.comment),
+              missingPoints: missingPointsFor(a),
             };
           }),
           setup,
@@ -216,7 +218,7 @@ export function PrintTemplates() {
       const students = await roster();
       const { data: assignments } = await supabase
         .from("assignments")
-        .select("id, title, category, points_possible, due_date")
+        .select("id, title, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days")
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
       const ids = (assignments ?? []).map((a) => a.id);
@@ -250,6 +252,7 @@ export function PrintTemplates() {
               pointsPossible: Number(a.points_possible),
               pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
               markCode: markCodeFromComment(g?.comment),
+              missingPoints: missingPointsFor(a),
             };
           }),
           setup,

@@ -1,4 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
+import { missingPointsFor } from "@/lib/late-penalty";
 import { getStudentEarlierWork } from "@/lib/earlier-work.functions";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -302,6 +303,7 @@ export function StudentClassReport({
             pointsPossible: Number(assignment.points_possible),
             pointsEarned: grade?.points_earned == null ? null : Number(grade.points_earned),
             markCode: markCodeFromComment(grade?.comment),
+            missingPoints: missingPointsFor(assignment),
           };
         }),
         setup,

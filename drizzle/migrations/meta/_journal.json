@@ -253,6 +253,13 @@
       "when": 1795578609784,
       "tag": "0035_admin_only_discussion_audits",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795579725862,
+      "tag": "0036_assignment_late_penalty",
+      "breakpoints": true
     }
   ]
 }

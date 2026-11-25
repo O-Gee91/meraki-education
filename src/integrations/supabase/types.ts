@@ -446,6 +446,10 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          late_penalty_enabled: boolean
+          late_penalty_mode: string
+          late_penalty_per_day: number | null
+          late_penalty_zero_after_days: number | null
           points_possible: number
           rubric_id: string | null
           status: string
@@ -461,6 +465,10 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          late_penalty_enabled?: boolean
+          late_penalty_mode?: string
+          late_penalty_per_day?: number | null
+          late_penalty_zero_after_days?: number | null
           points_possible?: number
           rubric_id?: string | null
           status?: string
@@ -476,6 +484,10 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          late_penalty_enabled?: boolean
+          late_penalty_mode?: string
+          late_penalty_per_day?: number | null
+          late_penalty_zero_after_days?: number | null
           points_possible?: number
           rubric_id?: string | null
           status?: string

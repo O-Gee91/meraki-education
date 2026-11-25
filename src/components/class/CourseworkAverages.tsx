@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
 import { ChevronDown, Info } from "lucide-react";
 import {
   computeAverage,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/grading";
 import { formatDate } from "@/lib/school";
 
-type Assignment = {
+type Assignment = LatePenaltySettings & {
   id: string;
   title: string;
   category: string;
@@ -102,6 +103,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
         pointsPossible: Number(a.points_possible),
         pointsEarned: g?.points_earned ?? null,
         markCode: markCodeFromComment(g?.comment),
+        missingPoints: missingPointsFor(a),
       };
     });
 

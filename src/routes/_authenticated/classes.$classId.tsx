@@ -1,4 +1,5 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
+import { missingMarkValue, missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
 import { isMissingWork } from "@/lib/missing-work";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { courseworkBucket, isDueSoon, needsCourseworkAttention } from "@/lib/coursework-view";
@@ -35,6 +36,7 @@ import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LatePenaltyFields, LATE_PENALTY_BLANK, latePenaltyColumns, latePenaltyFormFrom } from "@/components/class/LatePenaltyFields";
 import { CourseworkAverages } from "@/components/class/CourseworkAverages";
 import {
   Dialog,
@@ -288,7 +290,7 @@ function ClassDetailPage() {
       const { data, error } = await supabase
         .from("assignments")
         .select(
-          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at, status",
+          "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at, status, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days",
         )
         .eq("class_id", classId)
         .order("due_date", { ascending: true });
@@ -394,6 +396,7 @@ function ClassDetailPage() {
           pointsPossible: Number(a.points_possible),
           pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
           markCode: markCodeFromComment(g?.comment),
+          missingPoints: missingPointsFor(a, timeZone),
         };
       }),
       setup,
@@ -894,7 +897,7 @@ function ClassDetailPage() {
                                   const markCode = markCodeFromComment(grade?.comment);
                                   const isDraft = Boolean(grade?.is_draft);
                                   return (
-                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums" title={gradeCellTitle(assignment, grade, markCode, isStaff)}>
+                                     <td key={assignment.id} className="border-r border-border/60 px-3 py-3 text-center tabular-nums" title={gradeCellTitle(assignment, grade, markCode, isStaff, timeZone)}>
                                       <span className="inline-flex items-center justify-center gap-1.5">
                                         {markCode ? (
                                            <Badge variant="outline" className={markCode === "M" ? "border-warning/50 bg-warning/10 text-foreground" : "border-border/70 bg-muted/40 text-muted-foreground"}>{markCode}</Badge>
@@ -1166,6 +1169,10 @@ type AssignmentRow = {
   rubric_id: string | null;
   created_at?: string | null;
   status?: string;
+  late_penalty_enabled?: boolean | null;
+  late_penalty_mode?: string | null;
+  late_penalty_per_day?: number | null;
+  late_penalty_zero_after_days?: number | null;
 };
 
 type TimelineKey = "current" | "upcoming" | "past" | "all";
@@ -1227,6 +1234,7 @@ function AssignmentsTab({
     description: "",
     mode: "collected",
     rubricId: "",
+    ...LATE_PENALTY_BLANK,
   };
   const [form, setForm] = useState(() => readDraft<typeof blank>(draftKey) ?? blank);
   const [applyToSubject, setApplyToSubject] = useState(false);
@@ -1361,6 +1369,7 @@ function AssignmentsTab({
         due_date: form.due || null,
         description: form.description.trim().slice(0, 1000) || null,
         submission_mode: form.mode,
+        ...latePenaltyColumns(form),
       };
 
       const { data: inserted, error } = await supabase.from("assignments").insert(
@@ -1515,6 +1524,11 @@ function AssignmentsTab({
                   onChange={(e) => setForm({ ...form, due: e.target.value })}
                 />
               </div>
+              <LatePenaltyFields
+                idPrefix="new-penalty"
+                value={{ ...LATE_PENALTY_BLANK, ...form }}
+                onChange={(p) => setForm({ ...form, ...p })}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="mode">How is this handed in?</Label>
                 <Select value={form.mode} onValueChange={(v) => setForm({ ...form, mode: v })}>
@@ -1891,6 +1905,7 @@ function EditAssignment({
     description: assignment.description ?? "",
     mode: assignment.submission_mode,
     rubricId: assignment.rubric_id ?? "",
+    ...latePenaltyFormFrom(assignment),
   });
   const [form, setForm] = useState(initial);
   const [reopen, setReopen] = useState<ReopenSettings>(REOPEN_DEFAULTS);
@@ -1939,6 +1954,7 @@ function EditAssignment({
           description: form.description.trim().slice(0, 1000) || null,
           submission_mode: form.mode,
           rubric_id: form.rubricId || null,
+          ...latePenaltyColumns(form),
         })
         .eq("id", assignment.id);
       if (error) throw error;
@@ -2043,6 +2059,11 @@ function EditAssignment({
               onChange={(e) => setForm({ ...form, due: e.target.value })}
             />
           </div>
+          <LatePenaltyFields
+            idPrefix={`e-penalty-${assignment.id}`}
+            value={form}
+            onChange={(p) => setForm({ ...form, ...p })}
+          />
           <ReopenOptions
             idPrefix={`e-reopen-${assignment.id}`}
             value={reopen}
@@ -2715,15 +2736,17 @@ function RosterTab({
 
 /** Hover summary for a Gradebook cell: points, then when it was posted (or that it is a draft). */
 function gradeCellTitle(
-  assignment: { title: string; points_possible: number | string | null },
+  assignment: { title: string; points_possible: number | string | null } & LatePenaltySettings,
   grade: { points_earned: number | string | null; is_draft?: boolean | null; posted_at?: string | null; updated_at?: string | null } | undefined,
   markCode: string | null | undefined,
   isStaff: boolean,
+  timeZone?: string,
 ) {
   const possible = Number(assignment.points_possible ?? 0);
   if (!grade) return `${assignment.title} — not scored yet`;
+  const penalty = markCode?.toUpperCase() === "M" && isStaff ? missingMarkValue(assignment, new Date(), timeZone) : null;
   const score = markCode
-    ? `Mark ${markCode}`
+    ? penalty ? `Missing · ${penalty.explanation}` : `Mark ${markCode}`
     : grade.points_earned == null
       ? "Not scored yet"
       : `${Number(grade.points_earned).toLocaleString()} / ${possible.toLocaleString()} points`;

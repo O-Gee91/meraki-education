@@ -1,4 +1,5 @@
 import { isMissingWork } from "@/lib/missing-work";
+import { missingPointsFor } from "@/lib/late-penalty";
 import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -109,7 +110,7 @@ function DashboardPage() {
       const { data, error } = await supabase
         .from("grades")
         .select(
-          "id, points_earned, comment, updated_at, assignments(id, title, category, points_possible, due_date, class_id)",
+          "id, points_earned, comment, updated_at, assignments(id, title, category, points_possible, due_date, class_id, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days)",
         )
         .in("student_id", selfIds)
         .eq("is_draft", false)
@@ -259,6 +260,7 @@ function DashboardPage() {
           pointsEarned:
             grade.points_earned == null ? null : Number(grade.points_earned),
           markCode: markCodeFromComment(grade.comment),
+          missingPoints: grade.assignments ? missingPointsFor(grade.assignments) : undefined,
         })),
       setup,
     );

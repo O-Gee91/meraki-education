@@ -1,4 +1,5 @@
 import { resolveWorkState } from "@/lib/coursework-state";
+import { missingMarkValue, type LatePenaltySettings } from "@/lib/late-penalty";
 import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -141,7 +142,7 @@ type WorkAssignment = {
   submission_mode: string;
   rubric_id?: string | null;
   created_at?: string | null;
-};
+} & LatePenaltySettings;
 
 export function AssignmentWork({
   assignment,
@@ -515,7 +516,7 @@ function StaffCollectPanel({
     due_date?: string | null;
     rubric_id?: string | null;
     created_at?: string | null;
-  };
+  } & LatePenaltySettings;
   roster: Student[];
   classId: string;
   timeZone: string;
@@ -1724,6 +1725,16 @@ function StaffCollectPanel({
                           </label>
                         ) : null}
                       </div>
+                      {(() => {
+                        if (markCodeFromComment(activeGrade?.comment) !== "M") return null;
+                        const penalty = missingMarkValue(assignment, new Date(), timeZone);
+                        if (!penalty) return null;
+                        return (
+                          <p className="-mt-2 text-xs text-muted-foreground">
+                            Late penalty: {penalty.explanation}. A real score replaces this as entered.
+                          </p>
+                        );
+                      })()}
 
                       <div className="border-b border-border pb-5">
                         <QuickScoreBar

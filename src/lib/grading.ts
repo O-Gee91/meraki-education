@@ -152,6 +152,8 @@ type ScoreInput = {
   pointsPossible: number;
   pointsEarned: number | null;
   markCode: string | null;
+  /** Value of a Missing mark under the assignment's late penalty (see late-penalty.ts). */
+  missingPoints?: number | undefined;
 };
 
 /** Category name reserved for bonus work: points earned add on top, nothing counts against. */
@@ -182,7 +184,9 @@ export function computeAverage(rows: ScoreInput[], setup: GradingSetup): number 
 
     if (mark) {
       if (mark.behavior === "exclude") continue;
-      if (mark.behavior === "zero") earned = 0;
+      if (mark.behavior === "zero") {
+        earned = mark.code.toUpperCase() === "M" && row.missingPoints != null ? row.missingPoints : 0;
+      }
       if (mark.behavior === "value") {
         earned = (Number(mark.value ?? 0) / 100) * Number(row.pointsPossible);
       }
