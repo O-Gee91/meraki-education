@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, gradeTone, percent } from "@/lib/school";
@@ -55,13 +56,15 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function DashboardPage() {
-  const { isStaff, primaryRole, profile, previewingStudent } = useAuth();
+  const { user, isStaff, primaryRole, profile, previewingStudent, loading } = useAuth();
   const { classIds, studentIds } = useTeacherScope();
   const { ids: selfIds } = useSelfStudents();
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: allClasses = [] } = useQuery({
-    queryKey: ["classes"],
+    queryKey: ["classes", "dashboard", user?.id, primaryRole, previewingStudent],
+    enabled: Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
@@ -73,7 +76,9 @@ function DashboardPage() {
   });
 
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["students"],
+    queryKey: ["students", "dashboard", user?.id, primaryRole, previewingStudent],
+    enabled: Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
@@ -90,7 +95,9 @@ function DashboardPage() {
 
 
   const { data: announcements = [] } = useQuery({
-    queryKey: ["announcements"],
+    queryKey: ["announcements", "dashboard", user?.id, primaryRole, previewingStudent],
+    enabled: Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
@@ -103,8 +110,9 @@ function DashboardPage() {
   });
 
   const { data: grades = [] } = useQuery({
-    queryKey: ["my-grades", selfIds],
-    enabled: !isStaff && selfIds.length > 0,
+    queryKey: ["my-grades", user?.id, primaryRole, previewingStudent, selfIds],
+    enabled: !loading && !isStaff && selfIds.length > 0,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       // Scoped explicitly: staff previewing as a student could otherwise read every grade.
       const { data, error } = await supabase
@@ -125,8 +133,9 @@ function DashboardPage() {
   const { unread: unreadFeedback } = useUnreadFeedback(feedback);
 
   const { data: attendance = [] } = useQuery({
-    queryKey: ["my-attendance", selfIds],
-    enabled: !isStaff && selfIds.length > 0,
+    queryKey: ["my-attendance", user?.id, primaryRole, previewingStudent, selfIds],
+    enabled: !loading && !isStaff && selfIds.length > 0,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance")
@@ -140,8 +149,9 @@ function DashboardPage() {
   });
 
   const { data: upcomingEventsRaw = [] } = useQuery({
-    queryKey: ["staff-upcoming-events", today],
-    enabled: isStaff,
+    queryKey: ["staff-upcoming-events", user?.id, primaryRole, today],
+    enabled: !loading && isStaff,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calendar_events")
@@ -170,7 +180,9 @@ function DashboardPage() {
   ).slice(0, 8);
 
   const { data: upcomingAssignments = [] } = useQuery({
-    queryKey: ["upcoming-assignments", today],
+    queryKey: ["upcoming-assignments", user?.id, primaryRole, previewingStudent, today],
+    enabled: Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assignments")
@@ -185,7 +197,9 @@ function DashboardPage() {
   });
 
   const { data: upcomingAssessments = [] } = useQuery({
-    queryKey: ["upcoming-assessments", today],
+    queryKey: ["upcoming-assessments", user?.id, primaryRole, previewingStudent, today],
+    enabled: Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assessments")

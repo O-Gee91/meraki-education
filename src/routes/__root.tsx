@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { subscribeReadRefresh } from "@/lib/read-refresh";
 
 function NotFoundComponent() {
   const btn = "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors";
@@ -127,6 +128,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => subscribeReadRefresh(queryClient), [queryClient]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {

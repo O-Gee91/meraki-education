@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/school";
 import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { listMyFeedback, type FeedbackItem } from "@/lib/feedback.functions";
+import { useAuth } from "@/hooks/useAuth";
+import { feedbackKey, READ_REUSE_MS } from "@/lib/api-query-policy";
 
 const SEEN_KEY = "meraki.feedback-seen";
 
@@ -21,9 +23,11 @@ const KIND_LABEL: Record<FeedbackItem["kind"], string> = {
 /** Teacher feedback from every class, in one place a student actually checks. */
 export function useMyFeedback(enabled: boolean, previewStudentId?: string | null) {
   const load = useServerFn(listMyFeedback);
+  const { user, primaryRole, previewingStudent, loading } = useAuth();
   return useQuery({
-    queryKey: ["my-feedback", previewStudentId ?? null],
-    enabled,
+    queryKey: feedbackKey(user?.id, primaryRole, previewingStudent, previewStudentId),
+    enabled: enabled && Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: () => load({ data: { previewStudentId: previewStudentId ?? null } }),
   });
 }

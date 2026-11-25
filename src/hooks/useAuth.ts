@@ -1,28 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useActingRoleStore } from "@/hooks/useActingRole";
 import { useStudentPreviewMode } from "@/hooks/useStudentPreview";
+import { createSharedSessionStore } from "@/lib/shared-session";
 
 export type Role = "admin" | "teacher" | "student" | "parent";
 
-export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data: { session: current } }) => {
-      setSession(current);
-      setLoading(false);
-    });
+const sessionStore = createSharedSessionStore<Session>({
+  read: async () => (await supabase.auth.getSession()).data.session,
+  listen: (onSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => onSession(next));
     return () => data.subscription.unsubscribe();
-  }, []);
+  },
+});
 
+export function useSession() {
+  const { session, loading } = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot, sessionStore.getServerSnapshot);
   return { session, user: session?.user ?? null, loading };
 }
 
@@ -33,12 +28,13 @@ export function useAuth() {
     queryKey: ["roles", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Role[]> => {
+      if (!user) return [];
       // Admins can read every row in user_roles, so this MUST stay scoped to the
       // signed-in account or an admin would appear to hold every role.
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user!.id);
+        .eq("user_id", user.id);
       if (error) throw error;
       return (data ?? []).map((r) => r.role as Role);
     },
@@ -49,10 +45,11 @@ export function useAuth() {
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
+      if (!user) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email")
-        .eq("id", user!.id)
+        .eq("id", user.id)
         .maybeSingle();
       if (error) throw error;
       return data;

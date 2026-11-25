@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CalendarCheck, ChevronDown, ClipboardList, HeartPulse, MessageSquareText, Send, Sparkles, X } from "lucide-react";
-import { listWellbeingFeed } from "@/lib/wellbeing.functions";
+import { useWellbeingFeed } from "@/hooks/useWellbeingFeed";
 
 type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
@@ -217,17 +217,7 @@ export function PulseDashboard({
     },
   });
 
-  const { data: wellbeingRows = [] } = useQuery({
-    queryKey: ["pulse-wellbeing", classId, user?.id, teacherMode],
-    enabled: isStaff,
-    queryFn: async () => {
-      try {
-        return await listWellbeingFeed({ data: { teacherMode } });
-      } catch {
-        return [];
-      }
-    },
-  });
+  const { data: wellbeingRows = [] } = useWellbeingFeed("", isStaff);
 
   const signals = useMemo(() => {
     const ids = new Set(rosterIds);

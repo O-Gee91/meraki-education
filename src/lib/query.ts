@@ -44,3 +44,14 @@ export function chunk<T>(items: T[], size = 150): T[][] {
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
 }
+
+/** Bound request bursts while loading independent ID chunks in parallel. */
+export async function fetchChunks<I, T>(ids: I[], read: (ids: I[]) => Promise<T[]>, size = 150, concurrency = 3): Promise<T[]> {
+  const groups = chunk(ids, size);
+  const rows: T[] = [];
+  for (let i = 0; i < groups.length; i += concurrency) {
+    const batch = await Promise.all(groups.slice(i, i + concurrency).map(read));
+    rows.push(...batch.flat());
+  }
+  return rows;
+}

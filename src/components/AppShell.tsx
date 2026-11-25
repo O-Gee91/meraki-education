@@ -1,9 +1,9 @@
 import { StudentMfaGate } from "@/components/settings/StudentMfaGate";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
-import { listWellbeingFeed } from "@/lib/wellbeing.functions";
+import { useWellbeingFeed } from "@/hooks/useWellbeingFeed";
+import { READ_REUSE_MS, LIVE_REFRESH_MS } from "@/lib/api-query-policy";
 import { countNewCheckins, wellbeingSeenKey } from "@/lib/wellbeing-badge";
 import {
   BookOpen,
@@ -161,13 +161,17 @@ export function AppShell({
   const { data: unreadMessages = 0 } = useQuery({
     queryKey: ["unread-messages", user?.id],
     enabled: Boolean(user) && !previewingStudent,
-    refetchInterval: 60_000,
+    staleTime: READ_REUSE_MS,
+    refetchInterval: LIVE_REFRESH_MS,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
-      const { count } = await supabase
+      if (!user) return 0;
+      const { count, error } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
-        .eq("recipient_id", user!.id)
+        .eq("recipient_id", user.id)
         .eq("read", false);
+      if (error) throw error;
       return count ?? 0;
     },
   });
@@ -175,7 +179,6 @@ export function AppShell({
   // Educator-only "new check-in" signal. Uses the same scoped feed as the
   // Wellbeing page; only a count is shown, never check-in content.
   const isEducator = !previewingStudent && (primaryRole === "admin" || primaryRole === "teacher");
-  const fetchWellbeingFeed = useServerFn(listWellbeingFeed);
   const [seenAt, setSeenAt] = useState<string | null>(null);
   const [seenLoaded, setSeenLoaded] = useState(false);
   useEffect(() => {
@@ -184,14 +187,7 @@ export function AppShell({
     setSeenLoaded(true);
   }, [user?.id]);
   const onWellbeing = pathname === "/wellbeing";
-  const { data: wellbeingFeed = [] } = useQuery({
-    queryKey: ["checkins", "wellbeing-badge", user?.id, teacherMode],
-    enabled: Boolean(user) && isEducator && seenLoaded,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
-    retry: false,
-    queryFn: () => fetchWellbeingFeed({ data: { teacherMode } }),
-  });
+  const { data: wellbeingFeed = [] } = useWellbeingFeed("", isEducator && seenLoaded, true);
   function markWellbeingSeen() {
     if (!user) return;
     const now = new Date().toISOString();

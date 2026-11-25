@@ -4,45 +4,41 @@ import { ClipboardCheck, FileClock, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { markCodeFromComment } from "@/lib/grading";
+import { fetchAll, fetchChunks } from "@/lib/query";
+import { useAuth } from "@/hooks/useAuth";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
 
 type Item = { key: string; classId: string; className: string; kind: string; count: number; icon: typeof ListChecks };
 
 /** Educator to-do feed: work waiting to be graded, unreleased draft grades, assessments to review. */
 export function TeacherTodo({ classes }: { classes: { id: string; name: string }[] }) {
-  const ids = classes.map((c) => c.id);
+  const { user, primaryRole, loading } = useAuth();
+  const ids = classes.map((c) => c.id).sort();
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["teacher-todo", ids],
-    enabled: ids.length > 0,
+    queryKey: ["teacher-todo", user?.id, primaryRole, classes.map((c) => [c.id, c.name]).sort()],
+    enabled: ids.length > 0 && Boolean(user) && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async (): Promise<Item[]> => {
-      const { data: assignments, error: aErr } = await supabase
-        .from("assignments")
-        .select("id, class_id")
-        .in("class_id", ids);
-      if (aErr) throw aErr;
+      const [assignments, assessments] = await Promise.all([
+        fetchChunks(ids, (batch) => fetchAll((from, to) => supabase.from("assignments")
+          .select("id, class_id").in("class_id", batch).order("id").range(from, to))),
+        fetchChunks(ids, (batch) => fetchAll((from, to) => supabase.from("assessments")
+          .select("id, class_id").in("class_id", batch).order("id").range(from, to))),
+      ]);
       const aClass = new Map((assignments ?? []).map((a) => [a.id, a.class_id]));
       const aIds = [...aClass.keys()];
-      const { data: assessments, error: sErr } = await supabase
-        .from("assessments")
-        .select("id, class_id")
-        .in("class_id", ids);
-      if (sErr) throw sErr;
       const sClass = new Map((assessments ?? []).map((a) => [a.id, a.class_id]));
       const sIds = [...sClass.keys()];
 
-      const [subs, grades, attempts] = await Promise.all([
-        aIds.length
-          ? supabase.from("assignment_submissions").select("assignment_id, student_id, status").in("assignment_id", aIds).in("status", ["submitted", "collected"])
-          : Promise.resolve({ data: [], error: null }),
-        aIds.length
-          ? supabase.from("grades").select("assignment_id, student_id, points_earned, comment, is_draft").in("assignment_id", aIds)
-          : Promise.resolve({ data: [], error: null }),
-        sIds.length
-          ? supabase.from("assessment_submissions").select("assessment_id, status").in("assessment_id", sIds).eq("status", "submitted")
-          : Promise.resolve({ data: [], error: null }),
+      const [subs, grades, attempts, completions] = await Promise.all([
+        fetchChunks(aIds, (batch) => fetchAll((from, to) => supabase.from("assignment_submissions")
+          .select("assignment_id, student_id, status").in("assignment_id", batch).in("status", ["submitted", "collected"]).order("id").range(from, to))),
+        fetchChunks(aIds, (batch) => fetchAll((from, to) => supabase.from("grades")
+          .select("assignment_id, student_id, points_earned, comment, is_draft").in("assignment_id", batch).order("id").range(from, to))),
+        fetchChunks(sIds, (batch) => fetchAll((from, to) => supabase.from("assessment_submissions")
+          .select("assessment_id, status").in("assessment_id", batch).eq("status", "submitted").order("id").range(from, to))),
+        fetchDiscussionCompletions(aIds),
       ]);
-      if (subs.error) throw subs.error;
-      if (grades.error) throw grades.error;
-      if (attempts.error) throw attempts.error;
 
       const scored = new Set<string>();
       const toGrade = new Map<string, number>();
@@ -50,23 +46,23 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       const toReview = new Map<string, number>();
       const bump = (m: Map<string, number>, k: string | undefined) => k && m.set(k, (m.get(k) ?? 0) + 1);
 
-      for (const g of grades.data ?? []) {
+      for (const g of grades) {
         if (g.points_earned != null || markCodeFromComment(g.comment)) {
           scored.add(`${g.assignment_id}:${g.student_id}`);
           if (g.is_draft) bump(drafts, aClass.get(g.assignment_id));
         }
       }
-      for (const s of subs.data ?? []) {
+      for (const s of subs) {
         if (!scored.has(`${s.assignment_id}:${s.student_id}`)) bump(toGrade, aClass.get(s.assignment_id));
       }
       // Discussions keep work in posts; count finished ones still waiting for scores.
-      const pending = new Set((subs.data ?? []).map((s) => `${s.assignment_id}:${s.student_id}`));
-      for (const key of await fetchDiscussionCompletions(aIds)) {
+      const pending = new Set(subs.map((s) => `${s.assignment_id}:${s.student_id}`));
+      for (const key of completions) {
         const [sid, aid] = key.split(":");
         const k = `${aid}:${sid}`;
         if (!scored.has(k) && !pending.has(k)) bump(toGrade, aClass.get(aid ?? ""));
       }
-      for (const a of attempts.data ?? []) bump(toReview, sClass.get(a.assessment_id));
+      for (const a of attempts) bump(toReview, sClass.get(a.assessment_id));
 
       const name = new Map(classes.map((c) => [c.id, c.name]));
       const out: Item[] = [];

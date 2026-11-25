@@ -3,7 +3,7 @@
 ## Feature switches then API performance (Nov 25, 2026)
 - [x] Add admin-only rollout controls, identity-scoped cached evaluations and server-enforced AI comment switch
 - [x] Verify saved switches and selected-user targeting in signed-in UI at desktop and 739px widths; non-admin permission regression tests pass; 158 tests pass
-- [ ] API performance pass — paused until Joe reviews the feature-switch update
+- [x] API performance pass — shared session/read reuse, scoped wellbeing deduplication, bounded parallel dashboard reads and immediate mutation refresh; signed-in navigation requests 59→49, 168 tests pass (api-performance-review.md)
 - [ ] Review and remediate deep-scan security findings before performance work — account linking/reset, staff signup verification, cross-class grading/wellbeing access, redirects and notification recipients require investigation
 
 ## Cross-role pilot walkthrough (Nov 25, 2026)

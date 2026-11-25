@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunk, fetchAll, fetchPage } from "./query";
+import { chunk, fetchAll, fetchPage, fetchChunks } from "./query";
 import { applyCourseworkFilter } from "./coursework-filters";
 
 const source = Array.from({ length: 2345 }, (_, i) => i);
@@ -29,6 +29,21 @@ describe("fetchPage", () => {
 
 it("chunk splits id lists", () => {
   expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+});
+
+it("loads every ID chunk with at most three requests running together", async () => {
+  let active = 0;
+  let peak = 0;
+  const ids = Array.from({ length: 1001 }, (_, i) => i);
+  const rows = await fetchChunks(ids, async (batch) => {
+    active++;
+    peak = Math.max(peak, active);
+    await Promise.resolve();
+    active--;
+    return batch;
+  });
+  expect(peak).toBe(3);
+  expect(rows).toEqual(ids);
 });
 
 describe("applyCourseworkFilter", () => {

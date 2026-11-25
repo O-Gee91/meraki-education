@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { HeartPulse, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -26,7 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
-import { listWellbeingFeed, type WellbeingFeedItem } from "@/lib/wellbeing.functions";
+import { type WellbeingFeedItem } from "@/lib/wellbeing.functions";
+import { useWellbeingFeed } from "@/hooks/useWellbeingFeed";
 import { followUpReason, LOW_MOOD, moodTrendLabel, shiftDate } from "@/lib/wellbeing-patterns";
 import {
   Dialog,
@@ -111,14 +111,7 @@ function WellbeingPage() {
 }
 
 function useFeed(filterDate: string) {
-  const { teacherMode } = useTeacherScope();
-  const fetchWellbeingFeed = useServerFn(listWellbeingFeed);
-  return useQuery({
-    queryKey: ["checkins", "wellbeing-feed", filterDate, teacherMode],
-    queryFn: () =>
-      fetchWellbeingFeed({ data: filterDate ? { date: filterDate, teacherMode } : { teacherMode } }),
-    retry: false,
-  });
+  return useWellbeingFeed(filterDate);
 }
 
 function MoodPicker({ mood, setMood }: { mood: number | null; setMood: (n: number) => void }) {

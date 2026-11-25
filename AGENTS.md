@@ -10,6 +10,9 @@
 <!-- LOVABLE:END -->
 
 - Student-facing overall grades must use `computeAverage` with each class's grading setup; this keeps weighting, special marks, and extra credit consistent across views.
+- Share browser session subscriptions and short-lived read caches by viewer, active role and preview context; keep SSR snapshots session-free and use explicit mutation invalidation so performance reuse never becomes authorization.
+- Reuse the identity/hat/date-keyed wellbeing query across badge, feed and Pulse, with polling owned by the shell; this avoids duplicate private-data requests without broadening server access.
+- Load dashboard to-do dependencies in parallel with complete, bounded ID-chunk reads; this avoids waterfalls and oversized request URLs while preserving counts.
 - Keep desktop UI audits in `desktop-ui-audit.md` and track page review gates in `roadmap.md`; this preserves the requested one-page-at-a-time review sequence.
 - Apply reviewed desktop shell presentation through the opt-in AppShell desktopReview prop; this keeps unrevised pages unchanged until their review gate.
 - Scope Community conversation presentation through ClassFeed's opt-in desktopReview prop; this preserves the previously reviewed class feed presentation.

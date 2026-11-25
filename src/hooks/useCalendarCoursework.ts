@@ -6,6 +6,7 @@ import { fetchAll } from "@/lib/query";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
+import { READ_REUSE_MS, LIVE_REFRESH_MS } from "@/lib/api-query-policy";
 import {
   calendarAssignmentComplete,
   dayInZone,
@@ -44,9 +45,11 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ["calendar-coursework", monthStart, user?.id, studentView, selfIds.join(","), scopeKey],
+    queryKey: ["calendar-coursework", monthStart, user?.id, studentView, selfIds.join(","), scopeKey, monthEnd],
     enabled: !!user && (!studentView || selfIds.length > 0),
-    refetchInterval: 60_000,
+    staleTime: READ_REUSE_MS,
+    refetchInterval: LIVE_REFRESH_MS,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<CourseworkItem[]> => {
       let classIds: string[] | null = scope.classIds ? [...scope.classIds] : null;

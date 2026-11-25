@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
 
 export type SelfStudent = {
   id: string;
@@ -18,15 +19,17 @@ export type SelfStudent = {
  * these ids rather than trusting RLS while a preview is active.
  */
 export function useSelfStudents() {
-  const { user, primaryRole, previewingStudent } = useAuth();
+  const { user, primaryRole, previewingStudent, loading } = useAuth();
   const query = useQuery({
     queryKey: ["self-students", user?.id, primaryRole, previewingStudent],
-    enabled: !!user,
+    enabled: !!user && !loading,
+    staleTime: READ_REUSE_MS,
     queryFn: async (): Promise<SelfStudent[]> => {
+      if (!user) return [];
       let q = supabase.from("students").select("id, first_name, last_name, grade_level");
       if (previewingStudent) q = q.eq("is_tester", true).limit(1);
-      else if (primaryRole === "parent") q = q.eq("guardian_user_id", user!.id);
-      else q = q.eq("user_id", user!.id);
+      else if (primaryRole === "parent") q = q.eq("guardian_user_id", user.id);
+      else q = q.eq("user_id", user.id);
       const { data, error } = await q.order("last_name");
       if (error) throw error;
       return (data ?? []) as SelfStudent[];
