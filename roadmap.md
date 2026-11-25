@@ -1,5 +1,10 @@
 # Roadmap
 
+## Gradebook Overview (Nov 25, 2026)
+- [x] Add staff Overview / Grid switch, roster grades, median/mean/missing summary, category ledger and filterable distribution
+- [x] Verify 36 grading regression tests and isolated populated Overview controls/layout at 1440px, 736px and 390px
+- [ ] Live gradebook switch/report walkthrough and Joe's review — owner session stops at genuine passkey verification; no bypass used
+
 ## Selected security fixes (Nov 25, 2026)
 - [x] Block external sign-in return paths, server-stamp student submissions, scope role lookups, throttle recovery emails and replace shared-file bearer links — live QA and regression checks passed
 - [x] Grade/coursework verified-recipient change — linked email-confirmed account destinations only; no contact/profile fallback; both handlers covered in 194 passing tests; no live delivery sent

@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Student-facing overall grades must use `computeAverage` with each class's grading setup; this keeps weighting, special marks, and extra credit consistent across views.
+- Staff Gradebook Overview reuses the grid's average and missing helpers; class summaries exclude test/dropped rows, and planned assignment weights use the grading engine so a new presentation never changes scores.
 - Share browser session subscriptions and short-lived read caches by viewer, active role and preview context; keep SSR snapshots session-free and use explicit mutation invalidation so performance reuse never becomes authorization.
 - Reuse the identity/hat/date-keyed wellbeing query across badge, feed and Pulse, with polling owned by the shell; this avoids duplicate private-data requests without broadening server access.
 - Load dashboard to-do dependencies in parallel with complete, bounded ID-chunk reads; this avoids waterfalls and oversized request URLs while preserving counts.

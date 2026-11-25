@@ -38,6 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LatePenaltyFields, LATE_PENALTY_BLANK, latePenaltyColumns, latePenaltyFormFrom } from "@/components/class/LatePenaltyFields";
 import { CourseworkAverages } from "@/components/class/CourseworkAverages";
+import { GradebookOverview } from "@/components/class/GradebookOverview";
 import {
   Dialog,
   DialogContent,
@@ -154,6 +155,8 @@ function ClassDetailPage() {
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookSearch, setGradebookSearch] = useState("");
+  const [gradebookView, setGradebookView] = useState("overview");
+  const [hideOverviewGrades, setHideOverviewGrades] = useState(false);
   const [assignmentPage, setAssignmentPage] = useState(0);
   // Fewer assignment columns on laptops/tablets so scores never get squeezed.
   const [gradebookPerPage, setGradebookPerPage] = useState(3);
@@ -224,12 +227,11 @@ function ClassDetailPage() {
   const { data: fullRoster = [] } = useQuery({
     queryKey: ["roster", classId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await fetchAll((from, to) => supabase
         .from("enrollments")
         .select("id, student_id, created_at, students(id, first_name, last_name, grade_level, student_number, is_tester)")
-        .eq("class_id", classId);
-      if (error) throw error;
-      return (data ?? []).filter((r) => r.students);
+        .eq("class_id", classId).order("id").range(from, to));
+      return data.filter((r) => r.students);
     },
   });
   const [showDropped, setShowDropped] = useState(false);
@@ -287,15 +289,13 @@ function ClassDetailPage() {
   const { data: assignments = [] } = useQuery({
     queryKey: ["assignments", classId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      return fetchAll((from, to) => supabase
         .from("assignments")
         .select(
           "id, title, category, points_possible, due_date, description, submission_mode, rubric_id, created_at, status, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days",
         )
         .eq("class_id", classId)
-        .order("due_date", { ascending: true });
-      if (error) throw error;
-      return data;
+        .order("due_date", { ascending: true }).order("id").range(from, to));
     },
   });
 
@@ -488,6 +488,17 @@ function ClassDetailPage() {
   const currentAssignmentPage = Math.min(assignmentPage, assignmentPageCount - 1);
   const pageAssignments = gradebookRows.slice(currentAssignmentPage * perPage, currentAssignmentPage * perPage + perPage);
 
+  const showOverview = isStaff && gradebookView === "overview";
+  const overviewStudents = showOverview ? gradebookRoster.map((row) => ({
+    id: row.student_id,
+    name: studentLabel(row.students, useIds),
+    average: studentAverage(row.student_id),
+    missing: assignments.filter((assignment) => missingFor(row.student_id, assignment)).length,
+    excluded: isTestStudent(row.students) || !!row.droppedAt,
+    note: row.droppedAt ? `Dropped ${formatDate(row.droppedAt)}` : isTestStudent(row.students) ? "Test account" : null,
+  })) : [];
+  const visibleOverviewIds = new Set(visibleGradebookRoster.map((row) => row.student_id));
+
   function printGradebook() {
     const headerCells = gradebookRows
       .map(
@@ -669,7 +680,10 @@ function ClassDetailPage() {
 
 
         <TabsContent value="gradebook">
-          <PulseDashboard
+          {isStaff && <Tabs value={gradebookView} onValueChange={setGradebookView} className="mt-4">
+            <TabsList aria-label="Gradebook view"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="grid">Grid</TabsTrigger></TabsList>
+          </Tabs>}
+          {!showOverview && <PulseDashboard
             classId={classId}
             className={klass?.name ?? "this class"}
             roster={gradebookRoster}
@@ -679,8 +693,8 @@ function ClassDetailPage() {
             isStaff={isStaff}
             useIds={useIds}
             studentAverage={studentAverage}
-          />
-          {assignments.length > 0 && (
+          />}
+          {!showOverview && assignments.length > 0 && (
             <details className="group/avg mt-6 rounded-lg border border-border bg-card">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
                 <span>Averages overview</span>
@@ -716,7 +730,7 @@ function ClassDetailPage() {
                       </p>
                     </div>
                     {isStaff && (
-                      <Button type="button" variant="outline" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0}>
+                      <Button type="button" variant="outline" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0 || (showOverview && hideOverviewGrades)}>
                         <Printer className="size-4" /> Print gradebook
                       </Button>
                     )}
@@ -755,7 +769,22 @@ function ClassDetailPage() {
                   </div>
                 </header>
 
-                 {gradebookRows.length === 0 ? (
+                 {showOverview ? (
+                   <GradebookOverview
+                     key={classId}
+                     students={overviewStudents}
+                     visibleStudents={overviewStudents.filter((student) => visibleOverviewIds.has(student.id))}
+                     assignments={gradebookRows.map((row) => row.assignment)}
+                     allAssignments={assignments}
+                     setup={setup}
+                     scoredCounts={new Map(gradebookRows.map((row) => [row.assignment.id, row.scoredCount]))}
+                     ungradedCounts={courseworkUngraded}
+                     hideGrades={hideOverviewGrades}
+                     onHideGrades={setHideOverviewGrades}
+                     onStudent={setGradebookReportStudentId}
+                     onCoursework={() => setClassTab("coursework")}
+                   />
+                 ) : gradebookRows.length === 0 ? (
                   <p className="p-8 text-center text-sm text-muted-foreground">
                     No assignments match these filters.
                   </p>
@@ -932,14 +961,14 @@ function ClassDetailPage() {
                     </div>
                   </div>
                 )}
-                  <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                  {!showOverview && <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
                    <div className="flex flex-wrap gap-4">
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-success" />80%+ proficient</span>
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-muted-foreground/60" />70–79% approaching</span>
                      <span><span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />Below 70% needs support</span>
                    </div>
                    {isStaff && <span>Click a student name for the full report.</span>}
-                 </footer>
+                 </footer>}
               </div>
             )}
           </section>

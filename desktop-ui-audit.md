@@ -1,5 +1,11 @@
 # Desktop UI checkup
 
+## Gradebook Overview (Nov 25)
+- Staff-only Overview / Grid switch; Overview replaces Pulse/expanded averages with a compact roster, median/mean/missing summary, category ledger and class-scale distribution. Grid and family views stay unchanged.
+- Isolated sample-row Chromium checks at 1440px, 736px and 390px: no horizontal overflow, band filters work, hidden grades remove roster scores/counts/summary/distribution, and report/coursework callbacks fire. Screenshots reviewed; this is presentation verification, not a live-data walkthrough.
+- Real owner session reaches passkey verification; live gradebook switching/report navigation awaits the user's two-step verification. No authentication bypass or account changes made.
+- Review gate: show this gradebook update for Joe's review before reviewing another page.
+
 ## Nov 25 school pilot verification
 - Public landing, sign-in, Privacy, Terms, forgot/reset password and branded 404 checked in Chromium at 1280×800, 1024×768 and 788×776. No horizontal overflow; legal footer links navigate correctly, and sign-in includes both legal links.
 - Recovery form submitted with a nonexistent `.invalid` address: neutral confirmation appears and Back to sign in returns to /auth. No actual account password or real email was changed/sent.
