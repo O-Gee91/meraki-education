@@ -25,6 +25,17 @@ export const linkSelfRegisteredAccount = createServerFn({ method: "POST" })
       });
       if (!canManage) throw new Error("You cannot add students to that class");
     }
+    const { data: isAdmin } = await context.supabase.rpc("is_admin");
+    if (!isAdmin) {
+      if (data.student_id) {
+        const { data: canStudent } = await context.supabase.rpc("can_manage_student", {
+          _student_id: data.student_id,
+        });
+        if (!canStudent) throw new Error("You can only link accounts to students in your classes");
+      } else if (!data.class_id) {
+        throw new Error("Choose one of your classes for this new student");
+      }
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { linkAccountToStudent } = await import("./unlinked.server");
     return linkAccountToStudent(supabaseAdmin, data);
