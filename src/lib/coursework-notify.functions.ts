@@ -61,20 +61,22 @@ export const notifyCourseworkPosted = createServerFn({ method: "POST" })
       const { data: cls } = await supabaseAdmin.from("classes").select("name").eq("id", item.class_id).maybeSingle();
       const { data: enr } = await supabaseAdmin
         .from("enrollments")
-        .select("students(id, first_name, last_name, user_id, guardian_user_id, guardian_email, is_tester)")
+        .select("students(id, first_name, last_name, user_id, guardian_user_id, is_tester)")
         .eq("class_id", item.class_id);
       const roster = (enr ?? [])
         .map((e) => e.students as unknown as {
           id: string; first_name: string; last_name: string; user_id: string | null;
-          guardian_user_id: string | null; guardian_email: string | null; is_tester: boolean;
+          guardian_user_id: string | null; is_tester: boolean;
         } | null)
         .filter((s): s is NonNullable<typeof s> => !!s && !s.is_tester);
 
-      const profileIds = roster.flatMap((s) => [s.user_id, s.guardian_user_id]).filter((x): x is string => !!x);
+      const profileIds = roster.flatMap((s) => [data.students ? s.user_id : null, data.parents ? s.guardian_user_id : null]).filter((x): x is string => !!x);
       const { data: profiles } = profileIds.length
-        ? await supabaseAdmin.from("profiles").select("id, full_name, email").in("id", profileIds)
+        ? await supabaseAdmin.from("profiles").select("id, full_name").in("id", profileIds)
         : { data: [] };
       const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const { verifiedLinkedEmails } = await import("./verified-email.server");
+      const verifiedEmails = await verifiedLinkedEmails(supabaseAdmin, profileIds);
 
       const dueText = item.due
         ? new Date(item.due.length <= 10 ? `${item.due}T12:00:00Z` : item.due).toLocaleDateString("en-US", {
@@ -90,7 +92,6 @@ export const notifyCourseworkPosted = createServerFn({ method: "POST" })
         description: item.desc ? String(item.desc).slice(0, 600) : undefined,
         openUrl: `${origin}/classes/${item.class_id}`,
       };
-      const valid = (e?: string | null) => !!e && e.includes("@") && !e.endsWith(".local");
       const send = async (to: string, key: string, extra: Record<string, unknown>) => {
         try {
           const r = await sendTemplateEmail("coursework-posted", to, {
@@ -107,12 +108,12 @@ export const notifyCourseworkPosted = createServerFn({ method: "POST" })
       for (const s of roster) {
         const name = `${s.first_name} ${s.last_name}`.trim();
         if (data.students && s.user_id) {
-          const p = byId.get(s.user_id);
-          if (valid(p?.email) && (await send(p!.email!, `s-${s.id}`, { recipientName: s.first_name }))) students++;
+          const email = verifiedEmails.get(s.user_id);
+          if (email && (await send(email, `s-${s.id}`, { recipientName: s.first_name }))) students++;
         }
         if (data.parents) {
           const g = s.guardian_user_id ? byId.get(s.guardian_user_id) : undefined;
-          const email = valid(g?.email) ? g!.email! : valid(s.guardian_email) ? s.guardian_email! : null;
+          const email = s.guardian_user_id ? verifiedEmails.get(s.guardian_user_id) : undefined;
           if (email && (await send(email, `g-${s.id}`, {
             recipientName: g?.full_name ?? undefined, isGuardian: true, studentName: name,
           }))) parents++;

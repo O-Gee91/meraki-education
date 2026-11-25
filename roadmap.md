@@ -2,8 +2,9 @@
 
 ## Selected security fixes (Nov 25, 2026)
 - [x] Block external sign-in return paths, server-stamp student submissions, scope role lookups, throttle recovery emails and replace shared-file bearer links — live QA and regression checks passed
-- [ ] Grade/coursework verified-recipient change — awaiting approval because contact-email-only guardians would stop receiving notices
-- [x] Verify five selected fixes and update only their scan statuses; two email-recipient findings remain active awaiting user confirmation (selected-security-review.md)
+- [x] Grade/coursework verified-recipient change — linked email-confirmed account destinations only; no contact/profile fallback; both handlers covered in 194 passing tests; no live delivery sent
+- [x] Verify five selected fixes and update only their scan statuses (selected-security-review.md)
+- [x] Update only the two selected email-recipient findings after verification; remaining 11 findings untouched
 
 ## Feature switches then API performance (Nov 25, 2026)
 - [x] Add admin-only rollout controls, identity-scoped cached evaluations and server-enforced AI comment switch

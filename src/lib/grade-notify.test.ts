@@ -3,6 +3,8 @@ import { hasGradeValue } from "./grading";
 
 const mocks = vi.hoisted(() => ({
   send: vi.fn().mockResolvedValue({ sent: true }),
+  lookup: vi.fn(),
+  student: { id: "student-1", first_name: "Alex", last_name: "Chen", user_id: "user-1" as string | null, guardian_user_id: "guardian-1" as string | null, guardian_email: "edited-contact@example.com", is_tester: false },
   grade: { id: "grade-1", student_id: "student-1", points_earned: null as number | null, comment: null as string | null, is_draft: false, posted_at: "2026-10-24T06:14:00Z" },
 }));
 
@@ -20,13 +22,14 @@ vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth:
 vi.mock("@/lib/email-templates/send-email", () => ({ sendTemplateEmail: mocks.send }));
 vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
+    auth: { admin: { getUserById: mocks.lookup } },
     from: (table: string) => {
       const data = table === "assignments"
         ? { id: "assignment-1", title: "Essay", class_id: "class-1", points_possible: 20 }
         : table === "classes" ? { name: "English" }
         : table === "grades" ? [mocks.grade]
-        : table === "students" ? [{ id: "student-1", first_name: "Alex", last_name: "Chen", user_id: "user-1", guardian_user_id: "guardian-1", guardian_email: null, is_tester: false }]
-        : [{ id: "user-1", email: "student@example.com" }, { id: "guardian-1", email: "guardian@example.com" }];
+        : table === "students" ? [mocks.student]
+        : [{ id: "user-1", email: "edited-profile@example.com" }, { id: "guardian-1", email: "edited-profile@example.com" }];
       const query = {
         select: () => query,
         eq: () => query,
@@ -51,9 +54,31 @@ const notify = () => run({
 beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(mocks.grade, { points_earned: null, comment: null, is_draft: false });
+  Object.assign(mocks.student, { user_id: "user-1", guardian_user_id: "guardian-1", is_tester: false });
+  mocks.lookup.mockImplementation(async (id: string) => ({ data: { user: { id, email: id === "user-1" ? "student@example.com" : "guardian@example.com", email_confirmed_at: "2026-11-25T06:00:00Z" } }, error: null }));
 });
 
 describe("grade notification eligibility", () => {
+  it("never sends grade notices to a contact-only guardian", async () => {
+    mocks.student.guardian_user_id = null;
+    mocks.grade.points_earned = 18;
+    expect(await notify()).toEqual({ students: 1, parents: 0 });
+    expect(mocks.send.mock.calls.map((call) => call[1])).toEqual(["student@example.com"]);
+  });
+
+  it("skips linked accounts whose emails are not verified", async () => {
+    mocks.grade.points_earned = 18;
+    mocks.lookup.mockResolvedValue({ data: { user: { id: "guardian-1", email: "guardian@example.com", email_confirmed_at: null } }, error: null });
+    expect(await notify()).toEqual({ students: 0, parents: 0 });
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on account lookup errors without contact or profile fallback", async () => {
+    mocks.grade.points_earned = 18;
+    mocks.lookup.mockRejectedValue(new Error("Unavailable"));
+    expect(await notify()).toEqual({ students: 0, parents: 0 });
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
   it("does not email either family recipient after a score is cleared", async () => {
     expect(hasGradeValue(null, null)).toBe(false);
     expect(await notify()).toEqual({ students: 0, parents: 0 });

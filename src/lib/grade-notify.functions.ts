@@ -38,14 +38,15 @@ export const notifyGradesPosted = createServerFn({ method: "POST" })
       .in("student_id", data.studentIds);
     const { data: roster } = await supabaseAdmin
       .from("students")
-      .select("id, first_name, last_name, user_id, guardian_user_id, guardian_email, is_tester")
+      .select("id, first_name, last_name, user_id, guardian_user_id, is_tester")
       .in("id", data.studentIds);
-    const profileIds = (roster ?? []).flatMap((s) => [s.user_id, s.guardian_user_id]).filter((x): x is string => !!x);
+    const profileIds = (roster ?? []).filter((s) => !s.is_tester).flatMap((s) => [s.user_id, s.guardian_user_id]).filter((x): x is string => !!x);
     const { data: profiles } = profileIds.length
-      ? await supabaseAdmin.from("profiles").select("id, full_name, email").in("id", profileIds)
+      ? await supabaseAdmin.from("profiles").select("id, full_name").in("id", profileIds)
       : { data: [] };
     const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
-    const valid = (e?: string | null) => !!e && e.includes("@") && !e.endsWith(".local");
+    const { verifiedLinkedEmails } = await import("./verified-email.server");
+    const verifiedEmails = await verifiedLinkedEmails(supabaseAdmin, profileIds);
 
     for (const g of grades ?? []) {
       if (g.is_draft || !hasGradeValue(g.points_earned, g.comment)) continue;
@@ -72,12 +73,10 @@ export const notifyGradesPosted = createServerFn({ method: "POST" })
           return false;
         }
       };
-      const p = s.user_id ? byId.get(s.user_id) : undefined;
-      const studentEmail = p?.email;
-      if (studentEmail && valid(studentEmail) && (await send(studentEmail, "s", { recipientName: s.first_name }))) students++;
+      const studentEmail = s.user_id ? verifiedEmails.get(s.user_id) : undefined;
+      if (studentEmail && (await send(studentEmail, "s", { recipientName: s.first_name }))) students++;
       const gp = s.guardian_user_id ? byId.get(s.guardian_user_id) : undefined;
-      const guardianEmail = gp?.email;
-      const ge = guardianEmail && valid(guardianEmail) ? guardianEmail : s.guardian_email && valid(s.guardian_email) ? s.guardian_email : null;
+      const ge = s.guardian_user_id ? verifiedEmails.get(s.guardian_user_id) : undefined;
       if (ge && (await send(ge, "g", {
         recipientName: gp?.full_name ?? undefined, isGuardian: true,
         studentName: `${s.first_name} ${s.last_name}`.trim(),

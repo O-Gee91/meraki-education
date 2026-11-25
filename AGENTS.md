@@ -45,6 +45,7 @@
 - Auth return paths use browser-parsed same-origin validation, rejecting encoded separators and controls; this prevents sign-in redirects to attacker sites.
 - Student submission timestamps are server-stamped by the database trigger, preserving staff overrides; this prevents direct Data API backdating.
 - Role membership lookup permits only self, administrators or service work; this preserves policy helpers without exposing other accounts' roles.
+- Grade/coursework send boundaries share a server-only verified-account resolver with request-local bounded lookups; current Auth email confirmation, not editable contacts or profiles, authorizes the destination.
 - School FileLibrary opens files through authenticated downloads rather than signed bearer URLs; current storage policies are rechecked on every request.
 - Late-status controls do not edit penalties until deductions have an implemented scoring contract; preserve legacy override metadata and existing scores.
 - Missing-mark value under a late penalty comes only from src/lib/late-penalty.ts (passed to computeAverage as missingPoints); every average must use it so screens agree.

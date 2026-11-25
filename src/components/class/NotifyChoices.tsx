@@ -25,7 +25,7 @@ export function NotifyChoices({ value, onChange, idPrefix }: { value: NotifyValu
         <Checkbox id={`${idPrefix}-np`} checked={value.parents} onCheckedChange={(v) => onChange({ ...value, parents: v === true })} />
         <Label htmlFor={`${idPrefix}-np`} className="text-sm font-normal">Email parents &amp; guardians</Label>
       </div>
-      <p className="text-xs text-muted-foreground">Only people with an email address on file are emailed. Test accounts are skipped.</p>
+      <p className="text-xs text-muted-foreground">Only verified linked accounts receive emails. Contact-only guardians and test accounts are skipped.</p>
     </div>
   );
 }
