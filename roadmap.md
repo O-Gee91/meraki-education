@@ -1,5 +1,13 @@
 # Roadmap
 
+## Cross-role pilot walkthrough (Nov 25, 2026)
+- [ ] Teacher: dashboard, class coursework/gradebook, discussions, messages, reports and settings
+- [ ] Student: dashboard, assignments, class discussions, wellbeing, calendar and two-step verification gate
+- [ ] Guardian: child overview, assignments, calendar, messages and read-only boundaries
+- [ ] Admin: people, classes, reports, moderation and school-wide oversight
+- [ ] Check laptop/tablet layouts, console/network failures and role-based access; fix confirmed issues
+- [ ] Run regression tests and record verified flows plus any account/email/device limitations
+
 ## School pilot verification pass (Nov 25, 2026)
 - [x] Initial findings: 111 tests pass; public pages and live HTTPS/header checks pass
 - [x] P1: Hide nonfunctional late-penalty entry while preserving existing overrides and scores
