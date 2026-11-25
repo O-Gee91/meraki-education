@@ -7,6 +7,7 @@ import { PublishNotifyDialog, useNotifyCoursework } from "@/components/class/Not
 
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -289,37 +290,21 @@ export function AssessmentsTab({
                   )}
                   {isStaff ? (
                     <>
-                      <Button
-                        size="sm"
-                        variant={openId === `build:${a.id}` ? "default" : "outline"}
-                        onClick={() =>
-                          setOpenId(openId === `build:${a.id}` ? null : `build:${a.id}`)
-                        }
-                      >
-                        {openId === `build:${a.id}` ? "Close build" : "Build questions"}
+                      <Button size="sm" variant="ghost" aria-expanded={openId === `build:${a.id}`}
+                        onClick={() => setOpenId(openId === `build:${a.id}` ? null : `build:${a.id}`)}>
+                        Build questions
+                        <ChevronDown className={`ml-1 size-4 transition-transform ${openId === `build:${a.id}` ? "rotate-180" : ""}`} />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant={openId === `grade:${a.id}` ? "default" : "outline"}
-                        className={
-                          openId === `grade:${a.id}`
-                            ? "bg-amber-500 text-white hover:bg-amber-500/90"
-                            : "border-amber-500/40 text-amber-600"
-                        }
-                        onClick={() =>
-                          setOpenId(openId === `grade:${a.id}` ? null : `grade:${a.id}`)
-                        }
-                      >
-                        {openId === `grade:${a.id}` ? "Close grading" : "Grade submissions"}
+                      <Button size="sm" variant={openId === `grade:${a.id}` ? "secondary" : "outline"} aria-expanded={openId === `grade:${a.id}`}
+                        onClick={() => setOpenId(openId === `grade:${a.id}` ? null : `grade:${a.id}`)}>
+                        Grade submissions
+                        <ChevronDown className={`ml-1 size-4 transition-transform ${openId === `grade:${a.id}` ? "rotate-180" : ""}`} />
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOpenId(openId === a.id ? null : a.id)}
-                    >
-                      {openId === a.id ? "Close" : "Open"}
+                    <Button size="sm" variant="outline" aria-expanded={openId === a.id} onClick={() => setOpenId(openId === a.id ? null : a.id)}>
+                      Open
+                      <ChevronDown className={`ml-1 size-4 transition-transform ${openId === a.id ? "rotate-180" : ""}`} />
                     </Button>
                   )}
                 </div>
