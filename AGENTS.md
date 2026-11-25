@@ -24,7 +24,7 @@
 - Run unit tests with the dedicated Vitest configuration rather than the app's RPC transform; this allows mocked server handlers to execute directly without deployment routing.
 - Keep calendar category, color and audience transitions in shared calendar-form helpers; this lets regression tests cover every holiday visibility path used by the form.
 - Global "View as student" lives in useAuth (previewingStudent/realStaff) with student-owned data scoped via useSelfStudents/useTeacherScope; staff RLS reads every row, so preview screens must filter explicitly and block writes.
-- Wellbeing feeds use the active staff hat and verified co-teacher membership, with snapshot caches keyed by viewer and hat; this preserves admin visibility and co-teacher access without sharing cached role scopes.
+- Wellbeing feeds use the active staff hat, verified class ownership/co-teacher membership and the grade levels of those verified classes (never display names), with snapshot caches keyed by viewer and hat; this preserves admin visibility and co-teacher access without sharing cached role scopes.
 
 - Rule: Discussion sharing uses one discussion row per class (linked by share_group); shared threads point thread_id at a host discussion so posts live in one place while each class keeps its own gradebook assignment. Per-post scores live in discussion_post_scores and their sum is synced to grades.
 - Missing work is decided only by `isMissingWork` in src/lib/missing-work.ts; every screen counting missing work must use it so counts agree.

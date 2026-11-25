@@ -92,7 +92,7 @@ describe("wellbeing feed staff access", () => {
     mocks.roles = ["admin", "teacher"];
     mocks.coClasses = [{ class_id: "class-1" }];
     expect(await studentIds(false)).toEqual(["rostered", "same-grade", "unrelated"]);
-    expect(await studentIds(true)).toEqual(["rostered"]);
+    expect(await studentIds(true)).toEqual(["rostered", "same-grade"]);
   });
 
   it("includes a co-teacher's roster even when the student has a different grade", async () => {
@@ -108,13 +108,13 @@ describe("wellbeing feed staff access", () => {
 
   it("retains primary-teacher roster access", async () => {
     mocks.roles = ["teacher"];
-    expect(await studentIds(true, "primary")).toEqual(["rostered"]);
+    expect(await studentIds(true, "primary")).toEqual(["rostered", "same-grade"]);
   });
 
-  it("matches teacher names without adding unrelated same-grade students", async () => {
+  it("ignores a display name copied from another class's teacher", async () => {
     mocks.roles = ["teacher"];
     mocks.name = "  PRIMARY TEACHER  ";
-    expect(await studentIds(true)).toEqual(["rostered"]);
+    expect(await studentIds(true)).toEqual([]);
   });
 
   it("keeps students limited to their own check-ins", async () => {
