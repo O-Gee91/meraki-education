@@ -27,6 +27,17 @@ function oauth(): OAuthNamespace {
 }
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
+  head: () => ({
+    meta: [
+      { title: "Approve app access — Meraki Education" },
+      { name: "description", content: "Review an app's request to access your Meraki Education account." },
+      { property: "og:title", content: "Approve app access — Meraki Education" },
+      { property: "og:description", content: "Review an app's request to access your Meraki Education account." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
     authorization_id: typeof s["authorization_id"] === "string" ? s["authorization_id"] : "",
@@ -40,7 +51,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     }
   },
   loader: async ({ location }) => {
-    const authorizationId = new URLSearchParams(location.search).get("authorization_id")!;
+    const authorizationId = new URLSearchParams(location.search).get("authorization_id");
+    if (!authorizationId) throw new Error("Missing authorization_id");
     const { data, error } = await oauth().getAuthorizationDetails(authorizationId);
     if (error) throw error;
     const immediate = data?.redirect_url ?? data?.redirect_to;

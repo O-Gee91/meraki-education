@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
+import { fetchDiscussionParticipation } from "@/lib/discussion-completion";
+import { fetchAll } from "@/lib/query";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import {
+  calendarAssignmentComplete,
   dayInZone,
   dedupeLinkedAssignments,
   timeInZone,
@@ -48,23 +50,29 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<CourseworkItem[]> => {
       let classIds: string[] | null = scope.classIds ? [...scope.classIds] : null;
+      const childrenByClass = new Map<string, string[]>();
       if (studentView) {
-        const { data, error } = await supabase
+        const data = await fetchAll((from, to) => supabase
           .from("enrollments")
-          .select("class_id")
-          .in("student_id", selfIds);
-        if (error) throw error;
+          .select("class_id, student_id")
+          .in("student_id", selfIds).order("id").range(from, to));
+        for (const e of data) {
+          const children = childrenByClass.get(e.class_id) ?? [];
+          children.push(e.student_id);
+          childrenByClass.set(e.class_id, children);
+        }
         const enrolled = [...new Set((data ?? []).map((e) => e.class_id))];
         classIds = previewingStudent && scope.classIds
-          ? enrolled.filter((id) => scope.classIds!.has(id))
+          ? enrolled.filter((id) => scope.classIds?.has(id))
           : enrolled;
       }
       if (classIds && classIds.length === 0) return [];
 
-      const { data: classes, error: cErr } = await (classIds
-        ? supabase.from("classes").select("id, name, timezone").in("id", classIds)
-        : supabase.from("classes").select("id, name, timezone"));
-      if (cErr) throw cErr;
+      const classes = await fetchAll((from, to) => {
+        let q = supabase.from("classes").select("id, name, timezone");
+        if (classIds) q = q.in("id", classIds);
+        return q.order("id").range(from, to);
+      });
       const classById = new Map((classes ?? []).map((c) => [c.id, c]));
       const ids = classIds ?? [...classById.keys()];
       if (ids.length === 0) return [];
@@ -90,58 +98,50 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
       if (studentView) sQ = sQ.eq("published", true);
       const dQ = supabase
         .from("discussions")
-        .select("id, title, class_id, due_at, due_date, assignment_id, thread_id")
+        .select("id, title, class_id, due_at, due_date, assignment_id, thread_id, required_replies")
         .in("class_id", ids)
         .or(
           `and(due_at.gte.${from.toISOString()},due_at.lte.${to.toISOString()}),and(due_at.is.null,due_date.gte.${monthStart},due_date.lte.${monthEnd})`,
         );
-      const [a, s, d] = await Promise.all([aQ, sQ, dQ]);
-      if (a.error) throw a.error;
-      if (s.error) throw s.error;
-      if (d.error) throw d.error;
+      const [assignments, assessments, discussions] = await Promise.all([
+        fetchAll((from, to) => aQ.order("id").range(from, to)),
+        fetchAll((from, to) => sQ.order("id").range(from, to)),
+        fetchAll((from, to) => dQ.order("id").range(from, to)),
+      ]);
 
-      // Completion for the student viewer.
       const done = new Set<string>();
       if (studentView && selfIds.length) {
-        const aIds = (a.data ?? []).map((x) => x.id);
-        const sIds = (s.data ?? []).map((x) => x.id);
-        const [subs, grades, aSubs] = await Promise.all([
-          aIds.length
-            ? supabase.from("assignment_submissions").select("assignment_id").in("assignment_id", aIds).in("student_id", selfIds).in("status", ["submitted", "collected", "returned"])
-            : Promise.resolve({ data: [] as { assignment_id: string }[] }),
-          aIds.length
-            ? supabase.from("grades").select("assignment_id").in("assignment_id", aIds).in("student_id", selfIds).eq("is_draft", false)
-            : Promise.resolve({ data: [] as { assignment_id: string }[] }),
-          sIds.length
-            ? supabase.from("assessment_submissions").select("assessment_id").in("assessment_id", sIds).in("student_id", selfIds)
-            : Promise.resolve({ data: [] as { assessment_id: string }[] }),
+        const aIds = assignments.map((x) => x.id);
+        const sIds = assessments.map((x) => x.id);
+        const [subs, grades, aSubs, participation] = await Promise.all([
+          aIds.length ? fetchAll((from, to) => supabase.from("assignment_submissions")
+            .select("assignment_id, student_id, status").in("assignment_id", aIds).in("student_id", selfIds)
+            .order("id").range(from, to)) : Promise.resolve([]),
+          aIds.length ? fetchAll((from, to) => supabase.from("grades")
+            .select("assignment_id, student_id, points_earned, comment").in("assignment_id", aIds)
+            .in("student_id", selfIds).eq("is_draft", false).order("id").range(from, to)) : Promise.resolve([]),
+          sIds.length ? fetchAll((from, to) => supabase.from("assessment_submissions")
+            .select("assessment_id, student_id, status").in("assessment_id", sIds).in("student_id", selfIds)
+            .in("status", ["needs_review", "graded"]).order("id").range(from, to)) : Promise.resolve([]),
+          fetchDiscussionParticipation(discussions, selfIds),
         ]);
-        for (const r of subs.data ?? []) done.add(`assignment-${r.assignment_id}`);
-        for (const r of grades.data ?? []) done.add(`assignment-${r.assignment_id}`);
-        for (const r of aSubs.data ?? []) done.add(`assessment-${r.assessment_id}`);
-        // Graded discussions: same post + required-replies rule as every other screen.
-        const discAssignIds = (d.data ?? []).map((x) => x.assignment_id).filter((v): v is string => !!v);
-        if (discAssignIds.length) {
-          const completed = await fetchDiscussionCompletions(discAssignIds, selfIds);
-          const doneAssign = new Set([...completed].map((k) => k.split(":")[1]));
-          for (const x of d.data ?? []) if (x.assignment_id && doneAssign.has(x.assignment_id)) done.add(`discussion-${x.id}`);
+        // An aggregate family calendar is complete only when every enrolled child is complete.
+        for (const a of assignments) {
+          const children = childrenByClass.get(a.class_id) ?? [];
+          if (children.length > 0 && children.every((sid) => calendarAssignmentComplete(
+            subs.find((r) => r.assignment_id === a.id && r.student_id === sid)?.status,
+            grades.find((r) => r.assignment_id === a.id && r.student_id === sid),
+          ))) done.add(`assignment-${a.id}`);
         }
-        // Ungraded discussions: a main post counts as done.
-        const loose = (d.data ?? []).filter((x) => !x.assignment_id);
-        if (loose.length) {
-          const { data: me } = await supabase.from("students").select("user_id").in("id", selfIds);
-          const authorIds = (me ?? []).map((m) => m.user_id).filter((v): v is string => !!v);
-          if (authorIds.length) {
-            const { data: posts } = await supabase
-              .from("discussion_posts")
-              .select("discussion_id")
-              .in("discussion_id", loose.map((x) => x.thread_id ?? x.id))
-              .in("author_id", authorIds)
-              .is("parent_id", null)
-              .is("deleted_at", null);
-            const posted = new Set((posts ?? []).map((p) => p.discussion_id));
-            for (const x of loose) if (posted.has(x.thread_id ?? x.id)) done.add(`discussion-${x.id}`);
+        for (const a of assessments) {
+          const children = childrenByClass.get(a.class_id) ?? [];
+          if (children.length > 0 && children.every((sid) => aSubs.some((r) => r.assessment_id === a.id && r.student_id === sid))) {
+            done.add(`assessment-${a.id}`);
           }
+        }
+        for (const d of discussions) {
+          const children = childrenByClass.get(d.class_id) ?? [];
+          if (children.length > 0 && children.every((sid) => participation.has(`${sid}:${d.id}`))) done.add(`discussion-${d.id}`);
         }
       }
 
@@ -149,14 +149,14 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
       const name = (cid: string) => classById.get(cid)?.name ?? "Class";
       const linked = new Set<string>();
       const items: CourseworkItem[] = [];
-      for (const x of a.data ?? []) {
+      for (const x of assignments) {
         if (!x.due_date) continue;
         items.push({
           id: x.id, kind: "assignment", title: x.title, classId: x.class_id, className: name(x.class_id),
           date: x.due_date, time: null, draft: x.status !== "published", completed: done.has(`assignment-${x.id}`),
         });
       }
-      for (const x of s.data ?? []) {
+      for (const x of assessments) {
         if (!x.due_at) continue;
         if (x.assignment_id) linked.add(x.assignment_id);
         items.push({
@@ -165,7 +165,7 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
           draft: !x.published, completed: done.has(`assessment-${x.id}`),
         });
       }
-      for (const x of d.data ?? []) {
+      for (const x of discussions) {
         const date = x.due_at ? dayInZone(x.due_at, tz(x.class_id)) : x.due_date;
         if (!date) continue;
         if (x.assignment_id) linked.add(x.assignment_id);

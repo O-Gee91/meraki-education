@@ -12,6 +12,8 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Choose a new password — Meraki Education Platform" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         name: "description",
         content: "Set a new password for your Meraki Education account.",

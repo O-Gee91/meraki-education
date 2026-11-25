@@ -622,7 +622,7 @@ function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCate
 }
 
 function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: boolean }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const threadId = discussion.thread_id ?? discussion.id;
   const key = ["discussion-posts", threadId];
@@ -735,7 +735,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
 
   return (
     <div className="mt-4 border-t border-border pt-4">
-      {isStaff && (
+      {isAdmin && (
         <div className="mb-2 flex justify-end">
           <DeletedPostsLog threadId={threadId} />
         </div>

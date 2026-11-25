@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { courseworkBucket, isDueSoon } from "./coursework-view";
+import { courseworkBucket, isDueSoon, needsCourseworkAttention } from "./coursework-view";
 
 const today = "2026-11-01";
+
+describe("coursework attention", () => {
+  it("includes an item with zero ungraded students and one draft grade to post", () => {
+    expect(needsCourseworkAttention(0, 1)).toBe(true);
+  });
+  it("includes one ungraded student", () => {
+    expect(needsCourseworkAttention(1, 0)).toBe(true);
+  });
+  it("excludes fully posted and graded work", () => {
+    expect(needsCourseworkAttention(0, 0)).toBe(false);
+  });
+});
 
 describe("courseworkBucket", () => {
   it("work due within the next 7 days is current", () => {

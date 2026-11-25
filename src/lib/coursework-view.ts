@@ -11,6 +11,11 @@ export type CourseworkBucket = "current" | "upcoming" | "past";
 export const DUE_SOON_DAYS = 7;
 export const CURRENT_LOOKBACK_DAYS = 7;
 
+/** Work to grade and saved draft grades both require a teacher's attention. */
+export function needsCourseworkAttention(ungradedCount: number, draftGradeCount: number): boolean {
+  return ungradedCount > 0 || draftGradeCount > 0;
+}
+
 function shift(day: string, days: number): string {
   const d = new Date(`${day}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

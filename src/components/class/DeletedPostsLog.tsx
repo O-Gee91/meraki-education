@@ -4,19 +4,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { FormattedText } from "@/components/class/FormattedText";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchAll } from "@/lib/query";
 
-/** Staff-only record of discussion posts that were deleted (kept by the database audit trigger). */
+/** Admin-only original content; the database independently enforces this restriction. */
 export function DeletedPostsLog({ threadId }: { threadId: string }) {
+  const { isAdmin, user } = useAuth();
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["discussion-deleted-posts", threadId],
+    queryKey: ["discussion-deleted-posts", threadId, user?.id, isAdmin],
+    enabled: isAdmin,
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!isAdmin) return [];
+      const data = await fetchAll((from, to) => supabase
         .from("discussion_post_audits")
         .select("id, post_id, parent_id, author_id, acted_by, old_body, post_created_at, acted_at")
         .eq("discussion_id", threadId)
         .eq("action", "deleted")
-        .order("acted_at", { ascending: false });
-      if (error) throw error;
+        .order("acted_at", { ascending: false })
+        .order("id")
+        .range(from, to));
       const ids = [...new Set(data.flatMap((r) => [r.author_id, r.acted_by]).filter(Boolean))] as string[];
       const names = new Map<string, string>();
       if (ids.length) {
@@ -32,6 +38,8 @@ export function DeletedPostsLog({ threadId }: { threadId: string }) {
   });
   const fmt = (v: string | null) => (v ? new Date(v).toLocaleString() : "—");
 
+  if (!isAdmin) return null;
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -42,7 +50,7 @@ export function DeletedPostsLog({ threadId }: { threadId: string }) {
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Deleted posts</SheetTitle>
-          <SheetDescription>Only teachers of this class and admins can see this record.</SheetDescription>
+          <SheetDescription>Only school administrators can see this record.</SheetDescription>
         </SheetHeader>
         <div className="mt-4 space-y-3">
           {isLoading ? (

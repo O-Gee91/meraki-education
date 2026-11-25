@@ -9,13 +9,32 @@ import { meetsDiscussionCriteria } from "@/lib/discussion-state";
  * Returns keys of the form `${studentId}:${assignmentId}`.
  */
 export async function fetchDiscussionCompletions(assignmentIds: string[], studentIds?: string[]): Promise<Set<string>> {
-  const done = new Set<string>();
-  if (assignmentIds.length === 0) return done;
-  const { data: discs } = await supabase
+  if (assignmentIds.length === 0) return new Set();
+  const discs = await fetchAll((from, to) => supabase
     .from("discussions")
     .select("id, thread_id, assignment_id, required_replies")
-    .in("assignment_id", assignmentIds);
-  if (!discs?.length) return done;
+    .in("assignment_id", assignmentIds)
+    .order("id")
+    .range(from, to));
+  const participation = await fetchDiscussionParticipation(discs, studentIds);
+  const done = new Set<string>();
+  for (const d of discs) {
+    if (!d.assignment_id) continue;
+    for (const key of participation) {
+      const [sid, did] = key.split(":");
+      if (sid && did === d.id) done.add(`${sid}:${d.assignment_id}`);
+    }
+  }
+  return done;
+}
+
+/** Same criteria for graded and ungraded discussions; keys are studentId:discussionId. */
+export async function fetchDiscussionParticipation(
+  discs: Array<{ id: string; thread_id: string | null; required_replies: number }>,
+  studentIds?: string[],
+): Promise<Set<string>> {
+  const done = new Set<string>();
+  if (!discs.length) return done;
   const threadIds = [...new Set(discs.map((d) => d.thread_id ?? d.id))];
   const posts = await fetchAll((from, to) =>
     supabase
@@ -28,12 +47,13 @@ export async function fetchDiscussionCompletions(assignmentIds: string[], studen
   );
   if (!posts?.length) return done;
   const authorIds = [...new Set(posts.map((p) => p.author_id))];
-  let sq = supabase.from("students").select("id, user_id").in("user_id", authorIds);
-  if (studentIds?.length) sq = sq.in("id", studentIds);
-  const { data: students } = await sq;
-  const studentByUser = new Map((students ?? []).map((s) => [s.user_id, s.id]));
+  const students = await fetchAll((from, to) => {
+    let sq = supabase.from("students").select("id, user_id").in("user_id", authorIds);
+    if (studentIds?.length) sq = sq.in("id", studentIds);
+    return sq.order("id").range(from, to);
+  });
+  const studentByUser = new Map(students.map((s) => [s.user_id, s.id]));
   for (const d of discs) {
-    if (!d.assignment_id) continue;
     const tid = d.thread_id ?? d.id;
     const counts = new Map<string, { roots: number; replies: number }>();
     for (const p of posts) {
@@ -45,7 +65,7 @@ export async function fetchDiscussionCompletions(assignmentIds: string[], studen
     }
     for (const [uid, c] of counts) {
       const sid = studentByUser.get(uid);
-      if (sid && meetsDiscussionCriteria(c.roots, c.replies, d.required_replies)) done.add(`${sid}:${d.assignment_id}`);
+      if (sid && meetsDiscussionCriteria(c.roots, c.replies, d.required_replies)) done.add(`${sid}:${d.id}`);
     }
   }
   return done;

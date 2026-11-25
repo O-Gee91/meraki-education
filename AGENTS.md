@@ -35,3 +35,7 @@
 - Dropping or moving a student archives the enrollment into dropped_enrollments via a delete trigger; active rosters stay unchanged while old grades remain viewable.
 - Lists feeding counts, averages or missing work load through `fetchAll` in src/lib/query.ts; the Data API silently caps responses at 1000 rows.
 - Discussion posts are soft-deleted via `soft_delete_discussion_post` (body cleared, original kept in discussion_post_audits); readers filter `deleted_at` so removed posts never count.
+- Original discussion audit content is administrator-only in RLS and both audit readers; identity/active-role cache keys prevent cross-view reuse.
+- Calendar completion uses shared coursework state and discussion participation helpers for graded and ungraded work, with family completion scoped to enrolled children per class; this prevents contradictory completion badges.
+- Password recovery validates return origins against this project's approved hosts before looking up an account or generating a link; this prevents caller-controlled external redirects.
+- Late-status controls do not edit penalties until deductions have an implemented scoring contract; preserve legacy override metadata and existing scores.

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Clock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -32,7 +31,8 @@ function useOverriderName(userId: string | null | undefined) {
     queryKey: ["profile-name", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("full_name").eq("id", userId!).maybeSingle();
+      if (!userId) return "a teacher";
+      const { data } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();
       return data?.full_name?.trim() || "a teacher";
     },
   });
@@ -61,20 +61,18 @@ export function LateOverrideControl({ submission, assignmentId }: { submission: 
   const isLate = Boolean(submission.is_late);
   const [onTime, setOnTime] = useState(!isLate);
   const [reason, setReason] = useState("");
-  const [penalty, setPenalty] = useState("");
 
   const changing = onTime === isLate;
   const reasonMissing = changing && reason.trim().length === 0;
 
   const save = useMutation({
     mutationFn: async () => {
-      const pct = penalty.trim() === "" ? null : Number(penalty);
-      if (pct != null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) throw new Error("Penalty must be 0–100%");
       const { error } = await supabase.rpc("override_late_status", {
         _submission_id: submission.id,
         _on_time: onTime,
         _reason: reason.trim() || null,
-        _penalty_pct: pct,
+        // Retain legacy audit metadata; this control changes lateness, not scores.
+        _penalty_pct: submission.late_penalty_override_pct ?? null,
       } as never);
       if (error) throw error;
     },
@@ -91,14 +89,11 @@ export function LateOverrideControl({ submission, assignmentId }: { submission: 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {isLate ? (
-        <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+        <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
           <Clock className="h-3 w-3" /> Late
         </span>
       ) : null}
       <LateOverrideBadge submission={submission} />
-      {submission.late_penalty_override_pct != null ? (
-        <span className="text-xs text-muted-foreground">Late penalty: {submission.late_penalty_override_pct}%</span>
-      ) : null}
       {isStaff ? (
         <Button
           size="sm"
@@ -106,7 +101,6 @@ export function LateOverrideControl({ submission, assignmentId }: { submission: 
           onClick={() => {
             setOnTime(!isLate);
             setReason("");
-            setPenalty(submission.late_penalty_override_pct?.toString() ?? "");
             setOpen(true);
           }}
         >
@@ -117,7 +111,7 @@ export function LateOverrideControl({ submission, assignmentId }: { submission: 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Override late status</DialogTitle>
-            <DialogDescription>Every change is recorded in the audit log.</DialogDescription>
+            <DialogDescription>Every change is recorded in the audit log. Scores stay unchanged.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-md border p-3">
@@ -130,10 +124,6 @@ export function LateOverrideControl({ submission, assignmentId }: { submission: 
             <div className="space-y-1.5">
               <Label htmlFor="late-reason">Reason{changing ? " (required)" : " (optional)"}</Label>
               <Textarea id="late-reason" value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Excused absence on the due date" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="late-penalty">Late penalty override (%) — optional</Label>
-              <Input id="late-penalty" type="number" min={0} max={100} value={penalty} onChange={(e) => setPenalty(e.target.value)} placeholder="e.g. 0 to remove the deduction" />
             </div>
           </div>
           <DialogFooter>

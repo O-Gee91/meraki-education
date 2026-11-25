@@ -1,7 +1,7 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { isMissingWork } from "@/lib/missing-work";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
-import { courseworkBucket, isDueSoon } from "@/lib/coursework-view";
+import { courseworkBucket, isDueSoon, needsCourseworkAttention } from "@/lib/coursework-view";
 import { todayKey } from "@/lib/assignment-status";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -1169,14 +1169,14 @@ type AssignmentRow = {
 };
 
 type TimelineKey = "current" | "upcoming" | "past" | "all";
-type QuickKey = "ungraded" | "missing" | "draft";
+type QuickKey = "ungraded" | "missing" | "draft" | "attention";
 const TIMELINE: Array<[TimelineKey, string]> = [
   ["current", "Current"],
   ["upcoming", "Upcoming"],
   ["past", "Past / Graded"],
   ["all", "All"],
 ];
-const QUICK: Array<[QuickKey, string]> = [
+const QUICK: Array<[Exclude<QuickKey, "attention">, string]> = [
   ["ungraded", "Ungraded"],
   ["missing", "Missing"],
   ["draft", "Draft"],
@@ -1277,7 +1277,9 @@ function AssignmentsTab({
       isStaff && ((ungradedCounts[a.id] ?? 0) > 0 || draftGradeCount(a.id) > 0),
     );
   const matchesQuick = (a: AssignmentRow, key: QuickKey) =>
-    key === "ungraded"
+    key === "attention"
+      ? needsCourseworkAttention(ungradedCounts[a.id] ?? 0, draftGradeCount(a.id))
+      : key === "ungraded"
       ? (ungradedCounts[a.id] ?? 0) > 0
       : key === "missing"
         ? (missingCounts[a.id] ?? 0) > 0
@@ -1338,7 +1340,7 @@ function AssignmentsTab({
   ).length;
   const attentionCount = assignments.filter((a) =>
     isStaff
-      ? (ungradedCounts[a.id] ?? 0) > 0 || draftGradeCount(a.id) > 0
+      ? needsCourseworkAttention(ungradedCounts[a.id] ?? 0, draftGradeCount(a.id))
       : (missingCounts[a.id] ?? 0) > 0,
   ).length;
 
@@ -1609,7 +1611,7 @@ function AssignmentsTab({
           </button>
           <button
             type="button"
-            onClick={() => { setTimeline("all"); setQuick(isStaff ? "ungraded" : "missing"); }}
+            onClick={() => { setTimeline("all"); setQuick(isStaff ? "attention" : "missing"); }}
             className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-warning/60"
           >
             <ClipboardList className={`size-4 ${attentionCount > 0 ? "text-warning" : "text-muted-foreground"}`} />
@@ -1683,6 +1685,12 @@ function AssignmentsTab({
               <p className="text-xs text-muted-foreground">
                 {visibleAssignments.length} of {assignments.length} shown · newest due dates first
               </p>
+              {quick === "attention" ? (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>Needs attention · work to grade or draft grades to post</span>
+                  <Button size="sm" variant="ghost" onClick={() => setQuick(null)}>Clear filter</Button>
+                </div>
+              ) : null}
             </header>
 
             {visibleAssignments.length === 0 ? (

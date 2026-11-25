@@ -1,5 +1,17 @@
 # Roadmap
 
+## School pilot verification pass (Nov 25, 2026)
+- [x] Initial findings: 111 tests pass; public pages and live HTTPS/header checks pass
+- [x] P1: Hide nonfunctional late-penalty entry while preserving existing overrides and scores
+- [x] P1: Make Needs Attention include both ungraded work and draft grades awaiting posting
+- [x] P1: Align calendar completion with shared coursework/discussion criteria and load complete query results
+- [x] P1: Restrict original discussion audit content to administrators — applied database policy and confirmed is_admin() restriction
+- [x] P1: Validate password-reset redirect origins before generating recovery links
+- [ ] Untrack .env — platform refuses because published builds require tracked public connection configuration; no private credentials found
+- [ ] Cross-role laptop/tablet walkthrough — restored owner session stops at real passkey verification; no bypass permitted
+- [ ] P2: Confirm legal operator/contact; real-device passkey and delivered recovery email checks
+- [x] Produce final findings report (school-pilot-verification.md); 136 tests pass, preview build OK; public recovery/navigation verified
+
 ## Class snapshot wellbeing access
 - [x] Respect the active admin/teacher hat and include verified co-taught classes in wellbeing feed scope
 - [x] Run access regression tests — 16 wellbeing tests pass, including admin, dual-role, co-teacher and student/guardian privacy cases
@@ -39,7 +51,7 @@
 - 2FA options presented — awaiting user's choice
 - Print gradebook unverified on paginated class page
 - No student-facing pages reviewed with real student session; Safari/macOS unverified
-- Homework late-status penalty override recorded but not applied to scores
+- [x] Nonworking homework penalty override hidden; existing score/late-status metadata preserved (Nov 25)
 - 11 security findings untouched per user request
 - [x] Messaging: student/guardian teacher contacts, read receipts, Inbox/Sent, Reply, unread badge (educator end-to-end check pending)
 - [x] Detentions: tester cleanup, no tester detentions, teachers see own classes, admins grouped by grade

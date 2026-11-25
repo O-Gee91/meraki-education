@@ -30,21 +30,23 @@ type Row = {
 };
 
 function ModerationPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [classFilter, setClassFilter] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["moderation-audit"],
+    queryKey: ["moderation-audit", user?.id, isAdmin],
     enabled: isAdmin,
     queryFn: async () => {
+      if (!isAdmin) return [];
       const rows = await fetchAll<Row>((a, b) =>
         supabase
           .from("discussion_post_audits")
           .select("id, discussion_id, parent_id, author_id, acted_by, old_body, post_created_at, acted_at")
           .eq("action", "deleted")
           .order("acted_at", { ascending: false })
+          .order("id")
           .range(a, b),
       );
       const discIds = [...new Set(rows.map((r) => r.discussion_id).filter(Boolean))] as string[];

@@ -1,5 +1,11 @@
 # Desktop UI checkup
 
+## Nov 25 school pilot verification
+- Public landing, sign-in, Privacy, Terms, forgot/reset password and branded 404 checked in Chromium at 1280×800, 1024×768 and 788×776. No horizontal overflow; legal footer links navigate correctly, and sign-in includes both legal links.
+- Recovery form submitted with a nonexistent `.invalid` address: neutral confirmation appears and Back to sign in returns to /auth. No actual account password or real email was changed/sent.
+- Restored owner session reaches genuine passkey verification, not Student Tester. Teacher/student/guardian/admin pages, grading dialogs, printing, calendar writes, messaging and wellbeing badges are not visually verified in this pass. No MFA bypass or account security changes.
+- Existing class/gradebook/dialog responsive fixes remain unchanged; further presentation changes await real signed-in, page-by-page review evidence.
+
 ## Scope and evidence
 Desktop PC/Mac browser layouts. Review order: auth, landing, dashboard, remaining pages individually. No changes to grading, permissions, data or workflows.
 

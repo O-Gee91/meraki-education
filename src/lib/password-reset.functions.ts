@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { recoveryOrigin } from "@/lib/recovery-origin";
 
 /**
  * Self-service password reset. Accounts may sign in with a username backed by
@@ -17,6 +18,8 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    const origin = recoveryOrigin(data.origin);
+    if (!origin) return { ok: true };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: profile } = await supabaseAdmin
@@ -35,7 +38,7 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: authData.user.email,
-      options: { redirectTo: `${data.origin}/reset-password` },
+      options: { redirectTo: `${origin}/reset-password` },
     });
     const actionLink = linkData?.properties?.action_link;
     if (linkError || !actionLink) return { ok: true };

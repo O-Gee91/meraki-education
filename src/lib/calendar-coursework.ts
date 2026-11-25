@@ -1,4 +1,24 @@
+import { markCodeFromComment } from "@/lib/grading";
+import { resolveWorkState } from "@/lib/coursework-state";
+
 export type CourseworkKind = "assignment" | "assessment" | "discussion";
+
+/** Calendar completion follows coursework, including explicit missing marks and cleared scores. */
+export function calendarAssignmentComplete(
+  submissionStatus: string | null | undefined,
+  grade: { points_earned: number | null; comment: string | null } | undefined,
+): boolean {
+  const mark = markCodeFromComment(grade?.comment);
+  if (mark === "M") return false;
+  const result = resolveWorkState({
+    score: grade?.points_earned ?? null,
+    markLabel: mark,
+    submissionStatus,
+    missing: false,
+    pastDue: false,
+  });
+  return ["graded", "marked", "collected", "turned_in"].includes(result.state);
+}
 
 export type CourseworkItem = {
   id: string;

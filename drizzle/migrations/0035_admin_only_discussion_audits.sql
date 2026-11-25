@@ -1,0 +1,2 @@
+ALTER POLICY "Staff read discussion audits" ON public.discussion_post_audits TO authenticated USING (public.is_admin());
+COMMENT ON POLICY "Staff read discussion audits" ON public.discussion_post_audits IS 'Original discussion audit content is restricted to administrators; normal threads show only removed-post placeholders.';
