@@ -51,6 +51,15 @@ export function isTestStudent(student: (SortableStudent & { is_tester?: boolean 
   return clean(student.first_name).toLowerCase() === "student" && clean(student.last_name).toLowerCase() === "tester";
 }
 
+/** Remove demo accounts from staff grading counts, rosters and bulk actions. */
+export function withoutTestStudents<T>(
+  items: readonly T[],
+  getStudent: (item: T) => (SortableStudent & { is_tester?: boolean | null }) | null | undefined = (item) =>
+    item as SortableStudent & { is_tester?: boolean | null },
+) {
+  return items.filter((item) => !isTestStudent(getStudent(item)));
+}
+
 export function sortStudents<T>(
   items: readonly T[],
   mode: StudentSortMode = DEFAULT_STUDENT_SORT,

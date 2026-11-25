@@ -62,9 +62,6 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
           || (!!teacherName && schoolClass.teacher_name.trim().toLocaleLowerCase() === teacherName),
       );
       const classIds = teacherClasses.map((schoolClass) => schoolClass.id);
-      const gradeLevels = new Set(
-        teacherClasses.flatMap((schoolClass) => schoolClass.grade_level == null ? [] : [schoolClass.grade_level]),
-      );
       let rosterStudentIds = new Set<string>();
       if (classIds.length > 0) {
         const { data: enrollments, error: enrollmentsError } = await supabaseAdmin
@@ -74,10 +71,7 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
         if (enrollmentsError) throw new Error(`Could not load class rosters: ${enrollmentsError.message}`);
         rosterStudentIds = new Set((enrollments ?? []).map((enrollment) => enrollment.student_id));
       }
-      students = students.filter(
-        (student) => rosterStudentIds.has(student.id)
-          || (student.grade_level != null && gradeLevels.has(student.grade_level)),
-      );
+      students = students.filter((student) => rosterStudentIds.has(student.id));
     } else if (!isAdmin) {
       students = students.filter(
         (student) => student.user_id === context.userId || student.guardian_user_id === context.userId,

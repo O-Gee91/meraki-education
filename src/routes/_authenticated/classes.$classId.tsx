@@ -1271,6 +1271,7 @@ function AssignmentsTab({
       id: r.student_id,
       first_name: r.students!.first_name,
       last_name: r.students!.last_name,
+      is_tester: isTestStudent(r.students),
       created_at: r.created_at ?? null,
       droppedAt: r.droppedAt ?? null,
     }));

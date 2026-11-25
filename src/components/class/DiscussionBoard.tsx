@@ -27,6 +27,7 @@ import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDra
 import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
 import { formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
 import { isWithinEnrollmentWindow } from "@/lib/assignment-status";
+import { withoutTestStudents } from "@/lib/student-sort";
 
 const DEFAULT_DUE_TIME = "23:59";
 /** Builds the exact due instant from a date + time typed in the class time zone. */
@@ -622,7 +623,7 @@ function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCate
 }
 
 function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: boolean }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, primaryRole, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const threadId = discussion.thread_id ?? discussion.id;
   const key = ["discussion-posts", threadId];
@@ -712,7 +713,8 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
   });
 
   const allRoots = [...posts.filter((p) => !p.parent_id), ...removedRoots].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  const canWrite = !discussion.closed || isStaff;
+  const readOnly = primaryRole === "parent" || previewingStudent;
+  const canWrite = !readOnly && (!discussion.closed || isStaff);
   const filterText = nameFilter.trim().toLowerCase();
   const roots = focusId
     ? allRoots.filter((p) => p.id === focusId)
@@ -830,7 +832,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                         Focus
                       </button>
                     )}
-                    {!p.deleted_at && (isStaff || p.author_id === user?.id) && (
+                    {!p.deleted_at && (isStaff || (!readOnly && p.author_id === user?.id)) && (
                       <button onClick={() => { if (window.confirm("Remove this response? Replies stay in the thread.")) remove.mutate(p.id); }} className="text-muted-foreground hover:text-destructive">
                         Remove
                       </button>
@@ -847,7 +849,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
                             {scoreTag(r)}
                           </p>
                           <FormattedText text={r.body} className="mt-1" />
-                          {(isStaff || r.author_id === user?.id) && (
+                          {(isStaff || (!readOnly && r.author_id === user?.id)) && (
                             <button onClick={() => { if (window.confirm("Remove this reply?")) remove.mutate(r.id); }} className="mt-1 text-xs text-muted-foreground hover:text-destructive">
                               Remove
                             </button>
@@ -899,7 +901,9 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-muted-foreground">This discussion is closed.</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {readOnly ? "Read-only view — posting and replies are disabled." : "This discussion is closed."}
+            </p>
           )}
         </>
       )}
@@ -930,10 +934,11 @@ function GradeByStudent({
         .select("created_at, students(id, first_name, last_name, user_id, is_tester)")
         .eq("class_id", d.class_id);
       if (error) throw error;
-      return (data ?? [])
-        .filter((r) => r.students)
-        .map((r) => ({ ...r.students!, enrolled_at: r.created_at }))
-        .sort((a, b) => Number(a.is_tester) - Number(b.is_tester) || a.last_name.localeCompare(b.last_name));
+      return withoutTestStudents(
+        (data ?? [])
+          .filter((r) => r.students)
+          .map((r) => ({ ...r.students!, enrolled_at: r.created_at })),
+      ).sort((a, b) => a.last_name.localeCompare(b.last_name));
     },
   });
 

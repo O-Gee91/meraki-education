@@ -486,7 +486,7 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
 
 function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const queryClient = useQueryClient();
-  const { gradeLevels, studentIds } = useTeacherScope();
+  const { studentIds } = useTeacherScope();
   const [sortMode, setSortMode] = useStudentSort("wellbeing-students");
   const [studentId, setStudentId] = useState("");
   const [mood, setMood] = useState<number | null>(null);
@@ -502,15 +502,9 @@ function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: 
       return data;
     },
   });
-  const scoped = !!gradeLevels || !!studentIds;
+  const scoped = !!studentIds;
   const students = sortStudents(
-    scoped
-      ? allStudents.filter(
-          (s) =>
-            (!!gradeLevels && s.grade_level != null && gradeLevels.has(s.grade_level)) ||
-            (!!studentIds && studentIds.has(s.id)),
-        )
-      : allStudents,
+    scoped ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
     sortMode,
   );
   const submit = useMutation({

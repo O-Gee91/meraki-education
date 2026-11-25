@@ -1,12 +1,14 @@
 # Roadmap
 
 ## Cross-role pilot walkthrough (Nov 25, 2026)
-- [ ] Teacher: dashboard, class coursework/gradebook, discussions, messages, reports and settings
-- [ ] Student: dashboard, assignments, class discussions, wellbeing, calendar and two-step verification gate
-- [ ] Guardian: child overview, assignments, calendar, messages and read-only boundaries
-- [ ] Admin: people, classes, reports, moderation and school-wide oversight
-- [ ] Check laptop/tablet layouts, console/network failures and role-based access; fix confirmed issues
-- [ ] Run regression tests and record verified flows plus any account/email/device limitations
+- [x] Teacher: dashboard, class coursework/gradebook, discussion participation, hidden draft grade, posted grade, messages/reports/settings pages
+- [x] Student: dashboard, assignments, class discussion main post + required reply, calendar, posted score and overall grade; two-step gate exercised with documented opt-out
+- [x] Guardian: child overview, assignments, class grades, read-only discussion controls and direct backend write rejection
+- [x] Admin: people, classes, reports, moderation and school-wide oversight pages
+- [x] Laptop layout and console/network checks; fixed tester grading rosters, teacher wellbeing scope and guardian/student-preview discussion writes
+- [x] Run regression tests — 148 tests and TypeScript check pass
+- [ ] Tablet walkthrough and real authenticator enrollment — the minted student session is rejected by Auth factor enrollment; no security gate bypass used
+- [ ] Live message/email delivery not sent during QA; only temporary example.com accounts and isolated class data used
 
 ## School pilot verification pass (Nov 25, 2026)
 - [x] Initial findings: 111 tests pass; public pages and live HTTPS/header checks pass

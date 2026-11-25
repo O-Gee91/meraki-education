@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTestStudent, sortStudents } from "./student-sort";
+import { isTestStudent, sortStudents, withoutTestStudents } from "./student-sort";
 
 describe("test accounts", () => {
   it("pins test accounts to the bottom regardless of name order", () => {
@@ -17,5 +17,13 @@ describe("test accounts", () => {
     expect(isTestStudent({ first_name: "Student", last_name: "Tester" })).toBe(true);
     expect(isTestStudent({ first_name: "Mia", last_name: "Li", is_tester: true })).toBe(true);
     expect(isTestStudent({ first_name: "Mia", last_name: "Li" })).toBe(false);
+  });
+
+  it("keeps demo accounts out of staff grading while retaining real students", () => {
+    const roster = [
+      { id: "real", first_name: "Pilot", last_name: "QAStudent", is_tester: false },
+      { id: "demo", first_name: "Student", last_name: "Tester", is_tester: true },
+    ];
+    expect(withoutTestStudents(roster).map((s) => s.id)).toEqual(["real"]);
   });
 });

@@ -62,7 +62,7 @@ import {
 import { RubricScorePanel } from "@/components/class/RubricScorePanel";
 import { LateOverrideControl, LateOverrideBadge } from "@/components/class/LateOverride";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
-import { sortStudents } from "@/lib/student-sort";
+import { sortStudents, withoutTestStudents } from "@/lib/student-sort";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { DEFAULT_TIME_ZONE } from "@/lib/coursework-window";
 import { isMissingWork } from "@/lib/missing-work";
@@ -100,6 +100,7 @@ type Student = {
   id: string;
   first_name: string;
   last_name: string;
+  is_tester?: boolean | null;
   created_at?: string | null;
   droppedAt?: string | null;
 };
@@ -504,7 +505,7 @@ function StudentWorkPanel({
 
 function StaffCollectPanel({
   assignment,
-  roster,
+  roster: allRoster,
   classId,
   timeZone,
 }: {
@@ -521,6 +522,9 @@ function StaffCollectPanel({
   classId: string;
   timeZone: string;
 }) {
+  // Demo students remain on the class roster, but never affect grading totals
+  // or receive bulk collection/scoring actions.
+  const roster = withoutTestStudents(allRoster);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [proofreading, setProofreading] = useState<Record<string, boolean>>({});
