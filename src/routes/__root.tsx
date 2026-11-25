@@ -16,21 +16,19 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
+  const btn = "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors";
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <img src="/favicon.svg" alt="" className="mx-auto h-12 w-12" />
+        <p className="mt-6 text-sm font-medium text-muted-foreground">Meraki Education · 404</p>
+        <h1 className="mt-2 text-2xl font-semibold text-foreground">We couldn't find that page</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          The link may be old or mistyped. Your classes and work are safe.
         </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link to="/" className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90`}>Go home</Link>
+          <Link to="/dashboard" className={`${btn} border border-input bg-background text-foreground hover:bg-accent`}>Sign in / Dashboard</Link>
         </div>
       </div>
     </div>
@@ -97,7 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,

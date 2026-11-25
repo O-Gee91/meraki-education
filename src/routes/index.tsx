@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronDown, GraduationCap } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/SiteFooter";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
@@ -166,14 +167,7 @@ function Landing() {
       </section>
 
       </main>
-      <footer className="border-t border-border/60 bg-card">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-muted-foreground">
-          <span>Meraki Education Platform</span>
-          <Link to="/auth" search={{}} className="hover:text-foreground">
-            Account access <span aria-hidden="true">→</span>
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

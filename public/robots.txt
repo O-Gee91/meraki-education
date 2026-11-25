@@ -1,3 +1,9 @@
 User-agent: *
 Allow: /$
+Allow: /auth
+Allow: /privacy
+Allow: /terms
+Allow: /sitemap.xml
 Disallow: /
+
+Sitemap: https://meraki-education.app/sitemap.xml

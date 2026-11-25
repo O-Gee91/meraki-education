@@ -288,6 +288,11 @@ function AuthPage() {
                   <Button type="submit" className="h-11 w-full" disabled={busy}>
                     {busy ? "Signing in…" : "Sign in"}
                   </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    By signing in you agree to the{" "}
+                    <Link to="/terms" className="underline underline-offset-4 hover:text-foreground">Terms</Link> and{" "}
+                    <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">Privacy Policy</Link>.
+                  </p>
                 </form>
               </TabsContent>
 
