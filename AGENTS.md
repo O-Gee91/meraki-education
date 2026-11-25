@@ -51,3 +51,4 @@
 - Missing-mark value under a late penalty comes only from src/lib/late-penalty.ts (passed to computeAverage as missingPoints); every average must use it so screens agree.
 - Feature rollout lists are admin-only; evaluate flags through the authenticated database helper and recheck AI flags at execution, because client switches are not authorization and cached states cannot enforce a kill switch.
 - Teacher access is granted only by an administrator approving a staff access request; school email domains just flag requests, because email confirmation is not proof of staff identity.
+- Teacher credential resets and roster login provisioning require can_manage_student on the linked student (admins exempt), and re-issued passwords only target the account already linked to that student; this keeps assisted recovery without school-wide takeover.

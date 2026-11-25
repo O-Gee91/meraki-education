@@ -256,6 +256,18 @@ export async function provisionRosterAccounts(
           await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
         }
         if (entry.reset_existing) {
+          // Only re-issue a password for the account already linked to this
+          // student, never one found by email or supplied by the caller.
+          const { data: row } = await admin
+            .from("students")
+            .select("user_id, guardian_user_id")
+            .eq("id", entry.student_id)
+            .maybeSingle();
+          const linkedId = target.role === "student" ? row?.user_id : row?.guardian_user_id;
+          if (!linkedId || linkedId !== userId) {
+            fail("account is not linked to this student");
+            continue;
+          }
           // Re-issuing slips for a group: give the existing account a fresh
           // temporary password so the printed slip is valid again.
           password = tempPassword();
