@@ -2659,6 +2659,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_student: { Args: { _student_id: string }; Returns: boolean }
+      can_reach_student_wellbeing: {
+        Args: { _student_id: string }
+        Returns: boolean
+      }
       can_see_audience: {
         Args: { _audience: Database["public"]["Enums"]["post_audience"] }
         Returns: boolean
