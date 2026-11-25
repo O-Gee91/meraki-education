@@ -1,5 +1,10 @@
 # Roadmap
 
+## Selected security fixes (Nov 25, 2026)
+- [x] Block external sign-in return paths, server-stamp student submissions, scope role lookups, throttle recovery emails and replace shared-file bearer links — live QA and regression checks passed
+- [ ] Grade/coursework verified-recipient change — awaiting approval because contact-email-only guardians would stop receiving notices
+- [x] Verify five selected fixes and update only their scan statuses; two email-recipient findings remain active awaiting user confirmation (selected-security-review.md)
+
 ## Feature switches then API performance (Nov 25, 2026)
 - [x] Add admin-only rollout controls, identity-scoped cached evaluations and server-enforced AI comment switch
 - [x] Verify saved switches and selected-user targeting in signed-in UI at desktop and 739px widths; non-admin permission regression tests pass; 158 tests pass

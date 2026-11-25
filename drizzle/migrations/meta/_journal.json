@@ -274,6 +274,13 @@
       "when": 1795586310920,
       "tag": "0038_feature_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1795587410565,
+      "tag": "0039_selected_security_guards",
+      "breakpoints": true
     }
   ]
 }

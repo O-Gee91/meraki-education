@@ -2166,6 +2166,21 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_email_limits: {
+        Row: {
+          key_hash: string
+          last_requested_at: string
+        }
+        Insert: {
+          key_hash: string
+          last_requested_at?: string
+        }
+        Update: {
+          key_hash?: string
+          last_requested_at?: string
+        }
+        Relationships: []
+      }
       report_cards: {
         Row: {
           class_id: string
@@ -2660,6 +2675,7 @@ export type Database = {
       can_view_grade: { Args: { _grade: number }; Returns: boolean }
       can_view_student: { Args: { _student_id: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
+      claim_recovery_email: { Args: { _key_hash: string }; Returns: boolean }
       co_teacher_level: { Args: { _class_id: string }; Returns: string }
       evaluated_feature_flags: {
         Args: { _assignment_id?: string; _submission_id?: string }

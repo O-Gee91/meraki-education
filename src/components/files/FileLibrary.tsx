@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
 import { AUDIENCES, audienceLabel, type Audience } from "@/lib/audience";
+import { readPrivateFile } from "@/lib/private-file";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 50 * 1024 * 1024;
@@ -266,12 +267,17 @@ export function FileLibrary({
   });
 
   async function open(path: string) {
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-    if (error || !data) {
-      toast.error(error?.message ?? "Could not open file");
-      return;
+    try {
+      const data = await readPrivateFile(() => supabase.storage.from(BUCKET).download(path));
+      const url = URL.createObjectURL(data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = path.split("/").pop() ?? "file";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open file");
     }
-    window.open(data.signedUrl, "_blank", "noopener");
   }
 
   return (

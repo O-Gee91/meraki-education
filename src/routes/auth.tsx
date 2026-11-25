@@ -15,6 +15,7 @@ import {
   USERNAME_RULES,
 } from "@/lib/usernames";
 import { recordLogin } from "@/lib/login-tracking";
+import { safeNext } from "@/lib/safe-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,12 +44,6 @@ export const Route = createFileRoute("/auth")({
     typeof s["next"] === "string" ? { next: s["next"] } : {},
   component: AuthPage,
 });
-
-/** Only same-origin relative paths may be used as a post-login destination. */
-function safeNext(next?: string) {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return undefined;
-  return next;
-}
 
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(72);
 

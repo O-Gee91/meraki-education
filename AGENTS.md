@@ -41,6 +41,11 @@
 - Original discussion audit content is administrator-only in RLS and both audit readers; identity/active-role cache keys prevent cross-view reuse.
 - Calendar completion uses shared coursework state and discussion participation helpers for graded and ungraded work, with family completion scoped to enrolled children per class; this prevents contradictory completion badges.
 - Password recovery validates return origins against this project's approved hosts before looking up an account or generating a link; this prevents caller-controlled external redirects.
+- Password recovery claims a durable hashed-address cooldown before account lookup and fails closed on quota errors; this prevents repeated mail sends without revealing account existence.
+- Auth return paths use browser-parsed same-origin validation, rejecting encoded separators and controls; this prevents sign-in redirects to attacker sites.
+- Student submission timestamps are server-stamped by the database trigger, preserving staff overrides; this prevents direct Data API backdating.
+- Role membership lookup permits only self, administrators or service work; this preserves policy helpers without exposing other accounts' roles.
+- School FileLibrary opens files through authenticated downloads rather than signed bearer URLs; current storage policies are rechecked on every request.
 - Late-status controls do not edit penalties until deductions have an implemented scoring contract; preserve legacy override metadata and existing scores.
 - Missing-mark value under a late penalty comes only from src/lib/late-penalty.ts (passed to computeAverage as missingPoints); every average must use it so screens agree.
 - Feature rollout lists are admin-only; evaluate flags through the authenticated database helper and recheck AI flags at execution, because client switches are not authorization and cached states cannot enforce a kill switch.

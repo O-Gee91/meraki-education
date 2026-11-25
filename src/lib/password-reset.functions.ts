@@ -22,6 +22,12 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
     if (!origin) return { ok: true };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Claim before account lookup; real and nonexistent addresses behave alike.
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data.email.trim().toLowerCase()));
+    const keyHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const { data: claimed, error: limitError } = await supabaseAdmin.rpc("claim_recovery_email", { _key_hash: keyHash });
+    if (limitError || claimed !== true) return { ok: true };
+
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id, full_name, email, username")
@@ -45,6 +51,7 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
 
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
     await sendTemplateEmail("password-reset", profile.email ?? data.email, {
+      idempotencyKey: `recovery-${keyHash}-${Math.floor(Date.now() / 900_000)}`,
       templateData: {
         recipientName: profile.full_name ?? undefined,
         username: profile.username ?? undefined,
