@@ -281,6 +281,13 @@
       "when": 1795587410565,
       "tag": "0039_selected_security_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795592217742,
+      "tag": "0040_admin_approval_for_educators",
+      "breakpoints": true
     }
   ]
 }

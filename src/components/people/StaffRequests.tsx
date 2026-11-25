@@ -10,6 +10,7 @@ type RequestRow = {
   full_name: string;
   email: string;
   note: string | null;
+  domain_approved: boolean;
   status: string;
   created_at: string;
 };
@@ -23,7 +24,7 @@ export function StaffRequests({ enabled, desktopReview = false }: { enabled: boo
     queryFn: async (): Promise<RequestRow[]> => {
       const { data, error } = await supabase
         .from("staff_access_requests")
-        .select("id, user_id, full_name, email, note, status, created_at")
+        .select("id, user_id, full_name, email, note, domain_approved, status, created_at")
         .eq("status", "pending")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -68,8 +69,7 @@ export function StaffRequests({ enabled, desktopReview = false }: { enabled: boo
         <Badge variant="secondary">{requests.length}</Badge>
       </div>
       {!desktopReview && <p className="mt-1 text-xs text-muted-foreground">
-        Staff who signed up with an email outside the approved school domains stay as
-        non-staff accounts until an administrator approves them here.
+        Every new staff signup stays without staff access until an administrator approves it here.
       </p>}
 
       <div className="mt-4 divide-y divide-border">
@@ -84,7 +84,7 @@ export function StaffRequests({ enabled, desktopReview = false }: { enabled: boo
               className={desktopReview ? "grid min-w-0 items-start gap-3 py-4 xl:grid-cols-[minmax(0,1fr)_27rem] xl:gap-6" : "flex flex-wrap items-start justify-between gap-3 py-4"}
             >
               <div className={desktopReview ? "min-w-0 [overflow-wrap:anywhere]" : "min-w-0"}>
-                <p className="text-sm font-semibold">{row.full_name || "Unnamed"}</p>
+                <p className="text-sm font-semibold">{row.full_name || "Unnamed"}{row.domain_approved ? <Badge variant="secondary" className="ml-2">School email</Badge> : null}</p>
                 <p className={desktopReview ? "mt-1 text-xs text-muted-foreground" : "truncate text-xs text-muted-foreground"}>{row.email}</p>
                 {row.note ? (
                   <p className="mt-1 max-w-prose text-xs text-muted-foreground">“{row.note}”</p>

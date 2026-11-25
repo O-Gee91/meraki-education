@@ -50,3 +50,4 @@
 - Late-status controls do not edit penalties until deductions have an implemented scoring contract; preserve legacy override metadata and existing scores.
 - Missing-mark value under a late penalty comes only from src/lib/late-penalty.ts (passed to computeAverage as missingPoints); every average must use it so screens agree.
 - Feature rollout lists are admin-only; evaluate flags through the authenticated database helper and recheck AI flags at execution, because client switches are not authorization and cached states cannot enforce a kill switch.
+- Teacher access is granted only by an administrator approving a staff access request; school email domains just flag requests, because email confirmation is not proof of staff identity.

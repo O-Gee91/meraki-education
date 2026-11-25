@@ -165,7 +165,7 @@ function AuthPage() {
           role,
           username: normalized,
           contact_email: contactEmail,
-          staff_note: isEducator && !staffDomain ? staffNote.trim() : "",
+          staff_note: staffNote.trim(),
         },
       },
     });
@@ -175,7 +175,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    if (isEducator && !staffDomain) {
+    if (isEducator) {
       setPendingApproval(true);
       return;
     }
@@ -218,8 +218,8 @@ function AuthPage() {
             <div className="panel p-6 text-center">
               <h2 className="text-xl font-semibold tracking-normal">Waiting for administrator approval</h2>
               <p className="mt-3 text-sm text-muted-foreground">
-                Your account was created, but staff access from an email outside the approved
-                school domains has to be approved by a school administrator. You will be able to
+                Your account was created. Every new staff account has to be approved by a school
+                administrator before teacher tools open. You will be able to
                 use teacher tools as soon as your request is approved.
               </p>
               <Button className="mt-6" variant="outline" onClick={() => setPendingApproval(false)}>
