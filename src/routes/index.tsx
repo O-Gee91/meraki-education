@@ -33,8 +33,7 @@ export const Route = createFileRoute("/")({
 const PILLARS = [
   {
     title: "Community",
-    blurb:
-      "Safe, social spaces for every class and group in the school, plus a news river families actually read.",
+    blurb: "Safe, social spaces for every class and group in the school, plus a news river families actually read.",
     items: [
       "Social classrooms with posts, replies and pinned updates",
       "Groups for clubs, teams and professional learning — school-wide or staff-only",
@@ -57,8 +56,7 @@ const PILLARS = [
   },
   {
     title: "Assessment & Reporting",
-    blurb:
-      "One gradebook that rolls straight into standards coverage, report cards and portfolios of real work.",
+    blurb: "One gradebook that rolls straight into standards coverage, report cards and portfolios of real work.",
     items: [
       "Feature-rich gradebook with categories, comments and averages",
       "Standards-based grading tied to expectations and outcomes",
@@ -102,7 +100,7 @@ function Landing() {
       </header>
 
       <main>
-      <section className="relative isolate overflow-hidden text-landing-foreground" aria-labelledby="landing-title">
+        <section className="relative isolate overflow-hidden text-landing-foreground" aria-labelledby="landing-title">
           <img
             src={heroImage}
             alt=""
@@ -112,21 +110,25 @@ function Landing() {
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 -z-10 bg-landing-scrim/75" />
-        <div className="mx-auto flex min-h-[min(480px,60dvh)] w-full max-w-6xl items-center px-6 py-12 sm:py-16">
-          <div className="max-w-xl">
-            <p className="mb-4 text-sm font-medium text-landing-foreground/85">Grades 5–9</p>
-            <h1 id="landing-title" className="text-4xl font-semibold leading-tight sm:text-5xl">Meraki Education</h1>
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-landing-foreground/90">
-              Your school day, connected. Grades, attendance, coursework and family messages in one place.
-            </p>
-            <Button asChild size="lg" variant="secondary" className="mt-8 h-11">
-              <Link to="/auth">Sign in to Meraki <ArrowRight aria-hidden="true" /></Link>
-            </Button>
+          <div className="mx-auto flex min-h-[min(480px,60dvh)] w-full max-w-6xl items-center px-6 py-12 sm:py-16">
+            <div className="max-w-xl">
+              <p className="mb-4 text-sm font-medium text-landing-foreground/85">Grades 5–9</p>
+              <h1 id="landing-title" className="text-4xl font-semibold leading-tight sm:text-5xl">
+                Meraki Education
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-landing-foreground/90">
+                Your school day, connected. Grades, attendance, coursework and family messages in one place.
+              </p>
+              <Button asChild size="lg" variant="secondary" className="mt-8 h-11">
+                <Link to="/auth">
+                  Sign in to Meraki <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+        <section className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
           <h2 className="text-2xl font-semibold">Everything the school day needs</h2>
           <div className="mt-8 grid items-start gap-8 md:grid-cols-3">
             {PILLARS.map((p) => (
@@ -136,36 +138,38 @@ function Landing() {
                 <details className="group mt-4">
                   <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
                     Explore {p.title.toLowerCase()}
-                    <ChevronDown aria-hidden="true" className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                    />
                   </summary>
-                <ul className="mt-4 space-y-3 text-sm">
-                  {p.items.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
-                      <span className="text-muted-foreground">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                  <ul className="mt-4 space-y-3 text-sm">
+                    {p.items.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+                        <span className="text-muted-foreground">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </details>
               </div>
             ))}
           </div>
-      </section>
+        </section>
 
-      <section className="border-t border-border/60 bg-muted/30">
-        <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
-          <h2 className="text-2xl font-semibold">For your school community</h2>
-          <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {AUDIENCES.map((a) => (
-              <div key={a.who}>
-                <h3 className="text-base font-semibold">{a.who}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.copy}</p>
-              </div>
-            ))}
+        <section className="border-t border-border/60 bg-muted/30">
+          <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+            <h2 className="text-2xl font-semibold">For your school community</h2>
+            <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {AUDIENCES.map((a) => (
+                <div key={a.who}>
+                  <h3 className="text-base font-semibold">{a.who}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{a.copy}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-
+        </section>
       </main>
       <SiteFooter />
     </div>
