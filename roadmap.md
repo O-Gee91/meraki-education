@@ -1,5 +1,10 @@
 # Roadmap
 
+## Calmer class gradebook (Nov 26, 2026)
+- [x] Collapse Needs attention, Pulse, and the second missing-work tracker into one staff strip, and stop the duplicate submission read
+- [x] Keep class-wide attendance, behavior, and wellbeing on the staff view, and show failed reads as errors
+- [ ] Signed-in teacher walkthrough — no school login or two-step verification bypass
+
 ## Site-wide Notebook expansion (Nov 26, 2026)
 - [x] Extend optional notebook headings, paper surfaces, selected controls and ruled lists across the shared classroom shell
 - [x] Add completed-work ticks, posted-score circles, attendance tallies, mood doodles, bulletin paper and message confirmation plane
