@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
 import { isSystemGradeComment } from "@/lib/grading";
+import { boundedScoreError, overTotalScoreMessage, scoreExceedsTotal } from "@/lib/score-limit";
 
 async function preservedGradeComment(
   supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
@@ -18,6 +19,27 @@ async function preservedGradeComment(
     .maybeSingle();
   const current = data?.comment?.trim();
   return current && !isSystemGradeComment(current) ? current : fallback;
+}
+
+type GradeColumn = { points_possible: number | null; category: string | null };
+
+/** Refuse a gradebook write that would store more points than the column allows. */
+async function assertGradeWithinColumn(
+  admin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  assignmentId: string,
+  points: number,
+) {
+  const { data, error } = await admin
+    .from("assignments")
+    .select("points_possible, category")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return;
+  const column = data as GradeColumn;
+  if (scoreExceedsTotal(points, Number(column.points_possible), column.category)) {
+    throw new Error(overTotalScoreMessage(Number(column.points_possible)));
+  }
 }
 
 const ResponseSchema = z.object({
@@ -180,6 +202,13 @@ export const submitAssessment = createServerFn({ method: "POST" })
       };
     });
 
+    // Late work does not reach the gradebook until a teacher accepts it.
+    // Check the column before anything is saved so a too-small total cannot
+    // leave a submission behind with no grade.
+    if (assessment.assignment_id && !needsReview && !isLate) {
+      await assertGradeWithinColumn(supabaseAdmin, assessment.assignment_id, autoScore);
+    }
+
     const { data: submission, error: subErr } = await supabaseAdmin
       .from("assessment_submissions")
       .insert({
@@ -204,7 +233,6 @@ export const submitAssessment = createServerFn({ method: "POST" })
       if (ansErr) throw ansErr;
     }
 
-    // Late work does not reach the gradebook until a teacher accepts it.
     if (assessment.assignment_id && !needsReview && !isLate) {
       const comment = await preservedGradeComment(
         supabaseAdmin,
@@ -212,7 +240,7 @@ export const submitAssessment = createServerFn({ method: "POST" })
         student.id,
         "Auto-graded assessment",
       );
-      await supabaseAdmin.from("grades").upsert(
+      const { error: gradeErr } = await supabaseAdmin.from("grades").upsert(
         {
           assignment_id: assessment.assignment_id,
           student_id: student.id,
@@ -222,6 +250,10 @@ export const submitAssessment = createServerFn({ method: "POST" })
         },
         { onConflict: "assignment_id,student_id" },
       );
+      if (gradeErr) {
+        await supabaseAdmin.from("assessment_submissions").delete().eq("id", submission.id);
+        throw new Error(gradeErr.message);
+      }
     }
 
     return {
@@ -274,6 +306,55 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await assertManagesAnswer(context.supabase as unknown as ScopedClient, supabaseAdmin, data.answerId);
 
+    const { data: current, error: currentErr } = await supabaseAdmin
+      .from("assessment_answers")
+      .select("submission_id, assessment_questions(points)")
+      .eq("id", data.answerId)
+      .maybeSingle();
+    if (currentErr) throw currentErr;
+    if (!current) throw new Error("Response not found");
+    const questionPoints = Number(
+      (current.assessment_questions as { points: number } | null)?.points,
+    );
+    const questionError = boundedScoreError(data.points, questionPoints, "question");
+    if (questionError) throw new Error(questionError);
+
+    const { data: siblings, error: siblingErr } = await supabaseAdmin
+      .from("assessment_answers")
+      .select("id, points_awarded, assessment_questions(kind, answer_key)")
+      .eq("submission_id", current.submission_id);
+    if (siblingErr) throw siblingErr;
+    const isManualQuestion = (row: { assessment_questions: { kind: string; answer_key: unknown } | null }) => {
+      const q = row.assessment_questions;
+      if (!q) return false;
+      if (q.kind === "essay") return true;
+      if (q.kind !== "short_answer") return false;
+      const key = (q.answer_key ?? {}) as { manual?: boolean; accepted?: string[] };
+      return Boolean(key.manual) || (key.accepted ?? []).length === 0;
+    };
+    const manualPreview = (siblings ?? [])
+      .filter((row) => isManualQuestion(row as { assessment_questions: { kind: string; answer_key: unknown } | null }))
+      .reduce((sum, row) => sum + Number(row.id === data.answerId ? data.points : row.points_awarded ?? 0), 0);
+    const { data: openSubmission, error: openErr } = await supabaseAdmin
+      .from("assessment_submissions")
+      .select("auto_score, total_points, assessment_id")
+      .eq("id", current.submission_id)
+      .maybeSingle();
+    if (openErr) throw openErr;
+    if (openSubmission) {
+      const earned = Number(openSubmission.auto_score) + manualPreview;
+      if (scoreExceedsTotal(earned, Number(openSubmission.total_points))) {
+        throw new Error(overTotalScoreMessage(Number(openSubmission.total_points), "assessment"));
+      }
+      const { data: linked, error: linkedErr } = await supabaseAdmin
+        .from("assessments")
+        .select("assignment_id")
+        .eq("id", openSubmission.assessment_id)
+        .maybeSingle();
+      if (linkedErr) throw linkedErr;
+      if (linked?.assignment_id) await assertGradeWithinColumn(supabaseAdmin, linked.assignment_id, earned);
+    }
+
     const { error } = await supabaseAdmin
       .from("assessment_answers")
       .update({
@@ -296,25 +377,17 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
       .select("points_awarded, question_id, assessment_questions(kind, answer_key)")
       .eq("submission_id", answer.submission_id);
 
-    // Essays and "answers will vary" short answers are the teacher-scored ones.
-    const isManualQuestion = (row: unknown) => {
-      const q = (row as { assessment_questions: { kind: string; answer_key: unknown } | null })
-        .assessment_questions;
-      if (!q) return false;
-      if (q.kind === "essay") return true;
-      if (q.kind !== "short_answer") return false;
-      const key = (q.answer_key ?? {}) as { manual?: boolean; accepted?: string[] };
-      return Boolean(key.manual) || (key.accepted ?? []).length === 0;
-    };
+    const asManualRow = (row: unknown) =>
+      row as { assessment_questions: { kind: string; answer_key: unknown } | null; points_awarded: number | null };
 
     const manual = (answers ?? [])
-      .filter(isManualQuestion)
+      .filter((row) => isManualQuestion(asManualRow(row)))
       .reduce((sum, a) => sum + Number(a.points_awarded ?? 0), 0);
     const pendingEssay = (answers ?? []).some(
-      (a) => isManualQuestion(a) && a.points_awarded == null,
+      (a) => isManualQuestion(asManualRow(a)) && a.points_awarded == null,
     );
 
-    const { data: submission } = await supabaseAdmin
+    const { data: submission, error: submissionErr } = await supabaseAdmin
       .from("assessment_submissions")
       .update({
         manual_score: manual,
@@ -324,6 +397,7 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
       .eq("id", answer.submission_id)
       .select("id, student_id, auto_score, assessment_id, is_late, late_accepted")
       .single();
+    if (submissionErr) throw new Error(submissionErr.message);
 
     // A late attempt only counts once the teacher has accepted it.
     const countsTowardGrade =
@@ -342,7 +416,7 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
           submission.student_id,
           "Assessment graded",
         );
-        await supabaseAdmin.from("grades").upsert(
+        const { error: gradeErr } = await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
@@ -352,6 +426,7 @@ export const scoreEssayAnswer = createServerFn({ method: "POST" })
           },
           { onConflict: "assignment_id,student_id" },
         );
+        if (gradeErr) throw new Error(gradeErr.message);
       }
     }
 
@@ -377,6 +452,30 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
     if (!target) throw new Error("Submission not found");
     await assertManagesAssessment(context.supabase as unknown as ScopedClient, supabaseAdmin, target.assessment_id);
 
+    if (data.accepted) {
+      const { data: preview, error: previewErr } = await supabaseAdmin
+        .from("assessment_submissions")
+        .select("auto_score, manual_score, status, assessment_id")
+        .eq("id", data.submissionId)
+        .maybeSingle();
+      if (previewErr) throw previewErr;
+      if (preview?.status === "graded") {
+        const { data: linked, error: linkedErr } = await supabaseAdmin
+          .from("assessments")
+          .select("assignment_id")
+          .eq("id", preview.assessment_id)
+          .maybeSingle();
+        if (linkedErr) throw linkedErr;
+        if (linked?.assignment_id) {
+          await assertGradeWithinColumn(
+            supabaseAdmin,
+            linked.assignment_id,
+            Number(preview.auto_score) + Number(preview.manual_score),
+          );
+        }
+      }
+    }
+
     const { data: submission, error } = await supabaseAdmin
       .from("assessment_submissions")
       .update({ late_accepted: data.accepted })
@@ -400,7 +499,7 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
           submission.student_id,
           "Late assessment accepted",
         );
-        await supabaseAdmin.from("grades").upsert(
+        const { error: gradeErr } = await supabaseAdmin.from("grades").upsert(
           {
             assignment_id: assessment.assignment_id,
             student_id: submission.student_id,
@@ -410,6 +509,7 @@ export const setLateAcceptance = createServerFn({ method: "POST" })
           },
           { onConflict: "assignment_id,student_id" },
         );
+        if (gradeErr) throw new Error(gradeErr.message);
       }
     } else {
       await supabaseAdmin
@@ -630,6 +730,11 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
         .eq("assignment_id", assignmentId);
       const byStudent = new Map((existing ?? []).map((g) => [g.student_id, g]));
 
+      const { data: column } = await supabaseAdmin
+        .from("assignments")
+        .select("points_possible, category")
+        .eq("id", assignmentId)
+        .maybeSingle();
       const rows = countable
         .map((s) => {
           const current = byStudent.get(s.student_id);
@@ -645,6 +750,12 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
           };
         })
         .filter((row) => {
+          if (
+            column &&
+            scoreExceedsTotal(row.points_earned, Number(column.points_possible), column.category)
+          ) {
+            return false;
+          }
           const current = byStudent.get(row.student_id);
           if (!current) return true;
           if (!isSystemGradeComment(current.comment)) return false;

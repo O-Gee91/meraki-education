@@ -17,6 +17,8 @@ import { QUESTION_KIND_LABELS, type EssayIssue, type QuestionKind } from "@/lib/
 import { gradeTone, percent } from "@/lib/school";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { QuickScoreBar } from "@/components/class/QuickScoreBar";
+import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
+import { boundedScoreError } from "@/lib/score-limit";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
 
@@ -384,6 +386,7 @@ function EssayReview({
   const saved = readDraft<{ points: string; feedback: string }>(draftKey);
   const [points, setPoints] = useState(saved?.points ?? String(answer.points_awarded ?? ""));
   const [feedback, setFeedback] = useState(saved?.feedback ?? answer.feedback ?? "");
+  const [scoreError, setScoreError] = useState<string | null>(null);
   const gradeDirty = points.trim().length > 0 || feedback.trim().length > 0;
   const draft = useAutosaveDraft(draftKey, { points, feedback }, { dirty: gradeDirty });
 
@@ -419,18 +422,22 @@ function EssayReview({
   const save = useMutation({
     mutationFn: async () => {
       const value = Number(points);
-      if (Number.isNaN(value) || value < 0 || value > maxPoints)
-        throw new Error(`Enter a score between 0 and ${maxPoints}`);
+      const fieldError = boundedScoreError(value, maxPoints, "question");
+      if (fieldError) throw new Error(fieldError);
       await score({ data: { answerId: answer.id, points: value, feedback } });
     },
     onSuccess: () => {
+      setScoreError(null);
       toast.success("Score saved and synced to the gradebook");
       draft.clear();
       queryClient.invalidateQueries({ queryKey: ["assessment-answers", submissionId] });
       queryClient.invalidateQueries({ queryKey: ["assessment-submissions", assessmentId] });
     },
 
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      setScoreError(e.message);
+      toast.error(e.message);
+    },
   });
 
   const latest = reviews[0];
@@ -446,8 +453,14 @@ function EssayReview({
             className="h-9 w-24"
             inputMode="decimal"
             value={points}
-            onChange={(e) => setPoints(e.target.value)}
+            aria-invalid={scoreError ? true : undefined}
+            aria-describedby={scoreError ? `essay-score-error-${answer.id}` : undefined}
+            onChange={(e) => {
+              setPoints(e.target.value);
+              setScoreError(null);
+            }}
           />
+          <ScoreLimitAlert id={`essay-score-error-${answer.id}`} message={scoreError} />
         </div>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           Save score

@@ -67,14 +67,17 @@ import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDra
 import { DEFAULT_TIME_ZONE } from "@/lib/coursework-window";
 import { isMissingWork } from "@/lib/missing-work";
 import {
-  findMark,
   hasGradeValue,
   isAutoGradeComment,
+  isExtraCredit,
+  isTransferGrade,
   markCodeFromComment,
   parseGradingSetup,
   quickScoreCellValue,
   type SpecialMark,
 } from "@/lib/grading";
+import { parseScoreEntry } from "@/lib/score-limit";
+import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
 
 const BUCKET = "school-files";
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -137,6 +140,7 @@ async function openFile(path: string) {
 type WorkAssignment = {
   id: string;
   title: string;
+  category?: string | null;
   points_possible: number;
   due_date: string | null;
   description: string | null;
@@ -512,6 +516,7 @@ function StaffCollectPanel({
   assignment: {
     id: string;
     title: string;
+    category?: string | null;
     points_possible: number;
     submission_mode: string;
     due_date?: string | null;
@@ -538,6 +543,8 @@ function StaffCollectPanel({
   // A score typed into the detail panel but not yet confirmed (blur/Enter) is
   // tracked here so closing the window can't silently discard it.
   const [pendingScore, setPendingScore] = useState<{ studentId: string; value: string } | null>(null);
+  const [scoreErrors, setScoreErrors] = useState<Record<string, string>>({});
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { data: submissions = [] } = useSubmissions(assignment.id);
@@ -651,15 +658,15 @@ function StaffCollectPanel({
       note?: string;
       draft?: boolean;
     }) => {
-      const raw = input.value.trim();
-      const mark = findMark(raw ? raw.toUpperCase() : null, marks);
-      const points = mark || raw === "" ? null : Number(raw);
-      if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
-        throw new Error(
-          marks.length
-            ? `Enter a number or a mark code (${marks.map((m) => m.code).join(", ")})`
-            : "Enter a valid score",
-        );
+      const parsed = parseScoreEntry(
+        input.value,
+        Number(assignment.points_possible),
+        marks,
+        assignment.category,
+      );
+      if (!parsed.ok) throw new Error(parsed.message);
+      const points = parsed.points;
+      const mark = parsed.markCode ? { code: parsed.markCode } : null;
       // A written comment must survive a score change: only a special mark
       // replaces the comment, and a number simply clears a previous mark.
       const { data: latestGrade, error: latestGradeError } = await supabase
@@ -671,7 +678,7 @@ function StaffCollectPanel({
       if (latestGradeError) throw latestGradeError;
       const previous = latestGrade?.comment ?? null;
       const keptComment = markCodeFromComment(previous) ? null : previous;
-      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : keptComment;
+      const markComment = mark ? `MARK:${mark.code}` : keptComment;
       // Explicit "Save draft" keeps the grade teacher-only; every other save
       // path (quick scores, Enter/blur, Post grade) posts it immediately.
       const asDraft = input.draft === true;
@@ -722,11 +729,20 @@ function StaffCollectPanel({
       setPendingScore((current) =>
         current && current.studentId === variables.studentId ? null : current,
       );
+      setScoreErrors((current) => {
+        if (!current[variables.studentId]) return current;
+        const next = { ...current };
+        delete next[variables.studentId];
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, variables) => {
+      setScoreErrors((current) => ({ ...current, [variables.studentId]: e.message }));
+      toast.error(e.message);
+    },
   });
 
   // Release every draft grade for this assignment in one step.
@@ -775,11 +791,15 @@ function StaffCollectPanel({
   // When rows are selected, only those students are affected.
   const bulkFill = useMutation({
     mutationFn: async (input: { value: string; onlyBlank: boolean; studentIds?: string[] }) => {
-      const raw = input.value.trim();
-      const mark = findMark(raw ? raw.toUpperCase() : null, marks);
-      const points = mark || raw === "" ? null : Number(raw);
-      if (points != null && (Number.isNaN(points) || points < 0 || points > 10000))
-        throw new Error("Enter a valid score or mark code");
+      const parsed = parseScoreEntry(
+        input.value,
+        Number(assignment.points_possible),
+        marks,
+        assignment.category,
+      );
+      if (!parsed.ok) throw new Error(parsed.message);
+      const points = parsed.points;
+      const mark = parsed.markCode ? { code: parsed.markCode } : null;
 
       const scope = input.studentIds?.length
         ? roster.filter((s) => input.studentIds!.includes(s.id))
@@ -792,7 +812,7 @@ function StaffCollectPanel({
       if (targets.length === 0) throw new Error("Every student already has a score");
 
 
-      const markComment = mark ? `MARK:${mark.code.toUpperCase()}` : null;
+      const markComment = mark ? `MARK:${mark.code}` : null;
       const stamp = new Date().toISOString();
       const targetIds = targets.map((student) => student.id);
       const { data: latestGrades, error: latestGradesError } = await supabase
@@ -852,11 +872,15 @@ function StaffCollectPanel({
     },
     onSuccess: (count) => {
       toast.success(`Filled ${count} student${count === 1 ? "" : "s"}`);
+      setBulkError(null);
       queryClient.invalidateQueries({ queryKey: ["assignment-grades", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["assignment-submissions", assignment.id] });
       queryClient.invalidateQueries({ queryKey: ["grades"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      setBulkError(e.message);
+      toast.error(e.message);
+    },
   });
 
 
@@ -1005,6 +1029,16 @@ function StaffCollectPanel({
     // Keyboard navigation skips the input's blur event, so flush a typed score
     // before leaving the student instead of dropping it silently.
     if (pendingScore) {
+      const parsed = parseScoreEntry(
+        pendingScore.value,
+        Number(assignment.points_possible),
+        marks,
+        assignment.category,
+      );
+      if (!parsed.ok) {
+        setScoreErrors((current) => ({ ...current, [pendingScore.studentId]: parsed.message }));
+        return;
+      }
       score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
       setPendingScore(null);
     }
@@ -1255,8 +1289,22 @@ function StaffCollectPanel({
               Close without saving
             </Button>
             <AlertDialogAction
-              onClick={() => {
-                if (pendingScore) score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+              onClick={(event) => {
+                if (pendingScore) {
+                  const parsed = parseScoreEntry(
+                    pendingScore.value,
+                    Number(assignment.points_possible),
+                    marks,
+                    assignment.category,
+                  );
+                  if (!parsed.ok) {
+                    event.preventDefault();
+                    setScoreErrors((current) => ({ ...current, [pendingScore.studentId]: parsed.message }));
+                    setConfirmClose(false);
+                    return;
+                  }
+                  score.mutate({ studentId: pendingScore.studentId, value: pendingScore.value });
+                }
                 setPendingScore(null);
                 setConfirmClose(false);
                 setOpen(false);
@@ -1380,13 +1428,26 @@ function StaffCollectPanel({
                     marks={marks}
                     pending={bulkFill.isPending}
                     selectedCount={selected.length}
-                    onFill={(value, onlyBlank) =>
+                    error={bulkError}
+                    onError={setBulkError}
+                    onFill={(value, onlyBlank) => {
+                      const parsed = parseScoreEntry(
+                        value,
+                        Number(assignment.points_possible),
+                        marks,
+                        assignment.category,
+                      );
+                      if (!parsed.ok) {
+                        setBulkError(parsed.message);
+                        return;
+                      }
+                      setBulkError(null);
                       bulkFill.mutate({
                         value,
                         onlyBlank,
                         ...(selected.length ? { studentIds: selected } : {}),
-                      })
-                    }
+                      });
+                    }}
                   />
                   <div className="flex justify-end border-t border-border pt-2">
                     <QuickScoreEditButton classId={classId} />
@@ -1534,28 +1595,41 @@ function StaffCollectPanel({
                             </span>
                           </span>
                         </Button>
-                        <div className="flex items-center gap-1.5">
-                          {grade?.is_draft ? (
-                            <span
-                              className="rounded-full border border-warning/50 bg-warning/15 px-1.5 py-px text-[10px] font-semibold uppercase leading-4 tracking-wide text-warning-foreground"
-                              title="Draft grade — only you can see it until posted"
-                            >
-                              Draft
-                            </span>
-                          ) : null}
-                          <Input
-                            key={shownScore}
-                            className="h-10 w-20 text-center text-base font-semibold"
-                            placeholder={`/${assignment.points_possible}`}
-                            defaultValue={shownScore}
-                            aria-label={`Score for ${student.first_name} ${student.last_name}`}
-                            onFocus={() => selectStudent(student.id)}
-                            onKeyDown={saveOnEnter(student.id, shownScore)}
-                            onBlur={(event) => {
-                              if (event.target.value === shownScore) return;
-                              score.mutate({ studentId: student.id, value: event.target.value });
-                            }}
-                          />
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-1.5">
+                            {grade?.is_draft ? (
+                              <span
+                                className="rounded-full border border-warning/50 bg-warning/15 px-1.5 py-px text-[10px] font-semibold uppercase leading-4 tracking-wide text-warning-foreground"
+                                title="Draft grade — only you can see it until posted"
+                              >
+                                Draft
+                              </span>
+                            ) : null}
+                            <Input
+                              key={shownScore}
+                              className="h-10 w-20 text-center text-base font-semibold"
+                              placeholder={`/${assignment.points_possible}`}
+                              defaultValue={shownScore}
+                              aria-label={`Score for ${student.first_name} ${student.last_name}`}
+                              aria-invalid={scoreErrors[student.id] ? true : undefined}
+                              aria-describedby={scoreErrors[student.id] ? `score-error-row-${student.id}` : undefined}
+                              onFocus={() => selectStudent(student.id)}
+                              onChange={() =>
+                                setScoreErrors((current) => {
+                                  if (!current[student.id]) return current;
+                                  const next = { ...current };
+                                  delete next[student.id];
+                                  return next;
+                                })
+                              }
+                              onKeyDown={saveOnEnter(student.id, shownScore)}
+                              onBlur={(event) => {
+                                if (event.target.value === shownScore) return;
+                                score.mutate({ studentId: student.id, value: event.target.value });
+                              }}
+                            />
+                          </div>
+                          <ScoreLimitAlert id={`score-error-row-${student.id}`} message={scoreErrors[student.id]} className="max-w-48 text-right" />
                         </div>
                       </div>
                     );
@@ -1600,6 +1674,15 @@ function StaffCollectPanel({
                       <div className="grid gap-4 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="space-y-2">
                           <Label htmlFor={`detail-score-${activeStudent.id}`} className="text-sm">Score</Label>
+                          {isExtraCredit(assignment.category) ? (
+                            <p className="text-xs text-muted-foreground">
+                              Extra credit. Points up to {assignment.points_possible} lift the average and do not count against the student.
+                            </p>
+                          ) : isTransferGrade(assignment.category) ? (
+                            <p className="text-xs text-muted-foreground">
+                              Transfer grade. This is the previous class percentage and can be over {assignment.points_possible} when extra credit lifted that average.
+                            </p>
+                          ) : null}
                           <div className="flex items-center gap-2">
                             <Input
                               key={cellText(activeGrade)}
@@ -1607,9 +1690,17 @@ function StaffCollectPanel({
                               className="h-11 max-w-32 text-lg"
                               placeholder={`/${assignment.points_possible}`}
                               defaultValue={cellText(activeGrade)}
+                              aria-invalid={scoreErrors[activeStudent.id] ? true : undefined}
+                              aria-describedby={scoreErrors[activeStudent.id] ? `score-error-detail-${activeStudent.id}` : undefined}
                               onKeyDown={saveOnEnter(activeStudent.id, cellText(activeGrade))}
                               onChange={(event) => {
                                 const value = event.target.value;
+                                setScoreErrors((current) => {
+                                  if (!current[activeStudent.id]) return current;
+                                  const next = { ...current };
+                                  delete next[activeStudent.id];
+                                  return next;
+                                });
                                 setPendingScore(
                                   value === cellText(activeGrade)
                                     ? null
@@ -1627,6 +1718,7 @@ function StaffCollectPanel({
                             />
                             <span className="text-sm text-muted-foreground">of {assignment.points_possible}</span>
                           </div>
+                          <ScoreLimitAlert id={`score-error-detail-${activeStudent.id}`} message={scoreErrors[activeStudent.id]} />
                           <div className="flex flex-wrap items-center gap-2">
                             {(() => {
                               const currentValue = () =>
@@ -1827,6 +1919,8 @@ function BulkFillBar({
   pending,
   onFill,
   selectedCount,
+  error,
+  onError,
 }: {
   classId: string;
   pointsPossible: number;
@@ -1834,6 +1928,8 @@ function BulkFillBar({
   pending: boolean;
   onFill: (value: string, onlyBlank: boolean) => void;
   selectedCount: number;
+  error: string | null;
+  onError: (message: string | null) => void;
 }) {
   const { data: setup } = useClassGradingSetup(classId);
   const [onlyBlank, setOnlyBlank] = useState(true);
@@ -1879,7 +1975,13 @@ function BulkFillBar({
           className="h-7 w-28 text-xs"
           placeholder={marks.length ? `Score or ${marks[0]?.code}` : "Score"}
           value={custom}
-          onChange={(e) => setCustom(e.target.value)}
+          aria-label="Score to apply"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "bulk-score-error" : undefined}
+          onChange={(e) => {
+            setCustom(e.target.value);
+            if (error) onError(null);
+          }}
         />
         <Button
           type="button"
@@ -1896,6 +1998,7 @@ function BulkFillBar({
           Only students without a score
         </label>
       </div>
+      <ScoreLimitAlert id="bulk-score-error" message={error} />
     </div>
   );
 }

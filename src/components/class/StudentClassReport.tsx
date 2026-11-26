@@ -23,12 +23,15 @@ import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import {
   computeAverage,
   findMark,
+  isTransferGrade,
   letterFor,
   isAutoGradeComment,
   markCodeFromComment,
   parseGradingSetup,
   type GradingSetup,
 } from "@/lib/grading";
+import { parseScoreEntry, scoreExceedsTotal, overTotalScoreMessage } from "@/lib/score-limit";
+import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
 import { buildDocument, docHeader, escapeHtml, printHtml } from "@/lib/print-doc";
 import { formatDate } from "@/lib/school";
 import { isWithinEnrollmentWindow, shouldAutoFlag } from "@/lib/assignment-status";
@@ -312,21 +315,25 @@ export function StudentClassReport({
   const completedCount = rows.filter((row) => row.completed).length;
   const completionRate = rows.length ? (completedCount / rows.length) * 100 : 0;
 
+  const [scoreErrors, setScoreErrors] = useState<Record<string, string>>({});
+
   const saveScore = useMutation({
     mutationFn: async (input: {
+      rowKey: string;
       assignmentId: string | null;
       assessmentSubmissionId: string | null;
       autoScore: number;
       pointsPossible: number;
+      category: string;
       value: string;
     }) => {
       if (!student) throw new Error("Choose a student");
-      const raw = input.value.trim();
-      const mark = findMark(raw ? raw.toUpperCase() : null, setup.marks);
-      const points = mark || raw === "" ? null : Number(raw);
-      if (!mark && raw !== "" && (Number.isNaN(points) || Number(points) < 0 || Number(points) > 10000)) {
-        throw new Error("Enter a valid score or special mark");
-      }
+      const parsed = parseScoreEntry(input.value, input.pointsPossible, setup.marks, input.category);
+      if (!parsed.ok) throw new Error(parsed.message);
+      const points = parsed.points;
+      const mark = parsed.markCode
+        ? setup.marks.find((entry) => entry.code.toUpperCase() === parsed.markCode)
+        : null;
       if (input.assignmentId) {
         const { data: latestGrade, error: latestGradeError } = await supabase
           .from("grades")
@@ -350,10 +357,14 @@ export function StudentClassReport({
         if (error) throw error;
       }
       if (input.assessmentSubmissionId && points != null) {
+        const earned = Number(points);
+        if (scoreExceedsTotal(earned, input.pointsPossible, input.category)) {
+          throw new Error(overTotalScoreMessage(input.pointsPossible, "assessment"));
+        }
         const { error } = await supabase
           .from("assessment_submissions")
           .update({
-            manual_score: Number(points) - input.autoScore,
+            manual_score: earned - input.autoScore,
             total_points: input.pointsPossible,
             status: "graded",
             graded_at: new Date().toISOString(),
@@ -363,7 +374,13 @@ export function StudentClassReport({
         if (error) throw error;
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (_result, variables) => {
+      setScoreErrors((current) => {
+        if (!current[variables.rowKey]) return current;
+        const next = { ...current };
+        delete next[variables.rowKey];
+        return next;
+      });
       toast.success("Score saved everywhere");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["grades"] }),
@@ -371,7 +388,10 @@ export function StudentClassReport({
         queryClient.invalidateQueries({ queryKey: ["student-class-report-assessment-submissions"] }),
       ]);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error, variables) => {
+      setScoreErrors((current) => ({ ...current, [variables.rowKey]: error.message }));
+      toast.error(error.message);
+    },
   });
 
   function printReport() {
@@ -454,21 +474,33 @@ export function StudentClassReport({
                     <td className="px-3 py-3 text-muted-foreground">{row.dueDate ? formatDate(row.dueDate) : "No due date"}</td>
                     <td className="px-3 py-3"><Badge variant={row.status === "Missing" ? "destructive" : row.status === "Graded" ? "default" : "outline"}>{row.status}</Badge></td>
                     <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Input
                           key={`${row.key}-${initialValue}`}
                           aria-label={`Score for ${row.title}`}
+                          aria-invalid={scoreErrors[row.key] ? true : undefined}
+                          aria-describedby={scoreErrors[row.key] ? `report-score-error-${row.key}` : undefined}
                           className="h-9 w-24"
                           defaultValue={initialValue}
                           placeholder="Score"
                           disabled={!row.assignmentId && !row.assessmentSubmissionId}
+                          onChange={() =>
+                            setScoreErrors((current) => {
+                              if (!current[row.key]) return current;
+                              const next = { ...current };
+                              delete next[row.key];
+                              return next;
+                            })
+                          }
                           onBlur={(event) => {
                             if (event.target.value.trim() === initialValue) return;
                             saveScore.mutate({
+                              rowKey: row.key,
                               assignmentId: row.assignmentId,
                               assessmentSubmissionId: row.assessmentSubmissionId,
                               autoScore: row.autoScore,
                               pointsPossible: row.pointsPossible,
+                              category: row.category,
                               value: event.target.value,
                             });
                           }}
@@ -476,7 +508,11 @@ export function StudentClassReport({
                         <span className="whitespace-nowrap text-xs text-muted-foreground">
                           / {row.pointsPossible || "—"}{percent == null ? "" : ` · ${percent.toFixed(1)}% · ${letterFor(percent, setup.scale)}`}
                         </span>
+                        {isTransferGrade(row.category) ? (
+                          <span className="text-xs text-muted-foreground">Previous class percentage. Extra credit can put this over {row.pointsPossible}.</span>
+                        ) : null}
                       </div>
+                      <ScoreLimitAlert id={`report-score-error-${row.key}`} message={scoreErrors[row.key]} />
                     </td>
                   </tr>
                 );

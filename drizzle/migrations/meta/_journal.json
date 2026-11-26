@@ -302,6 +302,13 @@
       "when": 1795656259907,
       "tag": "0042_protect_admin_claim_and_class_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795682900000,
+      "tag": "0043_reject_over_total_scores",
+      "breakpoints": true
     }
   ]
 }

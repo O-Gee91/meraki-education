@@ -21,6 +21,8 @@ import {
   type RubricSelections,
 } from "@/lib/rubrics";
 import { cn } from "@/lib/utils";
+import { overTotalScoreMessage, scoreExceedsTotal } from "@/lib/score-limit";
+import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
 import { SuggestFeedbackButton } from "@/components/class/SuggestFeedbackButton";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 
@@ -87,8 +89,12 @@ export function RubricScorePanel({
   const earned = selectionsTotal(criteria, selections);
   const scaled = scaleToAssignment(earned, max, pointsPossible);
 
+  const overTotal = scoreExceedsTotal(scaled, pointsPossible);
   const save = useMutation({
     mutationFn: async () => {
+      if (scoreExceedsTotal(scaled, pointsPossible)) {
+        throw new Error(overTotalScoreMessage(pointsPossible));
+      }
       const stamp = new Date().toISOString();
       const { error } = await supabase.from("rubric_scores").upsert(
         {
@@ -259,11 +265,13 @@ export function RubricScorePanel({
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Button
               size="sm"
-              disabled={save.isPending}
+              disabled={save.isPending || overTotal}
+              aria-describedby={overTotal ? "rubric-score-limit" : undefined}
               onClick={() => save.mutate()}
             >
               {save.isPending ? "Saving…" : "Save rubric score"}
             </Button>
+            <ScoreLimitAlert id="rubric-score-limit" message={overTotal ? overTotalScoreMessage(pointsPossible) : null} />
             <SuggestFeedbackButton
               context={{ assignmentId }}
               build={() => ({

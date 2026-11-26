@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { discussionTotalPossible, formatPoints, parseFormatted, studentDiscussionTotal, wrapSelection } from "./discussion";
+import { discussionPostMax, discussionScoresAfterEdits, discussionTotalPossible, formatPoints, parseFormatted, studentDiscussionTotal, wrapSelection } from "./discussion";
 
 describe("discussion scoring", () => {
   it("total possible is response points plus required replies times reply points", () => {
@@ -13,6 +13,22 @@ describe("discussion scoring", () => {
   });
   it("shows points as earned / possible", () => {
     expect(formatPoints(8, 10)).toBe("8 / 10");
+  });
+  it("caps a legacy discussion on the main response", () => {
+    expect(discussionPostMax({ pointsPossible: 10, responsePoints: 0, replyPoints: 0, isReply: false })).toBe(10);
+    expect(discussionPostMax({ pointsPossible: 10, responsePoints: 0, replyPoints: 0, isReply: true })).toBe(0);
+  });
+  it("applies pending edits before the gradebook total is saved", () => {
+    expect(
+      discussionScoresAfterEdits(
+        [{ postId: "a", points: 6 }],
+        [
+          { postId: "a", points: 4 },
+          { postId: "b", points: 2 },
+        ],
+      ),
+    ).toBe(6);
+    expect(discussionScoresAfterEdits([{ postId: "a", points: 6 }], [{ postId: "a", points: null }])).toBeNull();
   });
 });
 
