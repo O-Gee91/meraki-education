@@ -1,5 +1,11 @@
 # Roadmap
 
+## Student and guardian daily workflow (Nov 26, 2026)
+- [x] Prioritize missing/due work, feedback/scores, classes/calendar, then collapsed news on the dashboard
+- [x] Separate assignment action and completed sections with calmer cards; preserve filters, details and child selection
+- [x] All 217 regression tests pass; sample dashboard order, assignment filters/details, guardian child switching and no overflow checked at 1440/390/720px; sample fixture removed
+- [ ] Real student/guardian daily workflow and assistive-technology review — owner session stops at two-step verification; no security bypass or live-data changes used
+
 ## Six selected security findings (Nov 26, 2026)
 - [x] Validate reset identifiers; restrict pending-account linking and prevent email-based account reuse
 - [x] Disable public first-admin claims and prevent co-teacher ownership changes; live definitions/grants verified, existing administrators unchanged

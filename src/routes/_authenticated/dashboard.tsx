@@ -3,11 +3,11 @@ import { missingPointsFor } from "@/lib/late-penalty";
 import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CalendarCheck, Megaphone, MessageSquareText, Users } from "lucide-react";
+import { BookOpen, CalendarCheck, Megaphone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
-import { FeedbackInbox, useMyFeedback, useUnreadFeedback } from "@/components/FeedbackInbox";
+import { FeedbackInbox } from "@/components/FeedbackInbox";
 import { TeacherTodo } from "@/components/TeacherTodo";
 
 import { Button } from "@/components/ui/button";
@@ -128,9 +128,6 @@ function DashboardPage() {
     },
   });
 
-  // Students and guardians get a visible count of new teacher comments.
-  const { data: feedback = [] } = useMyFeedback(!isStaff && !previewingStudent);
-  const { unread: unreadFeedback } = useUnreadFeedback(feedback);
 
   const { data: attendance = [] } = useQuery({
     queryKey: ["my-attendance", user?.id, primaryRole, previewingStudent, selfIds],
@@ -292,15 +289,17 @@ function DashboardPage() {
       description={
         isStaff
           ? "Your classes, roster and school announcements."
-          : "Your grades, upcoming work and news from your teachers."
+          : undefined
       }
     >
       <SetupCard />
 
+      {!isStaff && <h2 className="mb-4 text-lg font-semibold">Missing work &amp; due soon</h2>}
       {!isStaff && <MissingWorkCard />}
 
 
-      <div className={`grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "md:grid-cols-3 xl:grid-cols-5"}`}>
+      {isStaff && (
+      <div className="grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 xl:grid-cols-4">
 
         <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
         {isStaff ? (
@@ -313,11 +312,7 @@ function DashboardPage() {
             tone={overall == null ? undefined : gradeTone(overall)}
           />
         )}
-        <Stat
-          icon={Megaphone}
-          label="Announcements"
-          value={String(announcements.length)}
-        />
+        {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
         {isStaff ? (
           <Stat icon={CalendarCheck} label="Term" value={classes[0]?.term ?? "—"} />
         ) : (
@@ -327,27 +322,17 @@ function DashboardPage() {
             label="Recent attendance"
             value={`${attendance.length} days logged`}
           />
-          <Stat
-            icon={MessageSquareText}
-            label="Teacher feedback"
-            value={
-              unreadFeedback > 0
-                ? `${unreadFeedback} new`
-                : feedback.length
-                  ? `${feedback.length} comments`
-                  : "—"
-            }
-            tone={unreadFeedback > 0 ? "text-accent" : undefined}
-          />
           </>
         )}
       </div>
+
+      )}
 
       {isStaff && <TeacherTodo classes={classes} />}
 
       <section className="mt-6 border-b border-border pb-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Upcoming due dates</h2>
+          <h2 className="text-lg font-semibold">{isStaff ? "Upcoming due dates" : "Due soon"}</h2>
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Assignments &amp; assessments
           </span>
@@ -382,7 +367,76 @@ function DashboardPage() {
         )}
       </section>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+      {!isStaff && (
+        <div className="mt-8 space-y-6">
+      <div className={`grid gap-x-6 gap-y-4 border-y border-border py-5 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
+
+        <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
+        {isStaff ? (
+          <Stat icon={Users} label="Students" value={String(students.length)} />
+        ) : (
+          <Stat
+            icon={CalendarCheck}
+            label="Overall grade"
+            value={overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
+            tone={overall == null ? undefined : gradeTone(overall)}
+          />
+        )}
+        {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
+        {isStaff ? (
+          <Stat icon={CalendarCheck} label="Term" value={classes[0]?.term ?? "—"} />
+        ) : (
+          <>
+          <Stat
+            icon={CalendarCheck}
+            label="Recent attendance"
+            value={`${attendance.length} days logged`}
+          />
+          </>
+        )}
+      </div>
+
+{!isStaff && !previewingStudent && <FeedbackInbox desktopReview />}
+
+      {!isStaff && (
+        <section className="border-t border-border pt-6">
+          <h2 className="text-lg font-semibold">Recent scores</h2>
+          {recentGrades.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
+          ) : (
+            <table className="mt-4 w-full table-fixed text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="w-1/2 pb-2">Assignment</th>
+                  <th className="pb-2">Due</th>
+                  <th className="pb-2 text-right">Score</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {recentGrades.map((g) => {
+                  const possible = Number(g.assignments?.points_possible ?? 0);
+                  const pct = percent(Number(g.points_earned ?? 0), possible);
+                  return (
+                    <tr key={g.id}>
+                      <td className="break-words py-3 pr-3 font-medium">{g.assignments?.title}</td>
+                      <td className="py-3 pr-3 text-muted-foreground">
+                        {formatDate(g.assignments?.due_date)}
+                      </td>
+                      <td className={`py-3 text-right font-medium ${gradeTone(pct)}`}>
+                        {g.points_earned}/{possible} · {pct.toFixed(0)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
+        </div>
+      )}
+
+      <div className={`mt-8 grid gap-6 ${isStaff ? "xl:grid-cols-3" : ""}`}>
         <section className="min-w-0 xl:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Classes</h2>
@@ -420,6 +474,7 @@ function DashboardPage() {
           </div>
         </section>
 
+        {isStaff && (
         <section className="min-w-0 border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
           <h2 className="text-lg font-semibold">Announcements</h2>
           <div className="mt-4 space-y-4">
@@ -467,6 +522,7 @@ function DashboardPage() {
             </div>
           )}
         </section>
+        )}
       </div>
 
 
@@ -474,45 +530,29 @@ function DashboardPage() {
 
 
 
-      {!isStaff && !previewingStudent && <FeedbackInbox />}
+      <SchoolCalendar />
 
       {!isStaff && (
-        <section className="mt-6 border-t border-border pt-6">
-          <h2 className="text-lg font-semibold">Recent scores</h2>
-          {recentGrades.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
-          ) : (
-            <table className="mt-4 w-full table-fixed text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="w-1/2 pb-2">Assignment</th>
-                  <th className="pb-2">Due</th>
-                  <th className="pb-2 text-right">Score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {recentGrades.map((g) => {
-                  const possible = Number(g.assignments?.points_possible ?? 0);
-                  const pct = percent(Number(g.points_earned ?? 0), possible);
-                  return (
-                    <tr key={g.id}>
-                      <td className="break-words py-3 pr-3 font-medium">{g.assignments?.title}</td>
-                      <td className="py-3 pr-3 text-muted-foreground">
-                        {formatDate(g.assignments?.due_date)}
-                      </td>
-                      <td className={`py-3 text-right font-medium ${gradeTone(pct)}`}>
-                        {g.points_earned}/{possible} · {pct.toFixed(0)}%
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+        <details className="mt-8 border-t border-border pt-6">
+          <summary className="cursor-pointer rounded-sm text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">News &amp; community</summary>
+        <section className="pt-4">
+          <div className="mt-4 space-y-4">
+            {announcements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing posted yet.</p>
+            ) : (
+              announcements.map((a) => (
+                <article key={a.id}>
+                  <h3 className="text-sm font-semibold">{a.title}</h3>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
+                </article>
+              ))
+            )}
+          </div>
         </section>
+          <Link to="/community" className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline">Open community</Link>
+        </details>
       )}
-
-      <SchoolCalendar />
 
       {primaryRole === "parent" && (
         <p className="mt-6 text-sm text-muted-foreground">
@@ -597,7 +637,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
   });
 
   return (
-    <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+    <section className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-border py-4 text-sm">
       <span>
         {label && <span className="font-medium">{label}</span>}
         {missingCount > 0 ? (
@@ -609,7 +649,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
           "No missing work — all caught up."
         )}
       </span>
-      <Button asChild variant="outline" className="h-11">
+      <Button asChild variant="ghost" className="h-11">
         <Link to="/assignments">View assignments</Link>
       </Button>
     </section>

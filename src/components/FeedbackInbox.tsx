@@ -50,7 +50,7 @@ export function useUnreadFeedback(items: FeedbackItem[]) {
   return { unread, seenAt, markSeen };
 }
 
-export function FeedbackInbox({ classId }: { classId?: string }) {
+export function FeedbackInbox({ classId, desktopReview = false }: { classId?: string; desktopReview?: boolean }) {
   const previewStudentId = useStudentPreviewId();
   const { data = [], isLoading } = useMyFeedback(true, previewStudentId);
   const items = classId ? data.filter((i) => i.classId === classId) : data;
@@ -59,7 +59,7 @@ export function FeedbackInbox({ classId }: { classId?: string }) {
   const shown = expanded ? items : items.slice(0, 5);
 
   return (
-    <section className="panel mt-6 p-5">
+    <section className={desktopReview ? "border-t border-border pt-6" : "panel mt-6 p-5"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <MessageSquareText className="size-4 text-accent" />
@@ -72,9 +72,9 @@ export function FeedbackInbox({ classId }: { classId?: string }) {
           </Button>
         ) : null}
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">
+      {!desktopReview && <p className="mt-1 text-sm text-muted-foreground">
         Every comment your teachers have written on your assignments and assessments.
-      </p>
+      </p>}
 
       {isLoading ? (
         <p className="mt-4 text-sm text-muted-foreground">Loading your feedback…</p>
@@ -90,7 +90,7 @@ export function FeedbackInbox({ classId }: { classId?: string }) {
               return (
                 <li
                   key={item.id}
-                  className={`rounded-xl border p-3 ${
+                  className={`${desktopReview ? "border-b py-4" : "rounded-xl border p-3"} ${
                     isNew ? "border-accent/50 bg-accent/5" : "border-border bg-muted/30"
                   }`}
                 >

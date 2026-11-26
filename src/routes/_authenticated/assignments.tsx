@@ -1,4 +1,5 @@
 import { resolveWorkState } from "@/lib/coursework-state";
+import { assignmentSections } from "@/lib/assignment-sections";
 import { isMissingWork } from "@/lib/missing-work";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { useMemo, useState } from "react";
@@ -19,7 +20,6 @@ import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/school";
 import { isAutoGradeComment, markCodeFromComment } from "@/lib/grading";
@@ -226,7 +226,6 @@ function AssignmentsHubPage() {
     <AppShell
       desktopReview
       title={isGuardian ? "Your child's assignments" : "My assignments"}
-      description="Every assignment across your classes — due dates, status and posted scores."
     >
       {children.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -256,7 +255,7 @@ function AssignmentsHubPage() {
               ))}
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter assignments">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter assignments">
             {classIds.length > 1 && (
               <select
                 aria-label="Filter by class"
@@ -275,7 +274,7 @@ function AssignmentsHubPage() {
                 key={f.id}
                 type="button"
                 size="sm"
-                variant={filter === f.id ? "default" : "outline"}
+                variant={filter === f.id ? "secondary" : "ghost"}
                 onClick={() => setFilter(f.id)}
                 aria-pressed={filter === f.id}
               >
@@ -285,7 +284,7 @@ function AssignmentsHubPage() {
             ))}
           </div>
 
-          <div className="mt-4 divide-y divide-border border-y border-border">
+          <div className="mt-8 space-y-10">
             {visible.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 {filter === "missing"
@@ -297,20 +296,26 @@ function AssignmentsHubPage() {
                       : "No assignments yet."}
               </p>
             ) : (
-              visible.map((row) => {
+              assignmentSections(visible).map((section) => (
+                <section key={section.title} aria-label={section.title}>
+                  <h2 className="mb-4 text-lg font-semibold">{section.title} <span className="ml-2 text-sm font-normal text-muted-foreground">{section.rows.length}</span></h2>
+                  <div className="space-y-4">
+              {section.rows.map((row) => {
                 const open = openId === row.assignmentId;
                 return (
-                  <article key={row.assignmentId} className="py-3">
-                    <button
+                  <article key={row.assignmentId} className="rounded-lg border border-border bg-card p-5 sm:p-6">
+                    <Button
                       type="button"
-                      className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 text-left"
+                      variant="ghost"
+                      className="h-auto w-full flex-wrap justify-between gap-x-4 gap-y-3 whitespace-normal p-0 text-left hover:bg-transparent"
                       onClick={() => setOpenId(open ? null : row.assignmentId)}
                       aria-expanded={open}
+                      aria-controls={`assignment-details-${row.assignmentId}`}
                     >
-                      <span className="min-w-0">
-                        <span className="block break-words text-sm font-medium">{row.title}</span>
+                      <span className="min-w-0 flex-1 basis-52">
+                        <span className="block break-words text-base font-semibold">{row.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {row.className} · {row.category}
+                          {row.className}
                           {row.dueDate ? ` · Due ${formatDate(row.dueDate)}` : " · No due date"}
                         </span>
                       </span>
@@ -327,16 +332,17 @@ function AssignmentsHubPage() {
                           <ChevronDown className="size-4 text-muted-foreground" />
                         )}
                       </span>
-                    </button>
+                    </Button>
                     {open ? (
-                      <div className="mt-3 space-y-3 rounded-md border border-border/60 bg-muted/20 p-4">
+                      <div id={`assignment-details-${row.assignmentId}`} className="mt-5 space-y-4 border-t border-border pt-5">
+                        <p className="text-sm text-muted-foreground">{row.category} · {row.pointsPossible} points{row.isLate ? " · Turned in late" : ""}</p>
                         {row.description ? (
                           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
                             {row.description}
                           </p>
                         ) : null}
                         {row.feedback ? (
-                          <p className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
+                          <p className="border-l-2 border-accent pl-3 text-sm">
                             <span className="font-medium">Teacher feedback: </span>
                             {row.feedback}
                           </p>
@@ -356,7 +362,10 @@ function AssignmentsHubPage() {
                     ) : null}
                   </article>
                 );
-              })
+              })}
+                  </div>
+                </section>
+              ))
             )}
           </div>
         </>
@@ -382,7 +391,6 @@ function StatusChip({ row }: { row: HubRow }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium">
         <Inbox className="h-3.5 w-3.5 text-primary" aria-hidden /> Turned in
-        {row.isLate ? " · Late" : ""}
       </span>
     );
   if (row.status === "due")

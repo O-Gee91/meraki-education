@@ -290,3 +290,10 @@ Verified at 1024/1440/1920: no horizontal overflow; error state renders with bra
 - Verification: available self-minted session returned the Student Tester profile and student-only role, so real educator menus/breadcrumbs could not be visually verified. No permissions or stored records were modified to bypass this limitation.
 - Live Student Tester regression: Classes opens a saved class, Coursework and My grades tabs switch successfully, sidebar remains ungrouped and no educator breadcrumbs appear. No horizontal overflow at 390/916/1024/1440/1920px; screenshot inspected; no browser runtime errors. Existing student-sort and assessment tests pass (5 tests); latest preview build OK.
 - Review gate: Phase 2 educator presentation awaits an educator preview session and Joe's review; Phase 3 has not been started. Guardian-specific and Safari/macOS checks remain unverified.
+
+## Student / guardian daily workflow (Nov 26, 2026)
+- Dashboard priority: missing work and due soon; compact summary plus feedback and posted scores; classes and calendar; collapsed News & community. Teacher ordering remains unchanged.
+- Assignments: more spacious cards with resolved Needs action and Completed / Graded sections; one main status visible, category/points/late details disclosed on expansion. Submitted work still says Turned in, not Graded.
+- Both pages retain the approved max-width AppShell; filters, posted-only queries, grading/missing helpers, class links and guardian child selector preserved. Feedback spacing is opt-in so class-page feedback remains unchanged.
+- Verification: 217 unit tests pass (three new assignment-section rules); sample populated Chromium checks at 1440/390/720px confirm ordering, grade/details expansion, filter counts, empty state, child selection, news disclosure and no horizontal overflow. Desktop dashboard and mobile assignment screenshots inspected. No sample browser errors. Temporary fixture removed; preview build OK.
+- Live owner session returns to /auth at Two-step verification; real student/guardian daily workflow, screen-reader and keyboard/200%-zoom walkthrough remain unverified. No auth bypass or stored-data changes.
