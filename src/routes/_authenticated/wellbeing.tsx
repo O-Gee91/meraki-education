@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HeartPulse, Lock } from "lucide-react";
-import { NotebookMood } from "@/components/NotebookDecorations";
+import { NotebookEmpty, NotebookLoading, NotebookMood } from "@/components/NotebookDecorations";
+import { LoadError } from "@/components/LoadError";
 import { Sketch } from "@/components/Sketch";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -225,14 +226,14 @@ function StudentView() {
       <section className="min-w-0 [overflow-wrap:anywhere]">
         <h2 className="notebook-heading border-b border-border pb-4 text-lg font-semibold">My recent check-ins</h2>
         {isLoading ? (
-          <p className="mt-6 text-center text-sm text-muted-foreground">Loading…</p>
+          <NotebookLoading className="mt-6 justify-center text-sm text-muted-foreground">Loading your check-ins…</NotebookLoading>
         ) : isError ? (
           <div className="mt-6 text-center">
             <p className="text-sm">We couldn't load your check-ins.</p>
             <Button className="mt-3" size="sm" variant="outline" onClick={() => refetch()}>Try again</Button>
           </div>
         ) : checkins.length === 0 ? (
-          <p className="mt-6 text-center text-sm text-muted-foreground">Your check-ins will appear here.</p>
+          <NotebookEmpty className="mt-6 justify-center text-sm text-muted-foreground">Your check-ins will appear here.</NotebookEmpty>
         ) : (
           <ul className="divide-y divide-border">
             {checkins.slice(0, 30).map((c) => {
@@ -381,16 +382,16 @@ function StaffView() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-sm text-muted-foreground">Loading check-ins…</p>
+        <NotebookLoading className="justify-center text-sm text-muted-foreground">Loading check-ins…</NotebookLoading>
       ) : isError ? (
         <div className="text-center">
           <p className="text-sm font-medium">We couldn't load the well-being updates.</p>
           <Button className="mt-3" size="sm" variant="outline" onClick={() => refetch()}>Try again</Button>
         </div>
       ) : visible.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground">
+        <NotebookEmpty className="justify-center text-sm text-muted-foreground">
           {filter === "all" ? "No check-ins recorded yet." : "Nothing here right now."}
-        </p>
+        </NotebookEmpty>
       ) : (
         <ul className="divide-y divide-border">
           {visible.map((c) => {
@@ -483,7 +484,7 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
 
 function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const queryClient = useQueryClient();
-  const { studentIds } = useTeacherScope();
+  const { studentIds, scopeError, teacherMode, scoped: scopeReady } = useTeacherScope();
   const [sortMode, setSortMode] = useStudentSort("wellbeing-students");
   const [studentId, setStudentId] = useState("");
   const [mood, setMood] = useState<number | null>(null);
@@ -499,11 +500,13 @@ function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: 
       return data;
     },
   });
-  const scoped = !!studentIds;
-  const students = sortStudents(
-    scoped ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
-    sortMode,
-  );
+  const scopeLoading = teacherMode && !scopeReady && !scopeError;
+  const students = scopeError || scopeLoading
+    ? []
+    : sortStudents(
+        studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
+        sortMode,
+      );
   const submit = useMutation({
     mutationFn: async () => {
       if (!studentId) throw new Error("Select a student first");
@@ -531,7 +534,12 @@ function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: 
           <DialogDescription>For a student who checked in with you in person.</DialogDescription>
         </DialogHeader>
         <Label htmlFor="checkin-student">Student</Label>
-        <Select value={studentId} onValueChange={setStudentId}>
+        {scopeError ? (
+          <LoadError label="Students couldn't be loaded, so this check-in stays closed." />
+        ) : scopeLoading ? (
+          <NotebookLoading className="text-sm text-muted-foreground">Loading students…</NotebookLoading>
+        ) : null}
+        <Select value={studentId} onValueChange={setStudentId} disabled={scopeError || scopeLoading}>
           <SelectTrigger id="checkin-student"><SelectValue placeholder="Select a student" /></SelectTrigger>
           <SelectContent>
             {students.map((s) => (

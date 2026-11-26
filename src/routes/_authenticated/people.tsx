@@ -6,7 +6,10 @@ import { adminResetMfa, listMfaStatus } from "@/lib/mfa.functions";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
 import { useAuth, type Role } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,22 +69,26 @@ function PeoplePage() {
     queryFn: async () => new Set((await mfaStatusFn()).enabled),
   });
 
-  const { data: people = [], isLoading } = useQuery({
-    queryKey: ["people"],
+  const peopleQuery = useQuery({
+    queryKey: ["people", user?.id],
     enabled: isAdmin,
     queryFn: async () => {
-      const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email, username").order("full_name"),
-        supabase.from("user_roles").select("id, user_id, role"),
+      const [profiles, roles] = await Promise.all([
+        fetchAll((from, to) =>
+          supabase.from("profiles").select("id, full_name, email, username").order("full_name").order("id").range(from, to),
+        ),
+        fetchAll((from, to) =>
+          supabase.from("user_roles").select("id, user_id, role").order("id").range(from, to),
+        ),
       ]);
-      if (pErr) throw pErr;
-      if (rErr) throw rErr;
-      return (profiles ?? []).map((p) => ({
+      return profiles.map((p) => ({
         ...p,
-        roles: (roles ?? []).filter((r) => r.user_id === p.id).map((r) => r.role as Role),
+        roles: roles.filter((r) => r.user_id === p.id).map((r) => r.role as Role),
       }));
     },
   });
+  const people = peopleQuery.data ?? [];
+  const isLoading = peopleQuery.isPending;
 
   const toggleRole = useMutation({
     mutationFn: async ({
@@ -178,13 +185,15 @@ function PeoplePage() {
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
-          {isLoading ? "Loading accounts…" : `${filtered.length} of ${people.length} accounts`}
+          {peopleQuery.isError ? "Accounts couldn't be loaded." : isLoading ? "Loading accounts…" : `${filtered.length} of ${people.length} accounts`}
         </p>
         <div className="mt-5 divide-y divide-border">
-          {isLoading ? (
-            <p className="py-6 text-sm text-muted-foreground">Loading accounts…</p>
+          {peopleQuery.isError ? (
+            <LoadError label="Accounts couldn't be loaded." onRetry={() => void peopleQuery.refetch()} />
+          ) : isLoading ? (
+            <NotebookLoading className="py-6 text-sm text-muted-foreground">Loading accounts…</NotebookLoading>
           ) : filtered.length === 0 ? (
-            <p className="py-6 text-sm text-muted-foreground">No accounts found.</p>
+            <NotebookEmpty className="py-6 text-sm text-muted-foreground">No accounts found.</NotebookEmpty>
           ) : (
             filtered.map((p) => (
               <div

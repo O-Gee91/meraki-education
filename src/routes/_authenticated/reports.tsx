@@ -4,6 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,7 +98,7 @@ function ReportsPage() {
 
 function ReportCards({ isStaff }: { isStaff: boolean }) {
   const { user } = useAuth();
-  const { classIds, studentIds } = useTeacherScope();
+  const { classIds, studentIds, scopeError } = useTeacherScope();
   const queryClient = useQueryClient();
   const [classId, setClassId] = useState("");
   const [sortMode, setSortMode] = useStudentSort("report-cards");
@@ -125,17 +127,19 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     },
   });
 
-  const { data: allCards = [] } = useQuery({
-    queryKey: ["report-cards"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("report_cards")
-        .select("id, student_id, class_id, term, grade_pct, letter, comment, published, updated_at")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+  const cardsQuery = useQuery({
+    queryKey: ["report-cards", user?.id],
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase
+          .from("report_cards")
+          .select("id, student_id, class_id, term, grade_pct, letter, comment, published, updated_at")
+          .order("updated_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
   });
+  const allCards = cardsQuery.data ?? [];
 
   // Teacher mode keeps report cards limited to the classes this person teaches.
   const classes = classIds ? allClasses.filter((c) => classIds.has(c.id)) : allClasses;
@@ -278,12 +282,19 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       )}
 
       <div>
-        {cards.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">
+        {scopeError || cardsQuery.isError ? (
+          <LoadError
+            label="Report cards couldn't be loaded. Nothing here is treated as an empty term."
+            onRetry={() => void cardsQuery.refetch()}
+          />
+        ) : cardsQuery.isPending ? (
+          <NotebookLoading className="p-6 text-sm text-muted-foreground">Loading report cards…</NotebookLoading>
+        ) : cards.length === 0 ? (
+          <NotebookEmpty className="p-6 text-sm text-muted-foreground">
             {isStaff
               ? "No report cards yet — generate them from a class gradebook."
               : "No report cards have been published for you yet."}
-          </p>
+          </NotebookEmpty>
         ) : (
           <div className="overflow-x-auto"><table className="w-full min-w-[40rem] table-fixed text-sm">
             <colgroup>
@@ -361,7 +372,7 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ code: "", description: "", subject: "" });
 
-  const { data: standards = [] } = useQuery({
+  const standardsQuery = useQuery({
     queryKey: ["standards"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -372,6 +383,7 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const standards = standardsQuery.data ?? [];
 
   const { data: links = [] } = useQuery({
     queryKey: ["assignment-standards"],
@@ -477,7 +489,9 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
             );
           })}
         </ul>
-        {standards.length === 0 ? <p className="py-4 text-sm text-muted-foreground">No standards in the school library yet.</p> : null}
+        {standardsQuery.isError ? (
+          <LoadError label="Standards couldn't be loaded." onRetry={() => void standardsQuery.refetch()} />
+        ) : standards.length === 0 ? <NotebookEmpty className="py-4 text-sm text-muted-foreground">No standards in the school library yet.</NotebookEmpty> : null}
       </section>
       <details className="group border-t border-border pt-4">
         <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"><ChevronDown className="size-4 transition-transform group-open:rotate-180" />Common Core ELA library</summary>
@@ -510,7 +524,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
     : allPortfolioStudents;
   const sortedStudents = sortStudents(students, sortMode);
 
-  const { data: allItems = [] } = useQuery({
+  const itemsQuery = useQuery({
     queryKey: ["portfolio-items"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -521,6 +535,7 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       return data;
     },
   });
+  const allItems = itemsQuery.data ?? [];
   const items = previewingStudent
     ? allItems.filter((it) => previewScope.studentIds?.has(it.student_id))
     : allItems;
@@ -626,10 +641,12 @@ function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.length === 0 ? (
-          <p className="col-span-full py-6 text-sm text-muted-foreground">
+        {previewScope.scopeError || itemsQuery.isError ? (
+          <LoadError label="Portfolio work couldn't be loaded." onRetry={() => void itemsQuery.refetch()} />
+        ) : items.length === 0 ? (
+          <NotebookEmpty className="col-span-full py-6 text-sm text-muted-foreground">
             No portfolio work yet. Add evidence of learning — projects, photos, reflections.
-          </p>
+          </NotebookEmpty>
         ) : (
           items.map((item) => (
             <article key={item.id} className="min-w-0 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere]">

@@ -114,7 +114,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d={light:0,sand:0,midnight:1,noir:1};var t=localStorage.getItem('meraki-theme');if(t==='dark'){t='midnight';}if(!(t in d)){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'light';}var r=document.documentElement;r.setAttribute('data-theme',t);if(d[t]){r.classList.add('dark');}r.style.colorScheme=d[t]?'dark':'light';}catch(e){}})();`,
+            __html: `(function(){try{var d={light:0,sand:0,midnight:1,noir:1};var t=localStorage.getItem('meraki-theme');if(t==='dark'){t='midnight';}if(!(t in d)){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'midnight':'light';}var r=document.documentElement;r.setAttribute('data-theme',t);if(d[t]){r.classList.add('dark');}r.style.colorScheme=d[t]?'dark':'light';var s=localStorage.getItem('meraki-style');if(s==='notebook'){r.classList.add('style-notebook');}}catch(e){}})();`,
           }}
         />
       </head>

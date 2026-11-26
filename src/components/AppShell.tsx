@@ -260,9 +260,9 @@ export function AppShell({
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/" className="mb-8 flex items-center gap-2 px-2">
           <GraduationCap className="size-6 text-sidebar-primary" />
-          <span className="font-display text-lg font-semibold tracking-tight">Meraki Education</span>
+          <span className="notebook-heading font-display text-lg font-semibold tracking-tight">Meraki Education</span>
         </Link>
-        <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1">
+        <nav aria-label="Main navigation" className="notebook-nav flex flex-1 flex-col gap-1">
           {navGroups.map((group) => (
             <div key={group.label} className={cn(staffNavigation && "mb-3 last:mb-0")}>
               {group.label ? <h2 className="mb-1 px-3 text-xs font-medium text-sidebar-foreground/60">{group.label}</h2> : null}
@@ -380,7 +380,7 @@ export function AppShell({
                 </BreadcrumbList>
               </Breadcrumb>
             ) : null}
-            <h1 className={cn("break-words text-2xl font-semibold", !breadcrumbContext && "notebook-heading")}>{title}</h1>
+            <h1 className="notebook-heading break-words text-2xl font-semibold">{title}</h1>
             {description ? (
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             ) : null}
@@ -437,16 +437,19 @@ export function AppShell({
           </div>
         </header>
 
-        <nav aria-label="Mobile navigation" className={cn("gap-1 border-b border-border bg-card px-4 py-2 lg:hidden", desktopReview && (primaryRole === "student" || primaryRole === "parent") ? "grid min-w-0 grid-cols-2 sm:grid-cols-3" : "flex overflow-x-auto")}>
-          {items.map((item) => (
+        <nav aria-label="Mobile navigation" className={cn("notebook-nav gap-1 border-b border-border bg-card px-4 py-2 lg:hidden", desktopReview && (primaryRole === "student" || primaryRole === "parent") ? "grid min-w-0 grid-cols-2 sm:grid-cols-3" : "flex overflow-x-auto")}>
+          {items.map((item) => {
+            const active = pathname === item.to || pathname.startsWith(item.to + "/");
+            return (
             <Link
               key={item.to}
               to={item.to}
               onClick={item.to === "/wellbeing" ? markWellbeingSeen : undefined}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-11 min-w-0 items-center rounded-md px-3 py-1.5 text-sm",
                 desktopReview && (primaryRole === "student" || primaryRole === "parent") ? "break-words [overflow-wrap:anywhere]" : "whitespace-nowrap",
-                pathname.startsWith(item.to)
+                active
                   ? "bg-secondary font-medium text-secondary-foreground"
                   : "text-muted-foreground",
               )}
@@ -454,7 +457,8 @@ export function AppShell({
               {item.label}
               {item.to === "/wellbeing" ? <WellbeingBadge count={wellbeingNew} /> : null}
             </Link>
-          ))}
+            );
+          })}
         </nav>
 
         <main id="main-content" tabIndex={-1} className={cn("notebook-workspace min-w-0 flex-1 px-4 py-6 sm:px-6 focus:outline-none", desktopReview && "mx-auto w-full max-w-6xl")}>

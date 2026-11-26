@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds } from "@/lib/query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,7 +37,7 @@ function ModerationPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const auditQuery = useQuery({
     queryKey: ["moderation-audit", user?.id, isAdmin],
     enabled: isAdmin,
     queryFn: async () => {
@@ -51,17 +53,21 @@ function ModerationPage() {
       );
       const discIds = [...new Set(rows.map((r) => r.discussion_id).filter(Boolean))] as string[];
       const people = [...new Set(rows.flatMap((r) => [r.author_id, r.acted_by]).filter(Boolean))] as string[];
-      const [{ data: discs }, { data: profs }] = await Promise.all([
+      const [discs, profs] = await Promise.all([
         discIds.length
-          ? supabase.from("discussions").select("id, title, class_id, classes(name)").in("id", discIds)
-          : Promise.resolve({ data: [] as never[] }),
+          ? fetchByIds(discIds, (ids, from, to) =>
+              supabase.from("discussions").select("id, title, class_id, classes(name)").in("id", ids).order("id").range(from, to),
+            )
+          : Promise.resolve([]),
         people.length
-          ? supabase.from("profiles").select("id, full_name").in("id", people)
-          : Promise.resolve({ data: [] as never[] }),
+          ? fetchByIds(people, (ids, from, to) =>
+              supabase.from("profiles").select("id, full_name").in("id", ids).order("id").range(from, to),
+            )
+          : Promise.resolve([]),
       ]);
-      const names = new Map((profs ?? []).map((p: { id: string; full_name: string }) => [p.id, p.full_name]));
+      const names = new Map(profs.map((p: { id: string; full_name: string }) => [p.id, p.full_name]));
       const dmap = new Map(
-        (discs ?? []).map((d: { id: string; title: string; class_id: string; classes: { name: string } | null }) => [d.id, d]),
+        discs.map((d: { id: string; title: string; class_id: string; classes: { name: string } | null }) => [d.id, d]),
       );
       return rows.map((r) => {
         const d = r.discussion_id ? dmap.get(r.discussion_id) : undefined;
@@ -77,7 +83,8 @@ function ModerationPage() {
     },
   });
 
-  const rows = data ?? [];
+  const rows = auditQuery.data ?? [];
+  const isLoading = auditQuery.isPending;
   const classes = useMemo(() => {
     const m = new Map<string, string>();
     for (const r of rows) if (r.classId) m.set(r.classId, r.className);
@@ -115,13 +122,15 @@ function ModerationPage() {
       </div>
       <p className="mt-4 text-xs text-muted-foreground">{shown.length} of {rows.length} removed items</p>
       <div className="mt-3 space-y-3">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+        {auditQuery.isError ? (
+          <LoadError label="Removed posts couldn't be loaded." onRetry={() => void auditQuery.refetch()} />
+        ) : isLoading ? (
+          <NotebookLoading className="text-sm text-muted-foreground">Loading removed posts…</NotebookLoading>
         ) : shown.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No removed posts match these filters.</p>
+          <NotebookEmpty className="text-sm text-muted-foreground">No removed posts match these filters.</NotebookEmpty>
         ) : (
           shown.map((r) => (
-            <article key={r.id} className="min-w-0 rounded-md border border-border bg-card p-4 text-sm">
+            <article key={r.id} className="notebook-card min-w-0 rounded-md border border-border bg-card p-4 text-sm">
               <p className="font-medium [overflow-wrap:anywhere]">
                 {r.author} <span className="font-normal text-muted-foreground">· {r.parent_id ? "Reply" : "Main post"} · {r.className} · {r.title}</span>
               </p>

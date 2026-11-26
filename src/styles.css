@@ -328,7 +328,7 @@
 .dark .sketch-dark { display: initial; }
 .style-notebook .notebook-grade { position: relative; display: inline-block; }
 .notebook-grade > .sketch { inset: -0.3rem -0.4rem; width: calc(100% + 0.8rem); height: calc(100% + 0.6rem); }
-.style-notebook .notebook-heading { font-family: var(--font-hand); letter-spacing: 0; }
+.style-notebook :is(h1, h2, h3, h4, .notebook-heading) { font-family: var(--font-hand); letter-spacing: 0; }
 .style-notebook .notebook-month { position: relative; }
 .notebook-month .sketch { top: auto; bottom: -0.45rem; height: 0.5rem; }
 .style-notebook .notebook-day-number { position: relative; display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; }
@@ -337,13 +337,19 @@
 .style-notebook .notebook-day[aria-current="date"] .notebook-day-number { background-color: var(--sketch-today-bg); }
 .style-notebook .notebook-day > .sketch-box { inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
 .style-notebook .notebook-day-meta { position: relative; background-color: var(--card); border-radius: 2px; }
-.style-notebook .notebook-workspace :is(.panel, .notebook-card) {
+.style-notebook :is(.panel, .notebook-card) {
   border-color: var(--sketch-grid);
   border-radius: 3px 6px 4px 5px;
   box-shadow: var(--notebook-paper-shadow);
 }
-.style-notebook .notebook-workspace :is(thead, .divide-y > :not(:last-child)) { border-color: var(--sketch-grid); }
-.style-notebook .notebook-workspace :is(button[aria-pressed="true"], [role="tab"][data-state="active"]) { box-shadow: var(--notebook-selected-shadow); }
+.style-notebook :is(thead, .divide-y > :not(:last-child)) { border-color: var(--sketch-grid); }
+.style-notebook :is(a[aria-current="page"], button[aria-pressed="true"], [role="tab"][data-state="active"]) {
+  text-decoration-line: underline;
+  text-decoration-color: var(--sketch-ink-blue);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25rem;
+}
+.style-notebook .notebook-nav a[aria-current="page"] { text-decoration-color: var(--sidebar-primary); }
 .style-notebook .notebook-paper {
   position: relative;
   margin-top: 1rem;
@@ -384,7 +390,7 @@
   .style-notebook :is(.sketch, .notebook-empty-mark, .notebook-completion, .notebook-attendance) { display: none; }
   .style-notebook .notebook-paper::before { display: none; }
   .style-notebook .notebook-paper { box-shadow: none; }
-  .style-notebook .notebook-heading { font-family: var(--font-display); }
+  .style-notebook :is(h1, h2, h3, h4, .notebook-heading) { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 @media (prefers-reduced-motion: reduce) {
   .style-notebook *, .style-notebook *::before, .style-notebook *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

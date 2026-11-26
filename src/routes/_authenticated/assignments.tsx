@@ -169,7 +169,7 @@ function AssignmentsHubPage() {
     ),
   });
   const grades = gradesQuery.data ?? [];
-  const hubFailed = enrollmentsQuery.isError || assignmentsQuery.isError || submissionsQuery.isError || gradesQuery.isError;
+  const hubFailed = enrollmentsQuery.isError || assignmentsQuery.isError || submissionsQuery.isError || gradesQuery.isError || (previewingStudent && previewScope.scopeError);
   const hubLoading =
     (studentIds.length > 0 && enrollmentsQuery.isPending) ||
     (classIds.length > 0 && assignmentsQuery.isPending) ||

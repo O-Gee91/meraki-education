@@ -5,9 +5,23 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import path from "node:path";
+import { createRequire } from "node:module";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { loadEnv } from "vite";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
+
+const require = createRequire(import.meta.url);
+
+/** htmlparser2 imports entities 7 subpaths. The entities 4 pin must not swallow them. */
+function entitiesSubpath(subpath: "decode" | "escape") {
+  try {
+    return require.resolve(`entities/${subpath}`, {
+      paths: [path.resolve(import.meta.dirname, "node_modules/htmlparser2")],
+    });
+  } catch {
+    return path.resolve(import.meta.dirname, "node_modules/entities/lib", `${subpath}.js`);
+  }
+}
 
 // Server-side code (email routes) needs non-VITE_ env vars in process.env.
 const serverEnv = loadEnv(process.env["NODE_ENV"] ?? "development", process.cwd(), "");
@@ -23,6 +37,8 @@ export default defineConfig({
     plugins: [mcpPlugin()],
     resolve: {
       alias: {
+        "entities/decode": entitiesSubpath("decode"),
+        "entities/escape": entitiesSubpath("escape"),
         "entities/lib/decode.js": path.resolve(
           import.meta.dirname,
           "node_modules/entities/lib/decode.js",
