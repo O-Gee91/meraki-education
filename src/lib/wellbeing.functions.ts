@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAll, fetchByIds, fetchChunks, mergeChunkTops } from "@/lib/query";
 
 export type WellbeingResponse = {
   id: string;
@@ -38,10 +39,16 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
     const isTeacher = roles.has("teacher");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: allStudents, error: studentsError } = await supabaseAdmin
-      .from("students")
-      .select("id, first_name, last_name, grade_level, user_id, guardian_user_id");
-    if (studentsError) throw new Error(`Could not load students: ${studentsError.message}`);
+    const allStudents = await fetchAll((from, to) =>
+      supabaseAdmin
+        .from("students")
+        .select("id, first_name, last_name, grade_level, user_id, guardian_user_id")
+        .order("id")
+        .range(from, to),
+    ).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "unknown error";
+      throw new Error(`Could not load students: ${message}`);
+    });
 
     let students = allStudents ?? [];
     if (!isAdmin && isTeacher) {
@@ -66,12 +73,18 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
       const classIds = teacherClasses.map((schoolClass) => schoolClass.id);
       let rosterStudentIds = new Set<string>();
       if (classIds.length > 0) {
-        const { data: enrollments, error: enrollmentsError } = await supabaseAdmin
-          .from("enrollments")
-          .select("student_id")
-          .in("class_id", classIds);
-        if (enrollmentsError) throw new Error(`Could not load class rosters: ${enrollmentsError.message}`);
-        rosterStudentIds = new Set((enrollments ?? []).map((enrollment) => enrollment.student_id));
+        const enrollments = await fetchByIds(classIds, (batch, from, to) =>
+          supabaseAdmin
+            .from("enrollments")
+            .select("student_id")
+            .in("class_id", batch)
+            .order("student_id")
+            .range(from, to),
+        ).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : "unknown error";
+          throw new Error(`Could not load class rosters: ${message}`);
+        });
+        rosterStudentIds = new Set(enrollments.map((enrollment) => enrollment.student_id));
       }
       students = students.filter(
         (student) => rosterStudentIds.has(student.id)
@@ -86,44 +99,56 @@ export const listWellbeingFeed = createServerFn({ method: "GET" })
     const studentIds = (students ?? []).map((student) => student.id);
     if (studentIds.length === 0) return [] satisfies WellbeingFeedItem[];
 
-    let checkinsQuery = supabaseAdmin
-      .from("checkins")
-      .select("id, student_id, mood, note, date, created_at")
-      .in("student_id", studentIds)
-      .order("created_at", { ascending: false })
-      .limit(1000);
-    if (input.date) checkinsQuery = checkinsQuery.eq("date", input.date);
-
-    const { data: checkins, error: checkinsError } = await checkinsQuery;
-    if (checkinsError) throw new Error(`Could not load check-ins: ${checkinsError.message}`);
-    if (!checkins?.length) return [] satisfies WellbeingFeedItem[];
+    const CHECKIN_CAP = 1000;
+    const checkinRows = await fetchChunks(studentIds, async (batch) => {
+      let checkinsQuery = supabaseAdmin
+        .from("checkins")
+        .select("id, student_id, mood, note, date, created_at")
+        .in("student_id", batch)
+        .order("created_at", { ascending: false })
+        .limit(CHECKIN_CAP);
+      if (input.date) checkinsQuery = checkinsQuery.eq("date", input.date);
+      const { data, error } = await checkinsQuery;
+      if (error) throw new Error(`Could not load check-ins: ${error.message}`);
+      return data ?? [];
+    });
+    const checkins = mergeChunkTops([checkinRows], CHECKIN_CAP, (a, b) => b.created_at.localeCompare(a.created_at));
+    if (!checkins.length) return [] satisfies WellbeingFeedItem[];
 
     const checkinIds = checkins.map((checkin) => checkin.id);
-    const { data: staffNotes, error: staffNotesError } = await supabaseAdmin
-      .from("checkin_staff_notes")
-      .select("id, checkin_id, note, created_by, created_at")
-      .in("checkin_id", checkinIds)
-      .order("created_at", { ascending: true });
-    if (staffNotesError) throw new Error(`Could not load teacher responses: ${staffNotesError.message}`);
+    const staffNotes = await fetchByIds(checkinIds, (batch, from, to) =>
+      supabaseAdmin
+        .from("checkin_staff_notes")
+        .select("id, checkin_id, note, created_by, created_at")
+        .in("checkin_id", batch)
+        .order("created_at", { ascending: true })
+        .order("id")
+        .range(from, to),
+    ).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "unknown error";
+      throw new Error(`Could not load teacher responses: ${message}`);
+    });
+    staffNotes.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 
     const responderIds = Array.from(
       new Set((staffNotes ?? []).flatMap((staffNote) => staffNote.created_by ? [staffNote.created_by] : [])),
     );
     const responderNames = new Map<string, string>();
     if (responderIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", responderIds);
-      if (profilesError) throw new Error(`Could not load responder names: ${profilesError.message}`);
-      for (const profile of profiles ?? []) responderNames.set(profile.id, profile.full_name);
+      const profiles = await fetchByIds(responderIds, (batch, from, to) =>
+        supabaseAdmin.from("profiles").select("id, full_name").in("id", batch).order("id").range(from, to),
+      ).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "unknown error";
+        throw new Error(`Could not load responder names: ${message}`);
+      });
+      for (const profile of profiles) responderNames.set(profile.id, profile.full_name);
     }
 
     const studentsById = new Map(
       (students ?? []).map((student) => [student.id, `${student.first_name} ${student.last_name}`]),
     );
     const responsesByCheckin = new Map<string, WellbeingResponse[]>();
-    for (const staffNote of staffNotes ?? []) {
+    for (const staffNote of staffNotes) {
       const list = responsesByCheckin.get(staffNote.checkin_id) ?? [];
       list.push({
         id: staffNote.id,

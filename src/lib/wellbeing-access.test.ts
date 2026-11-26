@@ -21,6 +21,8 @@ vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth:
 
 function query(rows: Record<string, unknown>[], error: { message: string } | null = null) {
   let filtered = rows;
+  let start = 0;
+  let end = Number.POSITIVE_INFINITY;
   const builder = {
     select: () => builder,
     eq: (field: string, value: unknown) => {
@@ -31,10 +33,19 @@ function query(rows: Record<string, unknown>[], error: { message: string } | nul
       filtered = filtered.filter((row) => values.includes(row[field]));
       return builder;
     },
+    gte: () => builder,
     order: () => builder,
-    limit: () => builder,
+    limit: (count: number) => {
+      end = Math.min(end, start + count);
+      return builder;
+    },
+    range: (from: number, to: number) => {
+      start = from;
+      end = to + 1;
+      return builder;
+    },
     maybeSingle: async () => ({ data: filtered[0] ?? null, error }),
-    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: filtered, error }).then(resolve),
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: filtered.slice(start, end), error }).then(resolve),
   };
   return builder;
 }

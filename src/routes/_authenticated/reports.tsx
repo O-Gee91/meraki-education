@@ -21,7 +21,7 @@ import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, gradeTone } from "@/lib/school";
 import { computeAverage, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
@@ -165,35 +165,41 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       if (!classId) throw new Error("Choose a class first");
       const klass = classes.find((c) => c.id === classId);
       const setup = parseGradingSetup(klass?.weights);
-      const [{ data: rawRoster, error: rosterError }, { data: assignments, error: aError }] =
-        await Promise.all([
+      const [rawRoster, assignments] = await Promise.all([
+        fetchAll((from, to) =>
           supabase
             .from("enrollments")
             .select("student_id, students(first_name, last_name, is_tester)")
-            .eq("class_id", classId),
-          supabase.from("assignments").select("id, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days").eq("class_id", classId),
-        ]);
-      if (rosterError) throw rosterError;
-      if (aError) throw aError;
+            .eq("class_id", classId)
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAll((from, to) =>
+          supabase
+            .from("assignments")
+            .select("id, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days")
+            .eq("class_id", classId)
+            .order("id")
+            .range(from, to),
+        ),
+      ]);
       // Demo/test accounts never receive report cards.
-      const roster = (rawRoster ?? []).filter((r) => !isTestStudent(r.students));
+      const roster = rawRoster.filter((r) => !isTestStudent(r.students));
       if (roster.length === 0) throw new Error("This class has no students yet");
-      const assignmentIds = (assignments ?? []).map((a) => a.id);
-      const grades = assignmentIds.length
-        ? await fetchAll((from, to) =>
-            supabase
-              .from("grades")
-              .select("student_id, assignment_id, points_earned, comment")
-              .in("assignment_id", assignmentIds)
-              .order("id")
-              .range(from, to),
-          )
-        : [];
+      const assignmentIds = assignments.map((a) => a.id);
+      const grades = await fetchByIds(assignmentIds, (batch, from, to) =>
+        supabase
+          .from("grades")
+          .select("student_id, assignment_id, points_earned, comment")
+          .in("assignment_id", batch)
+          .order("id")
+          .range(from, to),
+      );
 
       const rows = roster.map((r) => {
         const pct = computeAverage(
-          (assignments ?? []).map((assignment) => {
-            const grade = (grades ?? []).find((g) => g.student_id === r.student_id && g.assignment_id === assignment.id);
+          assignments.map((assignment) => {
+            const grade = grades.find((g) => g.student_id === r.student_id && g.assignment_id === assignment.id);
             return {
               category: assignment.category,
               pointsPossible: Number(assignment.points_possible),

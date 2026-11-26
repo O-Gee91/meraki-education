@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
  * A lapsed sign-in session drops requests down to the anonymous key, so the
  * database answers with "permission denied" instead of data. Rather than
  * leaving a half-empty page behind, send the person back to sign in.
+ *
+ * True when a Data API or server-function failure looks like that lapsed sign-in.
  */
-function looksLikeExpiredSession(error: unknown) {
+export function isExpiredSessionError(error: unknown) {
   const err = error as { code?: string; message?: string } | null;
   const code = err?.code ?? "";
   const message = (err?.message ?? "").toLowerCase();
@@ -14,7 +16,8 @@ function looksLikeExpiredSession(error: unknown) {
     code === "PGRST301" ||
     message.includes("permission denied") ||
     message.includes("jwt expired") ||
-    message.includes("invalid claim")
+    message.includes("invalid claim") ||
+    message.includes("unauthorized:")
   );
 }
 
@@ -22,7 +25,7 @@ let redirecting = false;
 
 export async function handlePossibleSessionExpiry(error: unknown) {
   if (typeof window === "undefined" || redirecting) return;
-  if (!looksLikeExpiredSession(error)) return;
+  if (!isExpiredSessionError(error)) return;
 
   // Only bail out when the session really is gone — a genuine permission
   // problem for a signed-in user must not log them out.

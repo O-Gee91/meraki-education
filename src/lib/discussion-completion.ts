@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchByIds } from "@/lib/query";
 import { meetsDiscussionCriteria } from "@/lib/discussion-state";
 
 /**
@@ -10,10 +10,10 @@ import { meetsDiscussionCriteria } from "@/lib/discussion-state";
  */
 export async function fetchDiscussionCompletions(assignmentIds: string[], studentIds?: string[]): Promise<Set<string>> {
   if (assignmentIds.length === 0) return new Set();
-  const discs = await fetchAll((from, to) => supabase
+  const discs = await fetchByIds(assignmentIds, (batch, from, to) => supabase
     .from("discussions")
     .select("id, thread_id, assignment_id, required_replies")
-    .in("assignment_id", assignmentIds)
+    .in("assignment_id", batch)
     .order("id")
     .range(from, to));
   const participation = await fetchDiscussionParticipation(discs, studentIds);
@@ -36,19 +36,19 @@ export async function fetchDiscussionParticipation(
   const done = new Set<string>();
   if (!discs.length) return done;
   const threadIds = [...new Set(discs.map((d) => d.thread_id ?? d.id))];
-  const posts = await fetchAll((from, to) =>
+  const posts = await fetchByIds(threadIds, (batch, from, to) =>
     supabase
       .from("discussion_posts")
       .select("discussion_id, author_id, parent_id")
-      .in("discussion_id", threadIds)
+      .in("discussion_id", batch)
       .is("deleted_at", null)
       .order("id")
       .range(from, to),
   );
   if (!posts?.length) return done;
   const authorIds = [...new Set(posts.map((p) => p.author_id))];
-  const students = await fetchAll((from, to) => {
-    let sq = supabase.from("students").select("id, user_id").in("user_id", authorIds);
+  const students = await fetchByIds(authorIds, (batch, from, to) => {
+    let sq = supabase.from("students").select("id, user_id").in("user_id", batch);
     if (studentIds?.length) sq = sq.in("id", studentIds);
     return sq.order("id").range(from, to);
   });

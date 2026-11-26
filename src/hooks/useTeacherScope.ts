@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchByIds } from "@/lib/query";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchCoTaughtClassIds } from "@/hooks/useCoTaughtClasses";
 
@@ -43,11 +44,14 @@ export function useTeacherScope() {
         return { classIds, studentIds: new Set<string>(), gradeLevels };
       }
 
-      const { data: enrollments, error: eErr } = await supabase
-        .from("enrollments")
-        .select("student_id, class_id")
-        .in("class_id", [...classIds]);
-      if (eErr) throw eErr;
+      const enrollments = await fetchByIds([...classIds], (batch, from, to) =>
+        supabase
+          .from("enrollments")
+          .select("student_id, class_id")
+          .in("class_id", batch)
+          .order("id")
+          .range(from, to),
+      );
 
       return {
         classIds,

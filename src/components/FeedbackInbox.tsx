@@ -9,6 +9,7 @@ import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { listMyFeedback, type FeedbackItem } from "@/lib/feedback.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { feedbackKey, READ_REUSE_MS } from "@/lib/api-query-policy";
+import { LoadError } from "@/components/LoadError";
 
 const SEEN_KEY = "meraki.feedback-seen";
 
@@ -52,7 +53,7 @@ export function useUnreadFeedback(items: FeedbackItem[]) {
 
 export function FeedbackInbox({ classId, desktopReview = false }: { classId?: string; desktopReview?: boolean }) {
   const previewStudentId = useStudentPreviewId();
-  const { data = [], isLoading } = useMyFeedback(true, previewStudentId);
+  const { data = [], isLoading, isError, refetch } = useMyFeedback(true, previewStudentId);
   const items = classId ? data.filter((i) => i.classId === classId) : data;
   const { unread, seenAt, markSeen } = useUnreadFeedback(items);
   const [expanded, setExpanded] = useState(false);
@@ -78,6 +79,8 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
 
       {isLoading ? (
         <p className="mt-4 text-sm text-muted-foreground">Loading your feedback…</p>
+      ) : isError ? (
+        <LoadError label="Feedback couldn't be loaded. Try again in a moment." onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           No written feedback yet — it will appear here as soon as a teacher comments on your work.

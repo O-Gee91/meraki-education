@@ -17,7 +17,8 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -303,6 +304,7 @@ function ClassDetailPage() {
   });
 
   const assignmentIds = assignments.map((a) => a.id);
+  const assignmentKey = [...assignmentIds].sort().join(",");
   const gradebookCategoryCounts = useMemo(
     () =>
       assignments.reduce<Record<string, number>>((counts, assignment) => {
@@ -311,20 +313,19 @@ function ClassDetailPage() {
       }, {}),
     [assignments],
   );
-  const { data: allGrades = [] } = useQuery({
-    queryKey: ["grades", classId, assignmentIds.length],
+  const gradesQuery = useQuery({
+    queryKey: ["grades", classId, assignmentKey],
     enabled: assignmentIds.length > 0,
-    queryFn: async () => {
-      return fetchAll((from, to) =>
-        supabase
-          .from("grades")
-          .select("id, assignment_id, student_id, points_earned, comment, is_draft, posted_at, updated_at")
-          .in("assignment_id", assignmentIds)
-          .order("id")
-          .range(from, to),
-      );
-    },
+    queryFn: () => fetchByIds(assignmentIds, (batch, from, to) =>
+      supabase
+        .from("grades")
+        .select("id, assignment_id, student_id, points_earned, comment, is_draft, posted_at, updated_at")
+        .in("assignment_id", batch)
+        .order("id")
+        .range(from, to),
+    ),
   });
+  const allGrades = gradesQuery.data ?? [];
   // Students and guardians only ever see posted grades.
   const grades = previewing
     ? allGrades.filter((g) => g.student_id === testerId && !g.is_draft)
@@ -335,22 +336,26 @@ function ClassDetailPage() {
   const gradeFor = (studentId: string, assignmentId: string) =>
     grades.find((g) => g.student_id === studentId && g.assignment_id === assignmentId);
 
-  const { data: gradebookSubmissions = [] } = useQuery({
-    queryKey: ["gradebook-submissions", classId, assignmentIds.length],
+  const submissionsQuery = useQuery({
+    queryKey: ["gradebook-submissions", classId, assignmentKey],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const data = await fetchAll((from, to) =>
+      const data = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
           .from("assignment_submissions")
           .select("assignment_id, student_id")
           .in("status", ["submitted", "collected", "returned"])
-          .in("assignment_id", assignmentIds)
+          .in("assignment_id", batch)
           .order("id")
           .range(from, to),
       );
       return withDiscussionSubmissions(data, assignmentIds);
     },
   });
+  const gradebookSubmissions = useMemo(() => submissionsQuery.data ?? [], [submissionsQuery.data]);
+  const needsGradeReads = assignmentIds.length > 0;
+  const gradebookFailed = needsGradeReads && (gradesQuery.isError || submissionsQuery.isError);
+  const gradebookLoading = needsGradeReads && !gradebookFailed && (gradesQuery.isPending || submissionsQuery.isPending);
   const submittedKeys = useMemo(
     () => new Set(gradebookSubmissions.map((s) => `${s.student_id}:${s.assignment_id}`)),
     [gradebookSubmissions],
@@ -732,6 +737,18 @@ function ClassDetailPage() {
 
 
         <TabsContent value="gradebook">
+          {gradebookFailed ? (
+            <LoadError
+              label="Grades couldn't be loaded. Scores stay hidden until this succeeds, so nothing here is treated as missing."
+              onRetry={() => {
+                void gradesQuery.refetch();
+                void submissionsQuery.refetch();
+              }}
+            />
+          ) : gradebookLoading ? (
+            <p className="mt-6 text-sm text-muted-foreground">Loading the gradebook…</p>
+          ) : (
+          <>
           {isStaff && <Tabs value={gradebookView} onValueChange={setGradebookView} className="mt-4">
             <TabsList aria-label="Gradebook view"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="grid">Grid</TabsTrigger></TabsList>
           </Tabs>}
@@ -1042,6 +1059,8 @@ function ClassDetailPage() {
                droppedAt={gradebookEnrollmentFor(gradebookReportStudentId ?? "")?.droppedAt ?? null}
              />
            )}
+          </>
+          )}
           {!isStaff && <FeedbackInbox classId={classId} />}
         </TabsContent>
 
@@ -1056,6 +1075,17 @@ function ClassDetailPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="assignments">
+              {gradebookFailed ? (
+                <LoadError
+                  label="Grades couldn't be loaded. Scores stay hidden until this succeeds, so nothing here is treated as missing."
+                  onRetry={() => {
+                    void gradesQuery.refetch();
+                    void submissionsQuery.refetch();
+                  }}
+                />
+              ) : gradebookLoading ? (
+                <p className="mt-6 text-sm text-muted-foreground">Loading coursework…</p>
+              ) : (
               <AssignmentsTab
                 classId={classId}
                 isStaff={isStaff}
@@ -1070,6 +1100,7 @@ function ClassDetailPage() {
                 ungradedCounts={courseworkUngraded}
                 attentionRequest={isStaff ? courseworkAttention : null}
               />
+              )}
             </TabsContent>
             <TabsContent value="online">
               <AssessmentsTab

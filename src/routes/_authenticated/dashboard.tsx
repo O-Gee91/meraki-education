@@ -17,6 +17,8 @@ import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { READ_REUSE_MS } from "@/lib/api-query-policy";
 
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll, fetchByIds } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
 import { formatDate, gradeTone, percent } from "@/lib/school";
 import {
   computeAverage,
@@ -65,28 +67,28 @@ function DashboardPage() {
     queryKey: ["classes", "dashboard", user?.id, primaryRole, previewingStudent],
     enabled: Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: () => fetchAll((from, to) =>
+      supabase
         .from("classes")
         .select("id, name, subject, period, room, term, grade_level, weights")
-        .order("period");
-      if (error) throw error;
-      return data;
-    },
+        .order("period")
+        .order("id")
+        .range(from, to),
+    ),
   });
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ["students", "dashboard", user?.id, primaryRole, previewingStudent],
     enabled: Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: () => fetchAll((from, to) =>
+      supabase
         .from("students")
         .select("id, first_name, last_name, grade_level")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+        .order("last_name")
+        .order("id")
+        .range(from, to),
+    ),
   });
 
   // Working as a teacher narrows the overview to their own classes and rosters.
@@ -109,24 +111,25 @@ function DashboardPage() {
     },
   });
 
-  const { data: grades = [] } = useQuery({
+  const gradesQuery = useQuery({
     queryKey: ["my-grades", user?.id, primaryRole, previewingStudent, selfIds],
     enabled: !loading && !isStaff && selfIds.length > 0,
     staleTime: READ_REUSE_MS,
-    queryFn: async () => {
+    queryFn: () => fetchByIds(selfIds, (batch, from, to) =>
       // Scoped explicitly: staff previewing as a student could otherwise read every grade.
-      const { data, error } = await supabase
+      supabase
         .from("grades")
         .select(
           "id, points_earned, comment, updated_at, assignments(id, title, category, points_possible, due_date, class_id, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days)",
         )
-        .in("student_id", selfIds)
+        .in("student_id", batch)
         .eq("is_draft", false)
         .order("updated_at", { ascending: false })
-      if (error) throw error;
-      return data;
-    },
+        .order("id", { ascending: false })
+        .range(from, to),
+    ),
   });
+  const grades = gradesQuery.data ?? [];
 
 
   const { data: attendance = [] } = useQuery({
@@ -308,8 +311,8 @@ function DashboardPage() {
           <Stat
             icon={CalendarCheck}
             label="Overall grade"
-            value={overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
-            tone={overall == null ? undefined : gradeTone(overall)}
+            value={gradesQuery.isError || overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
+            tone={gradesQuery.isError || overall == null ? undefined : gradeTone(overall)}
           />
         )}
         {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
@@ -378,8 +381,8 @@ function DashboardPage() {
           <Stat
             icon={CalendarCheck}
             label="Overall grade"
-            value={overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
-            tone={isStaff && overall != null ? gradeTone(overall) : undefined}
+            value={gradesQuery.isError || overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
+            tone={isStaff && !gradesQuery.isError && overall != null ? gradeTone(overall) : undefined}
           />
         )}
         {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
@@ -401,7 +404,12 @@ function DashboardPage() {
       {!isStaff && (
         <section className="border-t border-border pt-6">
           <h2 className="text-lg font-semibold">Recent scores</h2>
-          {recentGrades.length === 0 ? (
+          {gradesQuery.isError ? (
+            <LoadError
+              label="Scores couldn't be loaded. The overall grade stays hidden until this succeeds."
+              onRetry={() => void gradesQuery.refetch()}
+            />
+          ) : recentGrades.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
           ) : (
             <table className="mt-4 w-full table-fixed text-sm">
@@ -587,63 +595,79 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
   const { classIds: scopeIds } = useTeacherScope();
   const scopeKey = previewingStudent ? [...(scopeIds ?? [])].sort().join(",") : "";
 
-  const { data: missingCount = 0 } = useQuery({
+  const missingQuery = useQuery({
     queryKey: ["missing-work", me?.id, today, scopeKey],
     enabled: !!me,
     queryFn: async () => {
-      const { data: enrols, error: eErr } = await supabase
-        .from("enrollments")
-        .select("class_id, created_at")
-        .eq("student_id", me!.id);
-      if (eErr) throw eErr;
-      let classIds = (enrols ?? []).map((e) => e.class_id);
+      const enrols = await fetchAll((from, to) =>
+        supabase
+          .from("enrollments")
+          .select("class_id, created_at")
+          .eq("student_id", me!.id)
+          .order("id")
+          .range(from, to),
+      );
+      let classIds = enrols.map((e) => e.class_id);
       if (previewingStudent) classIds = classIds.filter((id) => scopeIds?.has(id));
       if (classIds.length === 0) return 0;
       // Same rule as Gradebook, Pulse and the Assignments hub.
-      const { data: due, error: aErr } = await supabase
-        .from("assignments")
-        .select("id, class_id, due_date, created_at, status")
-        .in("class_id", classIds)
-        .eq("status", "published");
-      if (aErr) throw aErr;
-      const list = due ?? [];
+      const list = await fetchByIds(classIds, (batch, from, to) =>
+        supabase
+          .from("assignments")
+          .select("id, class_id, due_date, created_at, status")
+          .in("class_id", batch)
+          .eq("status", "published")
+          .order("id")
+          .range(from, to),
+      );
       const ids = list.map((a) => a.id);
       if (ids.length === 0) return 0;
-      const [{ data: subs, error: sErr }, { data: graded, error: gErr }] = await Promise.all([
-        supabase
-          .from("assignment_submissions")
-          .select("assignment_id")
-          .eq("student_id", me!.id)
-          .in("status", ["submitted", "collected", "returned"])
-          .in("assignment_id", ids),
-        supabase
-          .from("grades")
-          .select("assignment_id, points_earned, comment")
-          .eq("student_id", me!.id)
-          .eq("is_draft", false)
-          .in("assignment_id", ids),
+      const [subs, graded] = await Promise.all([
+        fetchByIds(ids, (batch, from, to) =>
+          supabase
+            .from("assignment_submissions")
+            .select("assignment_id")
+            .eq("student_id", me!.id)
+            .in("status", ["submitted", "collected", "returned"])
+            .in("assignment_id", batch)
+            .order("id")
+            .range(from, to),
+        ),
+        fetchByIds(ids, (batch, from, to) =>
+          supabase
+            .from("grades")
+            .select("assignment_id, points_earned, comment")
+            .eq("student_id", me!.id)
+            .eq("is_draft", false)
+            .in("assignment_id", batch)
+            .order("id")
+            .range(from, to),
+        ),
       ]);
-      if (sErr) throw sErr;
-      if (gErr) throw gErr;
-      const submitted = new Set((subs ?? []).map((x) => x.assignment_id));
+      const submitted = new Set(subs.map((x) => x.assignment_id));
       for (const k of await fetchDiscussionCompletions(ids, [me!.id])) submitted.add(k.split(":")[1] ?? "");
       return list.filter((a) =>
         isMissingWork({
           assignment: a,
-          grade: (graded ?? []).find((g) => g.assignment_id === a.id),
+          grade: graded.find((g) => g.assignment_id === a.id),
           submitted: submitted.has(a.id),
           today,
-          enrolledAt: (enrols ?? []).find((e) => e.class_id === a.class_id)?.created_at ?? null,
+          enrolledAt: enrols.find((e) => e.class_id === a.class_id)?.created_at ?? null,
         }),
       ).length;
     },
   });
+  const missingCount = missingQuery.data;
 
   return (
     <section className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-border py-4 text-sm">
       <span>
         {label && <span className="font-medium">{label}</span>}
-        {missingCount > 0 ? (
+        {missingQuery.isPending ? (
+          "Checking missing work…"
+        ) : missingQuery.isError ? (
+          "Missing work couldn't be checked. This is not the same as being caught up."
+        ) : missingCount && missingCount > 0 ? (
           <>
             <span className="font-semibold text-warning">{missingCount}</span>{" "}
             {missingCount === 1 ? "assignment is" : "assignments are"} missing.
@@ -652,9 +676,13 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
           "No missing work — all caught up."
         )}
       </span>
-      <Button asChild variant="ghost" className="h-11">
-        <Link to="/assignments">View assignments</Link>
-      </Button>
+      {missingQuery.isError ? (
+        <Button type="button" variant="outline" className="h-11" onClick={() => void missingQuery.refetch()}>Try again</Button>
+      ) : (
+        <Button asChild variant="ghost" className="h-11">
+          <Link to="/assignments">View assignments</Link>
+        </Button>
+      )}
     </section>
   );
 }

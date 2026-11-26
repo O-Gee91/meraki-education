@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, percent } from "@/lib/school";
 import { computeAverage, isAutoGradeComment, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
@@ -139,24 +139,32 @@ export function PrintTemplates() {
 
     if (template === "report_card") {
       const students = await roster();
-      const [{ data: cards }, { data: assignments }] = await Promise.all([
-        supabase
-          .from("report_cards")
-          .select("student_id, term, grade_pct, letter, comment")
-          .eq("class_id", classId),
-        supabase.from("assignments").select("id, points_possible, category, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days").eq("class_id", classId),
+      const [cards, assignments] = await Promise.all([
+        fetchAll((from, to) =>
+          supabase
+            .from("report_cards")
+            .select("student_id, term, grade_pct, letter, comment")
+            .eq("class_id", classId)
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAll((from, to) =>
+          supabase
+            .from("assignments")
+            .select("id, points_possible, category, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days")
+            .eq("class_id", classId)
+            .order("id")
+            .range(from, to),
+        ),
       ]);
-      const ids = (assignments ?? []).map((a) => a.id);
-      const grades = ids.length
-        ? await fetchAll((from, to) =>
-            supabase
-              .from("grades")
-              .select("student_id, assignment_id, points_earned, comment")
-              .in("assignment_id", ids)
-              .order("id")
-              .range(from, to),
-          )
-        : [];
+      const grades = await fetchByIds(assignments.map((a) => a.id), (batch, from, to) =>
+        supabase
+          .from("grades")
+          .select("student_id, assignment_id, points_earned, comment")
+          .in("assignment_id", batch)
+          .order("id")
+          .range(from, to),
+      );
 
       const pages = students.map((s) => {
         const card = (cards ?? []).find((c) => c.student_id === s.id);
@@ -216,22 +224,23 @@ export function PrintTemplates() {
 
     if (template === "progress_report") {
       const students = await roster();
-      const { data: assignments } = await supabase
-        .from("assignments")
-        .select("id, title, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days")
-        .eq("class_id", classId)
-        .order("due_date", { ascending: true });
-      const ids = (assignments ?? []).map((a) => a.id);
-      const grades = ids.length
-        ? await fetchAll((from, to) =>
-            supabase
-              .from("grades")
-              .select("student_id, assignment_id, points_earned, comment")
-              .in("assignment_id", ids)
-              .order("id")
-              .range(from, to),
-          )
-        : [];
+      const assignments = await fetchAll((from, to) =>
+        supabase
+          .from("assignments")
+          .select("id, title, category, points_possible, due_date, late_penalty_enabled, late_penalty_mode, late_penalty_per_day, late_penalty_zero_after_days")
+          .eq("class_id", classId)
+          .order("due_date", { ascending: true })
+          .order("id")
+          .range(from, to),
+      );
+      const grades = await fetchByIds(assignments.map((a) => a.id), (batch, from, to) =>
+        supabase
+          .from("grades")
+          .select("student_id, assignment_id, points_earned, comment")
+          .in("assignment_id", batch)
+          .order("id")
+          .range(from, to),
+      );
 
       const pages = students.map((s) => {
         const rows = (assignments ?? []).map((a) => {

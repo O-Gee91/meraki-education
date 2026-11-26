@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunk, fetchAll, fetchPage, fetchChunks } from "./query";
+import { chunk, fetchAll, fetchPage, fetchChunks, fetchByIds, mergeChunkTops } from "./query";
 import { applyCourseworkFilter } from "./coursework-filters";
 
 const source = Array.from({ length: 2345 }, (_, i) => i);
@@ -29,6 +29,33 @@ describe("fetchPage", () => {
 
 it("chunk splits id lists", () => {
   expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+});
+
+it("loads every id across chunks and pages", async () => {
+  const batches: string[][] = [];
+  const rows = await fetchByIds(
+    ["a", "a", "b", "c", "d", "e"],
+    (batch, from, to) => {
+      batches.push(batch);
+      return Promise.resolve({ data: batch.slice(from, to + 1), error: null });
+    },
+    { chunkSize: 2, pageSize: 1 },
+  );
+  expect(rows).toEqual(["a", "b", "c", "d", "e"]);
+  expect(batches.every((batch) => batch.length <= 2)).toBe(true);
+  await expect(fetchByIds([], () => Promise.resolve({ data: [], error: null }))).resolves.toEqual([]);
+  await expect(fetchByIds(["a"], () => Promise.resolve({ data: null, error: { message: "stopped" } }))).rejects.toThrow("stopped");
+});
+
+it("keeps the global newest rows from each chunk's own newest page", () => {
+  const rows = Array.from({ length: 20 }, (_, i) => ({ id: String(i).padStart(2, "0"), t: i, chunk: i % 3 }));
+  const limit = 5;
+  const groups = [0, 1, 2].map((chunkId) =>
+    rows.filter((row) => row.chunk === chunkId).sort((a, b) => b.t - a.t).slice(0, limit),
+  );
+  const merged = mergeChunkTops(groups, limit, (a, b) => b.t - a.t || b.id.localeCompare(a.id));
+  const truth = [...rows].sort((a, b) => b.t - a.t).slice(0, limit);
+  expect(merged.map((row) => row.id)).toEqual(truth.map((row) => row.id));
 });
 
 it("loads every ID chunk with at most three requests running together", async () => {
