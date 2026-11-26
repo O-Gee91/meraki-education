@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ProvisionEntry } from "./roster.server";
+import { provisionAccountsInput } from "./account-input";
 
 export const provisionStudentAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { entries: ProvisionEntry[] }) => input)
+  .inputValidator((input: { entries: ProvisionEntry[] }) => { provisionAccountsInput.parse(input); return input; })
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
     if (!isStaff) throw new Error("Only teachers and admins can create student accounts");

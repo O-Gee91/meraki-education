@@ -42,3 +42,21 @@ Code-read coverage:
 Verification: 194 tests pass, including real server handlers with a mocked email transport and account lookup for both assignments and assessments: verified destinations, contact-only exclusion, unverified-account exclusion, lookup failures, drafts, tester exclusion and permission checks. Preview build is OK. No real grade/coursework email was sent in this follow-up; live recipient delivery was not exercised.
 
 Only lov_finding_3257610908c2fd28 and lov_finding_b34ad7554855bd24 are updated in this follow-up. Other scan statuses, permissions and account linking are untouched.
+
+## Six selected account/ownership findings — November 26, 2026
+
+Rule: teachers can help students in their own classes without attaching an unrelated existing account, replacing an established account link, or taking another teacher's class; administrator access cannot be self-claimed.
+
+| Code-read surface | Result |
+|---|---|
+| UnlinkedAccounts, getUnlinkedAccounts, listUnlinkedAccounts, linkSelfRegisteredAccount, linkAccountToStudent | Picker and write boundary require matching non-staff pending accounts; both student and guardian links exclude already-linked identities. Empty destination links are checked at the write. Existing teacher student/class scope remains. |
+| CreateLogins and ClassLogins, provisionStudentAccounts, provisionRosterAccounts | Both flow through the same validated and student-scoped handler. Stored account links authorize reuse; caller IDs cannot redirect it. Contact email no longer resolves an existing identity; existing unlinked accounts use the pending-account flow instead. New username logins and linked-account password reissues remain supported. |
+| ResetAccess, resetStudentAccess, resetAccountAccess | Strict identifier validation precedes querying; separate equality lookups replace filter interpolation. Student scope, staff-account protection and administrator access remain. |
+| registerMyEmail, editable contact profile fields, roster email lookup | Contact registration stays available, but those fields cannot grant student-record access through provisioning. No email verification settings or past contacts changed. |
+| Dashboard SetupCard, claim_first_admin | Removed self-claim action and disabled function body and public execution grants. Two existing administrators remain unchanged. |
+| ClassesPage saveClass, CoTeachersPanel, classes update policy, guard_class_owner_change | Ordinary class editing and co-teacher management retained. New database trigger prevents a co-teacher from changing the primary teacher, including direct database requests; primary teachers and admins retain ownership management. |
+| Repository-wide callers of the three account server helpers and ownership writes | No separate background account-linking/reset job or alternate class-ownership writer found. No unrelated findings or data were changed. |
+
+All 214 regression tests pass, including 13 new account-security tests. Only the six selected findings were marked fixed.
+
+Verification: focused account, recovery, notification and wellbeing regression tests pass. Live database checks confirm public administrator-claim execution is revoked, the ownership trigger is installed and the two administrators are unchanged. Rollback-only identity tests are retained but cannot run through the managed connection: it cannot execute permission helpers or assume the authenticated role; both attempts rolled back all fixtures. Genuine browser restoration ended on /auth, so signed-in account actions remain unverified. No real student password, account link, contact, grade or enrollment was changed.

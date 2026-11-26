@@ -33,14 +33,6 @@ export type ProvisionedAccount = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function findUserIdByEmail(
-  admin: SupabaseClient<Database>,
-  email: string,
-): Promise<string | null> {
-  const { data } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
-  return data?.id ?? null;
-}
-
 async function findUserIdByUsername(
   admin: SupabaseClient<Database>,
   username: string,
@@ -108,6 +100,9 @@ export async function provisionRosterAccounts(
 
   for (const entry of entries.slice(0, 200)) {
     const name = `${entry.first_name} ${entry.last_name}`.trim();
+    const { data: student, error: studentError } = await admin.from("students")
+      .select("user_id, guardian_user_id").eq("id", entry.student_id).maybeSingle();
+    if (studentError || !student) throw new Error("Unable to verify student account links");
     const targets: Target[] = [];
 
     const studentUsername = normalizeUsername(entry.student_username ?? "");
@@ -118,7 +113,7 @@ export async function provisionRosterAccounts(
     if (studentUsername || studentEmail || (entry.reset_existing && entry.student_user_id))
       targets.push({
         role: "student",
-        existingUserId: entry.student_user_id ?? null,
+        existingUserId: student.user_id,
         username: studentUsername || null,
         email: studentUsername ? usernameToEmail(studentUsername) : studentEmail,
         contactEmail: studentEmail,
@@ -127,7 +122,7 @@ export async function provisionRosterAccounts(
     if (guardianUsername || guardianEmail || (entry.reset_existing && entry.guardian_user_id))
       targets.push({
         role: "parent",
-        existingUserId: entry.guardian_user_id ?? null,
+        existingUserId: student.guardian_user_id,
         username: guardianUsername || null,
         email: guardianUsername ? usernameToEmail(guardianUsername) : guardianEmail,
         contactEmail: guardianEmail,
@@ -162,6 +157,11 @@ export async function provisionRosterAccounts(
 
 
       let userId = target.existingUserId ?? null;
+      const submittedId = target.role === "student" ? entry.student_user_id : entry.guardian_user_id;
+      if (submittedId && submittedId !== userId) {
+        fail("account is not linked to this student");
+        continue;
+      }
       if (!userId && target.username) {
         const claimed = await claimFreeUsername(
           admin,
@@ -173,8 +173,9 @@ export async function provisionRosterAccounts(
         target.email = usernameToEmail(claimed.username);
         userId = claimed.userId;
       }
-      if (!userId && target.contactEmail)
-        userId = await findUserIdByEmail(admin, target.contactEmail);
+      // Never resolve an existing identity through editable contact email.
+      // New accounts are created here; existing unlinked accounts must use
+      // the explicit pending-account linking flow with its eligibility checks.
 
       if (userId && !target.username) {
         // Re-printing slips for an existing account — show its real sign-in details.
@@ -251,10 +252,6 @@ export async function provisionRosterAccounts(
           await admin.from("profiles").update({ email: null }).eq("id", userId);
         }
       } else {
-        if (target.contactEmail) {
-          // Keep the contact address current so notifications reach them.
-          await admin.from("profiles").update({ email: target.contactEmail }).eq("id", userId);
-        }
         if (entry.reset_existing) {
           // Only re-issue a password for the account already linked to this
           // student, never one found by email or supplied by the caller.
@@ -287,10 +284,15 @@ export async function provisionRosterAccounts(
               ...(target.contactEmail ? { guardian_email: target.contactEmail } : {}),
             };
 
-      const { error: linkError } = await admin
+      let linkQuery = admin
         .from("students")
         .update(update)
         .eq("id", entry.student_id);
+      const linkColumn = target.role === "student" ? "user_id" : "guardian_user_id";
+      linkQuery = target.existingUserId
+        ? linkQuery.eq(linkColumn, target.existingUserId)
+        : linkQuery.is(linkColumn, null);
+      const { data: linked, error: linkError } = await linkQuery.select("id").maybeSingle();
 
       results.push({
         student: name,
@@ -298,8 +300,8 @@ export async function provisionRosterAccounts(
         username: target.username,
         email: target.email,
         password,
-        status: linkError ? "failed" : status,
-        ...(linkError ? { detail: linkError.message } : {}),
+        status: linkError || !linked ? "failed" : status,
+        ...(linkError || !linked ? { detail: "Student account link changed; refresh the roster" } : {}),
       });
     }
   }

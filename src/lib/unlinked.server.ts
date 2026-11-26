@@ -68,7 +68,7 @@ export async function listUnlinkedAccounts(
   const candidates = roles.filter(
     (r) =>
       !staffIds.has(r.user_id) &&
-      (r.role === "student" ? !linkedStudents.has(r.user_id) : !linkedGuardians.has(r.user_id)),
+      !linkedStudents.has(r.user_id) && !linkedGuardians.has(r.user_id),
   );
   if (candidates.length === 0) return [];
 
@@ -109,6 +109,22 @@ export async function linkAccountToStudent(
   admin: SupabaseClient<Database>,
   input: LinkInput,
 ): Promise<{ student_id: string }> {
+  // Recheck the same eligibility as the pending-account picker at the write
+  // boundary; a submitted profile ID is not authority to replace a link.
+  const [roles, requests, studentLinks, guardianLinks] = await Promise.all([
+    admin.from("user_roles").select("role").eq("user_id", input.user_id),
+    admin.from("staff_access_requests").select("id").eq("user_id", input.user_id).neq("status", "denied").limit(1),
+    admin.from("students").select("id").eq("user_id", input.user_id).limit(1),
+    admin.from("students").select("id").eq("guardian_user_id", input.user_id).limit(1),
+  ]);
+  if ([roles, requests, studentLinks, guardianLinks].some((read) => read.error))
+    throw new Error("Unable to verify pending account");
+  const accountRoles = (roles.data ?? []).map((row) => row.role);
+  if (!accountRoles.includes(input.role) || accountRoles.includes("admin") || accountRoles.includes("teacher") || requests.data?.length)
+    throw new Error("Choose a pending student or guardian account with the matching role");
+  if (studentLinks.data?.length || guardianLinks.data?.length)
+    throw new Error("That account is already linked; ask an administrator to review it");
+
   const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("id, full_name, email")
@@ -128,10 +144,11 @@ export async function linkAccountToStudent(
       .from("students")
       .update(patch)
       .eq("id", input.student_id)
+      .is(input.role === "student" ? "user_id" : "guardian_user_id", null)
       .select("id")
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!data) throw new Error("Student record not found");
+    if (!data) throw new Error("Student not found or already has an account linked");
     studentId = data.id;
   } else {
     if (input.role === "parent")

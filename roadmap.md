@@ -1,5 +1,11 @@
 # Roadmap
 
+## Six selected security findings (Nov 26, 2026)
+- [x] Validate reset identifiers; restrict pending-account linking and prevent email-based account reuse
+- [x] Disable public first-admin claims and prevent co-teacher ownership changes; live definitions/grants verified, existing administrators unchanged
+- [x] Run all 214 regression tests and update only the six selected findings
+- [ ] Signed-in account-action and ownership walkthrough — restored owner session returns to /auth; managed database test connection cannot execute protected helpers or assume authenticated role
+
 ## Teacher class page simplification (Nov 26, 2026)
 - [x] Put the existing scoped snapshot above all teacher sections with attendance, grading, missing-work and wellbeing filters
 - [x] Preserve five navigation groups with secondary tools disclosed; retain Overview/Grid and simplify actions

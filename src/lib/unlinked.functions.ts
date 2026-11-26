@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { LinkInput } from "./unlinked.server";
+import { linkAccountInput } from "./account-input";
 
 export const getUnlinkedAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -14,7 +15,7 @@ export const getUnlinkedAccounts = createServerFn({ method: "POST" })
 
 export const linkSelfRegisteredAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: LinkInput) => input)
+  .inputValidator((input: LinkInput) => { linkAccountInput.parse(input); return input; })
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
     if (!isStaff) throw new Error("Only teachers and admins can link accounts");

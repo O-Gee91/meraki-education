@@ -295,6 +295,13 @@
       "when": 1795592731774,
       "tag": "0041_wellbeing_grade_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795656259907,
+      "tag": "0042_protect_admin_claim_and_class_ownership",
+      "breakpoints": true
     }
   ]
 }

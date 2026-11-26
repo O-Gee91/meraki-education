@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ResetInput } from "./accounts.server";
+import { resetAccountInput } from "./account-input";
 
 export const resetStudentAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: ResetInput) => input)
+  .inputValidator((input: ResetInput) => { resetAccountInput.parse(input); return input; })
   .handler(async ({ data, context }) => {
     const { data: isStaff } = await context.supabase.rpc("is_staff");
     if (!isStaff) throw new Error("Only teachers and admins can reset account access");
@@ -14,11 +15,12 @@ export const resetStudentAccess = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (!isAdmin) {
       // Teachers may only reset accounts linked to students they manage.
-      const { data: linked, error: linkErr } = await supabaseAdmin
-        .from("students")
-        .select("id")
-        .or(`user_id.eq.${data.user_id},guardian_user_id.eq.${data.user_id}`);
-      if (linkErr) throw new Error(linkErr.message);
+      const reads = await Promise.all([
+        supabaseAdmin.from("students").select("id").eq("user_id", data.user_id),
+        supabaseAdmin.from("students").select("id").eq("guardian_user_id", data.user_id),
+      ]);
+      if (reads.some((read) => read.error)) throw new Error("Unable to verify linked students");
+      const linked = reads.flatMap((read) => read.data ?? []);
       let allowed = false;
       for (const s of linked ?? []) {
         const { data: ok } = await context.supabase.rpc("can_manage_student", { _student_id: s.id });
