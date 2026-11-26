@@ -159,7 +159,6 @@ function ClassDetailPage() {
   const { useIds, toggle: toggleIds } = useRosterPrivacy();
   const [gradebookSort, setGradebookSort] = useStudentSort(`class-gradebook-${classId}`);
   const [gradebookSearch, setGradebookSearch] = useState("");
-  const [gradebookView, setGradebookView] = useState("overview");
   const [hideOverviewGrades, setHideOverviewGrades] = useState(false);
   const [assignmentPage, setAssignmentPage] = useState(0);
   // Fewer assignment columns on laptops/tablets so scores never get squeezed.
@@ -496,7 +495,7 @@ function ClassDetailPage() {
   const currentAssignmentPage = Math.min(assignmentPage, assignmentPageCount - 1);
   const pageAssignments = gradebookRows.slice(currentAssignmentPage * perPage, currentAssignmentPage * perPage + perPage);
 
-  const showOverview = isStaff && gradebookView === "overview";
+  const showOverview = isStaff;
   const overviewStudents = showOverview ? gradebookRoster.map((row) => ({
     id: row.student_id,
     name: studentLabel(row.students, useIds),
@@ -749,9 +748,6 @@ function ClassDetailPage() {
             <p className="mt-6 text-sm text-muted-foreground">Loading the gradebook…</p>
           ) : (
           <>
-          {isStaff && <Tabs value={gradebookView} onValueChange={setGradebookView} className="mt-4">
-            <TabsList aria-label="Gradebook view"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="grid">Grid</TabsTrigger></TabsList>
-          </Tabs>}
           {!isStaff && !showOverview && <PulseDashboard
             classId={classId}
             className={klass?.name ?? "this class"}
