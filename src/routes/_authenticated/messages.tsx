@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePagedLimit } from "@/lib/paged";
+import { ShowOlder } from "@/components/ShowOlder";
 import { Megaphone, Pencil, Send } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,16 +54,18 @@ function MessagesPage() {
   const [compose, setCompose] = useState({ recipient: "", subject: "", body: "" });
   const [post, setPost] = useState({ title: "", body: "", audience: "everyone" });
 
-  const { data: inbox = [] } = useQuery({
+  const inboxPage = usePagedLimit(150);
+  const { data: inbox = [], isFetching: inboxFetching } = useQuery({
     // Student view never shows the staff member's own private inbox.
-    queryKey: ["messages", user?.id],
+    queryKey: ["messages", user?.id, inboxPage.limit],
+    placeholderData: (prev) => prev,
     enabled: Boolean(user) && !previewingStudent,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
         .select("id, subject, body, created_at, read, read_at, sender_id, recipient_id")
         .order("created_at", { ascending: false })
-        .limit(150);
+        .limit(inboxPage.limit);
       if (error) throw error;
       return data;
     },
@@ -128,14 +132,16 @@ function MessagesPage() {
     document.getElementById("subject")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const { data: announcements = [] } = useQuery({
-    queryKey: ["announcements"],
+  const annPage = usePagedLimit(30);
+  const { data: announcements = [], isFetching: annFetching } = useQuery({
+    queryKey: ["announcements", annPage.limit],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
         .select("id, title, body, created_at, audience, author_id")
         .order("created_at", { ascending: false })
-        .limit(30);
+        .limit(annPage.limit);
       if (error) throw error;
       return data;
     },
@@ -471,6 +477,7 @@ function MessagesPage() {
                   );
                 })
               )}
+              <ShowOlder show={inboxPage.hasMore(inbox.length)} loading={inboxFetching} onClick={inboxPage.showMore} label="Show older messages" />
             </section>
           </div>
         </TabsContent>

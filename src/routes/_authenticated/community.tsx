@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePagedLimit } from "@/lib/paged";
+import { ShowOlder } from "@/components/ShowOlder";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -83,14 +85,16 @@ function CommunityPage() {
     },
   });
 
-  const { data: news = [] } = useQuery({
-    queryKey: ["news-river"],
+  const newsPage = usePagedLimit(10);
+  const { data: news = [], isFetching: newsFetching } = useQuery({
+    queryKey: ["news-river", newsPage.limit],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("announcements")
         .select("id, title, body, created_at")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(newsPage.limit);
       if (error) throw error;
       return data;
     },
@@ -292,6 +296,7 @@ function CommunityPage() {
               ))
             )}
           </div>
+          <ShowOlder show={newsPage.hasMore(news.length)} loading={newsFetching} onClick={newsPage.showMore} />
         </section>
       </div>
     </AppShell>

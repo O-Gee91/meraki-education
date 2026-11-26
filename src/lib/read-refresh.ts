@@ -18,7 +18,9 @@ export function subscribeReadRefresh(client: QueryClient) {
       ["teacher-todo", "self-students", "teacher-scope", "preview-scope", "calendar-coursework"].forEach((key) => pending.add(key));
     }
     if (root === "co-teachers") pending.add("co-taught-classes");
-    if (root === "attendance") pending.add("my-attendance");
+    if (root === "attendance") ["my-attendance", "pulse-attendance", "teacher-todo"].forEach((key) => pending.add(key));
+    if (root === "behavior" || root === "detentions") ["pulse-behavior", "teacher-todo"].forEach((key) => pending.add(key));
+    if (root === "checkins") ["teacher-todo"].forEach((key) => pending.add(key));
     if (pending.size === 0 || queued) return;
     queued = true;
     queueMicrotask(() => {

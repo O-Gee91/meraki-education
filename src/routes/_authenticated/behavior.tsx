@@ -1,4 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { usePagedLimit } from "@/lib/paged";
+import { ShowOlder } from "@/components/ShowOlder";
 import { SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -112,10 +114,11 @@ function usePreviewStudentIds() {
   return previewingStudent ? ids : null;
 }
 
-function useNotes() {
+function useNotes(limit: number) {
   const previewIds = usePreviewStudentIds();
   return useQuery({
-    queryKey: ["behavior", previewIds],
+    queryKey: ["behavior", previewIds, limit],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       let q = supabase
         .from("behavior_notes")
@@ -126,7 +129,7 @@ function useNotes() {
       const { data, error } = await q
 
         .order("date", { ascending: false })
-        .limit(500);
+        .limit(limit);
       if (error) throw error;
       return data;
     },
@@ -147,7 +150,8 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
     date: "",
   });
 
-  const { data: notes = [] } = useNotes();
+  const notesPage = usePagedLimit(200);
+  const { data: notes = [], isFetching: notesFetching } = useNotes(notesPage.limit);
   const [gradeFilter, setGradeFilter] = useState("all");
   const [kindFilter, setKindFilter] = useState("all");
   const [classFilter, setClassFilter] = useState(initialClassId ?? "all");
@@ -648,6 +652,7 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
             />
           ))
         )}
+        <ShowOlder show={notesPage.hasMore(notes.length)} loading={notesFetching} onClick={notesPage.showMore} label="Load older notes" />
       </section>
       <StudentHistorySheet
         studentId={drawerStudent}

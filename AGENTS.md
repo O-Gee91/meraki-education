@@ -227,3 +227,5 @@ Every new rule must satisfy:
 5. No undefined terms. Add to Glossary or spell out.
 6. Imperative mood. "Use X" not "X is used."
 7. Inherit, don't restate. Reference the system prompt for privacy/draft/WCAG rules; do not re-derive them here.
+- Long display lists (messages, behavior log, news, class feed) grow through `usePagedLimit` + "Show older"; never use it for reads that feed counts, averages or missing work. Why: removes silent caps without changing calculations.
+- Live class updates stay on polling plus `read-refresh.ts` grouped invalidation; the backend currently has no realtime schema for a doorbell. Why: avoids subscribing clients to private rows.

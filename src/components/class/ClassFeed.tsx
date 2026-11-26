@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePagedLimit } from "@/lib/paged";
+import { ShowOlder } from "@/components/ShowOlder";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ExternalLink, Link2, MessageSquare, Pin, Send, ShieldCheck } from "lucide-react";
@@ -30,15 +32,17 @@ export function ClassFeed({ scope, canPost = true, desktopReview = false }: { sc
   const draft = useAutosaveDraft(draftKey, { body, link }, { dirty });
 
 
-  const { data: posts = [] } = useQuery({
-    queryKey: scopeKey(scope),
+  const postsPage = usePagedLimit(50);
+  const { data: posts = [], isFetching: postsFetching } = useQuery({
+    queryKey: [...scopeKey(scope), postsPage.limit],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       let query = supabase
         .from("posts")
         .select("id, body, link, pinned, created_at, author_id")
         .order("pinned", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(postsPage.limit);
       query =
         "classId" in scope
           ? query.eq("class_id", scope.classId)
@@ -244,6 +248,7 @@ export function ClassFeed({ scope, canPost = true, desktopReview = false }: { sc
               {recent.map(renderPost)}
             </section>
           )}
+          <ShowOlder show={postsPage.hasMore(posts.length)} loading={postsFetching} onClick={postsPage.showMore} label="Show older posts" />
         </>
       )}
     </div>

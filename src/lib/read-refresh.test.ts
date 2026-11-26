@@ -36,4 +36,17 @@ describe("derived read refresh", () => {
     stop();
     client.clear();
   });
+  it("refreshes the class Today snapshot after attendance and behavior saves", async () => {
+    const client = new QueryClient();
+    client.setQueryData(["pulse-attendance", "c1"], []);
+    client.setQueryData(["pulse-behavior", "c1"], []);
+    const stop = subscribeReadRefresh(client);
+    await client.invalidateQueries({ queryKey: ["attendance"] });
+    await client.invalidateQueries({ queryKey: ["behavior"] });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(client.getQueryState(["pulse-attendance", "c1"])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(["pulse-behavior", "c1"])?.isInvalidated).toBe(true);
+    stop();
+    client.clear();
+  });
 });
