@@ -1,5 +1,11 @@
 # Roadmap
 
+## Teacher class page simplification (Nov 26, 2026)
+- [x] Put the existing scoped snapshot above all teacher sections with attendance, grading, missing-work and wellbeing filters
+- [x] Preserve five navigation groups with secondary tools disclosed; retain Overview/Grid and simplify actions
+- [x] Opt class-owned reviewed tools into desktop layout; regression and isolated sample presentation checks pass
+- [ ] Full signed-in teacher navigation and accessibility review — owner session stops at genuine device verification; no bypass used
+
 ## Gradebook Overview (Nov 25, 2026)
 - [x] Add staff Overview / Grid switch, roster grades, median/mean/missing summary, category ledger and filterable distribution
 - [x] Verify 36 grading regression tests and isolated populated Overview controls/layout at 1440px, 736px and 390px

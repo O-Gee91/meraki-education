@@ -97,6 +97,12 @@ export function PulseDashboard({
   isStaff,
   useIds,
   studentAverage,
+  teacherToday = false,
+  hideGrades = false,
+  gradingSummary,
+  onGradingAttention,
+  missingByStudent,
+  dateKey,
 }: {
   classId: string;
   className: string;
@@ -107,6 +113,12 @@ export function PulseDashboard({
   isStaff: boolean;
   useIds: boolean;
   studentAverage: (studentId: string) => number | null;
+  teacherToday?: boolean;
+  hideGrades?: boolean;
+  gradingSummary?: { ungraded: number; drafts: number };
+  onGradingAttention?: () => void;
+  missingByStudent?: Map<string, Set<string>>;
+  dateKey?: string;
 }) {
   const { user, teacherMode } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
@@ -125,7 +137,7 @@ export function PulseDashboard({
     });
   };
   const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = dateKey ?? today.toISOString().slice(0, 10);
 
   const { data: myStudentIds = new Set<string>() } = useQuery({
     queryKey: ["pulse-my-students", user?.id],
@@ -142,10 +154,10 @@ export function PulseDashboard({
 
   const visibleRoster = useMemo(() => {
     // Demo/test accounts never count toward risk, missing-work or slipping metrics.
-    const real = roster.filter((r) => !isTestStudent(r.students));
+    const real = roster.filter((r) => !isTestStudent(r.students) && (!teacherToday || !r.droppedAt));
     if (isStaff) return real;
     return real.filter((r) => myStudentIds.has(r.student_id));
-  }, [isStaff, roster, myStudentIds]);
+  }, [isStaff, roster, myStudentIds, teacherToday]);
 
   const { data: links = [] } = useQuery({
     queryKey: ["pulse-student-links", classId, visibleRoster.length],
@@ -248,6 +260,7 @@ export function PulseDashboard({
   }, [attendanceRows, behaviorRows, wellbeingRows, rosterIds.join(","), todayKey, since7]);
 
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
+    if (teacherToday && missingByStudent) return missingByStudent.get(studentId)?.has(assignment.id) ?? false;
     const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
     return isMissingWork({
       assignment,
@@ -279,7 +292,7 @@ export function PulseDashboard({
       }
       return { row: r, avg, missing, status };
     });
-  }, [assignments, grades, sortedVisibleRoster, studentAverage, submissions, todayKey]);
+  }, [assignments, grades, sortedVisibleRoster, studentAverage, submissions, todayKey, teacherToday, missingByStudent]);
 
   const counts = cards.reduce<Record<Status, number>>(
     (acc, c) => ({ ...acc, [c.status]: acc[c.status] + 1 }),
@@ -295,7 +308,7 @@ export function PulseDashboard({
       })
       .filter((entry) => entry.items.length > 0);
     return rows;
-  }, [assignments, grades, sortedVisibleRoster, submissions, todayKey]);
+  }, [assignments, grades, sortedVisibleRoster, submissions, todayKey, teacherToday, missingByStudent]);
 
   const totalMissing = missingList.reduce((sum, entry) => sum + entry.items.length, 0);
 
@@ -338,10 +351,12 @@ export function PulseDashboard({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (roster.length === 0) return null;
+  if (roster.length === 0 && !teacherToday) return null;
 
   const signalIds: Record<Signal, Set<string>> = {
-    attendance: signals.absentIds,
+    attendance: teacherToday
+      ? new Set(attendanceRows.filter((a) => a.date === todayKey && (a.status === "absent" || a.status === "tardy")).map((a) => a.student_id))
+      : signals.absentIds,
     missing: new Set(missingList.map((m) => m.row.student_id)),
     behavior: signals.behaviorIds,
     wellbeing: signals.lowIds,
@@ -356,6 +371,7 @@ export function PulseDashboard({
   const pickSignal = (s: Signal) => {
     setSignalFilter((cur) => (cur === s ? null : s));
     setSelected(null);
+    if (teacherToday) setStatusFilter(null);
     if (!open) toggleOpen();
   };
 
@@ -364,9 +380,10 @@ export function PulseDashboard({
       key: "attendance",
       icon: CalendarCheck,
       label: "Attendance",
-      value: signals.rate == null ? "—" : `${signals.rate}%`,
-      detail:
-        signals.todayMarked > 0
+      value: teacherToday ? `${signals.todayMarked}/${visibleRoster.length}` : signals.rate == null ? "—" : `${signals.rate}%`,
+      detail: teacherToday
+        ? `${signals.todayAbsent} absent · ${signalIds.attendance.size - signals.todayAbsent} tardy · ${Math.max(0, visibleRoster.length - signals.todayMarked)} unmarked`
+        : signals.todayMarked > 0
           ? `Today: ${signals.todayAbsent} absent · ${signalIds.attendance.size} with absences/tardies (14d)`
           : `Not taken today · ${signalIds.attendance.size} with absences/tardies (14d)`,
     },
@@ -388,7 +405,7 @@ export function PulseDashboard({
       key: "wellbeing",
       icon: HeartPulse,
       label: "Wellbeing (7d)",
-      value: signals.avgMood == null ? "—" : `${signals.avgMood.toFixed(1)}/5`,
+      value: teacherToday ? String(signals.lowIds.size) : signals.avgMood == null ? "—" : `${signals.avgMood.toFixed(1)}/5`,
       detail: `${signals.checkins} check-in${signals.checkins === 1 ? "" : "s"} · ${signals.lowIds.size} feeling low`,
     },
   ];
@@ -396,34 +413,43 @@ export function PulseDashboard({
   return (
     <div className="mt-4 space-y-4">
       {isStaff && (
-        <section className="panel p-5" aria-label="Class snapshot">
+        <section className={teacherToday ? "border-b border-border pb-5" : "panel p-5"} aria-label={teacherToday ? "Needs Attention / Today" : "Class snapshot"}>
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Class snapshot
+              {teacherToday ? "Needs Attention / Today" : "Class snapshot"}
             </h2>
             {signalFilter ? (
-              <button
+              <Button
+                variant="ghost" size="sm"
                 type="button"
-                onClick={() => setSignalFilter(null)}
+                onClick={() => { setSignalFilter(null); setStatusFilter(null); }}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <X className="size-3" /> Clear filter
-              </button>
+              </Button>
             ) : (
-              <span className="text-xs text-muted-foreground">Tap a card to see those students</span>
+              <span className="text-xs text-muted-foreground">{teacherToday ? formatDate(todayKey) : ""}</span>
             )}
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {tiles.map((t) => {
+            {teacherToday && gradingSummary && (
+              <Button variant="ghost" onClick={onGradingAttention} className="h-auto min-h-28 flex-col items-stretch justify-start whitespace-normal rounded-lg border border-border p-3 text-left">
+                <span className="flex items-center gap-2 text-xs text-muted-foreground"><ClipboardList className="size-3.5" /> Grading</span>
+                <span className="block text-2xl font-semibold tabular-nums">{gradingSummary.ungraded + gradingSummary.drafts}</span>
+                <span className="text-xs text-muted-foreground">{gradingSummary.ungraded} ungraded · {gradingSummary.drafts} draft grades</span>
+              </Button>
+            )}
+            {tiles.filter((t) => !teacherToday || t.key !== "behavior").map((t) => {
               const on = signalFilter === t.key;
               const Icon = t.icon;
               return (
-                <button
+                <Button
+                  variant="ghost"
                   key={t.key}
                   type="button"
                   aria-pressed={on}
                   onClick={() => pickSignal(t.key)}
-                  className={`rounded-lg border p-3 text-left transition hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-accent ${
+                  className={`h-auto min-h-28 flex-col items-stretch justify-start whitespace-normal rounded-lg border p-3 text-left transition hover:bg-muted/60 ${
                     on ? "border-foreground/60 bg-muted" : "border-border bg-card"
                   }`}
                 >
@@ -432,13 +458,15 @@ export function PulseDashboard({
                   </span>
                   <span className="mt-1 block text-2xl font-semibold tabular-nums">{t.value}</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">{t.detail}</span>
-                </button>
+                </Button>
               );
             })}
           </div>
+          {teacherToday && <Button variant="ghost" size="sm" className="mt-2" onClick={() => pickSignal("behavior")} aria-pressed={signalFilter === "behavior"}><MessageSquareText /> Behavior (14d) · {signals.concerns} concerns</Button>}
           {signals.recentBehavior.length > 0 && (
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground">Recent behavior notes</p>
+            <details className="mt-4 border-t border-border pt-3">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Recent behavior notes</summary>
+
               <ul className="mt-2 space-y-1">
                 {signals.recentBehavior.map((b) => (
                   <li key={b.id} className="flex items-center justify-between gap-3 text-xs">
@@ -453,17 +481,17 @@ export function PulseDashboard({
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           )}
         </section>
       )}
-      <section className="panel p-5">
+      <section className={teacherToday ? "border-b border-border pb-5" : "panel p-5"}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={toggleOpen}
             aria-expanded={open}
-            className="flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-accent"
+            className={teacherToday ? "flex min-w-0 flex-auto basis-full items-start gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-accent sm:basis-48" : "flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-accent"}
           >
             <ChevronDown
               className={`mt-1 size-4 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
@@ -471,20 +499,20 @@ export function PulseDashboard({
             <span className="min-w-0">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Sparkles className="size-4 text-accent" />
-                {isStaff ? "Pulse" : "My progress"}
+                {teacherToday && signalFilter ? tiles.find((t) => t.key === signalFilter)?.label ?? "Behavior" : isStaff ? "Pulse" : "My progress"}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              {!teacherToday && <p className="text-sm text-muted-foreground">
                 {open
                   ? isStaff
                     ? "Traffic-light view of the class. Tap a student for their standing and a one-click check-in."
                     : "Your current standing and upcoming deadlines at a glance."
                   : "Tap to expand."}
-              </p>
+              </p>}
             </span>
           </button>
           <div className="flex flex-wrap gap-2 text-xs">
             {isStaff && open ? <StudentSortControl value={sortMode} onChange={setSortMode} /> : null}
-            {(["green", "yellow", "red", "none"] as Status[]).map((s) => {
+            {!hideGrades && (!teacherToday || open) && (["green", "yellow", "red", "none"] as Status[]).map((s) => {
               const on = statusFilter === s;
               return (
                 <button
@@ -507,7 +535,7 @@ export function PulseDashboard({
                 </button>
               );
             })}
-            {statusFilter ? (
+                  {statusFilter ? (
               <button
                 type="button"
                 onClick={() => setStatusFilter(null)}
@@ -534,10 +562,10 @@ export function PulseDashboard({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setSelected(active ? null : row.student_id)}
-                className={`group flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md ${meta.ring} ${
+                className={`group flex flex-col items-center gap-2 border p-3 text-center transition ${teacherToday ? "rounded-lg hover:bg-muted" : "rounded-xl hover:-translate-y-0.5 hover:shadow-md"} ${hideGrades ? "border-border bg-card" : meta.ring} ${
                   active ? "ring-2 ring-accent" : ""
                 }`}
-                title={`${meta.label}${avg == null ? "" : ` · ${avg.toFixed(1)}%`}`}
+                title={hideGrades ? studentLabel(row.students, useIds) : `${meta.label}${avg == null ? "" : ` · ${avg.toFixed(1)}%`}`}
               >
                 <span className="relative">
                   <span className="flex size-11 items-center justify-center rounded-full bg-card text-sm font-semibold shadow-sm">
@@ -546,15 +574,15 @@ export function PulseDashboard({
                       : initials(row.students?.first_name, row.students?.last_name)}
                   </span>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card ${meta.dot}`}
+                    className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card ${hideGrades ? "bg-muted" : meta.dot}`}
                   />
-                  <span className="sr-only">{meta.label}</span>
+                  {!hideGrades && <span className="sr-only">{meta.label}</span>}
                 </span>
                 <span className="w-full truncate text-xs font-medium">
                   {studentLabel(row.students, useIds)}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {avg == null ? "—" : `${avg.toFixed(0)}%`}
+                  {hideGrades ? "Grades hidden" : avg == null ? "—" : `${avg.toFixed(0)}%`}
                   {missing > 0 ? ` · ${missing} missing` : ""}
                 </span>
               </button>
@@ -569,10 +597,10 @@ export function PulseDashboard({
                 {studentLabel(selectedCard.row.students, useIds)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {STATUS_META[selectedCard.status].label} ·{" "}
+                {!hideGrades && <>{STATUS_META[selectedCard.status].label} ·{" "}
                 {selectedCard.avg == null
                   ? "no graded work yet"
-                  : `${selectedCard.avg.toFixed(1)}% ${letterFor(selectedCard.avg, setup.scale)}`}
+                  : `${selectedCard.avg.toFixed(1)}% ${letterFor(selectedCard.avg, setup.scale)}`}</>}
                 {selectedCard.missing > 0
                   ? ` · ${selectedCard.missing} missing ${isStaff ? "item(s)" : "assignment(s)"}`
                   : ""}
@@ -605,7 +633,7 @@ export function PulseDashboard({
       </section>
 
       <div>
-        <section className="panel p-5">
+        <section className={teacherToday ? "border-b border-border pb-5" : "panel p-5"}>
           <button
             type="button"
             onClick={() => setMissingOpen((v) => !v)}

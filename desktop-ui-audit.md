@@ -1,5 +1,12 @@
 # Desktop UI checkup
 
+## Teacher class hierarchy (Nov 26)
+- Teacher-only Needs Attention / Today is above all sections, using parent gradebook missing counts and scoped Pulse attendance/wellbeing reads. Grading opens the existing Needs Attention coursework filter across all timelines.
+- Gradebook, Coursework and Attendance remain direct; Discussions, Roster and Settings & files are behind More classroom tools. All five groups and every tab remain available. Overview stays the staff default; Grid pagination, draft dots, hover details, calculations and publish handlers are unchanged.
+- Class FileLibrary and DiscussionBoard opt into reviewed unframed spacing; AppShell retains its existing desktopReview max-width. Grade work is the gradebook primary action; print and header links are quiet.
+- Isolated populated presentation checks: attendance/missing/wellbeing select the correct students, grading callback fires, median is 85.0 for 80/90 sample scores, categories render, hidden grades remove scores/distribution; no overflow at 1440, 740, 390 and 720px. A narrow heading collision was corrected with a wrapping header. These are not live-data tests.
+- Owner session reaches genuine device verification at /auth; full teacher navigation, 200% zoom and screen-reader walkthrough remain unverified. No account security, student data or grades were changed. Review this class page before another page.
+
 ## Gradebook Overview (Nov 25)
 - Staff-only Overview / Grid switch; Overview replaces Pulse/expanded averages with a compact roster, median/mean/missing summary, category ledger and class-scale distribution. Grid and family views stay unchanged.
 - Isolated sample-row Chromium checks at 1440px, 736px and 390px: no horizontal overflow, band filters work, hidden grades remove roster scores/counts/summary/distribution, and report/coursework callbacks fire. Screenshots reviewed; this is presentation verification, not a live-data walkthrough.

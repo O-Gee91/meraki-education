@@ -1,6 +1,7 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { missingMarkValue, missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
 import { isMissingWork } from "@/lib/missing-work";
+import { gradingAttentionSummary } from "@/lib/class-attention";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { courseworkBucket, isDueSoon, needsCourseworkAttention } from "@/lib/coursework-view";
 import { todayKey } from "@/lib/assignment-status";
@@ -133,6 +134,8 @@ function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { realStaff, previewingStudent, isAdmin, user, profile } = useAuth();
   const [classTab, setClassTab] = useState("gradebook");
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [courseworkAttention, setCourseworkAttention] = useState<{ key: QuickKey; request: number } | null>(null);
   const [guardianChildId, setGuardianChildId] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState("gradebook");
   // Coursework cards for discussion assignments can jump to the Discussion board tab.
@@ -498,6 +501,15 @@ function ClassDetailPage() {
     note: row.droppedAt ? `Dropped ${formatDate(row.droppedAt)}` : isTestStudent(row.students) ? "Test account" : null,
   })) : [];
   const visibleOverviewIds = new Set(visibleGradebookRoster.map((row) => row.student_id));
+  const snapshotRoster = gradebookRoster.filter((r) => !isTestStudent(r.students) && !r.droppedAt);
+  const snapshotIds = new Set(snapshotRoster.map((r) => r.student_id));
+  const snapshotMissing = new Map(snapshotRoster.map((r) => [r.student_id, new Set(assignments.filter((a) => missingFor(r.student_id, a)).map((a) => a.id))]));
+  const snapshotGrading = gradingAttentionSummary(courseworkUngraded, grades, snapshotIds);
+  function openGradingAttention() {
+    setCourseworkAttention((current) => ({ key: "attention", request: (current?.request ?? 0) + 1 }));
+    setClassTab("coursework");
+  }
+
 
   function printGradebook() {
     const headerCells = gradebookRows
@@ -602,16 +614,16 @@ function ClassDetailPage() {
         <div className="flex flex-wrap gap-2">
           {isStaff && <CoTeachersPanel classId={classId} />}
           {isStaff && (
-            <Button variant="outline" size="sm" onClick={toggleIds}>
+            <Button variant="ghost" size="sm" onClick={toggleIds}>
               {useIds ? "Show names" : "Show student IDs"}
             </Button>
           )}
           {isStaff && (
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="ghost" size="sm">
               <Link to="/behavior" search={{ classId }}>Behavior log</Link>
             </Button>
           )}
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="ghost" size="sm">
             <Link to="/classes">All classes</Link>
           </Button>
         </div>
@@ -633,6 +645,25 @@ function ClassDetailPage() {
           ))}
         </div>
       )}
+      {isStaff && <PulseDashboard
+        key={`today-${classId}`}
+        classId={classId}
+        className={klass?.name ?? "this class"}
+        roster={gradebookRoster}
+        assignments={assignments}
+        grades={grades}
+        setup={setup}
+        isStaff={isStaff}
+        useIds={useIds}
+        studentAverage={studentAverage}
+        teacherToday
+        hideGrades={hideOverviewGrades}
+        dateKey={todayKey()}
+        missingByStudent={snapshotMissing}
+        gradingSummary={snapshotGrading}
+        onGradingAttention={openGradingAttention}
+      />}
+      <div className={isStaff ? "mt-6 space-y-6" : undefined}>
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
         {(() => {
           const current = previewing ? previewTab : classTab;
@@ -654,17 +685,38 @@ function ClassDetailPage() {
               ] : []),
             ] },
           ];
-          const active = groups.find((g) => g.tabs.some((t) => t.value === current)) ?? groups[0]!;
+          const active = groups.find((g) => g.tabs.some((t) => t.value === current)) ?? groups[0];
+          if (!active) return null;
+          const secondaryActive = !["gradebook", "coursework", "calendar", "attendance"].includes(current);
+          const primaryGroups = isStaff ? groups.filter((g) => ["grades", "work", "people"].includes(g.key)) : groups;
           return (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
-                {groups.map((g) => (
-                  <TabsTrigger key={g.key} value={g.key === active.key ? current : g.tabs[0]!.value} className={UNDERLINE_TAB} onClick={() => go(g.tabs[0]!.value)}>
-                    {g.label}
-                  </TabsTrigger>
-                ))}
+                {primaryGroups.map((g) => {
+                  const target = isStaff && g.key === "people" ? "attendance" : g.tabs[0]?.value;
+                  if (!target) return null;
+                  return <TabsTrigger key={g.key} value={g.key === active.key && !secondaryActive ? current : target} className={UNDERLINE_TAB} onClick={() => go(target)}>
+                    {isStaff && g.key === "people" ? "Attendance" : g.label}
+                  </TabsTrigger>;
+                })}
               </TabsList>
-              {active.tabs.length > 1 && (
+              {isStaff && <>
+                <Button variant="ghost" size="sm" aria-expanded={moreToolsOpen || secondaryActive} aria-controls="classroom-more-tools" onClick={() => {
+                  if (secondaryActive) go("gradebook");
+                  setMoreToolsOpen(!(moreToolsOpen || secondaryActive));
+                }}>
+                  <ChevronDown className={moreToolsOpen || secondaryActive ? "" : "-rotate-90"} /> More classroom tools
+                </Button>
+                {(moreToolsOpen || secondaryActive) && <div id="classroom-more-tools" className="flex flex-wrap gap-x-8 gap-y-4 border-b border-border pb-4">
+                  {groups.filter((g) => ["talk", "people", "more"].includes(g.key)).map((g) => <div key={g.key} className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">{g.label}</p>
+                    <div role="group" aria-label={`${g.label} sections`} className="flex flex-wrap gap-1">
+                      {g.tabs.filter((t) => t.value !== "attendance").map((t) => <Button key={t.value} size="sm" variant={t.value === current ? "secondary" : "ghost"} aria-pressed={t.value === current} onClick={() => go(t.value)}>{t.label}</Button>)}
+                    </div>
+                  </div>)}
+                </div>}
+              </>}
+              {active.tabs.length > 1 && (!isStaff || active.key === "work") && (
                 <div role="group" aria-label={`${active.label} sections`} className="flex flex-wrap gap-1">
                   {active.tabs.map((t) => (
                     <Button key={t.value} size="sm" variant={t.value === current ? "secondary" : "ghost"} aria-pressed={t.value === current} onClick={() => go(t.value)}>
@@ -683,7 +735,7 @@ function ClassDetailPage() {
           {isStaff && <Tabs value={gradebookView} onValueChange={setGradebookView} className="mt-4">
             <TabsList aria-label="Gradebook view"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="grid">Grid</TabsTrigger></TabsList>
           </Tabs>}
-          {!showOverview && <PulseDashboard
+          {!isStaff && !showOverview && <PulseDashboard
             classId={classId}
             className={klass?.name ?? "this class"}
             roster={gradebookRoster}
@@ -729,11 +781,12 @@ function ClassDetailPage() {
                         {isStaff ? `${roster.length} ${roster.length === 1 ? "student" : "students"} · ` : ""}{gradebookRows.length} of {assignments.length} assignments
                       </p>
                     </div>
-                    {isStaff && (
-                      <Button type="button" variant="outline" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0 || (showOverview && hideOverviewGrades)}>
+                    {isStaff && (<div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={openGradingAttention}>Grade work</Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={printGradebook} disabled={gradebookRows.length === 0 || visibleGradebookRoster.length === 0 || (showOverview && hideOverviewGrades)}>
                         <Printer className="size-4" /> Print gradebook
                       </Button>
-                    )}
+                    </div>)}
                     {isStaff && <div className="flex w-full flex-wrap items-center gap-3 border-t border-border pt-4">
                       <div className="relative w-full sm:w-72">
                         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -1015,6 +1068,7 @@ function ClassDetailPage() {
                 timeZone={timeZone}
                 missingCounts={courseworkMissing}
                 ungradedCounts={courseworkUngraded}
+                attentionRequest={isStaff ? courseworkAttention : null}
               />
             </TabsContent>
             <TabsContent value="online">
@@ -1047,6 +1101,7 @@ function ClassDetailPage() {
             isStaff={isStaff}
             categories={categoryNames.length ? categoryNames : ["Homework"]}
             timeZone={timeZone}
+            desktopReview={isStaff}
           />
         </TabsContent>
 
@@ -1090,6 +1145,7 @@ function ClassDetailPage() {
 
         <TabsContent value="files" className="mt-4">
           <FileLibrary
+            desktopReview={isStaff}
             classId={classId}
             emptyLabel="No class files yet. Upload handouts, slides, spreadsheets or video."
           />
@@ -1099,7 +1155,7 @@ function ClassDetailPage() {
 
 
       </Tabs>
-
+      </div>
     </AppShell>
     </StudentPreviewContext.Provider>
   );
@@ -1230,6 +1286,7 @@ function AssignmentsTab({
   timeZone,
   missingCounts,
   ungradedCounts,
+  attentionRequest,
 }: {
   classId: string;
   isStaff: boolean;
@@ -1247,12 +1304,19 @@ function AssignmentsTab({
   timeZone: string;
   missingCounts: Record<string, number>;
   ungradedCounts: Record<string, number>;
+  attentionRequest: { key: QuickKey; request: number } | null;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [assignmentSearch, setAssignmentSearch] = useState("");
   const [timeline, setTimeline] = useState<TimelineKey>("current");
-  const [quick, setQuick] = useState<QuickKey | null>(null);
+  const [quick, setQuick] = useState<QuickKey | null>(attentionRequest?.key ?? null);
+  useEffect(() => {
+    if (!isStaff || !attentionRequest) return;
+    setQuick(attentionRequest.key);
+    setTimeline("all");
+    setAssignmentSearch("");
+  }, [attentionRequest, isStaff]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const draftKey = `new-assignment:${classId}`;
   const blank = {

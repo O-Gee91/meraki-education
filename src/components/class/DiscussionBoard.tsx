@@ -82,11 +82,13 @@ export function DiscussionBoard({
   isStaff,
   categories,
   timeZone = "Asia/Shanghai",
+  desktopReview = false,
 }: {
   classId: string;
   isStaff: boolean;
   categories: string[];
   timeZone?: string;
+  desktopReview?: boolean;
 }) {
   const { user, isAdmin } = useAuth();
   const coTaught = useCoTaughtClassIds();
@@ -276,9 +278,9 @@ export function DiscussionBoard({
     `rounded-full border px-3 py-1 text-xs transition-colors ${active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-muted"}`;
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={desktopReview ? "mt-6 min-w-0 space-y-6 [overflow-wrap:anywhere]" : "mt-4 space-y-4"}>
       {isStaff && (
-        <div className="panel p-4">
+        <div className={desktopReview ? "border-b border-border pb-6" : "panel p-4"}>
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Discussion board</h3>
@@ -431,12 +433,12 @@ export function DiscussionBoard({
       )}
 
       {discussions.length === 0 ? (
-        <p className="panel p-6 text-sm text-muted-foreground">
+        <p className={desktopReview ? "py-6 text-sm text-muted-foreground" : "panel p-6 text-sm text-muted-foreground"}>
           No discussions yet. {isStaff ? "Create one to get the class talking." : "Your teacher hasn't posted one yet."}
         </p>
       ) : (
         [...discussions].sort((a, b) => Number(a.closed) - Number(b.closed)).map((d) => (
-          <article key={d.id} className={d.closed ? "panel p-4 opacity-80" : "panel p-4"}>
+          <article key={d.id} className={desktopReview ? `min-w-0 border-b border-border pb-6 ${d.closed ? "opacity-80" : ""}` : d.closed ? "panel p-4 opacity-80" : "panel p-4"}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="font-semibold">{d.title}</h3>
