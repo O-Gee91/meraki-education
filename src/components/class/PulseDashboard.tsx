@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { CalendarCheck, ChevronDown, ClipboardList, HeartPulse, MessageSquareText, Send, Sparkles, X } from "lucide-react";
 import { useWellbeingFeed } from "@/hooks/useWellbeingFeed";
 
@@ -7,7 +8,17 @@ type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll, fetchByIds, fetchChunks, mergeChunkTops } from "@/lib/query";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
+import {
+  attentionFailureLabel,
+  presentCount,
+  pulseReadPlan,
+  readState,
+  teacherTodayDetail,
+  type ReadState,
+} from "@/lib/class-pulse";
 import { Button } from "@/components/ui/button";
+import { LoadError } from "@/components/LoadError";
 import { studentLabel } from "@/lib/student-display";
 import { letterFor, type GradingSetup } from "@/lib/grading";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +26,7 @@ import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { isMissingWork } from "@/lib/missing-work";
-import { NotebookEmpty, NotebookMarginNote } from "@/components/NotebookDecorations";
+import { NotebookEmpty, NotebookLoading, NotebookMarginNote } from "@/components/NotebookDecorations";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 
 type RosterRow = {
@@ -104,6 +115,8 @@ export function PulseDashboard({
   onGradingAttention,
   missingByStudent,
   dateKey,
+  academicReads = "ready",
+  onRetryAcademic,
 }: {
   classId: string;
   className: string;
@@ -120,6 +133,9 @@ export function PulseDashboard({
   onGradingAttention?: () => void;
   missingByStudent?: Map<string, Set<string>>;
   dateKey?: string;
+  /** Gradebook grade and submission reads. Failed reads must not look like zero missing work. */
+  academicReads?: ReadState;
+  onRetryAcademic?: () => void;
 }) {
   const { user, teacherMode } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
@@ -129,11 +145,16 @@ export function PulseDashboard({
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const [signalFilter, setSignalFilter] = useState<Signal | null>(null);
   useEffect(() => {
+    if (teacherToday && academicReads !== "ready" && signalFilter === "missing") setSignalFilter(null);
+  }, [teacherToday, academicReads, signalFilter]);
+  useEffect(() => {
+    // The teacher strip stays closed so the gradebook remains the first surface.
+    if (teacherToday) return;
     if (window.localStorage.getItem(`meraki.pulse-open.${classId}`) === "1") setOpen(true);
-  }, [classId]);
+  }, [classId, teacherToday]);
   const toggleOpen = () => {
     setOpen((v) => {
-      window.localStorage.setItem(`meraki.pulse-open.${classId}`, v ? "0" : "1");
+      if (!teacherToday) window.localStorage.setItem(`meraki.pulse-open.${classId}`, v ? "0" : "1");
       return !v;
     });
   };
@@ -160,9 +181,18 @@ export function PulseDashboard({
     return real.filter((r) => myStudentIds.has(r.student_id));
   }, [isStaff, roster, myStudentIds, teacherToday]);
 
-  const { data: links = [] } = useQuery({
+  const readPlan = pulseReadPlan({
+    staffView: isStaff,
+    parentSuppliesMissing: Boolean(teacherToday && missingByStudent),
+    assignmentCount: assignments.length,
+    rosterCount: visibleRoster.length,
+    checkInStudentId: selected,
+  });
+  const linksQuery = useQuery({
     queryKey: ["pulse-student-links", classId, visibleRoster.length],
-    enabled: isStaff && visibleRoster.length > 0,
+    enabled: readPlan.includes("student-links"),
+    staleTime: READ_REUSE_MS,
+    retry: false,
     queryFn: async () => {
       return fetchByIds(visibleRoster.map((r) => r.student_id), (batch, from, to) =>
         supabase
@@ -174,12 +204,15 @@ export function PulseDashboard({
       );
     },
   });
+  const links = linksQuery.data ?? [];
 
   const assignmentIds = assignments.map((a) => a.id);
   const assignmentKey = [...assignmentIds].sort().join(",");
-  const { data: submissions = [] } = useQuery({
+  const submissionsQuery = useQuery({
     queryKey: ["pulse-submission-times", classId, assignmentKey],
-    enabled: assignmentIds.length > 0,
+    enabled: readPlan.includes("submissions"),
+    staleTime: READ_REUSE_MS,
+    retry: false,
     queryFn: async () => {
       const data = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
@@ -192,15 +225,18 @@ export function PulseDashboard({
       return withDiscussionSubmissions(data, assignmentIds);
     },
   });
+  const submissions = submissionsQuery.data ?? [];
 
   // Teacher-only snapshot signals (last 14 days attendance/behavior, last 7 days wellbeing).
   const rosterIds = visibleRoster.map((r) => r.student_id);
   const since14 = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
   const since7 = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
 
-  const { data: attendanceRows = [] } = useQuery({
+  const attendanceQuery = useQuery({
     queryKey: ["pulse-attendance", classId, since14],
-    enabled: isStaff,
+    enabled: readPlan.includes("attendance"),
+    staleTime: READ_REUSE_MS,
+    retry: false,
     queryFn: async () => {
       return fetchAll((from, to) =>
         supabase
@@ -213,10 +249,13 @@ export function PulseDashboard({
       );
     },
   });
+  const attendanceRows = attendanceQuery.data ?? [];
 
-  const { data: behaviorRows = [] } = useQuery({
+  const behaviorQuery = useQuery({
     queryKey: ["pulse-behavior", classId, rosterIds.length, since14],
-    enabled: isStaff && rosterIds.length > 0,
+    enabled: readPlan.includes("behavior"),
+    staleTime: READ_REUSE_MS,
+    retry: false,
     queryFn: async () => {
       const groups = await fetchChunks(rosterIds, async (batch) => {
         const { data, error } = await supabase
@@ -232,8 +271,13 @@ export function PulseDashboard({
       return mergeChunkTops([groups], 200, (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
     },
   });
+  const behaviorRows = behaviorQuery.data ?? [];
 
-  const { data: wellbeingRows = [] } = useWellbeingFeed("", isStaff);
+  const wellbeingQuery = useWellbeingFeed("", readPlan.includes("wellbeing"));
+  const wellbeingRows = wellbeingQuery.data ?? [];
+  const attendanceState = readState(readPlan.includes("attendance"), attendanceQuery);
+  const behaviorState = readState(readPlan.includes("behavior"), behaviorQuery);
+  const wellbeingState = readState(readPlan.includes("wellbeing"), wellbeingQuery);
 
   const signals = useMemo(() => {
     const ids = new Set(rosterIds);
@@ -264,7 +308,11 @@ export function PulseDashboard({
   }, [attendanceRows, behaviorRows, wellbeingRows, rosterIds.join(","), todayKey, since7]);
 
   const isMissing = (studentId: string, assignment: AssignmentRow) => {
-    if (teacherToday && missingByStudent) return missingByStudent.get(studentId)?.has(assignment.id) ?? false;
+    if (teacherToday && missingByStudent) {
+      if (academicReads !== "ready") return false;
+      return missingByStudent.get(studentId)?.has(assignment.id) ?? false;
+    }
+    if (readPlan.includes("submissions") && !submissionsQuery.isSuccess) return false;
     const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
     return isMissingWork({
       assignment,
@@ -375,8 +423,10 @@ export function PulseDashboard({
   const pickSignal = (s: Signal) => {
     setSignalFilter((cur) => (cur === s ? null : s));
     setSelected(null);
-    if (teacherToday) setStatusFilter(null);
-    if (!open) toggleOpen();
+    if (teacherToday) {
+      setStatusFilter(null);
+      setOpen(false);
+    } else if (!open) toggleOpen();
   };
 
   const tiles: { key: Signal; icon: typeof CalendarCheck; label: string; value: string; detail: string }[] = [
@@ -414,6 +464,258 @@ export function PulseDashboard({
     },
   ];
 
+  const chipState = (key: Signal): ReadState =>
+    key === "missing" ? academicReads : key === "attendance" ? attendanceState : key === "behavior" ? behaviorState : wellbeingState;
+  const todayDetail = teacherTodayDetail(signalFilter, open);
+  const failureLabel = attentionFailureLabel([
+    academicReads === "error" ? "grades and missing work" : "",
+    attendanceState === "error" ? "attendance" : "",
+    behaviorState === "error" ? "behavior" : "",
+    wellbeingState === "error" ? "wellbeing" : "",
+  ]);
+  const familyMissingReady = !readPlan.includes("submissions") || submissionsQuery.isSuccess;
+  const familyMissingFailed = readPlan.includes("submissions") && submissionsQuery.isError;
+
+  if (isStaff && teacherToday) {
+    const gradingTotal = (gradingSummary?.ungraded ?? 0) + (gradingSummary?.drafts ?? 0);
+    const ordered: Signal[] = ["attendance", "missing", "wellbeing", "behavior"];
+    const activeTile = tiles.find((tile) => tile.key === signalFilter);
+    const retryAttention = () => {
+      if (academicReads === "error") onRetryAcademic?.();
+      if (attendanceQuery.isError) void attendanceQuery.refetch();
+      if (behaviorQuery.isError) void behaviorQuery.refetch();
+      if (wellbeingQuery.isError) void wellbeingQuery.refetch();
+    };
+    return (
+      <section aria-labelledby="class-today-heading" className="mt-4 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 id="class-today-heading" className="notebook-heading mr-1 text-sm font-semibold">Needs attention</h2>
+          <span className="text-xs text-muted-foreground">{formatDate(todayKey)}</span>
+          {gradingSummary && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 gap-2 bg-card px-3"
+              aria-disabled={academicReads !== "ready"}
+              onClick={() => { if (academicReads === "ready") onGradingAttention?.(); }}
+            >
+              <ClipboardList className="size-3.5 text-muted-foreground" aria-hidden />
+              <span>Grading</span>
+              <span className="font-semibold tabular-nums">{presentCount(academicReads, gradingTotal)}</span>
+              {academicReads === "ready" && (
+                <span className="sr-only">{gradingSummary.ungraded} ungraded, {gradingSummary.drafts} draft grades. Opens coursework that needs attention.</span>
+              )}
+            </Button>
+          )}
+          {ordered.map((key) => {
+            const tile = tiles.find((item) => item.key === key);
+            if (!tile) return null;
+            const state = chipState(key);
+            const pressed = signalFilter === key;
+            const Icon = tile.icon;
+            return (
+              <Button
+                key={key}
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={pressed}
+                aria-disabled={state !== "ready"}
+                onClick={() => { if (state === "ready") pickSignal(key); }}
+                className={`h-9 gap-2 px-3 ${pressed ? "border-foreground bg-muted" : "bg-card"}`}
+              >
+                <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+                <span>{tile.label.replace(/ \(.*\)$/, "")}</span>
+                <span className="font-semibold tabular-nums">{presentCount(state, tile.value)}</span>
+                {state === "ready" && <span className="sr-only">{tile.detail}</span>}
+              </Button>
+            );
+          })}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2"
+            aria-expanded={open}
+            onClick={() => {
+              setSignalFilter(null);
+              setStatusFilter(null);
+              setSelected(null);
+              toggleOpen();
+            }}
+          >
+            <Sparkles className="size-3.5 text-accent" aria-hidden /> Class pulse
+          </Button>
+          {(signalFilter || open) && (
+            <Button type="button" variant="ghost" size="sm" className="h-9 gap-1" onClick={() => { setSignalFilter(null); setStatusFilter(null); setOpen(false); }}>
+              <X className="size-3.5" aria-hidden /> Close
+            </Button>
+          )}
+        </div>
+        {failureLabel && <LoadError label={failureLabel} onRetry={retryAttention} />}
+        {(todayDetail.students || todayDetail.missingList || todayDetail.behaviorNotes) && (
+          <div className="mt-3 space-y-3">
+            {activeTile && signalFilter && signalFilter !== "missing" && chipState(signalFilter) === "ready" && (
+              <p className="text-sm text-muted-foreground">{activeTile.detail}</p>
+            )}
+            {todayDetail.behaviorNotes && (
+              <div>
+                {signals.recentBehavior.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No behavior notes in the last 14 days.</p>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium">Recent behavior notes</h3>
+                    <ul className="mt-2 space-y-1">
+                      {signals.recentBehavior.map((note) => (
+                        <li key={note.id} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 truncate">
+                            <span className="font-medium">{nameFor(note.student_id)}</span>
+                            <span className="text-muted-foreground">
+                              {" "}· {note.kind === "positive" ? "Shout-out" : note.kind === "strike" ? "Strike" : "Concern"}
+                              {note.reason ? ` — ${note.reason}` : note.notes ? ` — ${note.notes}` : ""}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-muted-foreground">{formatDate(note.date)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <Button asChild variant="link" size="sm" className="mt-1 h-auto px-0">
+                  <Link to="/behavior" search={{ classId }}>Open behavior log</Link>
+                </Button>
+              </div>
+            )}
+            {todayDetail.missingList && academicReads === "ready" && (
+              totalMissing === 0 ? (
+                <p className="text-sm text-muted-foreground">No missing work. Everyone in this class is caught up.</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {totalMissing} past-due {totalMissing === 1 ? "item" : "items"} across {missingList.length} {missingList.length === 1 ? "student" : "students"}, with no score and no hand-in yet.
+                  </p>
+                  <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {missingList.map(({ row, items }) => (
+                      <div key={row.student_id} className="rounded-lg border border-border p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="min-w-0 truncate text-sm font-semibold">{studentLabel(row.students, useIds)}</p>
+                          <span className="shrink-0 text-xs text-muted-foreground">{items.length} missing</span>
+                        </div>
+                        <ul className="mt-2 space-y-1">
+                          {items.map((assignment) => (
+                            <li key={assignment.id} className="flex items-center justify-between gap-2 text-sm">
+                              <span className="min-w-0 truncate">{assignment.title}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">due {formatDate(assignment.due_date)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+            {todayDetail.students && (
+              <div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <StudentSortControl value={sortMode} onChange={setSortMode} />
+                  {!hideGrades && (["green", "yellow", "red", "none"] as Status[]).map((status) => {
+                    const on = statusFilter === status;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => { setStatusFilter(on ? null : status); setSelected(null); }}
+                        className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-accent ${on ? "border-foreground bg-muted font-medium" : "border-border"}`}
+                      >
+                        <span className={`size-2 rounded-full ${STATUS_META[status].dot}`} />
+                        {STATUS_META[status].label}
+                        <strong>{counts[status]}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
+                  {filteredCards.length === 0 ? (
+                    <NotebookEmpty className="col-span-full text-sm text-muted-foreground">No students in this group.</NotebookEmpty>
+                  ) : null}
+                  {filteredCards.map(({ row, avg, missing, status }) => {
+                    const meta = STATUS_META[status];
+                    const active = selected === row.student_id;
+                    return (
+                      <button
+                        key={row.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setSelected(active ? null : row.student_id)}
+                        className={`flex flex-col items-center gap-2 rounded-lg border p-3 text-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-accent ${hideGrades ? "border-border bg-card" : meta.ring} ${active ? "ring-2 ring-accent" : ""}`}
+                        title={hideGrades ? studentLabel(row.students, useIds) : `${meta.label}${avg == null ? "" : ` · ${avg.toFixed(1)}%`}`}
+                      >
+                        <span className="relative">
+                          <span className="flex size-11 items-center justify-center rounded-full bg-card text-sm font-semibold">
+                            {useIds ? (row.students?.student_number ?? "—").slice(-3) : initials(row.students?.first_name, row.students?.last_name)}
+                          </span>
+                          <span className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card ${hideGrades ? "bg-muted" : meta.dot}`} />
+                          {!hideGrades && <span className="sr-only">{meta.label}</span>}
+                        </span>
+                        <span className="w-full truncate text-xs font-medium">{studentLabel(row.students, useIds)}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {hideGrades ? "Grades hidden" : avg == null ? "—" : `${avg.toFixed(0)}%`}
+                          {missing > 0 ? ` · ${missing} missing` : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedCard && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">{studentLabel(selectedCard.row.students, useIds)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {!hideGrades && <>{STATUS_META[selectedCard.status].label} · {selectedCard.avg == null ? "no graded work yet" : `${selectedCard.avg.toFixed(1)}% ${letterFor(selectedCard.avg, setup.scale)}`}</>}
+                        {selectedCard.missing > 0 ? ` · ${selectedCard.missing} missing item(s)` : ""}
+                      </p>
+                      {!hideGrades ? <NotebookMarginNote percent={selectedCard.avg} /> : null}
+                      {selectedMissing && (
+                        <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+                          {selectedMissing.items.map((assignment) => (
+                            <li key={assignment.id}>
+                              <span className="font-medium text-foreground">{assignment.title}</span>
+                              <span className="ml-1">· due {formatDate(assignment.due_date)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if (linksQuery.isError) {
+                          toast.error("Student contacts couldn't be loaded.");
+                          void linksQuery.refetch();
+                          return;
+                        }
+                        checkIn.mutate(selectedCard.row.student_id);
+                      }}
+                      disabled={checkIn.isPending || linksQuery.isFetching}
+                    >
+                      <Send className="mr-2 size-4" aria-hidden />
+                      {checkIn.isPending ? "Sending…" : "Send check-in"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  // Students and guardians. The staff class page returns the compact strip above.
   return (
     <div className="mt-4 space-y-4">
       {isStaff && (
@@ -648,7 +950,7 @@ export function PulseDashboard({
             <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               <ClipboardList className="size-4 shrink-0" />
               {isStaff ? "Missing work tracker" : "My missing work"}
-              {!missingOpen && totalMissing > 0 && (
+              {!missingOpen && familyMissingReady && totalMissing > 0 && (
                 <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium normal-case text-foreground">
                   {totalMissing}
                 </span>
@@ -666,7 +968,14 @@ export function PulseDashboard({
           </p>
           )}
 
-          {missingOpen && (totalMissing === 0 ? (
+          {missingOpen && familyMissingFailed ? (
+            <LoadError
+              label="Missing work couldn't be loaded. Nothing here is treated as missing until this succeeds."
+              onRetry={() => void submissionsQuery.refetch()}
+            />
+          ) : missingOpen && !familyMissingReady ? (
+            <NotebookLoading className="mt-3 text-sm text-muted-foreground">Loading missing work…</NotebookLoading>
+          ) : missingOpen && (totalMissing === 0 ? (
             <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-success">
               {isStaff
                 ? "No missing work — everyone in this class is caught up."

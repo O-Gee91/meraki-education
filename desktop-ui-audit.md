@@ -1,5 +1,10 @@
 # Desktop UI checkup
 
+## Calmer class gradebook (Nov 26)
+- Teacher Needs attention is one wrapping row of counts above the tabs. Missing work, behavior notes, and class pulse open in that row instead of as extra collapsed sections. The gradebook grid is the next primary surface. Show student IDs, Behavior log, and All classes share one Class tools menu. The gradebook no longer repeats the title's class switcher.
+- Staff missing and grading counts come from the gradebook reads. Pulse does not re-read submissions or discussion completion for that strip. Check-in contacts load when a student is selected. Attendance, behavior, and wellbeing stay staff-only. A failed read says it failed instead of showing zero.
+- No signed-in browser walkthrough. School login and two-step verification were not bypassed.
+
 ## Notebook site-wide modifier (Nov 26)
 - Optional shared shell paper surfaces, semantic page/section handwriting, selected controls and list rules; standard appearance and existing review layout gates retained. Content titles, names, dates, scores and comments keep their normal font.
 - Dashboard/assignment posted-score circles, completed-work ticks, loading/empty doodles, bulletin paper, attendance tally summary and wellbeing mood sketches. No queries, grade calculations, status precedence, write permissions or RLS changed. Hidden gradebook scores have no marks revealing their values.

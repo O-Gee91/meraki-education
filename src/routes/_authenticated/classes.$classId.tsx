@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll, fetchByIds } from "@/lib/query";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
 import { LoadError } from "@/components/LoadError";
 import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { Button } from "@/components/ui/button";
@@ -184,6 +185,7 @@ function ClassDetailPage() {
 
   const { data: klass } = useQuery({
     queryKey: ["class", classId],
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
@@ -199,6 +201,7 @@ function ClassDetailPage() {
   const { data: switcherClasses = [] } = useQuery({
     queryKey: ["class-switcher", user?.id, profile?.full_name, isAdmin],
     enabled: realStaff && !!user,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("classes")
@@ -230,6 +233,7 @@ function ClassDetailPage() {
 
   const { data: fullRoster = [] } = useQuery({
     queryKey: ["roster", classId],
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const data = await fetchAll((from, to) => supabase
         .from("enrollments")
@@ -292,6 +296,7 @@ function ClassDetailPage() {
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["assignments", classId],
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       return fetchAll((from, to) => supabase
         .from("assignments")
@@ -316,6 +321,7 @@ function ClassDetailPage() {
   const gradesQuery = useQuery({
     queryKey: ["grades", classId, assignmentKey],
     enabled: assignmentIds.length > 0,
+    staleTime: READ_REUSE_MS,
     queryFn: () => fetchByIds(assignmentIds, (batch, from, to) =>
       supabase
         .from("grades")
@@ -339,6 +345,7 @@ function ClassDetailPage() {
   const submissionsQuery = useQuery({
     queryKey: ["gradebook-submissions", classId, assignmentKey],
     enabled: assignmentIds.length > 0,
+    staleTime: READ_REUSE_MS,
     queryFn: async () => {
       const data = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
@@ -618,19 +625,30 @@ function ClassDetailPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           {isStaff && <CoTeachersPanel classId={classId} />}
-          {isStaff && (
-            <Button variant="ghost" size="sm" onClick={toggleIds}>
-              {useIds ? "Show names" : "Show student IDs"}
-            </Button>
-          )}
-          {isStaff && (
+          {isStaff ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="size-4" aria-hidden /> Class tools
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={toggleIds}>
+                  {useIds ? "Show names" : "Show student IDs"}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/behavior" search={{ classId }}>Behavior log</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/classes">All classes</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <Button asChild variant="ghost" size="sm">
-              <Link to="/behavior" search={{ classId }}>Behavior log</Link>
+              <Link to="/classes">All classes</Link>
             </Button>
           )}
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/classes">All classes</Link>
-          </Button>
         </div>
       }
     >
@@ -667,8 +685,13 @@ function ClassDetailPage() {
         missingByStudent={snapshotMissing}
         gradingSummary={snapshotGrading}
         onGradingAttention={openGradingAttention}
+        academicReads={gradebookFailed ? "error" : gradebookLoading ? "loading" : "ready"}
+        onRetryAcademic={() => {
+          void gradesQuery.refetch();
+          void submissionsQuery.refetch();
+        }}
       />}
-      <div className={isStaff ? "mt-6 space-y-6" : undefined}>
+      <div className={isStaff ? "mt-4 space-y-6" : undefined}>
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
         {(() => {
           const current = previewing ? previewTab : classTab;
@@ -850,8 +873,6 @@ function ClassDetailPage() {
                      onHideGrades={setHideOverviewGrades}
                      onStudent={setGradebookReportStudentId}
                      onCoursework={() => setClassTab("coursework")}
-                     classes={switcherClasses}
-                     classId={classId}
                    />
                  ) : gradebookRows.length === 0 ? (
                   <p className="p-8 text-center text-sm text-muted-foreground">
