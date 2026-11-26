@@ -322,13 +322,13 @@
 .sketch-dark { display: none; }
 .dark .sketch-light { display: none; }
 .dark .sketch-dark { display: initial; }
-.notebook-grade { position: relative; display: inline-block; }
+.style-notebook .notebook-grade { position: relative; display: inline-block; }
 .notebook-grade > .sketch { inset: -0.3rem -0.4rem; width: calc(100% + 0.8rem); height: calc(100% + 0.6rem); }
 .style-notebook .notebook-heading { font-family: var(--font-hand); letter-spacing: 0; }
-.notebook-month { position: relative; }
+.style-notebook .notebook-month { position: relative; }
 .notebook-month .sketch { top: auto; bottom: -0.45rem; height: 0.5rem; }
-.notebook-day-number { position: relative; display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; }
-.notebook-day { position: relative; }
+.style-notebook .notebook-day-number { position: relative; display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; }
+.style-notebook .notebook-day { position: relative; }
 .style-notebook .notebook-day { border-radius: 2px; border-color: var(--sketch-grid); }
 .style-notebook .notebook-day[aria-current="date"] .notebook-day-number { background-color: var(--sketch-today-bg); }
 .style-notebook .notebook-day > .sketch-box { inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
