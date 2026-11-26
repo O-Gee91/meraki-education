@@ -40,6 +40,8 @@ describe("derived read refresh", () => {
     const client = new QueryClient();
     client.setQueryData(["pulse-attendance", "c1"], []);
     client.setQueryData(["pulse-behavior", "c1"], []);
+    client.setQueryData(["attendance", "c1"], []);
+    client.setQueryData(["behavior", null], []);
     const stop = subscribeReadRefresh(client);
     await client.invalidateQueries({ queryKey: ["attendance"] });
     await client.invalidateQueries({ queryKey: ["behavior"] });

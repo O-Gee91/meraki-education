@@ -1006,7 +1006,7 @@ function StrikeRowItem({ row }: { row: StrikeRow }) {
 }
 
 function StrikeTracker() {
-  const { data: notes = [] } = useNotes();
+  const { data: notes = [] } = useNotes(1000);
   const [gradeFilter, setGradeFilter] = useState("all");
 
   const rows = useMemo(() => {
