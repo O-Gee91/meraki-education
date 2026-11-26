@@ -437,14 +437,15 @@ export function AppShell({
           </div>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-b border-border bg-card px-4 py-2 lg:hidden">
+        <nav aria-label="Mobile navigation" className={cn("gap-1 border-b border-border bg-card px-4 py-2 lg:hidden", desktopReview && (primaryRole === "student" || primaryRole === "parent") ? "grid min-w-0 grid-cols-2 sm:grid-cols-3" : "flex overflow-x-auto")}>
           {items.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               onClick={item.to === "/wellbeing" ? markWellbeingSeen : undefined}
               className={cn(
-                "whitespace-nowrap rounded-md px-3 py-1.5 text-sm",
+                "flex min-h-11 min-w-0 items-center rounded-md px-3 py-1.5 text-sm",
+                desktopReview && (primaryRole === "student" || primaryRole === "parent") ? "break-words [overflow-wrap:anywhere]" : "whitespace-nowrap",
                 pathname.startsWith(item.to)
                   ? "bg-secondary font-medium text-secondary-foreground"
                   : "text-muted-foreground",

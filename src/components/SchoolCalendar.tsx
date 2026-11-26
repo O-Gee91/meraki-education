@@ -426,8 +426,8 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
 
   return (
     <section className="panel mt-6 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="grid min-w-0 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold">{classId ? "Class calendar" : "School calendar"}</h2>
           <p className="text-sm text-muted-foreground">
             {isStaff
@@ -435,7 +435,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
               : "Events, exams and deadlines posted by your school."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:w-auto sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
           {!isStaff && (
             <Button
               variant="ghost"
@@ -443,7 +443,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? "Expand school calendar" : "Collapse school calendar"}
               onClick={() => setIsCollapsed((v) => !v)}
-              className="gap-1"
+              className="col-span-3 min-h-11 justify-self-start gap-1 sm:col-span-1"
             >
               {isCollapsed ? (
                 <>
@@ -459,15 +459,17 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
           <Button
             variant="outline"
             size="icon"
+            className="h-11 w-11 shrink-0"
             aria-label="Previous month"
             onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="min-w-[9rem] text-center text-sm font-medium">{monthLabel}</span>
+          <span className="min-w-0 text-center text-sm font-medium sm:min-w-36">{monthLabel}</span>
           <Button
             variant="outline"
             size="icon"
+            className="h-11 w-11 shrink-0"
             aria-label="Next month"
             onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
           >
@@ -477,8 +479,8 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
       </div>
 
       {isCollapsed ? (
-        <div className="mt-4 flex items-center justify-between rounded-md border border-border bg-muted/30 p-4">
-          <div className="text-sm">
+        <div className="mt-4 grid min-w-0 gap-3 rounded-md border border-border bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="min-w-0 text-sm">
             <p className="font-medium">
               {events.length} event{events.length === 1 ? "" : "s"}
               {monthWorkCount ? ` · ${monthWorkCount} due date${monthWorkCount === 1 ? "" : "s"}` : ""} this month
@@ -492,6 +494,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 justify-self-start"
             aria-label="Expand school calendar"
             onClick={() => setIsCollapsed(false)}
           >
@@ -563,7 +566,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                       }`}
                     >
                       <span
-                        className={`text-xs font-semibold ${isToday ? "text-accent" : "text-foreground"}`}
+                        className={`text-xs font-semibold ${isToday ? "text-primary" : "text-foreground"}`}
                       >
                         {date.getDate()}
                       </span>
@@ -871,12 +874,12 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Draft</span>
                       )}
                     </div>
-                    <h4 className="mt-1 text-sm font-semibold">
+                    <h4 className="mt-1 break-words text-sm font-semibold [overflow-wrap:anywhere]">
                       <Link to="/classes/$classId" params={{ classId: w.classId }} className="hover:underline">
                         {w.title}
                       </Link>
                     </h4>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                       {w.className} · Due {w.time ?? "end of day"}
                     </p>
                   </article>
@@ -890,7 +893,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                       className={`rounded-md border border-border border-l-4 p-3 ${colorOption(e.color).edge}`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div>
+                        <div className="min-w-0 break-words [overflow-wrap:anywhere]">
                           <span
                             className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
                               colorOption(e.color).chip
@@ -933,7 +936,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                         </div>
 
                         {isStaff && (
-                          <div className="flex items-center">
+                          <div className="flex shrink-0 items-center">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -970,7 +973,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                         </p>
                       )}
                       {e.description && (
-                        <p className="mt-2 text-sm text-muted-foreground">{e.description}</p>
+                        <p className="mt-2 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{e.description}</p>
                       )}
                     </article>
                   ))

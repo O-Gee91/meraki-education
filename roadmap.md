@@ -1,5 +1,10 @@
 # Roadmap
 
+## Mobile daily workflow checks (Nov 26, 2026)
+- [x] Test isolated populated student/guardian presentation at 320/390/430/768/1440px; fix selectors, long text, scores, calendar, navigation and child-switch reset
+- [x] All 217 regressions pass; sample filters/details/read-only guardian state, feedback/calendar, keyboard disclosure and desktop 200% zoom verified with no page overflow
+- [ ] Real signed-in walkthrough — owner session still stops at two-step verification
+
 ## Student and guardian daily workflow (Nov 26, 2026)
 - [x] Prioritize missing/due work, feedback/scores, classes/calendar, then collapsed news on the dashboard
 - [x] Separate assignment action and completed sections with calmer cards; preserve filters, details and child selection

@@ -245,9 +245,11 @@ function AssignmentsHubPage() {
                   size="sm"
                   variant={activeChild?.id === c.id ? "secondary" : "ghost"}
                   aria-pressed={activeChild?.id === c.id}
+                  className="h-auto min-h-11 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]"
                   onClick={() => {
                     setChildId(c.id);
                     setOpenId(null);
+                    setClassFilter("all");
                   }}
                 >
                   {c.first_name} {c.last_name}
@@ -259,7 +261,7 @@ function AssignmentsHubPage() {
             {classIds.length > 1 && (
               <select
                 aria-label="Filter by class"
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                className="h-11 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-2 text-sm sm:w-auto"
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
               >
@@ -274,6 +276,7 @@ function AssignmentsHubPage() {
                 key={f.id}
                 type="button"
                 size="sm"
+                className="min-h-11"
                 variant={filter === f.id ? "secondary" : "ghost"}
                 onClick={() => setFilter(f.id)}
                 aria-pressed={filter === f.id}
@@ -307,19 +310,19 @@ function AssignmentsHubPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-auto w-full flex-wrap justify-between gap-x-4 gap-y-3 whitespace-normal p-0 text-left hover:bg-transparent"
+                      className="h-auto min-h-11 w-full flex-wrap justify-between gap-x-4 gap-y-3 whitespace-normal p-0 text-left text-foreground hover:bg-transparent hover:text-foreground"
                       onClick={() => setOpenId(open ? null : row.assignmentId)}
                       aria-expanded={open}
                       aria-controls={`assignment-details-${row.assignmentId}`}
                     >
                       <span className="min-w-0 flex-1 basis-52">
-                        <span className="block break-words text-base font-semibold">{row.title}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="block break-words text-base font-semibold [overflow-wrap:anywhere]">{row.title}</span>
+                        <span className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                           {row.className}
                           {row.dueDate ? ` · Due ${formatDate(row.dueDate)}` : " · No due date"}
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-2">
+                      <span className="flex max-w-full flex-wrap items-center gap-2">
                         <StatusChip row={row} />
                         {row.status === "graded" && row.score != null ? (
                           <span className="text-sm font-semibold tabular-nums">
@@ -334,7 +337,7 @@ function AssignmentsHubPage() {
                       </span>
                     </Button>
                     {open ? (
-                      <div id={`assignment-details-${row.assignmentId}`} className="mt-5 space-y-4 border-t border-border pt-5">
+                      <div id={`assignment-details-${row.assignmentId}`} className="mt-5 space-y-4 break-words border-t border-border pt-5 [overflow-wrap:anywhere]">
                         <p className="text-sm text-muted-foreground">{row.category} · {row.pointsPossible} points{row.isLate ? " · Turned in late" : ""}</p>
                         {row.description ? (
                           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
@@ -352,7 +355,7 @@ function AssignmentsHubPage() {
                             Guardians see posted grades and feedback only.
                           </p>
                         ) : (
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">
                             <Link to="/classes/$classId" params={{ classId: row.classId }}>
                               Open in {row.className}
                             </Link>

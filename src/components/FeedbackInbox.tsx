@@ -60,14 +60,14 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
 
   return (
     <section className={desktopReview ? "border-t border-border pt-6" : "panel mt-6 p-5"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <MessageSquareText className="size-4 text-accent" />
-          Feedback from your teachers
-          {unread > 0 ? <Badge className="ml-1">{unread} new</Badge> : null}
+      <div className="grid min-w-0 gap-3 sm:flex sm:items-center sm:justify-between">
+        <h2 className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-lg font-semibold">
+          <MessageSquareText className="size-4 shrink-0 text-accent" />
+          <span>Feedback from your teachers</span>
+          {unread > 0 ? <Badge className="shrink-0">{unread} new</Badge> : null}
         </h2>
         {unread > 0 ? (
-          <Button size="sm" variant="outline" onClick={markSeen}>
+          <Button size="sm" variant="outline" className="min-h-11 justify-self-start" onClick={markSeen}>
             Mark as read
           </Button>
         ) : null}
@@ -94,8 +94,8 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
                     isNew ? "border-accent/50 bg-accent/5" : "border-border bg-muted/30"
                   }`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">
+                  <div className="grid min-w-0 gap-2 sm:flex sm:items-center sm:justify-between">
+                    <p className="min-w-0 break-words text-sm font-semibold [overflow-wrap:anywhere]">
                       {item.title}
                       {item.studentName ? (
                         <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -103,7 +103,7 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
                         </span>
                       ) : null}
                     </p>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                       {item.className} · {formatDate(item.at)}
                     </span>
                   </div>
@@ -112,9 +112,9 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
                     {isNew ? " · new" : ""}
                   </p>
                   {item.subtitle ? (
-                    <p className="mt-1 text-xs italic text-muted-foreground">{item.subtitle}</p>
+                    <p className="mt-1 break-words text-xs italic text-muted-foreground [overflow-wrap:anywhere]">{item.subtitle}</p>
                   ) : null}
-                  <p className="mt-1.5 whitespace-pre-wrap text-sm">{item.body}</p>
+                  <p className="mt-1.5 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{item.body}</p>
                 </li>
               );
             })}
@@ -123,7 +123,7 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
             <Button
               variant="ghost"
               size="sm"
-              className="mt-3"
+              className="mt-3 min-h-11"
               onClick={() => setExpanded((v) => !v)}
             >
               {expanded ? "Show less" : `Show all ${items.length}`}

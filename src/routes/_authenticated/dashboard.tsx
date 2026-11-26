@@ -331,7 +331,7 @@ function DashboardPage() {
       {isStaff && <TeacherTodo classes={classes} />}
 
       <section className="mt-6 border-b border-border pb-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="grid min-w-0 gap-2 sm:flex sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">{isStaff ? "Upcoming due dates" : "Due soon"}</h2>
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Assignments &amp; assessments
@@ -344,16 +344,16 @@ function DashboardPage() {
         ) : (
           <ul className="mt-4 divide-y divide-border">
             {upcoming.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-4 py-3">
+              <li key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                 <div className="min-w-0">
                   <Link
                     to="/classes/$classId"
                     params={{ classId: item.classId }}
-                    className="break-words text-sm font-medium hover:text-accent"
+                    className="break-words text-sm font-medium hover:text-primary [overflow-wrap:anywhere]"
                   >
                     {item.title}
                   </Link>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                     {item.className} · {item.type}
                   </p>
                 </div>
@@ -379,7 +379,7 @@ function DashboardPage() {
             icon={CalendarCheck}
             label="Overall grade"
             value={overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
-            tone={overall == null ? undefined : gradeTone(overall)}
+            tone={isStaff && overall != null ? gradeTone(overall) : undefined}
           />
         )}
         {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
@@ -407,8 +407,8 @@ function DashboardPage() {
             <table className="mt-4 w-full table-fixed text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="w-1/2 pb-2">Assignment</th>
-                  <th className="pb-2">Due</th>
+                  <th className="w-3/5 pb-2 sm:w-1/2">Assignment</th>
+                  <th className="hidden pb-2 sm:table-cell">Due</th>
                   <th className="pb-2 text-right">Score</th>
                 </tr>
               </thead>
@@ -418,12 +418,15 @@ function DashboardPage() {
                   const pct = percent(Number(g.points_earned ?? 0), possible);
                   return (
                     <tr key={g.id}>
-                      <td className="break-words py-3 pr-3 font-medium">{g.assignments?.title}</td>
-                      <td className="py-3 pr-3 text-muted-foreground">
+                      <td className="break-words py-3 pr-3 font-medium [overflow-wrap:anywhere]">
+                        {g.assignments?.title}
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground sm:hidden">Due {formatDate(g.assignments?.due_date)}</span>
+                      </td>
+                      <td className="hidden py-3 pr-3 text-muted-foreground sm:table-cell">
                         {formatDate(g.assignments?.due_date)}
                       </td>
-                      <td className={`py-3 text-right font-medium ${gradeTone(pct)}`}>
-                        {g.points_earned}/{possible} · {pct.toFixed(0)}%
+                      <td className="break-words py-3 text-right font-medium text-foreground [overflow-wrap:anywhere]">
+                        <span>{g.points_earned}/{possible}</span><span className="block sm:inline"> <span className="hidden sm:inline">· </span>{pct.toFixed(0)}%</span>
                       </td>
                     </tr>
                   );
@@ -440,7 +443,7 @@ function DashboardPage() {
         <section className="min-w-0 xl:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Classes</h2>
-            <Link to="/classes" className="text-sm text-accent hover:underline">
+            <Link to="/classes" className="inline-flex min-h-11 items-center text-sm text-primary hover:underline">
               View all
             </Link>
           </div>
@@ -462,7 +465,7 @@ function DashboardPage() {
                   key={c.id}
                   to="/classes/$classId"
                   params={{ classId: c.id }}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm hover:text-accent"
+                  className="grid min-w-0 gap-1 break-words py-3 text-sm hover:text-primary [overflow-wrap:anywhere] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
                 >
                   <span className="min-w-0 break-words font-medium">{c.name}</span>
                   <span className="text-muted-foreground">
@@ -550,7 +553,7 @@ function DashboardPage() {
             )}
           </div>
         </section>
-          <Link to="/community" className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline">Open community</Link>
+          <Link to="/community" className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Open community</Link>
         </details>
       )}
 
