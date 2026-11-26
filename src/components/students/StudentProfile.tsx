@@ -391,7 +391,7 @@ export function StudentProfile({
             ) : (
               <ul className="divide-y divide-border rounded-md border border-border text-sm">
                 {detentions.map((d) => (
-                  <li key={d.id} className="flex items-start justify-between gap-3 px-3 py-2">
+                  <li key={d.id} className="notebook-detention-slip flex items-start justify-between gap-3 px-3 py-2">
                     <span>
                       <span className="font-medium">{d.scheduled_date}</span>
                       <span className="text-muted-foreground"> · {d.reason}</span>

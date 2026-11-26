@@ -9,6 +9,7 @@ import {
   type GradingSetup,
 } from "@/lib/grading";
 import { formatDate } from "@/lib/school";
+import { NotebookMarginNote } from "@/components/NotebookDecorations";
 
 type Assignment = LatePenaltySettings & {
   id: string;
@@ -155,6 +156,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
             {isStaff ? "Class average" : "My overall average"}
           </p>
           <div className="mt-1"><Pct value={overall} size="lg" /></div>
+          <NotebookMarginNote percent={overall} />
           <p className="mt-1 text-xs text-muted-foreground">
             {ob.label} · {assignments.length} {assignments.length === 1 ? "item" : "items"}
           </p>

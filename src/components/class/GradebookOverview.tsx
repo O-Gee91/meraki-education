@@ -6,6 +6,7 @@ import { letterFor, type GradingSetup } from "@/lib/grading";
 import { plannedAssignmentWeights, summarizeOverview, type OverviewStudent } from "@/lib/gradebook-overview";
 import { todayKey } from "@/lib/assignment-status";
 import { NotebookGrade } from "@/components/Sketch";
+import { NotebookMarginNote } from "@/components/NotebookDecorations";
 
 type Assignment = { id: string; title: string; category: string; points_possible: number; due_date: string | null; status: string | null };
 type RailClass = { id: string; name: string; period?: string | null };
@@ -92,6 +93,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
                   <td className="px-3 py-2 tabular-nums">{hideGrades ? "" : medianLetter ?? ""}</td>
                 </tr>
                 {!hideGrades && <tr className="text-xs text-muted-foreground"><td className="px-3 pb-2">Mean · Missing</td><td className="px-1 pb-2 text-right tabular-nums">{pct(summary.mean)}</td><td className="px-3 pb-2 tabular-nums">{summary.missing}</td></tr>}
+                {!hideGrades && <tr><td colSpan={3} className="px-3 pb-2"><NotebookMarginNote percent={summary.mean} /></td></tr>}
               </tfoot>
             </table>
             <div className="border-t border-border px-3 py-2">

@@ -301,12 +301,17 @@
   --notebook-selected-shadow: inset 0 -2px 0 var(--sketch-ink-blue);
 }
 .style-notebook.dark {
-  --sketch-ink: oklch(0.9 0.015 240);
-  --sketch-grid: oklch(0.72 0.025 240);
-  --sketch-ink-red: oklch(0.8 0.11 25);
-  --sketch-ink-blue: oklch(0.83 0.09 235);
+  --sketch-ink: oklch(0.94 0.02 240);
+  --sketch-grid: oklch(0.78 0.03 240);
+  --sketch-ink-red: oklch(0.84 0.12 25);
+  --sketch-ink-blue: oklch(0.88 0.07 230);
   --sketch-today-bg: transparent;
   --notebook-tape: oklch(0.65 0.02 180 / 0.35);
+}
+.style-notebook {
+  --swipe-event: oklch(0.9 0.045 250);
+  --swipe-assignment: oklch(0.91 0.055 75);
+  --swipe-reminder: oklch(0.92 0.05 150);
 }
 .sketch {
   position: absolute;
@@ -328,13 +333,29 @@
 .dark .sketch-dark { display: initial; }
 .style-notebook .notebook-grade { position: relative; display: inline-block; }
 .notebook-grade > .sketch { inset: -0.3rem -0.4rem; width: calc(100% + 0.8rem); height: calc(100% + 0.6rem); }
-.style-notebook :is(h1, h2, h3, h4, .notebook-heading) { font-family: var(--font-hand); letter-spacing: 0; }
+.style-notebook :is(p, li, td, dd, th, time, input, textarea, .notebook-data, .tabular-nums) {
+  font-family: var(--font-sans);
+  font-variation-settings: normal;
+}
+.style-notebook .notebook-heading {
+  font-family: var(--font-hand);
+  font-variation-settings: "CASL" 0.75, "wght" 560;
+  letter-spacing: 0;
+}
 .style-notebook .notebook-month { position: relative; }
 .notebook-month .sketch { top: auto; bottom: -0.45rem; height: 0.5rem; }
 .style-notebook .notebook-day-number { position: relative; display: inline-flex; min-width: 1.5rem; height: 1.5rem; align-items: center; justify-content: center; }
 .style-notebook .notebook-day { position: relative; }
 .style-notebook .notebook-day { border-radius: 2px; border-color: var(--sketch-grid); }
-.style-notebook .notebook-day[aria-current="date"] .notebook-day-number { background-color: var(--sketch-today-bg); }
+.style-notebook:not(.dark) .notebook-day[aria-current="date"] .notebook-day-number {
+  background-color: transparent;
+  background-image: linear-gradient(var(--sketch-today-bg), var(--sketch-today-bg));
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 100% 58%;
+  animation: notebook-today-swipe 420ms ease;
+}
+.style-notebook.dark .notebook-day[aria-current="date"] .notebook-day-number { background: none; }
 .style-notebook .notebook-day > .sketch-box { inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
 .style-notebook .notebook-day-meta { position: relative; background-color: var(--card); border-radius: 2px; }
 .style-notebook :is(.panel, .notebook-card) {
@@ -372,7 +393,18 @@
 }
 .notebook-completion { display: none; }
 .style-notebook .notebook-completion { position: relative; display: inline-block; width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
-.style-notebook .notebook-complete-rule { text-decoration: underline; text-decoration-color: var(--sketch-ink-red); text-decoration-style: wavy; text-underline-offset: 0.3rem; }
+.style-notebook .notebook-complete-rule {
+  position: relative;
+  display: inline;
+  text-decoration: none;
+  box-decoration-break: clone;
+}
+.style-notebook .notebook-complete-rule > .sketch {
+  position: absolute;
+  inset: 0.35em 0 auto 0;
+  height: 0.7em;
+  width: auto;
+}
 .notebook-empty-mark { display: none; }
 .style-notebook .notebook-empty { display: flex; align-items: center; gap: 1rem; }
 .style-notebook .notebook-empty-mark { position: relative; display: block; width: 3rem; height: 2rem; flex-shrink: 0; }
@@ -383,15 +415,185 @@
 .style-notebook .notebook-grade > .sketch { width: calc(100% + 0.8rem); height: calc(100% + 0.6rem); }
 .notebook-attendance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; padding: 1rem 0; border-block: 1px solid var(--sketch-grid); }
 .notebook-tally { position: relative; display: inline-block; min-width: 0; width: 100%; max-width: 12rem; height: 2rem; }
-.notebook-sent { position: relative; display: inline-block; width: 1.5rem; height: 1.5rem; animation: notebook-plane 650ms ease-out both; }
-@keyframes notebook-plane { from { transform: translate(-3px, 3px); opacity: 0; } to { transform: translate(0, 0); opacity: 1; } }
+.notebook-sent { position: relative; display: inline-block; width: 1.5rem; height: 1.5rem; }
+.style-notebook .notebook-sent { animation: notebook-fly 900ms ease-in 520ms both; }
+@keyframes notebook-fly {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  18% { transform: translate(-5px, 3px) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(26px, -34px) rotate(16deg); opacity: 0; }
+}
+@keyframes notebook-today-swipe { from { background-size: 0% 58%; } to { background-size: 100% 58%; } }
+.sketch-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sketch-draw var(--sketch-draw-ms, 640ms) ease forwards;
+  vector-effect: none;
+}
+.sketch-draw path:nth-child(2) { animation-delay: 80ms; }
+.sketch-draw path:nth-child(3) { animation-delay: 150ms; }
+@keyframes sketch-draw { to { stroke-dashoffset: 0; } }
 @media (min-width: 640px) { .notebook-attendance { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media print {
-  .style-notebook :is(.sketch, .notebook-empty-mark, .notebook-completion, .notebook-attendance) { display: none; }
+  .style-notebook :is(.sketch, .notebook-empty-mark, .notebook-completion, .notebook-attendance, .notebook-stamp, .notebook-margin-note, .notebook-here, .notebook-checklist) { display: none; }
   .style-notebook .notebook-paper::before { display: none; }
   .style-notebook .notebook-paper { box-shadow: none; }
-  .style-notebook :is(h1, h2, h3, h4, .notebook-heading) { font-family: var(--font-display); letter-spacing: -0.02em; }
+  .style-notebook .notebook-heading { font-family: var(--font-display); letter-spacing: -0.02em; font-variation-settings: normal; }
+  .style-notebook .notebook-cork { background: none; box-shadow: none; }
+  .style-notebook :is(.notebook-pin, .notebook-stamp, .notebook-margin-note) { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .style-notebook *, .style-notebook *::before, .style-notebook *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .style-notebook :is(.notebook-pin, .notebook-stamp, .notebook-sent, .notebook-margin-note) {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .style-notebook .sketch-draw path { animation: none !important; stroke-dashoffset: 0; }
+  .style-notebook:not(.dark) .notebook-day[aria-current="date"] .notebook-day-number { animation: none; background-size: 100% 58%; }
+}
+
+/* Calendar board: hand-ruled cells, smudge hover, chips that keep marks off the words. */
+.style-notebook .notebook-board { position: relative; gap: 0; }
+.style-notebook .notebook-board > .sketch-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+.style-notebook .notebook-board .notebook-day {
+  border-color: transparent;
+  background-color: transparent;
+  border-radius: 0;
+}
+.style-notebook .notebook-day::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 10%;
+  right: 8%;
+  top: 18%;
+  bottom: 16%;
+  border-radius: 46% 54% 48% 52%;
+  background: color-mix(in oklab, var(--sketch-ink) 14%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+.style-notebook .notebook-day:hover::after,
+.style-notebook .notebook-day:focus-visible::after { opacity: 1; }
+.style-notebook .notebook-day > :not(.sketch) { position: relative; z-index: 1; }
+.style-notebook .notebook-chip {
+  position: relative;
+  z-index: 1;
+  background-color: var(--card);
+  box-shadow: 0 0 0 2px var(--card);
+}
+.style-notebook:not(.dark) .notebook-swipe {
+  background-repeat: no-repeat;
+  background-position: left 60%;
+  background-size: 100% 0.55em;
+}
+.style-notebook:not(.dark) .notebook-swipe-event { background-image: linear-gradient(var(--swipe-event), var(--swipe-event)); }
+.style-notebook:not(.dark) .notebook-swipe-assignment { background-image: linear-gradient(var(--swipe-assignment), var(--swipe-assignment)); }
+.style-notebook:not(.dark) .notebook-swipe-reminder { background-image: linear-gradient(var(--swipe-reminder), var(--swipe-reminder)); }
+.style-notebook.dark .notebook-swipe-event { box-shadow: inset 3px 0 0 var(--sketch-ink-blue); }
+.style-notebook.dark .notebook-swipe-assignment { box-shadow: inset 3px 0 0 oklch(0.82 0.09 75); }
+.style-notebook.dark .notebook-swipe-reminder { box-shadow: inset 3px 0 0 oklch(0.84 0.08 155); }
+.notebook-here { display: flex; align-items: center; gap: 0.6rem; margin: 0.75rem 0; }
+.notebook-here-rule { position: relative; display: inline-block; width: 4.5rem; height: 0.8rem; flex-shrink: 0; }
+.notebook-here-rule > .sketch { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.style-notebook .notebook-cork {
+  background-color: oklch(0.58 0.07 55);
+  background-image: radial-gradient(oklch(0.48 0.05 50) 0.7px, transparent 0.8px);
+  background-size: 8px 8px;
+  padding: 0.9rem;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 6px oklch(0.42 0.05 50);
+}
+.style-notebook .notebook-cork > .notebook-pin { animation: notebook-pin 480ms ease both; }
+.style-notebook .notebook-pin:nth-child(odd) { --pin-tilt: -1.2deg; }
+.style-notebook .notebook-pin:nth-child(even) { --pin-tilt: 1deg; }
+.style-notebook .notebook-pin:nth-child(3n) { animation-delay: 70ms; }
+@keyframes notebook-pin {
+  from { transform: translateY(-10px) scale(1.02); }
+  to { transform: rotate(var(--pin-tilt, 0deg)); }
+}
+.style-notebook .notebook-cork.divide-y > :not(:last-child) { border-color: transparent; }
+.style-notebook .notebook-cork .notebook-empty {
+  background: var(--card);
+  color: var(--card-foreground);
+  padding: 0.75rem;
+  border-radius: 3px;
+}
+
+.style-notebook .notebook-detention-slip {
+  position: relative;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.85rem 0.9rem 0.85rem 1.7rem;
+  border-radius: 2px;
+  background-color: oklch(0.94 0.035 12);
+  background-image: radial-gradient(circle at 0.55rem 0.7rem, transparent 0.28rem, oklch(0.4 0.02 20) 0.31rem, transparent 0.4rem);
+  background-size: 100% 1.2rem;
+  background-repeat: repeat-y;
+  color: oklch(0.27 0.04 20);
+}
+.style-notebook .notebook-detention-slip :is(p, span, h3, h4) { color: oklch(0.27 0.04 20); }
+.style-notebook .notebook-strike-slip {
+  position: relative;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  padding: 0.85rem 0.9rem;
+  background: color-mix(in oklab, var(--card) 86%, oklch(0.82 0.03 230));
+  border: 1px dashed var(--sketch-grid);
+  border-top: 8px dotted color-mix(in oklab, var(--sketch-grid) 80%, var(--foreground));
+}
+.notebook-stamp { display: none; }
+.style-notebook .notebook-stamp {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border: 2px solid var(--sketch-ink-red);
+  color: var(--sketch-ink-red);
+  font-family: var(--font-hand);
+  letter-spacing: 0.04em;
+  transform: rotate(-8deg);
+  pointer-events: none;
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+}
+.style-notebook .notebook-slip-fill {
+  font-family: var(--font-hand);
+  color: var(--sketch-ink-blue);
+  border-bottom: 1px dotted var(--sketch-ink-blue);
+}
+
+.notebook-done { display: inline-flex; max-width: 100%; align-items: flex-start; gap: 0.35rem; }
+.notebook-checklist { display: grid; gap: 0.45rem; margin-top: 0.75rem; padding: 0; list-style: none; }
+.notebook-checklist li { display: flex; align-items: center; gap: 0.5rem; }
+
+.notebook-margin-note {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  color: var(--sketch-ink-blue, currentColor);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
+}
+.notebook-margin-arrow { position: relative; display: inline-block; width: 1.6rem; height: 0.9rem; flex-shrink: 0; }
+.notebook-margin-arrow > .sketch { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.notebook-draft-label { display: none; }
+.style-notebook .notebook-draft {
+  border-left: 3px solid var(--sketch-ink-blue);
+  padding-left: 0.55rem;
+  background-image: repeating-linear-gradient(to right, var(--sketch-grid) 0 6px, transparent 6px 10px);
+  background-size: auto 1px;
+  background-repeat: repeat-x;
+  background-position: left bottom;
+}
+.style-notebook .notebook-draft-label {
+  display: inline;
+  margin-right: 0.35rem;
+  color: var(--sketch-ink-blue);
 }

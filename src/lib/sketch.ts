@@ -54,3 +54,67 @@ export function sketchMood(mood: number, rand: Random): string[] {
   const mouth = mood >= 4 ? "M 30 29 Q 50 47 70 29" : mood === 3 ? "M 34 34 L 66 34" : "M 30 37 Q 50 23 70 37";
   return [sketchCircle(50, 25, 36, 22, rand), sketchLine(36, 17, 36, 20, rand), sketchLine(64, 17, 64, 20, rand), mouth];
 }
+
+/** Bowed shaft with two barbs that meet the tip. Coordinates stay in the caller's box. */
+export function sketchArrow(x1: number, y1: number, x2: number, y2: number, rand: Random): string[] {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const ux = dx / length;
+  const uy = dy / length;
+  const px = -uy;
+  const py = ux;
+  const head = Math.min(14, length * 0.28);
+  const spread = head * 0.55;
+  const bx = x2 - ux * head;
+  const by = y2 - uy * head;
+  return [
+    sketchLine(x1, y1, x2, y2, rand, { bow: 2.4, overshoot: 0 }),
+    sketchLine(x2, y2, bx + px * spread, by + py * spread, rand, { bow: 0.4, overshoot: 0.15 }),
+    sketchLine(x2, y2, bx - px * spread, by - py * spread, rand, { bow: 0.4, overshoot: 0.15 }),
+  ];
+}
+
+/** Five-point star that stops short of closing, so the stroke reads as one pen pass. */
+export function sketchStar(cx: number, cy: number, radius: number, rand: Random): string {
+  const points = 5;
+  return Array.from({ length: points }, (_, i) => {
+    const angle = -Math.PI / 2 + (i * 4 * Math.PI) / points;
+    const wobble = 1 + (rand() - 0.5) * 0.12;
+    return `${i ? "L" : "M"} ${n(cx + Math.cos(angle) * radius * wobble)} ${n(cy + Math.sin(angle) * radius * wobble)}`;
+  }).join(" ");
+}
+
+/** Spiral that winds outward. Seeded wobble keeps it still across refreshes. */
+export function sketchSpiral(cx: number, cy: number, rand: Random): string {
+  const steps = 32;
+  const turns = 2.15;
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const t = i / steps;
+    const angle = t * Math.PI * 2 * turns;
+    const radius = 1.5 + t * 13;
+    const wobble = 1 + (rand() - 0.5) * 0.1;
+    return `${i ? "L" : "M"} ${n(cx + Math.cos(angle) * radius * wobble)} ${n(cy + Math.sin(angle) * radius * wobble)}`;
+  }).join(" ");
+}
+
+export function sketchDoodle(rand: Random): string[] {
+  return [sketchStar(22, 24, 15, rand), sketchSpiral(72, 26, rand)];
+}
+
+/** Folded plane: outline, then the center crease. Slight jitter, stable per seed. */
+export function sketchPlane(rand: Random): string[] {
+  const j = () => (rand() - 0.5) * 1.4;
+  const noseX = 90 + j();
+  const noseY = 10 + j();
+  const tailX = 10 + j();
+  const tailY = 28 + j();
+  const wingX = 56 + j();
+  const wingY = 40 + j();
+  const foldX = 42 + j();
+  const foldY = 27 + j();
+  return [
+    `M ${n(tailX)} ${n(tailY)} L ${n(noseX)} ${n(noseY)} L ${n(wingX)} ${n(wingY)} L ${n(foldX)} ${n(foldY)} Z`,
+    `M ${n(foldX)} ${n(foldY)} L ${n(foldX - 4)} ${n(foldY + 14)} L ${n(foldX + 12)} ${n(foldY + 6)}`,
+  ];
+}

@@ -32,7 +32,7 @@ export function NotebookAppearance() {
     if (style !== "notebook") return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Recursive:wght@400;600&family=ZCOOL+KuaiLe&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Recursive:CASL,wght@0..1,400..700&family=ZCOOL+KuaiLe&display=swap";
     document.head.appendChild(link);
     return () => link.remove();
   }, [style]);

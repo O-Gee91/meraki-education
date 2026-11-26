@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardCheck, FileClock, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +9,8 @@ import { fetchByIds } from "@/lib/query";
 import { LoadError } from "@/components/LoadError";
 import { useAuth } from "@/hooks/useAuth";
 import { READ_REUSE_MS } from "@/lib/api-query-policy";
-import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
+import { NotebookChecklist, NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
+import { checklistSteps } from "@/lib/notebook-notes";
 
 type Item = { key: string; classId: string; className: string; kind: string; count: number; icon: typeof ListChecks };
 
@@ -16,11 +18,13 @@ type Item = { key: string; classId: string; className: string; kind: string; cou
 export function TeacherTodo({ classes }: { classes: { id: string; name: string }[] }) {
   const { user, primaryRole, loading } = useAuth();
   const ids = classes.map((c) => c.id).sort();
+  const [phase, setPhase] = useState(0);
   const todoQuery = useQuery({
     queryKey: ["teacher-todo", user?.id, primaryRole, classes.map((c) => [c.id, c.name]).sort()],
     enabled: ids.length > 0 && Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
     queryFn: async (): Promise<Item[]> => {
+      setPhase(0);
       const [assignments, assessments] = await Promise.all([
         fetchByIds(ids, (batch, from, to) => supabase.from("assignments")
           .select("id, class_id").in("class_id", batch).order("id").range(from, to)),
@@ -31,6 +35,7 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       const aIds = [...aClass.keys()];
       const sClass = new Map((assessments ?? []).map((a) => [a.id, a.class_id]));
       const sIds = [...sClass.keys()];
+      setPhase(1);
 
       const [subs, grades, attempts, completions] = await Promise.all([
         fetchByIds(aIds, (batch, from, to) => supabase.from("assignment_submissions")
@@ -83,7 +88,10 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
     <section className="mt-6 border-b border-border pb-6">
       <h2 className="notebook-heading text-lg font-semibold">To do</h2>
       {todoQuery.isLoading && ids.length > 0 ? (
-        <NotebookLoading className="mt-3 text-sm text-muted-foreground">Checking your classes…</NotebookLoading>
+        <>
+          <NotebookLoading className="mt-3 text-sm text-muted-foreground">Checking your classes…</NotebookLoading>
+          <NotebookChecklist className="text-sm text-muted-foreground" steps={checklistSteps(["Assignments and assessments", "Submissions and grades"], phase)} />
+        </>
       ) : todoQuery.isError ? (
         <LoadError label="Your to-do list couldn't be loaded." onRetry={() => void todoQuery.refetch()} />
       ) : items.length === 0 ? (

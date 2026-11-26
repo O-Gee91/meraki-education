@@ -10,7 +10,7 @@ import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { FeedbackInbox } from "@/components/FeedbackInbox";
 import { TeacherTodo } from "@/components/TeacherTodo";
 import { NotebookGrade } from "@/components/Sketch";
-import { NotebookEmpty } from "@/components/NotebookDecorations";
+import { NotebookEmpty, NotebookMarginNote } from "@/components/NotebookDecorations";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -389,6 +389,7 @@ function DashboardPage() {
             label="Overall grade"
             value={gradesQuery.isError || overall == null ? "—" : `${overall.toFixed(1)}% ${letterFor(overall, overallScale)}`}
             tone={isStaff && !gradesQuery.isError && overall != null ? gradeTone(overall) : undefined}
+            note={gradesQuery.isError ? null : overall}
           />
         )}
         {isStaff && <Stat icon={Megaphone} label="Announcements" value={String(announcements.length)} />}
@@ -494,13 +495,13 @@ function DashboardPage() {
         {isStaff && (
         <section className="min-w-0 border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
           <h2 className="notebook-heading text-lg font-semibold">Announcements</h2>
-          <div className="mt-4 space-y-4">
+          <div className="notebook-cork mt-4 space-y-4">
             {announcements.length === 0 ? (
               <NotebookEmpty className="text-sm text-muted-foreground">Nothing posted yet.</NotebookEmpty>
             ) : (
               announcements.map((a) => (
-                <article key={a.id} className="notebook-paper">
-                  <h3 className="text-sm font-semibold">{a.title}</h3>
+                <article key={a.id} className="notebook-paper notebook-pin">
+                  <h3 className="notebook-data text-sm font-semibold">{a.title}</h3>
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
                 </article>
@@ -553,13 +554,13 @@ function DashboardPage() {
         <details className="mt-8 border-t border-border pt-6">
           <summary className="cursor-pointer rounded-sm text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">News &amp; community</summary>
         <section className="pt-4">
-          <div className="mt-4 space-y-4">
+          <div className="notebook-cork mt-4 space-y-4">
             {announcements.length === 0 ? (
               <NotebookEmpty className="text-sm text-muted-foreground">Nothing posted yet.</NotebookEmpty>
             ) : (
               announcements.map((a) => (
-                <article key={a.id} className="notebook-paper">
-                  <h3 className="text-sm font-semibold">{a.title}</h3>
+                <article key={a.id} className="notebook-paper notebook-pin">
+                  <h3 className="notebook-data text-sm font-semibold">{a.title}</h3>
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
                 </article>
@@ -723,11 +724,13 @@ function Stat({
   label,
   value,
   tone,
+  note,
 }: {
   icon: typeof BookOpen;
   label: string;
   value: string;
   tone?: string | undefined;
+  note?: number | null;
 }) {
   return (
     <div className="min-w-0">
@@ -735,7 +738,8 @@ function Stat({
         <Icon className="size-4" />
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <p className={`mt-2 break-words text-xl font-semibold ${tone ?? ""}`}><NotebookGrade seed={`summary:${label}`} marked={label === "Overall grade" && value !== "—"}>{value}</NotebookGrade></p>
+      <p className={`notebook-data mt-2 break-words text-xl font-semibold ${tone ?? ""}`}><NotebookGrade seed={`summary:${label}`} marked={label === "Overall grade" && value !== "—"}>{value}</NotebookGrade></p>
+      {note !== undefined ? <NotebookMarginNote percent={note} /> : null}
     </div>
   );
 }

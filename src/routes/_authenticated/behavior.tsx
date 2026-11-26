@@ -922,12 +922,12 @@ function NoteRow({
 
   const mine = !!currentUserId && note.recorded_by === currentUserId;
   return (
-    <article className={`py-5 ${mine ? "border-l-2 border-l-primary/50 pl-3" : ""}`}>
+    <article className={`py-5 ${note.kind === "strike" ? "notebook-strike-slip" : ""} ${mine ? "border-l-2 border-l-primary/50 pl-3" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <button
             type="button"
-            className="break-words text-left text-sm font-semibold hover:underline"
+            className="notebook-data break-words text-left text-sm font-semibold hover:underline"
             onClick={() => onOpenStudent?.(note.student_id)}
             title="See this student's full behavior history"
           >
@@ -966,7 +966,8 @@ function NoteRow({
       <Badge variant="outline" className={`mt-2 max-w-full whitespace-normal break-words border-transparent shadow-none ${note.kind === "strike" ? "bg-destructive/10 text-destructive" : note.kind === "positive" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"}`}>
         {noteHeadline(note)}
       </Badge>
-      <p className="mt-2 max-w-prose whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{note.notes}</p>
+      {note.kind === "strike" ? <span className="notebook-stamp mt-2" aria-hidden="true">Strike</span> : null}
+      <p className={`mt-2 max-w-prose whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground ${note.kind === "strike" ? "notebook-slip-fill" : ""}`}>{note.notes}</p>
     </article>
   );
 }
@@ -984,15 +985,16 @@ type StrikeRow = {
 function StrikeRowItem({ row }: { row: StrikeRow }) {
   const inCycle = row.strikes % 3 === 0 ? 3 : row.strikes % 3;
   return (
-    <li className="grid min-w-0 gap-3 py-4 md:grid-cols-[minmax(0,1fr)_11rem]">
+    <li className="notebook-strike-slip grid min-w-0 gap-3 py-4 md:grid-cols-[minmax(0,1fr)_11rem]">
       <div className="min-w-0">
-        <p className="break-words text-sm font-semibold">{row.name}</p>
+        <p className="notebook-data break-words text-sm font-semibold">{row.name}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {row.strikes} total · last {formatDate(row.last)}
         </p>
-        {row.reasons.length ? <p className="mt-1 max-w-prose break-words text-sm text-muted-foreground">{row.reasons.join(", ")}</p> : null}
+        {row.reasons.length ? <p className="notebook-slip-fill mt-1 max-w-prose break-words text-sm text-muted-foreground">{row.reasons.join(", ")}</p> : null}
       </div>
       <div className="space-y-2 md:justify-self-end">
+      <span className="notebook-stamp" aria-hidden="true">Strike</span>
       <span className="flex items-center gap-2">
         <span className="flex gap-1" aria-hidden="true">
         {[1, 2, 3].map((i) => (
@@ -1238,7 +1240,7 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
           </h3>
           <div className="mt-2 divide-y divide-border border-t border-border">
           {byGrade.get(g)!.map((d) => (
-        <article key={d.id} className="grid min-w-0 gap-4 py-5">
+        <article key={d.id} className="notebook-detention-slip grid min-w-0 gap-4 py-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="break-words text-sm font-semibold">

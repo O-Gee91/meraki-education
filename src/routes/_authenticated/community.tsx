@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/school";
+import { NotebookEmpty } from "@/components/NotebookDecorations";
 
 export const Route = createFileRoute("/_authenticated/community")({
   head: () => ({
@@ -283,13 +284,13 @@ function CommunityPage() {
 
         <section className="min-w-0 border-t border-border pt-5 [overflow-wrap:anywhere]" aria-label="School news">
           <h2 className="notebook-heading text-lg font-semibold">School news river</h2>
-          <div className="mt-4 divide-y divide-border">
+          <div className="notebook-cork mt-4 divide-y divide-border">
             {news.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No school news yet.</p>
+              <NotebookEmpty className="text-sm text-muted-foreground">No school news yet.</NotebookEmpty>
             ) : (
               news.map((n) => (
-                <article key={n.id} className="notebook-paper min-w-0 py-4 first:pt-0">
-                  <h3 className="text-base font-semibold">{n.title}</h3>
+                <article key={n.id} className="notebook-paper notebook-pin min-w-0 py-4 first:pt-0">
+                  <h3 className="notebook-data text-base font-semibold">{n.title}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(n.created_at)}</p>
                   <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">{n.body}</p>
                 </article>
