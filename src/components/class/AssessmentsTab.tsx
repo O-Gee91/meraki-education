@@ -391,10 +391,11 @@ async function syncColumnPoints(assessmentId: string) {
     .eq("assessment_id", assessmentId);
   const total = (qs ?? []).reduce((s, q) => s + Number(q.points || 0), 0);
   if (total <= 0) return;
-  await supabase
+  const { error } = await supabase
     .from("assignments")
     .update({ points_possible: total })
     .eq("id", assessment.assignment_id);
+  if (error) throw error;
 }
 
 function NewAssessment({
@@ -1056,7 +1057,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     onSuccess: async (result) => {
       toast.success(result === "updated" ? "Question updated" : "Question added");
       reset();
-      await syncColumnPoints(assessmentId);
+      try {
+        await syncColumnPoints(assessmentId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not update the gradebook total");
+      }
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
@@ -1070,7 +1075,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
     },
     onSuccess: async (_d, id) => {
       if (editingId === id) reset();
-      await syncColumnPoints(assessmentId);
+      try {
+        await syncColumnPoints(assessmentId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not update the gradebook total");
+      }
       queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
     },
@@ -1316,7 +1325,11 @@ function QuestionBuilder({ assessmentId }: { assessmentId: string }) {
               assessmentId={assessmentId}
               startPosition={questions.length}
               onImported={async () => {
-                await syncColumnPoints(assessmentId);
+                try {
+                  await syncColumnPoints(assessmentId);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not update the gradebook total");
+                }
                 queryClient.invalidateQueries({ queryKey: ["assessment-questions", assessmentId] });
                 queryClient.invalidateQueries({ queryKey: ["assignments"] });
               }}

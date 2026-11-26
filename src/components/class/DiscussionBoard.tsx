@@ -22,7 +22,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/query";
 import { formatDate, formatDateTime } from "@/lib/school";
 import { POST_MAX_LENGTH } from "@/lib/feed-safety";
-import { discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
+import { discussionPostMax, discussionScoresAfterEdits, discussionTotalPossible, formatPoints, studentDiscussionTotal } from "@/lib/discussion";
+import { boundedScoreError, discussionTotalError } from "@/lib/score-limit";
+import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
 import { formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
@@ -71,8 +73,12 @@ const SELECT_CLS =
 
 /** Max points for a main response / a reply (legacy discussions fall back to the whole total). */
 function maxFor(d: Discussion, isReply: boolean) {
-  if (d.response_points === 0 && d.reply_points === 0) return isReply ? 0 : Number(d.points_possible);
-  return Number(isReply ? d.reply_points : d.response_points);
+  return discussionPostMax({
+    pointsPossible: Number(d.points_possible),
+    responsePoints: Number(d.response_points),
+    replyPoints: Number(d.reply_points),
+    isReply,
+  });
 }
 
 type Scope = "class" | "classes" | "grade";
@@ -949,31 +955,41 @@ function GradeByStudent({
     mutationFn: async (student: { id: string; user_id: string | null }) => {
       if (!student.user_id) throw new Error("This student has no account yet");
       const mine = posts.filter((p) => p.author_id === student.user_id);
+      const edits: { postId: string; points: number | null; max: number }[] = [];
       for (const p of mine) {
         const raw = pending[p.id];
         if (raw === undefined) continue;
         const max = maxFor(d, !!p.parent_id);
         if (raw.trim() === "") {
-          const { error } = await supabase.from("discussion_post_scores").delete().eq("post_id", p.id);
-          if (error) throw error;
+          edits.push({ postId: p.id, points: null, max });
           continue;
         }
         const pts = Number(raw);
-        if (!Number.isFinite(pts) || pts < 0) throw new Error("Scores must be 0 or more");
+        const fieldError = boundedScoreError(pts, max, p.parent_id ? "reply" : "response");
+        if (fieldError) throw new Error(fieldError);
+        edits.push({ postId: p.id, points: pts, max });
+      }
+      const savedForStudent = scores
+        .filter((s) => s.author_id === student.user_id)
+        .map((s) => ({ postId: s.post_id, points: Number(s.points) }));
+      const total = discussionScoresAfterEdits(savedForStudent, edits);
+      if (d.graded && total != null) {
+        const totalError = discussionTotalError(total, Number(d.points_possible));
+        if (totalError) throw new Error(totalError);
+      }
+      for (const edit of edits) {
+        if (edit.points == null) {
+          const { error } = await supabase.from("discussion_post_scores").delete().eq("post_id", edit.postId);
+          if (error) throw error;
+          continue;
+        }
         const { error } = await supabase.from("discussion_post_scores").upsert(
-          { post_id: p.id, discussion_id: threadId, author_id: student.user_id, points: pts, max_points: max, graded_by: user!.id },
+          { post_id: edit.postId, discussion_id: threadId, author_id: student.user_id, points: edit.points, max_points: edit.max, graded_by: user!.id },
           { onConflict: "post_id" },
         );
         if (error) throw error;
       }
-      // Recompute the total from saved scores and sync to this class's gradebook.
-      const { data: saved, error: sErr } = await supabase
-        .from("discussion_post_scores")
-        .select("points, post_id")
-        .eq("discussion_id", threadId)
-        .eq("author_id", student.user_id);
-      if (sErr) throw sErr;
-      const total = studentDiscussionTotal(saved ?? []);
+      // The total was checked before any write. Sync that same total to this class's gradebook.
       if (d.assignment_id && total !== null) {
         const { error } = await supabase.from("grades").upsert(
           { assignment_id: d.assignment_id, student_id: student.id, points_earned: total, is_draft: false, posted_at: new Date().toISOString(), posted_by: user!.id },
@@ -1000,18 +1016,30 @@ function GradeByStudent({
     const s = scores.find((x) => x.post_id === post.id);
     const max = maxFor(d, !!post.parent_id);
     const value = pending[post.id] ?? (s ? String(s.points) : "");
+    const typed = pending[post.id];
+    const fieldError =
+      typed === undefined || typed.trim() === ""
+        ? null
+        : boundedScoreError(Number(typed), max, post.parent_id ? "reply" : "response");
+    const errorId = `discussion-score-error-${post.id}`;
     return (
-      <div key={post.id} className="flex shrink-0 items-center gap-1 text-sm">
-        <Input
-          type="number"
-          min={0}
-          step="0.5"
-          value={value}
-          onChange={(e) => setPending((p) => ({ ...p, [post.id]: e.target.value }))}
-          className="h-8 w-16 text-right"
-          aria-label={post.parent_id ? "Reply score" : "Response score"}
-        />
-        <span className="text-muted-foreground">/ {max}</span>
+      <div key={post.id} className="flex shrink-0 flex-col items-end gap-1 text-sm">
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            min={0}
+            max={max}
+            step="0.5"
+            value={value}
+            onChange={(e) => setPending((p) => ({ ...p, [post.id]: e.target.value }))}
+            className="h-8 w-16 text-right"
+            aria-label={post.parent_id ? "Reply score" : "Response score"}
+            aria-invalid={fieldError ? true : undefined}
+            aria-describedby={fieldError ? errorId : undefined}
+          />
+          <span className="text-muted-foreground">/ {max}</span>
+        </div>
+        <ScoreLimitAlert id={errorId} message={fieldError} className="max-w-48 text-right" />
       </div>
     );
   };
@@ -1028,7 +1056,25 @@ function GradeByStudent({
         const main = mine.filter((p) => !p.parent_id);
         const replies = mine.filter((p) => p.parent_id);
         const saved = scores.filter((s) => s.author_id === st.user_id);
+        const pendingEdits = mine
+          .filter((p) => pending[p.id] !== undefined)
+          .map((p) => {
+            const raw = pending[p.id] ?? "";
+            return { postId: p.id, points: raw.trim() === "" ? null : Number(raw) };
+          });
+        const previewTotal = discussionScoresAfterEdits(
+          saved.map((s) => ({ postId: s.post_id, points: Number(s.points) })),
+          pendingEdits,
+        );
         const total = studentDiscussionTotal(saved);
+        const shownTotal = pendingEdits.length > 0 ? previewTotal : total;
+        const totalError =
+          d.graded && shownTotal != null ? discussionTotalError(shownTotal, Number(d.points_possible)) : null;
+        const fieldInvalid = mine.some((p) => {
+          const raw = pending[p.id];
+          if (raw === undefined || raw.trim() === "") return false;
+          return boundedScoreError(Number(raw), maxFor(d, !!p.parent_id), p.parent_id ? "reply" : "response") != null;
+        });
         const dueKey = d.due_at ?? (d.due_date ? `${d.due_date}T23:59:59` : null);
         const pastDue = !!dueKey && new Date(dueKey).getTime() < Date.now() && isWithinEnrollmentWindow(
           { created_at: d.created_at, due_date: dueKey },
@@ -1045,13 +1091,16 @@ function GradeByStudent({
                 <Badge variant={ds.state === "graded" || ds.state === "complete" ? "secondary" : "outline"} className={ds.state === "missing" || (pastDue && ds.state !== "graded" && ds.state !== "complete") ? "border-warning text-foreground" : undefined}>{status}</Badge>
                 {st.is_tester ? <Badge variant="outline">Test account</Badge> : null}
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm">Total <span className="text-base font-semibold">{formatPoints(total, Number(d.points_possible))}</span></span>
-                {mine.length > 0 && (
-                  <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || saveStudent.isPending} onClick={() => saveStudent.mutate(st)}>
-                    Save scores
-                  </Button>
-                )}
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm">Total <span className="text-base font-semibold">{formatPoints(shownTotal, Number(d.points_possible))}</span></span>
+                  {mine.length > 0 && (
+                    <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || saveStudent.isPending || fieldInvalid || totalError != null} onClick={() => saveStudent.mutate(st)} aria-describedby={totalError ? `discussion-total-error-${st.id}` : undefined}>
+                      Save scores
+                    </Button>
+                  )}
+                </div>
+                <ScoreLimitAlert id={`discussion-total-error-${st.id}`} message={totalError} className="max-w-sm text-right" />
               </div>
             </header>
             {mine.length === 0 ? (

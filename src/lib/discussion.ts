@@ -57,6 +57,41 @@ export function discussionTotalPossible(responsePoints: number, replyPoints: num
   return Math.max(0, responsePoints) + Math.max(0, replyPoints) * Math.max(0, requiredReplies);
 }
 
+/**
+ * Max points for one post. Legacy discussions (both point fields still 0)
+ * put the whole total on the main response and none on replies.
+ */
+export function discussionPostMax(input: {
+  pointsPossible: number;
+  responsePoints: number;
+  replyPoints: number;
+  isReply: boolean;
+}): number {
+  const response = Number(input.responsePoints) || 0;
+  const reply = Number(input.replyPoints) || 0;
+  if (response === 0 && reply === 0) return input.isReply ? 0 : Number(input.pointsPossible) || 0;
+  return input.isReply ? reply : response;
+}
+
+/**
+ * Saved post scores after the teacher's pending edits.
+ * A null edit clears that post. Null when nothing remains graded.
+ */
+export function discussionScoresAfterEdits(
+  saved: { postId: string; points: number }[],
+  edits: { postId: string; points: number | null }[],
+): number | null {
+  const map = new Map(saved.map((score) => [score.postId, Number(score.points) || 0]));
+  for (const edit of edits) {
+    if (edit.points == null) map.delete(edit.postId);
+    else map.set(edit.postId, Number(edit.points) || 0);
+  }
+  if (map.size === 0) return null;
+  let sum = 0;
+  for (const points of map.values()) sum += points;
+  return sum;
+}
+
 /** Sum a student's per-post scores; null when nothing is graded yet. */
 export function studentDiscussionTotal(scores: { points: number }[]): number | null {
   if (scores.length === 0) return null;
