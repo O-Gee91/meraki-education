@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { subscribeReadRefresh } from "@/lib/read-refresh";
+import { NotebookAppearance } from "@/components/NotebookStyle";
 
 function NotFoundComponent() {
   const btn = "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors";
@@ -142,6 +143,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <NotebookAppearance />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster richColors position="top-right" />

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { selectNotebookStyle, useNotebookStyle } from "@/components/NotebookStyle";
 
 export const THEME_STORAGE_KEY = "meraki-theme";
 
@@ -60,7 +61,8 @@ function isTheme(value: string | null): value is Theme {
 }
 
 function applyTheme(theme: Theme) {
-  const meta = THEMES.find((t) => t.id === theme) ?? THEMES[0]!;
+  const meta = THEMES.find((t) => t.id === theme);
+  if (!meta) return;
   const root = document.documentElement;
   root.dataset["theme"] = theme;
   root.classList.toggle("dark", meta.dark);
@@ -100,7 +102,9 @@ export function useTheme() {
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, select } = useTheme();
-  const active = THEMES.find((t) => t.id === theme) ?? THEMES[0]!;
+  const style = useNotebookStyle();
+  const active = THEMES.find((t) => t.id === theme);
+  if (!active) return null;
 
   return (
     <DropdownMenu>
@@ -141,6 +145,14 @@ export function ThemeToggle({ className }: { className?: string }) {
             <Check
               className={cn("size-4 shrink-0", option.id === theme ? "opacity-100" : "opacity-0")}
             />
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Style</DropdownMenuLabel>
+        {(["normal", "notebook"] as const).map((option) => (
+          <DropdownMenuItem key={option} onSelect={() => selectNotebookStyle(option)} className="min-h-11 gap-3">
+            <span className="flex-1">{option === "normal" ? "Standard" : "Notebook"}</span>
+            <Check className={cn("size-4", style === option ? "opacity-100" : "opacity-0")} />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -6,6 +6,7 @@ import { letterFor, type GradingSetup } from "@/lib/grading";
 import { plannedAssignmentWeights, summarizeOverview, type OverviewStudent } from "@/lib/gradebook-overview";
 import { formatDate } from "@/lib/school";
 import { todayKey } from "@/lib/assignment-status";
+import { NotebookGrade } from "@/components/Sketch";
 
 type Assignment = { id: string; title: string; category: string; points_possible: number; due_date: string | null; status: string | null };
 type Props = {
@@ -67,8 +68,8 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
           <div className="border-t border-border bg-muted/20 p-4">
             <p className="mb-3 text-xs text-muted-foreground">Class summary · {summary.students} active students</p>
             <dl className="grid grid-cols-3 gap-3">
-              <div><dt className="text-xs text-muted-foreground">Median</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{hideGrades ? "—" : pct(summary.median)}</dd>{!hideGrades && summary.median != null && <p className="text-xs text-muted-foreground">{letterFor(summary.median, setup.scale)}</p>}</div>
-              <div><dt className="text-xs text-muted-foreground">Mean</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{hideGrades ? "—" : pct(summary.mean)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Median</dt><dd className="mt-1 text-lg font-semibold tabular-nums"><NotebookGrade seed="class-median" marked={!hideGrades && summary.median != null}>{hideGrades ? "—" : pct(summary.median)}</NotebookGrade></dd>{!hideGrades && summary.median != null && <p className="text-xs text-muted-foreground">{letterFor(summary.median, setup.scale)}</p>}</div>
+              <div><dt className="text-xs text-muted-foreground">Mean</dt><dd className="mt-1 text-lg font-semibold tabular-nums"><NotebookGrade seed="class-mean" marked={!hideGrades && summary.mean != null}>{hideGrades ? "—" : pct(summary.mean)}</NotebookGrade></dd></div>
               <div><dt className="text-xs text-muted-foreground">Missing work</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{hideGrades ? "—" : summary.missing}</dd></div>
             </dl>
           </div>

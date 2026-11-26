@@ -21,6 +21,7 @@ import { useCalendarCoursework } from "@/hooks/useCalendarCoursework";
 import { isUpcoming, type CourseworkItem } from "@/lib/calendar-coursework";
 import { CheckCircle2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { Sketch } from "@/components/Sketch";
 
 const CATEGORIES = [
   { value: "event", label: "Event" },
@@ -465,7 +466,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="min-w-0 text-center text-sm font-medium sm:min-w-36">{monthLabel}</span>
+          <span className="notebook-month notebook-heading min-w-0 text-center text-sm font-medium sm:min-w-36">{monthLabel}<Sketch seed={`month:${monthLabel}`} kind="line" /></span>
           <Button
             variant="outline"
             size="icon"
@@ -559,18 +560,23 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                       key={key}
                       type="button"
                       onClick={() => setSelectedDate(key)}
-                      className={`min-h-16 rounded-md border p-1 text-left transition-colors ${
+                      aria-pressed={isSelected}
+                      aria-current={isToday ? "date" : undefined}
+                      aria-label={date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                      className={`notebook-day min-h-16 rounded-md border p-1 text-left transition-colors ${
                         isSelected
                           ? "border-accent bg-accent/10"
                           : "border-border hover:border-accent/50"
                       }`}
                     >
                       <span
-                        className={`text-xs font-semibold ${isToday ? "text-primary" : "text-foreground"}`}
+                        className={`notebook-day-number text-xs font-semibold ${isToday ? "text-primary" : "text-foreground"}`}
                       >
                         {date.getDate()}
+                        {isToday ? <Sketch seed={`today:${key}`} tone="blue" /> : key < toKey(today) ? <Sketch seed={`past:${key}`} kind="strike" tone="red" /> : null}
                       </span>
-                      <span className="mt-1 flex flex-wrap gap-0.5">
+                      {isSelected && <Sketch seed={`selected:${key}`} kind="box" />}
+                      <span className="notebook-day-meta mt-1 flex flex-wrap gap-0.5">
                         {list.slice(0, 4).map((e) => (
                           <span
                             key={e.id}
@@ -591,7 +597,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
 
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
+                <h3 className="notebook-heading text-sm font-semibold">
                   {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "long",
