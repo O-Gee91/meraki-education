@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seededRandom, sketchBox, sketchCircle, sketchGrid, sketchLine, sketchTick, sketchTally, sketchMood } from "./sketch";
+import { seededRandom, sketchArrow, sketchBox, sketchCircle, sketchDoodle, sketchGrid, sketchLine, sketchPlane, sketchStar, sketchTick, sketchTally, sketchMood } from "./sketch";
 import { DEFAULT_STYLE, resolveNotebookStyle } from "./notebook-style";
 describe("notebook appearance", () => {
   it("is off by default and rejects unknown stored styles", () => {
@@ -23,6 +23,18 @@ describe("notebook appearance", () => {
     expect(sketchTally(5, seededRandom("a"))).toHaveLength(5);
     expect(sketchTally(12, seededRandom("a"))).toHaveLength(12);
     expect(sketchTally(Number.NaN, seededRandom("a"))).toEqual([]);
+  });
+  it("keeps arrows, doodles and planes stable and finite", () => {
+    const rand = seededRandom("mark");
+    expect(sketchArrow(4, 20, 90, 18, rand)).toHaveLength(3);
+    expect(sketchArrow(4, 20, 90, 18, seededRandom("mark"))).toEqual(sketchArrow(4, 20, 90, 18, seededRandom("mark")));
+    expect(sketchArrow(4, 20, 90, 18, seededRandom("mark"))).not.toEqual(sketchArrow(4, 20, 90, 18, seededRandom("other")));
+    expect(sketchDoodle(seededRandom("doodle")).join(" ")).toBe(sketchDoodle(seededRandom("doodle")).join(" "));
+    expect(sketchDoodle(seededRandom("doodle")).join(" ")).not.toBe(sketchDoodle(seededRandom("other")).join(" "));
+    expect(sketchStar(20, 20, 12, seededRandom("star"))).not.toMatch(/NaN|Infinity/);
+    expect(sketchPlane(seededRandom("plane"))).toHaveLength(2);
+    expect(sketchPlane(seededRandom("plane")).join("")).not.toMatch(/NaN|Infinity/);
+    expect(sketchArrow(0, 0, 0, 0, seededRandom("zero")).join("")).not.toMatch(/NaN|Infinity/);
   });
   it("keeps mood marks stable and distinguishes neutral from low and positive moods", () => {
     expect(sketchMood(3, seededRandom("m"))).toEqual(sketchMood(3, seededRandom("m")));

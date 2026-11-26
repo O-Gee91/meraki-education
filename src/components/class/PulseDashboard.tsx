@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { isMissingWork } from "@/lib/missing-work";
+import { NotebookEmpty, NotebookMarginNote } from "@/components/NotebookDecorations";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 
 type RosterRow = {
@@ -554,7 +555,7 @@ export function PulseDashboard({
         <>
         <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
           {filteredCards.length === 0 ? (
-            <p className="col-span-full text-sm text-muted-foreground">No students in this group.</p>
+            <NotebookEmpty className="col-span-full text-sm text-muted-foreground">No students in this group.</NotebookEmpty>
           ) : null}
           {filteredCards.map(({ row, avg, missing, status }) => {
             const meta = STATUS_META[status];
@@ -608,6 +609,7 @@ export function PulseDashboard({
                   ? ` · ${selectedCard.missing} missing ${isStaff ? "item(s)" : "assignment(s)"}`
                   : ""}
               </p>
+              {!hideGrades ? <NotebookMarginNote percent={selectedCard.avg} /> : null}
               {selectedMissing && (
                 <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
                   {selectedMissing.items.map((a) => (

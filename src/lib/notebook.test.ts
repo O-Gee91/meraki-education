@@ -77,7 +77,10 @@ describe("notebook selection", () => {
     expect(root).toContain("meraki-style");
     expect(root).toContain("style-notebook");
     expect(root).toContain("s==='notebook'");
-    expect(css).toContain(".style-notebook :is(h1, h2, h3, h4, .notebook-heading)");
+    expect(css).toContain(".style-notebook .notebook-heading");
+    expect(css).not.toContain(".style-notebook :is(h1, h2, h3, h4, .notebook-heading)");
+    expect(css).toContain(".notebook-data");
+    expect(css).toContain("font-family: var(--font-sans)");
     expect(css).toContain(".style-notebook :is(.panel, .notebook-card)");
     expect(css).toContain(".style-notebook :is(thead, .divide-y > :not(:last-child))");
     expect(css).toContain('.style-notebook .notebook-nav a[aria-current="page"]');

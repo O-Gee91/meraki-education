@@ -541,14 +541,14 @@ function MessagesPage() {
             )}
             <section
               aria-label="School announcements"
-              className="min-w-0 divide-y divide-border border-t border-border"
+              className="notebook-cork min-w-0 divide-y divide-border border-t border-border"
             >
               <h2 className="notebook-heading py-5 text-lg font-semibold">School announcements</h2>
               {announcements.length === 0 ? (
                 <NotebookEmpty className="py-6 text-sm text-muted-foreground">No announcements yet.</NotebookEmpty>
               ) : (
                 announcements.map((a) => (
-                  <article key={a.id} className="notebook-paper min-w-0 py-5 [overflow-wrap:anywhere]">
+                  <article key={a.id} className="notebook-paper notebook-pin min-w-0 py-5 [overflow-wrap:anywhere]">
                     {editingId === a.id ? (
                       <div className="space-y-3">
                         <Input
@@ -597,7 +597,7 @@ function MessagesPage() {
                       <>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <h3 className="text-base font-semibold">{a.title}</h3>
+                            <h3 className="notebook-data text-base font-semibold">{a.title}</h3>
                             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                               <Badge variant="outline" className="max-w-full whitespace-normal font-normal text-muted-foreground">
                                 {audienceLabel(a.audience)}

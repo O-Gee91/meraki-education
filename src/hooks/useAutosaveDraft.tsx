@@ -124,9 +124,10 @@ export function DraftStatus({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground ${className ?? ""}`}
+      className={`notebook-draft inline-flex items-center gap-1.5 text-xs text-muted-foreground ${className ?? ""}`}
       aria-live="polite"
     >
+      <span className="notebook-draft-label notebook-heading">Draft</span>
       {state === "saving" ? (
         <>
           <Loader2 className="h-3 w-3 animate-spin" /> Autosaving…

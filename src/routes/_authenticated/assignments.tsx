@@ -348,7 +348,7 @@ function AssignmentsHubPage() {
                       aria-controls={`assignment-details-${row.assignmentId}`}
                     >
                       <span className="min-w-0 flex-1 basis-52">
-                        <span className="flex items-start gap-2"><span className="block min-w-0 break-words text-base font-semibold [overflow-wrap:anywhere]">{row.title}</span>{(row.status === "graded" || row.status === "submitted") && <span className="notebook-completion"><Sketch seed={`completed:${row.assignmentId}`} kind="tick" /></span>}</span>
+                        <span className="flex items-start gap-2"><span className={`notebook-data block min-w-0 break-words text-base font-semibold [overflow-wrap:anywhere] ${(row.status === "graded" || row.status === "submitted") ? "notebook-complete-rule" : ""}`}>{row.title}{(row.status === "graded" || row.status === "submitted") ? <Sketch seed={`completed:${row.assignmentId}`} kind="strike" tone="red" draw /> : null}</span>{(row.status === "graded" || row.status === "submitted") && <span className="notebook-completion"><Sketch seed={`completed-tick:${row.assignmentId}`} kind="tick" draw /></span>}</span>
                         <span className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                           {row.className}
                           {row.dueDate ? ` · Due ${formatDate(row.dueDate)}` : " · No due date"}

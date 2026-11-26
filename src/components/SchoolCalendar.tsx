@@ -17,6 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/query";
 import { LoadError } from "@/components/LoadError";
 import { NotebookEmpty } from "@/components/NotebookDecorations";
+import { NotebookCalendarList, type CalendarAgendaRow } from "@/components/NotebookCalendarList";
+import { useNotebookStyle } from "@/components/NotebookStyle";
+import { calendarMarkKind, monthContainsDay } from "@/lib/notebook-calendar";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { withCalendarAudience, withCalendarCategory, withCalendarColor } from "@/lib/calendar-form";
 import { useAuth } from "@/hooks/useAuth";
@@ -159,6 +162,8 @@ function formatTime(value?: string | null) {
 
 export function SchoolCalendar({ classId }: { classId?: string } = {}) {
   const { isStaff, isAdmin, user, profile } = useAuth();
+  const notebookStyle = useNotebookStyle();
+  const [layout, setLayout] = useState<"month" | "list">("month");
   const queryClient = useQueryClient();
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -426,6 +431,31 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
   const dayEvents = byDate.get(selectedDate) ?? [];
   const dayWork = workByDate.get(selectedDate) ?? [];
   const monthWorkCount = showCoursework ? coursework.length : 0;
+  const listMode = notebookStyle === "notebook" && layout === "list";
+  const agendaRows = useMemo<CalendarAgendaRow[]>(() => {
+    const eventRows: CalendarAgendaRow[] = allEvents
+      .filter((event) => colorFilter.length === 0 || colorFilter.includes(event.color))
+      .map((event) => ({
+        id: `event-${event.id}`,
+        date: event.event_date,
+        title: event.title,
+        detail: [CATEGORIES.find((c) => c.value === event.category)?.label ?? event.category, formatTime(event.start_time) ?? "", event.location ?? ""].filter((part) => part.length > 0).join(" · "),
+        kind: calendarMarkKind({ source: "event", category: event.category }),
+        completed: false,
+      }));
+    const workRows: CalendarAgendaRow[] = (showCoursework ? allCoursework : [])
+      .filter((work) => classFilter === "all" || work.classId === classFilter)
+      .map((work) => ({
+        id: `work-${work.kind}-${work.id}`,
+        date: work.date,
+        title: work.title,
+        detail: `${work.className} · ${work.kind === "assignment" ? "Assignment" : work.kind === "assessment" ? "Assessment" : "Discussion"}${work.time ? ` · ${work.time}` : ""}`,
+        kind: calendarMarkKind({ source: "work", kind: work.kind }),
+        completed: work.completed,
+      }));
+    return [...eventRows, ...workRows];
+  }, [allEvents, allCoursework, classFilter, colorFilter, showCoursework]);
+  const weeks = Math.max(1, Math.ceil(cells.length / 7));
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   return (
@@ -539,6 +569,12 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                 Clear
               </Button>
             )}
+            {notebookStyle === "notebook" && (
+              <div className="ml-auto flex gap-1" role="group" aria-label="Calendar layout">
+                <Button type="button" size="sm" variant={layout === "month" ? "secondary" : "ghost"} aria-pressed={layout === "month"} onClick={() => setLayout("month")}>Month</Button>
+                <Button type="button" size="sm" variant={layout === "list" ? "secondary" : "ghost"} aria-pressed={layout === "list"} onClick={() => setLayout("list")}>List</Button>
+              </div>
+            )}
           </div>
 
           {eventsQuery.isError || courseworkQuery.isError ? (
@@ -551,6 +587,9 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
             />
           ) : null}
 
+          {listMode ? (
+            <NotebookCalendarList rows={agendaRows} today={todayKey} showHere={monthContainsDay(todayKey, monthStart, monthEnd)} />
+          ) : (
           <div className="mt-5 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
             <div className="min-w-0">
               <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wide text-muted-foreground">
@@ -560,7 +599,8 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                   </span>
                 ))}
               </div>
-              <div className="mt-1 grid grid-cols-7 gap-1">
+              <div className="notebook-board mt-1 grid grid-cols-7 gap-1">
+                <Sketch seed={`grid:${monthLabel}`} kind="grid" cols={7} rows={weeks} />
                 {cells.map((date, i) => {
                   if (!date) return <div key={`pad-${i}`} />;
                   const key = toKey(date);
@@ -597,7 +637,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                           />
                         ))}
                         {work.length > 0 && (
-                          <span className="rounded-sm bg-destructive/15 px-1 text-[10px] font-medium leading-tight text-destructive">
+                          <span className="notebook-chip rounded-sm bg-destructive/15 px-1 text-[10px] font-medium leading-tight text-destructive">
                             {work.length} due
                           </span>
                         )}
@@ -610,7 +650,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
 
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="notebook-heading text-sm font-semibold">
+                <h3 className="notebook-data text-sm font-semibold">
                   {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "long",
@@ -893,10 +933,11 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Draft</span>
                       )}
                     </div>
-                    <h4 className="mt-1 break-words text-sm font-semibold [overflow-wrap:anywhere]">
+                    <h4 className={`notebook-data mt-1 break-words text-sm font-semibold [overflow-wrap:anywhere] ${w.completed ? "notebook-complete-rule" : ""}`}>
                       <Link to="/classes/$classId" params={{ classId: w.classId }} className="hover:underline">
                         {w.title}
                       </Link>
+                      {w.completed ? <Sketch seed={`done-day:${w.kind}:${w.id}`} kind="strike" tone="red" draw /> : null}
                     </h4>
                     <p className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                       {w.className} · Due {w.time ?? "end of day"}
@@ -921,7 +962,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                             <span className={`size-2 rounded-full ${colorOption(e.color).dot}`} />
                             {CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category}
                           </span>
-                          <h4 className="mt-1 text-sm font-semibold">{e.title}</h4>
+                          <h4 className="notebook-data mt-1 text-sm font-semibold">{e.title}</h4>
                           {(() => {
                             const list = (e.audiences?.length ? e.audiences : [e.audience]) as string[];
                             const ids = e.class_ids?.length ? e.class_ids : e.class_id ? [e.class_id] : [];
@@ -1000,6 +1041,7 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
               </div>
             </div>
           </div>
+          )}
         </>
       )}
     </section>
