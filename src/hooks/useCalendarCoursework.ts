@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchDiscussionParticipation } from "@/lib/discussion-completion";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds } from "@/lib/query";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
@@ -55,10 +55,10 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
       let classIds: string[] | null = scope.classIds ? [...scope.classIds] : null;
       const childrenByClass = new Map<string, string[]>();
       if (studentView) {
-        const data = await fetchAll((from, to) => supabase
+        const data = await fetchByIds(selfIds, (batch, from, to) => supabase
           .from("enrollments")
           .select("class_id, student_id")
-          .in("student_id", selfIds).order("id").range(from, to));
+          .in("student_id", batch).order("id").range(from, to));
         for (const e of data) {
           const children = childrenByClass.get(e.class_id) ?? [];
           children.push(e.student_id);
@@ -71,11 +71,11 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
       }
       if (classIds && classIds.length === 0) return [];
 
-      const classes = await fetchAll((from, to) => {
-        let q = supabase.from("classes").select("id, name, timezone");
-        if (classIds) q = q.in("id", classIds);
-        return q.order("id").range(from, to);
-      });
+      const classes = classIds
+        ? await fetchByIds(classIds, (batch, from, to) =>
+            supabase.from("classes").select("id, name, timezone").in("id", batch).order("id").range(from, to))
+        : await fetchAll((from, to) =>
+            supabase.from("classes").select("id, name, timezone").order("id").range(from, to));
       const classById = new Map((classes ?? []).map((c) => [c.id, c]));
       const ids = classIds ?? [...classById.keys()];
       if (ids.length === 0) return [];
@@ -85,31 +85,40 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
       const to = new Date(`${monthEnd}T23:59:59Z`);
       to.setUTCDate(to.getUTCDate() + 1);
 
-      let aQ = supabase
-        .from("assignments")
-        .select("id, title, class_id, due_date, status")
-        .in("class_id", ids)
-        .gte("due_date", monthStart)
-        .lte("due_date", monthEnd);
-      if (studentView) aQ = aQ.eq("status", "published");
-      let sQ = supabase
-        .from("assessments")
-        .select("id, title, class_id, due_at, published, assignment_id")
-        .in("class_id", ids)
-        .gte("due_at", from.toISOString())
-        .lte("due_at", to.toISOString());
-      if (studentView) sQ = sQ.eq("published", true);
-      const dQ = supabase
-        .from("discussions")
-        .select("id, title, class_id, due_at, due_date, assignment_id, thread_id, required_replies")
-        .in("class_id", ids)
-        .or(
-          `and(due_at.gte.${from.toISOString()},due_at.lte.${to.toISOString()}),and(due_at.is.null,due_date.gte.${monthStart},due_date.lte.${monthEnd})`,
-        );
+      const dueFrom = from.toISOString();
+      const dueTo = to.toISOString();
       const [assignments, assessments, discussions] = await Promise.all([
-        fetchAll((from, to) => aQ.order("id").range(from, to)),
-        fetchAll((from, to) => sQ.order("id").range(from, to)),
-        fetchAll((from, to) => dQ.order("id").range(from, to)),
+        fetchByIds(ids, (batch, start, end) => {
+          let q = supabase
+            .from("assignments")
+            .select("id, title, class_id, due_date, status")
+            .in("class_id", batch)
+            .gte("due_date", monthStart)
+            .lte("due_date", monthEnd);
+          if (studentView) q = q.eq("status", "published");
+          return q.order("id").range(start, end);
+        }),
+        fetchByIds(ids, (batch, start, end) => {
+          let q = supabase
+            .from("assessments")
+            .select("id, title, class_id, due_at, published, assignment_id")
+            .in("class_id", batch)
+            .gte("due_at", dueFrom)
+            .lte("due_at", dueTo);
+          if (studentView) q = q.eq("published", true);
+          return q.order("id").range(start, end);
+        }),
+        fetchByIds(ids, (batch, start, end) =>
+          supabase
+            .from("discussions")
+            .select("id, title, class_id, due_at, due_date, assignment_id, thread_id, required_replies")
+            .in("class_id", batch)
+            .or(
+              `and(due_at.gte.${dueFrom},due_at.lte.${dueTo}),and(due_at.is.null,due_date.gte.${monthStart},due_date.lte.${monthEnd})`,
+            )
+            .order("id")
+            .range(start, end),
+        ),
       ]);
 
       const done = new Set<string>();
@@ -117,15 +126,15 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
         const aIds = assignments.map((x) => x.id);
         const sIds = assessments.map((x) => x.id);
         const [subs, grades, aSubs, participation] = await Promise.all([
-          aIds.length ? fetchAll((from, to) => supabase.from("assignment_submissions")
-            .select("assignment_id, student_id, status").in("assignment_id", aIds).in("student_id", selfIds)
-            .order("id").range(from, to)) : Promise.resolve([]),
-          aIds.length ? fetchAll((from, to) => supabase.from("grades")
-            .select("assignment_id, student_id, points_earned, comment").in("assignment_id", aIds)
-            .in("student_id", selfIds).eq("is_draft", false).order("id").range(from, to)) : Promise.resolve([]),
-          sIds.length ? fetchAll((from, to) => supabase.from("assessment_submissions")
-            .select("assessment_id, student_id, status").in("assessment_id", sIds).in("student_id", selfIds)
-            .in("status", ["needs_review", "graded"]).order("id").range(from, to)) : Promise.resolve([]),
+          fetchByIds(aIds, (batch, start, end) => supabase.from("assignment_submissions")
+            .select("assignment_id, student_id, status").in("assignment_id", batch).in("student_id", selfIds)
+            .order("id").range(start, end)),
+          fetchByIds(aIds, (batch, start, end) => supabase.from("grades")
+            .select("assignment_id, student_id, points_earned, comment").in("assignment_id", batch)
+            .in("student_id", selfIds).eq("is_draft", false).order("id").range(start, end)),
+          fetchByIds(sIds, (batch, start, end) => supabase.from("assessment_submissions")
+            .select("assessment_id, student_id, status").in("assessment_id", batch).in("student_id", selfIds)
+            .in("status", ["needs_review", "graded"]).order("id").range(start, end)),
           fetchDiscussionParticipation(discussions, selfIds),
         ]);
         // An aggregate family calendar is complete only when every enrolled child is complete.

@@ -19,7 +19,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchByIds } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/school";
 import { isAutoGradeComment, markCodeFromComment } from "@/lib/grading";
@@ -85,18 +86,19 @@ function AssignmentsHubPage() {
   const activeChild = children.find((c) => c.id === childId) ?? children[0] ?? null;
   const studentIds = activeChild ? [activeChild.id] : [];
 
-  const { data: enrollments = [] } = useQuery({
+  const enrollmentsQuery = useQuery({
     queryKey: ["hub-enrollments", studentIds],
     enabled: studentIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: () => fetchByIds(studentIds, (batch, from, to) =>
+      supabase
         .from("enrollments")
         .select("student_id, class_id, created_at, classes(id, name)")
-        .in("student_id", studentIds);
-      if (error) throw error;
-      return data ?? [];
-    },
+        .in("student_id", batch)
+        .order("id")
+        .range(from, to),
+    ),
   });
+  const enrollments = enrollmentsQuery.data ?? [];
   // Staff previewing as a student only see their own classes.
   const classIds = Array.from(new Set(enrollments.map((e) => e.class_id))).filter(
     (id) => !previewingStudent || previewScope.classIds?.has(id),
@@ -104,33 +106,42 @@ function AssignmentsHubPage() {
   const className = (id: string) =>
     enrollments.find((e) => e.class_id === id)?.classes?.name ?? "Class";
 
-  const { data: assignments = [] } = useQuery({
+  const assignmentsQuery = useQuery({
     queryKey: ["hub-assignments", classIds],
     enabled: classIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assignments")
-        .select(
-          "id, class_id, title, description, category, points_possible, due_date, submission_mode, created_at, status",
-        )
-        .in("class_id", classIds)
-        .eq("status", "published")
-        .order("due_date", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      const rows = await fetchByIds(classIds, (batch, from, to) =>
+        supabase
+          .from("assignments")
+          .select(
+            "id, class_id, title, description, category, points_possible, due_date, submission_mode, created_at, status",
+          )
+          .in("class_id", batch)
+          .eq("status", "published")
+          .order("due_date", { ascending: true })
+          .order("id")
+          .range(from, to),
+      );
+      return rows.sort((a, b) => {
+        if (a.due_date == null && b.due_date == null) return a.id.localeCompare(b.id);
+        if (a.due_date == null) return 1;
+        if (b.due_date == null) return -1;
+        return a.due_date.localeCompare(b.due_date) || a.id.localeCompare(b.id);
+      });
     },
   });
+  const assignments = assignmentsQuery.data ?? [];
   const assignmentIds = assignments.map((a) => a.id);
 
-  const { data: submissions = [] } = useQuery({
+  const submissionsQuery = useQuery({
     queryKey: ["hub-submissions", assignmentIds, studentIds],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const data = await fetchAll((from, to) =>
+      const data = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
           .from("assignment_submissions")
           .select("assignment_id, student_id, status, is_late, submitted_at")
-          .in("assignment_id", assignmentIds)
+          .in("assignment_id", batch)
           .in("student_id", studentIds)
           .order("id")
           .range(from, to),
@@ -138,24 +149,29 @@ function AssignmentsHubPage() {
       return withDiscussionSubmissions(data, assignmentIds, studentIds);
     },
   });
+  const submissions = submissionsQuery.data ?? [];
 
   // RLS already hides draft grades from students and guardians.
-  const { data: grades = [] } = useQuery({
+  const gradesQuery = useQuery({
     queryKey: ["hub-grades", assignmentIds, studentIds],
     enabled: assignmentIds.length > 0,
-    queryFn: async () => {
-      return fetchAll((from, to) =>
-        supabase
-          .from("grades")
-          .select("assignment_id, student_id, points_earned, comment")
-          .eq("is_draft", false)
-          .in("assignment_id", assignmentIds)
-          .in("student_id", studentIds)
-          .order("id")
-          .range(from, to),
-      );
-    },
+    queryFn: () => fetchByIds(assignmentIds, (batch, from, to) =>
+      supabase
+        .from("grades")
+        .select("assignment_id, student_id, points_earned, comment")
+        .eq("is_draft", false)
+        .in("assignment_id", batch)
+        .in("student_id", studentIds)
+        .order("id")
+        .range(from, to),
+    ),
   });
+  const grades = gradesQuery.data ?? [];
+  const hubFailed = enrollmentsQuery.isError || assignmentsQuery.isError || submissionsQuery.isError || gradesQuery.isError;
+  const hubLoading =
+    (studentIds.length > 0 && enrollmentsQuery.isPending) ||
+    (classIds.length > 0 && assignmentsQuery.isPending) ||
+    (assignmentIds.length > 0 && (submissionsQuery.isPending || gradesQuery.isPending));
 
   const rows = useMemo<HubRow[]>(() => {
     const soon = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
@@ -257,6 +273,20 @@ function AssignmentsHubPage() {
               ))}
             </div>
           )}
+          {hubFailed ? (
+            <LoadError
+              label="Assignments couldn't be loaded. Missing and graded counts stay hidden until this succeeds."
+              onRetry={() => {
+                void enrollmentsQuery.refetch();
+                void assignmentsQuery.refetch();
+                void submissionsQuery.refetch();
+                void gradesQuery.refetch();
+              }}
+            />
+          ) : hubLoading ? (
+            <p className="mt-6 text-sm text-muted-foreground">Loading assignments…</p>
+          ) : (
+          <>
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter assignments">
             {classIds.length > 1 && (
               <select
@@ -371,6 +401,8 @@ function AssignmentsHubPage() {
               ))
             )}
           </div>
+          </>
+          )}
         </>
       )}
     </AppShell>

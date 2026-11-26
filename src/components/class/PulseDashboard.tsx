@@ -6,7 +6,7 @@ import { useWellbeingFeed } from "@/hooks/useWellbeingFeed";
 type Signal = "attendance" | "missing" | "behavior" | "wellbeing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/query";
+import { fetchAll, fetchByIds, fetchChunks, mergeChunkTops } from "@/lib/query";
 import { Button } from "@/components/ui/button";
 import { studentLabel } from "@/lib/student-display";
 import { letterFor, type GradingSetup } from "@/lib/grading";
@@ -163,28 +163,28 @@ export function PulseDashboard({
     queryKey: ["pulse-student-links", classId, visibleRoster.length],
     enabled: isStaff && visibleRoster.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, user_id, guardian_user_id")
-        .in(
-          "id",
-          visibleRoster.map((r) => r.student_id),
-        );
-      if (error) throw error;
-      return data ?? [];
+      return fetchByIds(visibleRoster.map((r) => r.student_id), (batch, from, to) =>
+        supabase
+          .from("students")
+          .select("id, user_id, guardian_user_id")
+          .in("id", batch)
+          .order("id")
+          .range(from, to),
+      );
     },
   });
 
   const assignmentIds = assignments.map((a) => a.id);
+  const assignmentKey = [...assignmentIds].sort().join(",");
   const { data: submissions = [] } = useQuery({
-    queryKey: ["pulse-submission-times", classId, assignmentIds.length],
+    queryKey: ["pulse-submission-times", classId, assignmentKey],
     enabled: assignmentIds.length > 0,
     queryFn: async () => {
-      const data = await fetchAll((from, to) =>
+      const data = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
           .from("assignment_submissions")
           .select("id, submitted_at, assignment_id, student_id")
-          .in("assignment_id", assignmentIds)
+          .in("assignment_id", batch)
           .order("id")
           .range(from, to),
       );
@@ -217,15 +217,18 @@ export function PulseDashboard({
     queryKey: ["pulse-behavior", classId, rosterIds.length, since14],
     enabled: isStaff && rosterIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("behavior_notes")
-        .select("id, student_id, kind, date, reason, notes")
-        .in("student_id", rosterIds)
-        .gte("date", since14)
-        .order("date", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return data ?? [];
+      const groups = await fetchChunks(rosterIds, async (batch) => {
+        const { data, error } = await supabase
+          .from("behavior_notes")
+          .select("id, student_id, kind, date, reason, notes")
+          .in("student_id", batch)
+          .gte("date", since14)
+          .order("date", { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return data ?? [];
+      });
+      return mergeChunkTops([groups], 200, (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
     },
   });
 

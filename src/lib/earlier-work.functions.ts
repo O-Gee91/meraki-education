@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
+import { fetchByIds } from "@/lib/query";
 
 export type EarlierWorkClass = {
   classId: string;
@@ -31,30 +32,42 @@ export const getStudentEarlierWork = createServerFn({ method: "POST" })
     if (error) throw new Error("Could not load earlier work");
     if (!drops?.length) return { classes: [] };
     const ids = drops.map((d) => d.class_id);
-    const { data: items } = await supabaseAdmin
-      .from("assignments")
-      .select("id, class_id, title, category, points_possible, due_date")
-      .in("class_id", ids)
-      .eq("status", "published");
-    const itemIds = (items ?? []).map((a) => a.id);
-    const { data: marks } = itemIds.length
-      ? await supabaseAdmin
-          .from("grades")
-          .select("assignment_id, points_earned, comment")
-          .eq("student_id", data.studentId)
-          .eq("is_draft", false)
-          .in("assignment_id", itemIds)
-      : { data: [] };
+    const items = await fetchByIds(ids, (batch, from, to) =>
+      supabaseAdmin
+        .from("assignments")
+        .select("id, class_id, title, category, points_possible, due_date")
+        .in("class_id", batch)
+        .eq("status", "published")
+        .order("id")
+        .range(from, to),
+    ).catch(() => {
+      throw new Error("Could not load earlier work");
+    });
+    const itemIds = items.map((a) => a.id);
+    const marks = itemIds.length
+      ? await fetchByIds(itemIds, (batch, from, to) =>
+          supabaseAdmin
+            .from("grades")
+            .select("assignment_id, points_earned, comment")
+            .eq("student_id", data.studentId)
+            .eq("is_draft", false)
+            .in("assignment_id", batch)
+            .order("id")
+            .range(from, to),
+        ).catch(() => {
+          throw new Error("Could not load earlier work");
+        })
+      : [];
     return {
       classes: drops.map((d) => ({
         classId: d.class_id,
         name: (d.classes as { name?: string } | null)?.name ?? "Previous class",
         droppedAt: d.dropped_at,
         weights: (d.classes as { weights?: Json } | null)?.weights ?? null,
-        assignments: (items ?? [])
+        assignments: items
           .filter((a) => a.class_id === d.class_id)
           .map((a) => ({ id: a.id, title: a.title, category: a.category, points_possible: Number(a.points_possible), due_date: a.due_date })),
-        grades: (marks ?? []).map((g) => ({ assignment_id: g.assignment_id, points_earned: g.points_earned == null ? null : Number(g.points_earned), comment: g.comment })),
+        grades: marks.map((g) => ({ assignment_id: g.assignment_id, points_earned: g.points_earned == null ? null : Number(g.points_earned), comment: g.comment })),
       })),
     };
   });

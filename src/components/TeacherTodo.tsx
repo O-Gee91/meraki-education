@@ -4,7 +4,8 @@ import { ClipboardCheck, FileClock, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { markCodeFromComment } from "@/lib/grading";
-import { fetchAll, fetchChunks } from "@/lib/query";
+import { fetchByIds } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
 import { useAuth } from "@/hooks/useAuth";
 import { READ_REUSE_MS } from "@/lib/api-query-policy";
 
@@ -14,16 +15,16 @@ type Item = { key: string; classId: string; className: string; kind: string; cou
 export function TeacherTodo({ classes }: { classes: { id: string; name: string }[] }) {
   const { user, primaryRole, loading } = useAuth();
   const ids = classes.map((c) => c.id).sort();
-  const { data: items = [], isLoading } = useQuery({
+  const todoQuery = useQuery({
     queryKey: ["teacher-todo", user?.id, primaryRole, classes.map((c) => [c.id, c.name]).sort()],
     enabled: ids.length > 0 && Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
     queryFn: async (): Promise<Item[]> => {
       const [assignments, assessments] = await Promise.all([
-        fetchChunks(ids, (batch) => fetchAll((from, to) => supabase.from("assignments")
-          .select("id, class_id").in("class_id", batch).order("id").range(from, to))),
-        fetchChunks(ids, (batch) => fetchAll((from, to) => supabase.from("assessments")
-          .select("id, class_id").in("class_id", batch).order("id").range(from, to))),
+        fetchByIds(ids, (batch, from, to) => supabase.from("assignments")
+          .select("id, class_id").in("class_id", batch).order("id").range(from, to)),
+        fetchByIds(ids, (batch, from, to) => supabase.from("assessments")
+          .select("id, class_id").in("class_id", batch).order("id").range(from, to)),
       ]);
       const aClass = new Map((assignments ?? []).map((a) => [a.id, a.class_id]));
       const aIds = [...aClass.keys()];
@@ -31,12 +32,12 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       const sIds = [...sClass.keys()];
 
       const [subs, grades, attempts, completions] = await Promise.all([
-        fetchChunks(aIds, (batch) => fetchAll((from, to) => supabase.from("assignment_submissions")
-          .select("assignment_id, student_id, status").in("assignment_id", batch).in("status", ["submitted", "collected"]).order("id").range(from, to))),
-        fetchChunks(aIds, (batch) => fetchAll((from, to) => supabase.from("grades")
-          .select("assignment_id, student_id, points_earned, comment, is_draft").in("assignment_id", batch).order("id").range(from, to))),
-        fetchChunks(sIds, (batch) => fetchAll((from, to) => supabase.from("assessment_submissions")
-          .select("assessment_id, status").in("assessment_id", batch).eq("status", "submitted").order("id").range(from, to))),
+        fetchByIds(aIds, (batch, from, to) => supabase.from("assignment_submissions")
+          .select("assignment_id, student_id, status").in("assignment_id", batch).in("status", ["submitted", "collected"]).order("id").range(from, to)),
+        fetchByIds(aIds, (batch, from, to) => supabase.from("grades")
+          .select("assignment_id, student_id, points_earned, comment, is_draft").in("assignment_id", batch).order("id").range(from, to)),
+        fetchByIds(sIds, (batch, from, to) => supabase.from("assessment_submissions")
+          .select("assessment_id, status").in("assessment_id", batch).eq("status", "submitted").order("id").range(from, to)),
         fetchDiscussionCompletions(aIds),
       ]);
 
@@ -75,12 +76,15 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
       return out.sort((x, y) => y.count - x.count);
     },
   });
+  const items = todoQuery.data ?? [];
 
   return (
     <section className="mt-6 border-b border-border pb-6">
       <h2 className="text-lg font-semibold">To do</h2>
-      {isLoading && ids.length > 0 ? (
+      {todoQuery.isLoading && ids.length > 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">Checking your classes…</p>
+      ) : todoQuery.isError ? (
+        <LoadError label="Your to-do list couldn't be loaded." onRetry={() => void todoQuery.refetch()} />
       ) : items.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">Nothing waiting on you right now.</p>
       ) : (

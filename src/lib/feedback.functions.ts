@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isAutoGradeComment } from "@/lib/grading";
+import { fetchAll, fetchByIds } from "@/lib/query";
 
 export type FeedbackItem = {
   id: string;
@@ -40,24 +41,37 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     previewStudentId: input?.previewStudentId?.trim() || null,
   }))
   .handler(async ({ data: input, context }): Promise<FeedbackItem[]> => {
-    const { data: students, error: sErr } = await context.supabase
-      .from("students")
-      .select("id, first_name, last_name, user_id, guardian_user_id, is_tester");
-    if (sErr) throw sErr;
-
-    let mine = (students ?? []).filter(
-      (s) => s.user_id === context.userId || s.guardian_user_id === context.userId,
-    );
     // Staff using "View as student" see the demo Student Tester's feedback.
-    // Only staff may ask, and only for a tester record.
+    // Only staff may ask, and only for a tester record. Everyone else is limited
+    // to the student row or guardian children linked to this account.
+    let mine: { id: string; first_name: string; last_name: string }[];
     if (input.previewStudentId) {
-      const { data: roleRows } = await context.supabase
+      const previewId = input.previewStudentId;
+      const { data: roleRows, error: roleError } = await context.supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", context.userId);
+      if (roleError) throw new Error("Could not load feedback");
       const roles = new Set((roleRows ?? []).map((r) => r.role as string));
       if (!roles.has("teacher") && !roles.has("admin")) return [];
-      mine = (students ?? []).filter((s) => s.id === input.previewStudentId && s.is_tester);
+      mine = await fetchAll((from, to) =>
+        context.supabase
+          .from("students")
+          .select("id, first_name, last_name")
+          .eq("id", previewId)
+          .eq("is_tester", true)
+          .order("id")
+          .range(from, to),
+      );
+    } else {
+      mine = await fetchAll((from, to) =>
+        context.supabase
+          .from("students")
+          .select("id, first_name, last_name, user_id, guardian_user_id")
+          .or(`user_id.eq.${context.userId},guardian_user_id.eq.${context.userId}`)
+          .order("id")
+          .range(from, to),
+      );
     }
     if (mine.length === 0) return [];
 
@@ -71,15 +85,17 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     const items: FeedbackItem[] = [];
 
     /* ---- written comments left with a score ---- */
-    const { data: grades } = await context.supabase
-      .from("grades")
-      .select(
-        "id, comment, updated_at, student_id, assignments(title, class_id, classes(name))",
-      )
-      .in("student_id", ids)
-      .not("comment", "is", null);
+    const grades = await fetchByIds(ids, (batch, from, to) =>
+      context.supabase
+        .from("grades")
+        .select("id, comment, updated_at, student_id, assignments(title, class_id, classes(name))")
+        .in("student_id", batch)
+        .not("comment", "is", null)
+        .order("id")
+        .range(from, to),
+    );
 
-    for (const g of grades ?? []) {
+    for (const g of grades) {
       const comment = (g.comment ?? "").trim();
       // Internal notes the system writes for itself ("MARK:xx" special marks,
       // auto-zeroes, graded-assessment sync) are not teacher feedback.
@@ -97,18 +113,18 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     }
 
     /* ---- overall comments on a hand-in, plus proofreading marks ---- */
-    const { data: submissions } = await context.supabase
-      .from("assignment_submissions")
-      .select(
-        "id, teacher_note, updated_at, student_id, assignments(title, class_id, classes(name))",
-      )
-      .in("student_id", ids);
-
-    const submissionById = new Map(
-      (submissions ?? []).map((s) => [s.id, s] as const),
+    const submissions = await fetchByIds(ids, (batch, from, to) =>
+      context.supabase
+        .from("assignment_submissions")
+        .select("id, teacher_note, updated_at, student_id, assignments(title, class_id, classes(name))")
+        .in("student_id", batch)
+        .order("id")
+        .range(from, to),
     );
 
-    for (const s of submissions ?? []) {
+    const submissionById = new Map(submissions.map((s) => [s.id, s] as const));
+
+    for (const s of submissions) {
       const note = (s.teacher_note ?? "").trim();
       if (!note) continue;
       items.push({
@@ -123,12 +139,16 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     }
 
     if (submissionById.size > 0) {
-      const { data: annotations } = await context.supabase
-        .from("submission_annotations")
-        .select("id, submission_id, mark_label, mark_symbol, excerpt, comment, created_at")
-        .in("submission_id", [...submissionById.keys()]);
+      const annotations = await fetchByIds([...submissionById.keys()], (batch, from, to) =>
+        context.supabase
+          .from("submission_annotations")
+          .select("id, submission_id, mark_label, mark_symbol, excerpt, comment, created_at")
+          .in("submission_id", batch)
+          .order("id")
+          .range(from, to),
+      );
 
-      for (const a of annotations ?? []) {
+      for (const a of annotations) {
         const body = (a.comment ?? "").trim() || (a.mark_label ?? "").trim();
         if (!body) continue;
         const parent = submissionById.get(a.submission_id);
@@ -145,15 +165,17 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     }
 
     /* ---- rubric comments ---- */
-    const { data: rubricScores } = await context.supabase
-      .from("rubric_scores")
-      .select(
-        "id, comment, updated_at, student_id, assignments(title, class_id, classes(name))",
-      )
-      .in("student_id", ids)
-      .not("comment", "is", null);
+    const rubricScores = await fetchByIds(ids, (batch, from, to) =>
+      context.supabase
+        .from("rubric_scores")
+        .select("id, comment, updated_at, student_id, assignments(title, class_id, classes(name))")
+        .in("student_id", batch)
+        .not("comment", "is", null)
+        .order("id")
+        .range(from, to),
+    );
 
-    for (const r of rubricScores ?? []) {
+    for (const r of rubricScores) {
       const comment = (r.comment ?? "").trim();
       if (!comment) continue;
       items.push({
@@ -168,32 +190,39 @@ export const listMyFeedback = createServerFn({ method: "GET" })
     }
 
     /* ---- per-question feedback on quizzes, tests and essays ---- */
-    const { data: attempts } = await context.supabase
-      .from("assessment_submissions")
-      .select("id, student_id, assessments(title, class_id, classes(name))")
-      .in("student_id", ids);
+    const attempts = await fetchByIds(ids, (batch, from, to) =>
+      context.supabase
+        .from("assessment_submissions")
+        .select("id, student_id, assessments(title, class_id, classes(name))")
+        .in("student_id", batch)
+        .order("id")
+        .range(from, to),
+    );
 
-    const attemptById = new Map((attempts ?? []).map((a) => [a.id, a] as const));
+    const attemptById = new Map(attempts.map((a) => [a.id, a] as const));
 
     if (attemptById.size > 0) {
-      const { data: answers } = await context.supabase
-        .from("assessment_answers")
-        .select("id, submission_id, question_id, feedback, points_awarded, updated_at")
-        .in("submission_id", [...attemptById.keys()])
-        .not("feedback", "is", null);
+      const answers = await fetchByIds([...attemptById.keys()], (batch, from, to) =>
+        context.supabase
+          .from("assessment_answers")
+          .select("id, submission_id, question_id, feedback, points_awarded, updated_at")
+          .in("submission_id", batch)
+          .not("feedback", "is", null)
+          .order("id")
+          .range(from, to),
+      );
 
-      const withFeedback = (answers ?? []).filter((a) => (a.feedback ?? "").trim().length > 0);
+      const withFeedback = answers.filter((a) => (a.feedback ?? "").trim().length > 0);
 
       let prompts = new Map<string, string>();
       if (withFeedback.length > 0) {
         // The question bank is staff-only, so the prompt text is fetched here
         // and handed back without any answer key.
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: questions } = await supabaseAdmin
-          .from("assessment_questions")
-          .select("id, prompt")
-          .in("id", [...new Set(withFeedback.map((a) => a.question_id))]);
-        prompts = new Map((questions ?? []).map((q) => [q.id, q.prompt] as const));
+        const questions = await fetchByIds([...new Set(withFeedback.map((a) => a.question_id))], (batch, from, to) =>
+          supabaseAdmin.from("assessment_questions").select("id, prompt").in("id", batch).order("id").range(from, to),
+        );
+        prompts = new Map(questions.map((q) => [q.id, q.prompt] as const));
       }
 
       for (const a of withFeedback) {

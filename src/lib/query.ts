@@ -55,3 +55,36 @@ export async function fetchChunks<I, T>(ids: I[], read: (ids: I[]) => Promise<T[
   }
   return rows;
 }
+
+/**
+ * Every row matching an id list. Splits `.in()` filters under URL limits and
+ * pages each chunk past the 1000-row cap. `read` must apply a stable order.
+ */
+export async function fetchByIds<T>(
+  ids: readonly string[],
+  read: (ids: string[], from: number, to: number) => RangeResult<T>,
+  options?: { chunkSize?: number; pageSize?: number },
+): Promise<T[]> {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  if (unique.length === 0) return [];
+  return fetchChunks(
+    unique,
+    (batch) => fetchAll((from, to) => read(batch, from, to), options?.pageSize),
+    options?.chunkSize,
+  );
+}
+
+/**
+ * The global newest `limit` rows are contained in the union of each id chunk's
+ * own newest `limit` rows. Fetch that many per chunk, then merge here.
+ */
+export function mergeChunkTops<T>(groups: readonly (readonly T[])[], limit: number, compare: (a: T, b: T) => number): T[] {
+  const cap = Math.max(0, Math.floor(limit));
+  return groups.flat().sort(compare).slice(0, cap);
+}
