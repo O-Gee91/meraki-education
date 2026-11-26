@@ -125,7 +125,7 @@ export function ClassFeed({ scope, canPost = true, desktopReview = false }: { sc
   const renderPost = (post: (typeof posts)[number]) => {
     const resource = safeLink(post.link);
     return (
-      <article key={post.id} className={desktopReview ? "min-w-0 border-b border-border pb-6" : "panel p-4"}>
+      <article key={post.id} className={(post.pinned ? "notebook-paper " : "") + (desktopReview ? "min-w-0 border-b border-border pb-6" : "panel p-4")}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold">

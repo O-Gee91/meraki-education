@@ -296,6 +296,9 @@
   --sketch-ink-red: oklch(0.5 0.16 25);
   --sketch-ink-blue: oklch(0.45 0.14 250);
   --sketch-today-bg: oklch(0.92 0.09 90);
+  --notebook-tape: oklch(0.86 0.025 180 / 0.7);
+  --notebook-paper-shadow: 1px 3px 0 color-mix(in oklab, var(--border) 70%, transparent);
+  --notebook-selected-shadow: inset 0 -2px 0 var(--sketch-ink-blue);
 }
 .style-notebook.dark {
   --sketch-ink: oklch(0.9 0.015 240);
@@ -303,6 +306,7 @@
   --sketch-ink-red: oklch(0.8 0.11 25);
   --sketch-ink-blue: oklch(0.83 0.09 235);
   --sketch-today-bg: transparent;
+  --notebook-tape: oklch(0.65 0.02 180 / 0.35);
 }
 .sketch {
   position: absolute;
@@ -333,6 +337,55 @@
 .style-notebook .notebook-day[aria-current="date"] .notebook-day-number { background-color: var(--sketch-today-bg); }
 .style-notebook .notebook-day > .sketch-box { inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
 .style-notebook .notebook-day-meta { position: relative; background-color: var(--card); border-radius: 2px; }
+.style-notebook .notebook-workspace :is(.panel, .notebook-card) {
+  border-color: var(--sketch-grid);
+  border-radius: 3px 6px 4px 5px;
+  box-shadow: var(--notebook-paper-shadow);
+}
+.style-notebook .notebook-workspace :is(thead, .divide-y > :not(:last-child)) { border-color: var(--sketch-grid); }
+.style-notebook .notebook-workspace :is(button[aria-pressed="true"], [role="tab"][data-state="active"]) { box-shadow: var(--notebook-selected-shadow); }
+.style-notebook .notebook-paper {
+  position: relative;
+  margin-top: 1rem;
+  padding: 1.5rem 1rem 1rem;
+  border: 1px solid var(--sketch-grid);
+  border-radius: 3px;
+  background: var(--card);
+  box-shadow: var(--notebook-paper-shadow);
+}
+.style-notebook .notebook-paper::before {
+  content: "";
+  position: absolute;
+  top: -0.35rem;
+  left: 1.5rem;
+  width: 2.75rem;
+  height: 0.75rem;
+  background: var(--notebook-tape);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+.notebook-completion { display: none; }
+.style-notebook .notebook-completion { position: relative; display: inline-block; width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.style-notebook .notebook-complete-rule { text-decoration: underline; text-decoration-color: var(--sketch-ink-red); text-decoration-style: wavy; text-underline-offset: 0.3rem; }
+.notebook-empty-mark { display: none; }
+.style-notebook .notebook-empty { display: flex; align-items: center; gap: 1rem; }
+.style-notebook .notebook-empty-mark { position: relative; display: block; width: 3rem; height: 2rem; flex-shrink: 0; }
+.notebook-mood { position: relative; display: inline-block; width: 3rem; height: 2.5rem; font-size: 1.5rem; line-height: 2.5rem; }
+.style-notebook .notebook-mood-choice { position: relative; }
+.style-notebook .notebook-mood-choice > .sketch { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); }
+.style-notebook :is(.notebook-mood, .notebook-completion, .notebook-grade) > .sketch { width: 100%; height: 100%; }
+.style-notebook .notebook-grade > .sketch { width: calc(100% + 0.8rem); height: calc(100% + 0.6rem); }
+.notebook-attendance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; padding: 1rem 0; border-block: 1px solid var(--sketch-grid); }
+.notebook-tally { position: relative; display: inline-block; min-width: 0; width: 100%; max-width: 12rem; height: 2rem; }
+.notebook-sent { position: relative; display: inline-block; width: 1.5rem; height: 1.5rem; animation: notebook-plane 650ms ease-out both; }
+@keyframes notebook-plane { from { transform: translate(-3px, 3px); opacity: 0; } to { transform: translate(0, 0); opacity: 1; } }
+@media (min-width: 640px) { .notebook-attendance { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media print {
+  .style-notebook :is(.sketch, .notebook-empty-mark, .notebook-completion, .notebook-attendance) { display: none; }
+  .style-notebook .notebook-paper::before { display: none; }
+  .style-notebook .notebook-paper { box-shadow: none; }
+  .style-notebook .notebook-heading { font-family: var(--font-display); }
+}
 @media (prefers-reduced-motion: reduce) {
   .style-notebook *, .style-notebook *::before, .style-notebook *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

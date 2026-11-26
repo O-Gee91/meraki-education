@@ -10,6 +10,7 @@ import { listMyFeedback, type FeedbackItem } from "@/lib/feedback.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { feedbackKey, READ_REUSE_MS } from "@/lib/api-query-policy";
 import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 
 const SEEN_KEY = "meraki.feedback-seen";
 
@@ -62,7 +63,7 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
   return (
     <section className={desktopReview ? "border-t border-border pt-6" : "panel mt-6 p-5"}>
       <div className="grid min-w-0 gap-3 sm:flex sm:items-center sm:justify-between">
-        <h2 className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-lg font-semibold">
+        <h2 className="notebook-heading grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-lg font-semibold">
           <MessageSquareText className="size-4 shrink-0 text-accent" />
           <span>Feedback from your teachers</span>
           {unread > 0 ? <Badge className="shrink-0">{unread} new</Badge> : null}
@@ -78,13 +79,13 @@ export function FeedbackInbox({ classId, desktopReview = false }: { classId?: st
       </p>}
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-muted-foreground">Loading your feedback…</p>
+        <NotebookLoading className="mt-4 text-sm text-muted-foreground">Loading your feedback…</NotebookLoading>
       ) : isError ? (
         <LoadError label="Feedback couldn't be loaded. Try again in a moment." onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
+        <NotebookEmpty className="mt-4 text-sm text-muted-foreground">
           No written feedback yet — it will appear here as soon as a teacher comments on your work.
-        </p>
+        </NotebookEmpty>
       ) : (
         <>
           <ul className="mt-4 space-y-3">

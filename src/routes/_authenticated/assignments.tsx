@@ -1,5 +1,7 @@
 import { resolveWorkState } from "@/lib/coursework-state";
 import { assignmentSections } from "@/lib/assignment-sections";
+import { NotebookGrade, Sketch } from "@/components/Sketch";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { isMissingWork } from "@/lib/missing-work";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { useMemo, useState } from "react";
@@ -284,7 +286,7 @@ function AssignmentsHubPage() {
               }}
             />
           ) : hubLoading ? (
-            <p className="mt-6 text-sm text-muted-foreground">Loading assignments…</p>
+            <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading assignments…</NotebookLoading>
           ) : (
           <>
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter assignments">
@@ -319,7 +321,7 @@ function AssignmentsHubPage() {
 
           <div className="mt-8 space-y-10">
             {visible.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
+              <NotebookEmpty className="py-8 text-sm text-muted-foreground">
                 {filter === "missing"
                   ? "Nothing missing — great job staying on top of your work."
                   : filter === "graded"
@@ -327,16 +329,16 @@ function AssignmentsHubPage() {
                     : filter === "due"
                       ? "Nothing due in the next week."
                       : "No assignments yet."}
-              </p>
+              </NotebookEmpty>
             ) : (
               assignmentSections(visible).map((section) => (
                 <section key={section.title} aria-label={section.title}>
-                  <h2 className="mb-4 text-lg font-semibold">{section.title} <span className="ml-2 text-sm font-normal text-muted-foreground">{section.rows.length}</span></h2>
+                  <h2 className="notebook-heading mb-4 text-lg font-semibold">{section.title} <span className="ml-2 text-sm font-normal text-muted-foreground">{section.rows.length}</span></h2>
                   <div className="space-y-4">
               {section.rows.map((row) => {
                 const open = openId === row.assignmentId;
                 return (
-                  <article key={row.assignmentId} className="rounded-lg border border-border bg-card p-5 sm:p-6">
+                  <article key={row.assignmentId} className="notebook-card rounded-lg border border-border bg-card p-5 sm:p-6">
                     <Button
                       type="button"
                       variant="ghost"
@@ -346,7 +348,7 @@ function AssignmentsHubPage() {
                       aria-controls={`assignment-details-${row.assignmentId}`}
                     >
                       <span className="min-w-0 flex-1 basis-52">
-                        <span className="block break-words text-base font-semibold [overflow-wrap:anywhere]">{row.title}</span>
+                        <span className="flex items-start gap-2"><span className="block min-w-0 break-words text-base font-semibold [overflow-wrap:anywhere]">{row.title}</span>{(row.status === "graded" || row.status === "submitted") && <span className="notebook-completion"><Sketch seed={`completed:${row.assignmentId}`} kind="tick" /></span>}</span>
                         <span className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                           {row.className}
                           {row.dueDate ? ` · Due ${formatDate(row.dueDate)}` : " · No due date"}
@@ -356,7 +358,7 @@ function AssignmentsHubPage() {
                         <StatusChip row={row} />
                         {row.status === "graded" && row.score != null ? (
                           <span className="text-sm font-semibold tabular-nums">
-                            {row.score}/{row.pointsPossible}
+                            <NotebookGrade seed={`score:${activeChild?.id}:${row.assignmentId}`}>{row.score}/{row.pointsPossible}</NotebookGrade>
                           </span>
                         ) : null}
                         {open ? (

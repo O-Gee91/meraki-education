@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { HeartPulse, Lock } from "lucide-react";
+import { NotebookMood } from "@/components/NotebookDecorations";
+import { Sketch } from "@/components/Sketch";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -118,22 +120,24 @@ function MoodPicker({ mood, setMood }: { mood: number | null; setMood: (n: numbe
   return (
     <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5" role="radiogroup" aria-label="How are you feeling?">
       {MOODS.map((m) => (
-        <button
+        <Button
+          variant="ghost"
           type="button"
           role="radio"
           aria-checked={mood === m.value}
           key={m.value}
           onClick={() => setMood(m.value)}
           className={
-            "flex flex-col items-center gap-1 rounded-md border px-1 py-3 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-ring " +
+            "notebook-mood-choice h-auto flex flex-col items-center gap-1 rounded-md border px-1 py-3 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-ring " +
             (mood === m.value
               ? "border-primary bg-primary/10 text-primary"
               : "border-border hover:bg-secondary/60")
           }
         >
-          <span aria-hidden="true" className="text-2xl">{m.emoji}</span>
+          <NotebookMood value={m.value} emoji={m.emoji} />
           {m.label}
-        </button>
+          {mood === m.value && <Sketch seed={`selected-mood:${m.value}`} tone="blue" />}
+        </Button>
       ))}
     </div>
   );
@@ -179,7 +183,7 @@ function StudentView() {
   return (
     <div className="grid min-w-0 gap-8 xl:grid-cols-[22rem_minmax(0,1fr)]">
       <section className="min-w-0 self-start border-b border-border pb-6 xl:border-b-0 xl:border-r xl:pr-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
+        <h2 className="notebook-heading flex items-center gap-2 text-lg font-semibold">
           <HeartPulse className="size-4 text-accent" /> Today's check-in
         </h2>
         {showForm ? (
@@ -219,7 +223,7 @@ function StudentView() {
       </section>
 
       <section className="min-w-0 [overflow-wrap:anywhere]">
-        <h2 className="border-b border-border pb-4 text-lg font-semibold">My recent check-ins</h2>
+        <h2 className="notebook-heading border-b border-border pb-4 text-lg font-semibold">My recent check-ins</h2>
         {isLoading ? (
           <p className="mt-6 text-center text-sm text-muted-foreground">Loading…</p>
         ) : isError ? (

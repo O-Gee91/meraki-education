@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { attendanceTone, formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
+import { NotebookAttendance } from "@/components/NotebookDecorations";
 
 const STATUSES = ["present", "absent", "tardy", "excused"] as const;
 
@@ -167,6 +168,7 @@ export function AttendanceTab({ classId }: { classId: string }) {
         </div>
       )}
 
+      <NotebookAttendance seed={`attendance:${classId}:${date}`} counts={STATUSES.map((status) => ({ label: status, count: roster.filter((r) => records.find((record) => record.student_id === r.student_id)?.status === status).length }))} />
       <div className="panel mt-4 divide-y divide-border">
         {roster.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">

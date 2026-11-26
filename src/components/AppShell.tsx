@@ -380,7 +380,7 @@ export function AppShell({
                 </BreadcrumbList>
               </Breadcrumb>
             ) : null}
-            <h1 className="break-words text-2xl font-semibold">{title}</h1>
+            <h1 className={cn("break-words text-2xl font-semibold", !breadcrumbContext && "notebook-heading")}>{title}</h1>
             {description ? (
               <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             ) : null}
@@ -457,7 +457,7 @@ export function AppShell({
           ))}
         </nav>
 
-        <main id="main-content" tabIndex={-1} className={cn("min-w-0 flex-1 px-4 py-6 sm:px-6 focus:outline-none", desktopReview && "mx-auto w-full max-w-6xl")}>
+        <main id="main-content" tabIndex={-1} className={cn("notebook-workspace min-w-0 flex-1 px-4 py-6 sm:px-6 focus:outline-none", desktopReview && "mx-auto w-full max-w-6xl")}>
           {previewingStudent && STAFF_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) ? (
             <p className="text-sm text-muted-foreground">
               Students can't open this page. Exit student view to use it.

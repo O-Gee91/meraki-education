@@ -36,3 +36,21 @@ export function sketchGrid(cols: number, rows: number, rand: Random): string[] {
 export function sketchTick(x: number, y: number, size: number, rand: Random): string[] {
   return [sketchLine(x, y + size * 0.5, x + size * 0.35, y + size, rand), sketchLine(x + size * 0.35, y + size, x + size, y, rand)];
 }
+
+export function sketchTally(count: number, rand: Random): string[] {
+  if (!Number.isFinite(count) || count <= 0) return [];
+  const total = Math.floor(count);
+  return Array.from({ length: total }, (_, i) => {
+    const group = Math.floor(i / 5);
+    const stroke = i % 5;
+    const x = group * 32 + 5;
+    return stroke === 4
+      ? sketchLine(x - 2, 38, x + 22, 10, rand)
+      : sketchLine(x + stroke * 6, 10, x + stroke * 6, 38, rand);
+  });
+}
+
+export function sketchMood(mood: number, rand: Random): string[] {
+  const mouth = mood >= 4 ? "M 30 29 Q 50 47 70 29" : mood === 3 ? "M 34 34 L 66 34" : "M 30 37 Q 50 23 70 37";
+  return [sketchCircle(50, 25, 36, 22, rand), sketchLine(36, 17, 36, 20, rand), sketchLine(64, 17, 64, 20, rand), mouth];
+}

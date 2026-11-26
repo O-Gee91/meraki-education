@@ -8,6 +8,7 @@ import { fetchByIds } from "@/lib/query";
 import { LoadError } from "@/components/LoadError";
 import { useAuth } from "@/hooks/useAuth";
 import { READ_REUSE_MS } from "@/lib/api-query-policy";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 
 type Item = { key: string; classId: string; className: string; kind: string; count: number; icon: typeof ListChecks };
 
@@ -80,13 +81,13 @@ export function TeacherTodo({ classes }: { classes: { id: string; name: string }
 
   return (
     <section className="mt-6 border-b border-border pb-6">
-      <h2 className="text-lg font-semibold">To do</h2>
+      <h2 className="notebook-heading text-lg font-semibold">To do</h2>
       {todoQuery.isLoading && ids.length > 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">Checking your classes…</p>
+        <NotebookLoading className="mt-3 text-sm text-muted-foreground">Checking your classes…</NotebookLoading>
       ) : todoQuery.isError ? (
         <LoadError label="Your to-do list couldn't be loaded." onRetry={() => void todoQuery.refetch()} />
       ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">Nothing waiting on you right now.</p>
+        <NotebookEmpty className="mt-3 text-sm text-muted-foreground">Nothing waiting on you right now.</NotebookEmpty>
       ) : (
         <ul className="mt-4 divide-y divide-border">
           {items.map((i) => (

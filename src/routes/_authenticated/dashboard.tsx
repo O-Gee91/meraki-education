@@ -9,6 +9,8 @@ import { AppShell } from "@/components/AppShell";
 import { SchoolCalendar } from "@/components/SchoolCalendar";
 import { FeedbackInbox } from "@/components/FeedbackInbox";
 import { TeacherTodo } from "@/components/TeacherTodo";
+import { NotebookGrade } from "@/components/Sketch";
+import { NotebookEmpty } from "@/components/NotebookDecorations";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -297,7 +299,7 @@ function DashboardPage() {
     >
       <SetupCard />
 
-      {!isStaff && <h2 className="mb-4 text-lg font-semibold">Missing work &amp; due soon</h2>}
+      {!isStaff && <h2 className="notebook-heading mb-4 text-lg font-semibold">Missing work &amp; due soon</h2>}
       {!isStaff && <MissingWorkCard />}
 
 
@@ -335,15 +337,15 @@ function DashboardPage() {
 
       <section className="mt-6 border-b border-border pb-6">
         <div className="grid min-w-0 gap-2 sm:flex sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold">{isStaff ? "Upcoming due dates" : "Due soon"}</h2>
+          <h2 className="notebook-heading text-lg font-semibold">{isStaff ? "Upcoming due dates" : "Due soon"}</h2>
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Assignments &amp; assessments
           </span>
         </div>
         {upcoming.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
+          <NotebookEmpty className="mt-3 text-sm text-muted-foreground">
             Nothing due right now — you&apos;re all caught up.
-          </p>
+          </NotebookEmpty>
         ) : (
           <ul className="mt-4 divide-y divide-border">
             {upcoming.map((item) => (
@@ -403,7 +405,7 @@ function DashboardPage() {
 
       {!isStaff && (
         <section className="border-t border-border pt-6">
-          <h2 className="text-lg font-semibold">Recent scores</h2>
+          <h2 className="notebook-heading text-lg font-semibold">Recent scores</h2>
           {gradesQuery.isError ? (
             <LoadError
               label="Scores couldn't be loaded. The overall grade stays hidden until this succeeds."
@@ -434,7 +436,7 @@ function DashboardPage() {
                         {formatDate(g.assignments?.due_date)}
                       </td>
                       <td className="break-words py-3 text-right font-medium text-foreground [overflow-wrap:anywhere]">
-                        <span>{g.points_earned}/{possible}</span><span className="block sm:inline"> <span className="hidden sm:inline">· </span>{pct.toFixed(0)}%</span>
+                        <span>{g.points_earned}/{possible}</span><span className="block sm:inline"> <span className="hidden sm:inline">· </span><NotebookGrade seed={`recent-grade:${g.id}`}>{pct.toFixed(0)}%</NotebookGrade></span>
                       </td>
                     </tr>
                   );
@@ -450,7 +452,7 @@ function DashboardPage() {
       <div className={`mt-8 grid gap-6 ${isStaff ? "xl:grid-cols-3" : ""}`}>
         <section className="min-w-0 xl:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Classes</h2>
+            <h2 className="notebook-heading text-lg font-semibold">Classes</h2>
             <Link to="/classes" className="inline-flex min-h-11 items-center text-sm text-primary hover:underline">
               View all
             </Link>
@@ -487,13 +489,13 @@ function DashboardPage() {
 
         {isStaff && (
         <section className="min-w-0 border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
-          <h2 className="text-lg font-semibold">Announcements</h2>
+          <h2 className="notebook-heading text-lg font-semibold">Announcements</h2>
           <div className="mt-4 space-y-4">
             {announcements.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing posted yet.</p>
             ) : (
               announcements.map((a) => (
-                <article key={a.id}>
+                <article key={a.id} className="notebook-paper">
                   <h3 className="text-sm font-semibold">{a.title}</h3>
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
@@ -552,7 +554,7 @@ function DashboardPage() {
               <p className="text-sm text-muted-foreground">Nothing posted yet.</p>
             ) : (
               announcements.map((a) => (
-                <article key={a.id}>
+                <article key={a.id} className="notebook-paper">
                   <h3 className="text-sm font-semibold">{a.title}</h3>
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{a.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(a.created_at)}</p>
@@ -729,7 +731,7 @@ function Stat({
         <Icon className="size-4" />
         <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>
-      <p className={`mt-2 break-words text-xl font-semibold ${tone ?? ""}`}>{value}</p>
+      <p className={`mt-2 break-words text-xl font-semibold ${tone ?? ""}`}><NotebookGrade seed={`summary:${label}`} marked={label === "Overall grade" && value !== "—"}>{value}</NotebookGrade></p>
     </div>
   );
 }

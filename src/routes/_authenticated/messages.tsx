@@ -6,6 +6,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { NotebookSentIcon, NotebookEmpty } from "@/components/NotebookDecorations";
+import { useNotebookStyle } from "@/components/NotebookStyle";
 import { useAuth } from "@/hooks/useAuth";
 import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +52,7 @@ export const Route = createFileRoute("/_authenticated/messages")({
 
 function MessagesPage() {
   const { user, isStaff, previewingStudent } = useAuth();
+  const notebookStyle = useNotebookStyle();
   const queryClient = useQueryClient();
   const [compose, setCompose] = useState({ recipient: "", subject: "", body: "" });
   const [post, setPost] = useState({ title: "", body: "", audience: "everyone" });
@@ -222,7 +225,7 @@ function MessagesPage() {
       return recipients.length;
     },
     onSuccess: (count) => {
-      toast.success(count > 1 ? `Message sent to ${count} people` : "Message sent");
+      toast.success(count > 1 ? `Message sent to ${count} people` : "Message sent", notebookStyle === "notebook" ? { icon: <NotebookSentIcon /> } : {});
       setCompose({ recipient: "", subject: "", body: "" });
       setStudentId("");
       queryClient.invalidateQueries({ queryKey: ["messages"] });
@@ -314,7 +317,7 @@ function MessagesPage() {
         <TabsContent value="inbox">
           <div className="mt-6 grid min-w-0 items-start gap-8 xl:grid-cols-[20rem_minmax(0,1fr)]">
             <section className="min-w-0 border-t border-border pt-5">
-              <h2 className="text-lg font-semibold">New message</h2>
+              <h2 className="notebook-heading text-lg font-semibold">New message</h2>
               <div className="mt-4 space-y-3">
                 {isStaff && (
                   <div className="grid grid-cols-2 gap-1 rounded-md border border-border p-1" role="group" aria-label="How to choose recipient">
@@ -486,7 +489,7 @@ function MessagesPage() {
           <div className={`mt-6 grid min-w-0 items-start gap-8 ${isStaff ? "xl:grid-cols-[20rem_minmax(0,1fr)]" : ""}`}>
             {isStaff && (
               <section className="min-w-0 border-t border-border pt-5">
-                <h2 className="text-lg font-semibold">Post announcement</h2>
+                <h2 className="notebook-heading text-lg font-semibold">Post announcement</h2>
                 <div className="mt-4 space-y-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="title">Title</Label>
@@ -540,12 +543,12 @@ function MessagesPage() {
               aria-label="School announcements"
               className="min-w-0 divide-y divide-border border-t border-border"
             >
-              <h2 className="py-5 text-lg font-semibold">School announcements</h2>
+              <h2 className="notebook-heading py-5 text-lg font-semibold">School announcements</h2>
               {announcements.length === 0 ? (
-                <p className="py-6 text-sm text-muted-foreground">No announcements yet.</p>
+                <NotebookEmpty className="py-6 text-sm text-muted-foreground">No announcements yet.</NotebookEmpty>
               ) : (
                 announcements.map((a) => (
-                  <article key={a.id} className="min-w-0 py-5 [overflow-wrap:anywhere]">
+                  <article key={a.id} className="notebook-paper min-w-0 py-5 [overflow-wrap:anywhere]">
                     {editingId === a.id ? (
                       <div className="space-y-3">
                         <Input

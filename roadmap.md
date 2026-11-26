@@ -1,9 +1,15 @@
 # Roadmap
 
+## Site-wide Notebook expansion (Nov 26, 2026)
+- [x] Extend optional notebook headings, paper surfaces, selected controls and ruled lists across the shared classroom shell
+- [x] Add completed-work ticks, posted-score circles, attendance tallies, mood doodles, bulletin paper and message confirmation plane
+- [x] 229 regressions pass; isolated sample presentation checked at 320/390/640/740/1280px, light/dark, keyboard mood selection, saved preferences, details, grade hiding and no overflow
+- [ ] Real signed-in walkthrough — restored owner session reaches genuine two-step verification at /auth; no bypass used
+
 ## Notebook appearance (Nov 26, 2026)
-- [ ] Add an off-by-default style choice independent of color scheme, seeded sketch kit, optional handwriting fonts and dark chalk marks
-- [ ] Apply initial calendar marks and grade summary circles without changing grades, queries or role visibility
-- [ ] Verify style switching, persistence, mobile layout and regression tests; signed-in checks may require owner second-step verification
+- [x] Add an off-by-default style choice independent of color scheme, seeded sketch kit, optional handwriting fonts and dark chalk marks
+- [x] Apply initial calendar marks and grade summary circles without changing grades, queries or role visibility
+- [x] Style switching, persistence, mobile sample layout and 229 regression tests verified; real calendar walkthrough remains under the signed-in blocker above
 
 ## Mobile daily workflow checks (Nov 26, 2026)
 - [x] Test isolated populated student/guardian presentation at 320/390/430/768/1440px; fix selectors, long text, scores, calendar, navigation and child-switch reset

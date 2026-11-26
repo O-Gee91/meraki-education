@@ -42,7 +42,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
       <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <section className="min-w-0 border-b border-border lg:border-b-0 lg:border-r" aria-label="Student grade roster">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-            <h3 className="text-sm font-semibold">Student roster <span className="ml-1 font-normal text-muted-foreground">{shown.length}</span></h3>
+            <h3 className="notebook-heading text-sm font-semibold">Student roster <span className="ml-1 font-normal text-muted-foreground">{shown.length}</span></h3>
             <Button variant="ghost" size="sm" onClick={() => { onHideGrades(!hideGrades); setSelectedBand(null); }} aria-pressed={hideGrades}>
               {hideGrades ? <Eye className="size-4" /> : <EyeOff className="size-4" />}{hideGrades ? "Show grades" : "Hide grades"}
             </Button>
@@ -58,7 +58,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
                   {student.note && <p className="mt-1 text-xs text-muted-foreground">{student.note}</p>}
                 </div>
                 <div className="text-right tabular-nums">
-                  {hideGrades ? <span className="text-muted-foreground">—</span> : <><span className="text-sm font-semibold">{pct(student.average)}</span>{student.average != null && <span className="ml-1 text-xs text-muted-foreground">{letterFor(student.average, setup.scale)}</span>}</>}
+                  {hideGrades ? <span className="text-muted-foreground">—</span> : <><span className="text-sm font-semibold"><NotebookGrade seed={`overall:${student.id}`} marked={student.average != null}>{pct(student.average)}</NotebookGrade></span>{student.average != null && <span className="ml-1 text-xs text-muted-foreground">{letterFor(student.average, setup.scale)}</span>}</>}
                 </div>
                 <div className="text-right text-sm tabular-nums">{hideGrades ? "—" : student.missing > 0 ? <span className="inline-flex items-center gap-1"><AlertCircle className="size-3 text-warning" />{student.missing}</span> : <span className="text-muted-foreground">—</span>}</div>
               </div>
@@ -77,7 +77,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
 
         <section className="min-w-0" aria-label="Assignment category ledger">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-            <h3 className="text-sm font-semibold">Assignments by category</h3>
+            <h3 className="notebook-heading text-sm font-semibold">Assignments by category</h3>
             <span className="text-xs text-muted-foreground">{setup.mode === "weighted" ? "Category weighted" : "Total points"}</span>
           </div>
           {groups.map(([category, list]) => {
@@ -114,7 +114,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
       </div>
 
       {!hideGrades && <section className="border-t border-border px-4 py-4" aria-label="Class grade distribution">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Grade distribution <span className="ml-1 text-xs font-normal text-muted-foreground">{summary.graded} graded students</span></h3>{selectedBand && <Button variant="ghost" size="sm" onClick={() => setSelectedBand(null)}>Clear {selectedBand} filter</Button>}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="notebook-heading text-sm font-semibold">Grade distribution <span className="ml-1 text-xs font-normal text-muted-foreground">{summary.graded} graded students</span></h3>{selectedBand && <Button variant="ghost" size="sm" onClick={() => setSelectedBand(null)}>Clear {selectedBand} filter</Button>}</div>
         <div className="mt-4 flex flex-wrap gap-2">
           {summary.bands.map((band) => <Button key={band.letter} variant="ghost" className={`h-36 min-w-14 flex-1 flex-col justify-end gap-1 rounded-sm px-2 [&_svg]:size-auto ${selectedBand === band.letter ? "bg-secondary ring-1 ring-ring" : ""}`} aria-label={`${band.letter}: ${band.count} students`} aria-pressed={selectedBand === band.letter} onClick={() => setSelectedBand(selectedBand === band.letter ? null : band.letter)}>
             <span className="text-xs tabular-nums text-muted-foreground">{band.count}</span>

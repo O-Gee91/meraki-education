@@ -1,5 +1,11 @@
 # Desktop UI checkup
 
+## Notebook site-wide modifier (Nov 26)
+- Optional shared shell paper surfaces, semantic page/section handwriting, selected controls and list rules; standard appearance and existing review layout gates retained. Content titles, names, dates, scores and comments keep their normal font.
+- Dashboard/assignment posted-score circles, completed-work ticks, loading/empty doodles, bulletin paper, attendance tally summary and wellbeing mood sketches. No queries, grade calculations, status precedence, write permissions or RLS changed. Hidden gradebook scores have no marks revealing their values.
+- Isolated sample-record Chromium checks at 320/390/640/740/1280px: details open, keyboard mood selection, grade hide/show, light/dark chalk, message-confirmation preview, saved style preferences and no horizontal page overflow. Screenshots reviewed. Temporary fixture removed. 229 tests pass.
+- Owner session returns to /auth for genuine two-step verification. Real classroom, calendar, student/guardian and send/check-in workflows remain unverified; no real messages or check-ins submitted. Screen-reader, real 200% browser zoom and Safari checks remain unverified.
+
 ## Teacher class hierarchy (Nov 26)
 - Teacher-only Needs Attention / Today is above all sections, using parent gradebook missing counts and scoped Pulse attendance/wellbeing reads. Grading opens the existing Needs Attention coursework filter across all timelines.
 - Gradebook, Coursework and Attendance remain direct; Discussions, Roster and Settings & files are behind More classroom tools. All five groups and every tab remain available. Overview stays the staff default; Grid pagination, draft dots, hover details, calculations and publish handlers are unchanged.

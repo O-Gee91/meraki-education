@@ -233,7 +233,7 @@ function CommunityPage() {
           )}
 
           <section className="min-w-0 border-t border-border pt-5" aria-label="Community groups">
-            <h2 className="text-lg font-semibold">Groups</h2>
+            <h2 className="notebook-heading text-lg font-semibold">Groups</h2>
             {groups.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 No groups yet. Staff can open clubs, teams and professional learning spaces.
@@ -282,13 +282,13 @@ function CommunityPage() {
         </div>
 
         <section className="min-w-0 border-t border-border pt-5 [overflow-wrap:anywhere]" aria-label="School news">
-          <h2 className="text-lg font-semibold">School news river</h2>
+          <h2 className="notebook-heading text-lg font-semibold">School news river</h2>
           <div className="mt-4 divide-y divide-border">
             {news.length === 0 ? (
               <p className="text-sm text-muted-foreground">No school news yet.</p>
             ) : (
               news.map((n) => (
-                <article key={n.id} className="min-w-0 py-4 first:pt-0">
+                <article key={n.id} className="notebook-paper min-w-0 py-4 first:pt-0">
                   <h3 className="text-base font-semibold">{n.title}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">{formatDate(n.created_at)}</p>
                   <p className="mt-3 max-w-prose whitespace-pre-line text-sm leading-relaxed text-foreground/85">{n.body}</p>
