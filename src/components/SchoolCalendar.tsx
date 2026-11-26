@@ -14,6 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty } from "@/components/NotebookDecorations";
 import { AUDIENCES, audienceLabel } from "@/lib/audience";
 import { withCalendarAudience, withCalendarCategory, withCalendarColor } from "@/lib/calendar-form";
 import { useAuth } from "@/hooks/useAuth";
@@ -239,10 +242,9 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
   const monthStart = toKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
   const monthEnd = toKey(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0));
 
-  const { data: allEvents = [] } = useQuery({
-    queryKey: ["calendar-events", monthStart],
-    queryFn: async () => {
-      const { data, error } = await supabase
+  const eventsQuery = useQuery({
+    queryKey: ["calendar-events", monthStart, monthEnd],
+    queryFn: () => fetchAll((from, to) => supabase
         .from("calendar_events")
         .select(
           "id, title, description, event_date, start_time, end_time, location, category, audience, audiences, color, class_id, class_ids, grade_level",
@@ -250,13 +252,14 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
         .gte("event_date", monthStart)
         .lte("event_date", monthEnd)
         .order("event_date")
-        .order("start_time", { nullsFirst: true });
-      if (error) throw error;
-      return data as EventRow[];
-    },
+        .order("start_time", { nullsFirst: true })
+        .order("id")
+        .range(from, to)),
   });
+  const allEvents = (eventsQuery.data ?? []) as EventRow[];
 
-  const { data: allCoursework = [] } = useCalendarCoursework(monthStart, monthEnd);
+  const courseworkQuery = useCalendarCoursework(monthStart, monthEnd);
+  const allCoursework = courseworkQuery.data ?? [];
   const classFilter = classId ?? "all";
   // Re-check once a minute so items drop off as their time passes.
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -537,6 +540,16 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
               </Button>
             )}
           </div>
+
+          {eventsQuery.isError || courseworkQuery.isError ? (
+            <LoadError
+              label="The calendar couldn't be loaded. Events and completion marks stay hidden so a failed read is not shown as an empty month."
+              onRetry={() => {
+                void eventsQuery.refetch();
+                void courseworkQuery.refetch();
+              }}
+            />
+          ) : null}
 
           <div className="mt-5 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
             <div className="min-w-0">
@@ -890,8 +903,8 @@ export function SchoolCalendar({ classId }: { classId?: string } = {}) {
                     </p>
                   </article>
                 ))}
-                {dayEvents.length === 0 && dayWork.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nothing scheduled for this day.</p>
+                {eventsQuery.isError || courseworkQuery.isError ? null : dayEvents.length === 0 && dayWork.length === 0 ? (
+                  <NotebookEmpty className="text-sm text-muted-foreground">Nothing scheduled for this day.</NotebookEmpty>
                 ) : (
                   dayEvents.map((e) => (
                     <article

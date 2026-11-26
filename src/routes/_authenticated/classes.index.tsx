@@ -5,7 +5,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { StudentImport } from "@/components/students/StudentImport";
+import { fetchAll } from "@/lib/query";
 
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { useAuth } from "@/hooks/useAuth";
@@ -70,17 +73,20 @@ function ClassesPage() {
     grade: number | null;
   } | null>(null);
 
-  const { data: allClasses = [], isLoading } = useQuery({
+  const classesQuery = useQuery({
     queryKey: ["classes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("classes")
-        .select("id, name, subject, period, room, term, teacher_id, teacher_name, grade_level")
-        .order("period");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase
+          .from("classes")
+          .select("id, name, subject, period, room, term, teacher_id, teacher_name, grade_level")
+          .order("period")
+          .order("id")
+          .range(from, to),
+      ),
   });
+  const allClasses = classesQuery.data ?? [];
+  const isLoading = classesQuery.isPending;
 
   const saveClass = useMutation({
     mutationFn: async () => {
@@ -252,15 +258,20 @@ function ClassesPage() {
         ) : null
       }
     >
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading classes…</p>
+      {classesQuery.isError || previewScope.scopeError ? (
+        <LoadError
+          label="Classes couldn't be loaded. Nothing here is treated as an empty list."
+          onRetry={() => void classesQuery.refetch()}
+        />
+      ) : isLoading || (previewingStudent && !previewScope.scoped) ? (
+        <NotebookLoading className="text-sm text-muted-foreground">Loading classes…</NotebookLoading>
       ) : classes.length === 0 ? (
         <div className="border-t border-border py-8">
-          <p className="text-sm text-muted-foreground">
+          <NotebookEmpty className="text-sm text-muted-foreground">
             {isStaff
               ? "No classes yet — create your first section to start a gradebook."
               : "You are not enrolled in any classes yet."}
-          </p>
+          </NotebookEmpty>
         </div>
       ) : (
         <>
@@ -291,7 +302,7 @@ function ClassesPage() {
 
           {groups.length === 0 ? (
             <div className="py-8">
-              <p className="text-sm text-muted-foreground">No classes for this grade.</p>
+              <NotebookEmpty className="text-sm text-muted-foreground">No classes for this grade.</NotebookEmpty>
             </div>
           ) : (
             <div className="space-y-8">
@@ -304,7 +315,7 @@ function ClassesPage() {
                     {items.map((c) => {
                       const canEdit = isAdmin || (isStaff && c.teacher_id === user?.id);
                       return (
-                        <div key={c.id} className="relative min-w-0 rounded-lg border border-border bg-card transition-colors hover:border-ring">
+                        <div key={c.id} className="notebook-card relative min-w-0 rounded-lg border border-border bg-card transition-colors hover:border-ring">
                           <Link
                             to="/classes/$classId"
                             params={{ classId: c.id }}

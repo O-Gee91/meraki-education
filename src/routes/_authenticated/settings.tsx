@@ -7,6 +7,8 @@ import { KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { TwoFactorCard } from "@/components/settings/TwoFactorCard";
 import { PasskeysCard } from "@/components/settings/PasskeysCard";
 import { MfaSetupGuide } from "@/components/settings/MfaSetupGuide";
@@ -41,7 +43,7 @@ function SettingsPage() {
   const { user, profile, isStaff } = useAuth();
   const navigate = Route.useNavigate();
 
-  const { data: logins = [] } = useQuery({
+  const loginsQuery = useQuery({
     queryKey: ["my-login-events", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -55,6 +57,7 @@ function SettingsPage() {
       return data;
     },
   });
+  const logins = loginsQuery.data ?? [];
 
 
   const [current, setCurrent] = useState("");
@@ -173,8 +176,12 @@ function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Your latest logins to Meraki. If one looks unfamiliar, change your password.
         </p>
-        {logins.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No sign-ins recorded yet.</p>
+        {loginsQuery.isError ? (
+          <LoadError label="Recent sign-ins couldn't be loaded." onRetry={() => void loginsQuery.refetch()} />
+        ) : loginsQuery.isPending ? (
+          <NotebookLoading className="mt-3 text-sm text-muted-foreground">Loading recent sign-ins…</NotebookLoading>
+        ) : logins.length === 0 ? (
+          <NotebookEmpty className="mt-3 text-sm text-muted-foreground">No sign-ins recorded yet.</NotebookEmpty>
         ) : (
           <ul className="mt-4 divide-y divide-border text-sm">
             {logins.map((l) => (

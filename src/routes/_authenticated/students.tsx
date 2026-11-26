@@ -3,7 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll, fetchByIds } from "@/lib/query";
+import { writeInBatches } from "@/lib/notebook-attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,16 +67,15 @@ function StudentsPage() {
 
   // While working as a teacher, the directory is limited to students enrolled in
   // this person's own classes.
-  const { data: myStudentIds } = useQuery({
-    queryKey: ["my-class-student-ids", user?.id, teacherMode],
+  const scopeQuery = useQuery({
+    queryKey: ["my-class-student-ids", user?.id, teacherMode, profile?.full_name],
     enabled: !!user && teacherMode,
     queryFn: async () => {
       const myName = (profile?.full_name ?? "").trim().toLowerCase();
-      const { data: classRows, error: classError } = await supabase
-        .from("classes")
-        .select("id, teacher_id, teacher_name");
-      if (classError) throw classError;
-      const mine = (classRows ?? [])
+      const classRows = await fetchAll((from, to) =>
+        supabase.from("classes").select("id, teacher_id, teacher_name").order("id").range(from, to),
+      );
+      const mine = classRows
         .filter(
           (c) =>
             c.teacher_id === user!.id ||
@@ -80,28 +83,29 @@ function StudentsPage() {
         )
         .map((c) => c.id);
       if (mine.length === 0) return new Set<string>();
-      const { data, error } = await supabase
-        .from("enrollments")
-        .select("student_id")
-        .in("class_id", mine);
-      if (error) throw error;
-      return new Set((data ?? []).map((r) => r.student_id));
+      const rows = await fetchByIds(mine, (ids, from, to) =>
+        supabase.from("enrollments").select("student_id").in("class_id", ids).order("id").range(from, to),
+      );
+      return new Set(rows.map((r) => r.student_id));
     },
   });
 
-  const { data: allStudents = [] } = useQuery({
-    queryKey: ["students"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select(
-          "id, first_name, last_name, grade_level, guardian_email, student_number, chinese_name, user_id, guardian_user_id",
-        )
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+  const studentsQuery = useQuery({
+    queryKey: ["students", "directory", user?.id, teacherMode],
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase
+          .from("students")
+          .select(
+            "id, first_name, last_name, grade_level, guardian_email, student_number, chinese_name, user_id, guardian_user_id",
+          )
+          .order("last_name")
+          .order("id")
+          .range(from, to),
+      ),
   });
+  const allStudents = studentsQuery.data ?? [];
+  const myStudentIds = scopeQuery.data;
 
   const create = useMutation({
     mutationFn: async () => {
@@ -149,8 +153,10 @@ function StudentsPage() {
   const removeStudents = useMutation({
     mutationFn: async (ids: string[]) => {
       if (ids.length === 0) throw new Error("Select at least one student");
-      const { error } = await supabase.from("students").delete().in("id", ids);
-      if (error) throw error;
+      await writeInBatches(ids, async (batch) => {
+        const { error } = await supabase.from("students").delete().in("id", batch);
+        return { error };
+      });
     },
     onSuccess: (_d, ids) => {
       toast.success(ids.length === 1 ? "Student removed" : `${ids.length} students removed`);
@@ -169,8 +175,13 @@ function StudentsPage() {
     if (window.confirm(label)) removeStudents.mutate(ids);
   };
 
-  const students =
-    teacherMode && myStudentIds ? allStudents.filter((s) => myStudentIds.has(s.id)) : allStudents;
+  const scopeFailed = teacherMode && scopeQuery.isError;
+  const scopeLoading = teacherMode && scopeQuery.isPending;
+  const students = !teacherMode
+    ? allStudents
+    : myStudentIds
+      ? allStudents.filter((s) => myStudentIds.has(s.id))
+      : [];
 
   const filtered = sortStudents(
     students.filter((s) =>
@@ -283,7 +294,7 @@ function StudentsPage() {
         />
         </div>
         <StudentSortControl value={sortMode} onChange={setSortMode} />
-        <span className="text-sm text-muted-foreground">{filtered.length} {filtered.length === 1 ? "student" : "students"}</span>
+        <span className="text-sm text-muted-foreground">{studentsQuery.isError || scopeFailed ? "Students couldn't be loaded." : scopeLoading || studentsQuery.isPending ? "Loading students…" : `${filtered.length} ${filtered.length === 1 ? "student" : "students"}`}</span>
       </div>
       <details className="group border-b border-border py-3">
         <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-sm text-sm font-medium text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
@@ -343,10 +354,28 @@ function StudentsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.length === 0 ? (
+            {studentsQuery.isError || scopeFailed ? (
+              <tr>
+                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6">
+                  <LoadError
+                    label="Students couldn't be loaded. The directory stays hidden so a failed read is not treated as an empty school."
+                    onRetry={() => {
+                      void studentsQuery.refetch();
+                      void scopeQuery.refetch();
+                    }}
+                  />
+                </td>
+              </tr>
+            ) : scopeLoading || studentsQuery.isPending ? (
+              <tr>
+                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6">
+                  <NotebookLoading className="text-sm text-muted-foreground">Loading students…</NotebookLoading>
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={isStaff ? 6 : 4} className="px-4 py-6 text-muted-foreground">
-                  No students found.
+                  <NotebookEmpty>No students found.</NotebookEmpty>
                 </td>
               </tr>
             ) : (

@@ -61,7 +61,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { user, isStaff, primaryRole, profile, previewingStudent, loading } = useAuth();
-  const { classIds, studentIds } = useTeacherScope();
+  const { classIds, studentIds, scopeError } = useTeacherScope();
   const { ids: selfIds } = useSelfStudents();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -299,6 +299,10 @@ function DashboardPage() {
     >
       <SetupCard />
 
+      {scopeError ? (
+        <LoadError label="Your class list couldn't be loaded. Counts, due dates, and to-dos stay hidden so a failed read is not treated as an empty school." />
+      ) : null}
+
       {!isStaff && <h2 className="notebook-heading mb-4 text-lg font-semibold">Missing work &amp; due soon</h2>}
       {!isStaff && <MissingWorkCard />}
 
@@ -306,9 +310,9 @@ function DashboardPage() {
       {isStaff && (
       <div className="grid gap-x-6 gap-y-5 border-b border-border pb-6 sm:grid-cols-2 xl:grid-cols-4">
 
-        <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
+        <Stat icon={BookOpen} label="Classes" value={scopeError ? "—" : String(classes.length)} />
         {isStaff ? (
-          <Stat icon={Users} label="Students" value={String(students.length)} />
+          <Stat icon={Users} label="Students" value={scopeError ? "—" : String(students.length)} />
         ) : (
           <Stat
             icon={CalendarCheck}
@@ -333,7 +337,7 @@ function DashboardPage() {
 
       )}
 
-      {isStaff && <TeacherTodo classes={classes} />}
+      {isStaff && !scopeError && <TeacherTodo classes={classes} />}
 
       <section className="mt-6 border-b border-border pb-6">
         <div className="grid min-w-0 gap-2 sm:flex sm:items-center sm:justify-between">
@@ -342,7 +346,7 @@ function DashboardPage() {
             Assignments &amp; assessments
           </span>
         </div>
-        {upcoming.length === 0 ? (
+        {scopeError ? null : upcoming.length === 0 ? (
           <NotebookEmpty className="mt-3 text-sm text-muted-foreground">
             Nothing due right now — you&apos;re all caught up.
           </NotebookEmpty>
@@ -376,9 +380,9 @@ function DashboardPage() {
         <div className="mt-8 space-y-6">
       <div className={`grid gap-x-6 gap-y-4 border-y border-border py-5 sm:grid-cols-2 ${isStaff ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
 
-        <Stat icon={BookOpen} label="Classes" value={String(classes.length)} />
+        <Stat icon={BookOpen} label="Classes" value={scopeError ? "—" : String(classes.length)} />
         {isStaff ? (
-          <Stat icon={Users} label="Students" value={String(students.length)} />
+          <Stat icon={Users} label="Students" value={scopeError ? "—" : String(students.length)} />
         ) : (
           <Stat
             icon={CalendarCheck}
@@ -412,7 +416,7 @@ function DashboardPage() {
               onRetry={() => void gradesQuery.refetch()}
             />
           ) : recentGrades.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">No graded work yet.</p>
+            <NotebookEmpty className="mt-3 text-sm text-muted-foreground">No graded work yet.</NotebookEmpty>
           ) : (
             <table className="mt-4 w-full table-fixed text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -458,8 +462,8 @@ function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4 divide-y divide-border">
-            {classes.length === 0 ? (
-              <p className="py-6 text-sm text-muted-foreground">
+            {scopeError ? null : classes.length === 0 ? (
+              <NotebookEmpty className="py-6 text-sm text-muted-foreground">
                 No classes yet.{" "}
                 {isStaff ? (
                   <Link to="/classes" className="text-accent hover:underline">
@@ -468,7 +472,7 @@ function DashboardPage() {
                 ) : (
                   "Ask the office to add you to a class."
                 )}
-              </p>
+              </NotebookEmpty>
             ) : (
               classes.map((c) => (
                 <Link
@@ -492,7 +496,7 @@ function DashboardPage() {
           <h2 className="notebook-heading text-lg font-semibold">Announcements</h2>
           <div className="mt-4 space-y-4">
             {announcements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing posted yet.</p>
+              <NotebookEmpty className="text-sm text-muted-foreground">Nothing posted yet.</NotebookEmpty>
             ) : (
               announcements.map((a) => (
                 <article key={a.id} className="notebook-paper">
@@ -551,7 +555,7 @@ function DashboardPage() {
         <section className="pt-4">
           <div className="mt-4 space-y-4">
             {announcements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing posted yet.</p>
+              <NotebookEmpty className="text-sm text-muted-foreground">Nothing posted yet.</NotebookEmpty>
             ) : (
               announcements.map((a) => (
                 <article key={a.id} className="notebook-paper">

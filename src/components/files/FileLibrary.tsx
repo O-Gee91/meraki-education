@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchByIds } from "@/lib/query";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { formatDate } from "@/lib/school";
 import { AUDIENCES, audienceLabel, type Audience } from "@/lib/audience";
 import { readPrivateFile } from "@/lib/private-file";
@@ -95,7 +98,7 @@ export function FileLibrary({
 
   const scopeKey = ["files", classId ?? "school", studentId ?? "all"];
 
-  const { data: files = [] } = useQuery({
+  const filesQuery = useQuery({
     queryKey: scopeKey,
     queryFn: async () => {
       let q = supabase
@@ -112,6 +115,7 @@ export function FileLibrary({
       return data as FileRow[];
     },
   });
+  const files = filesQuery.data ?? [];
 
   // Classes this staff member can share to — teachers see their own classes,
   // admins see every class.
@@ -151,14 +155,10 @@ export function FileLibrary({
   const { data: people = [] } = useQuery({
     queryKey: ["file-uploaders", uploaderIds.join(",")],
     enabled: uploaderIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", uploaderIds);
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () =>
+      fetchByIds(uploaderIds, (ids, from, to) =>
+        supabase.from("profiles").select("id, full_name, email").in("id", ids).order("id").range(from, to),
+      ),
   });
   const nameFor = (id: string | null) => {
     const p = people.find((x) => x.id === id);
@@ -412,8 +412,12 @@ export function FileLibrary({
         )}
       </div>
 
-      {shown.length === 0 ? (
-        <p className={desktopReview ? "py-6 text-sm text-muted-foreground" : "panel p-6 text-sm text-muted-foreground"}>{emptyLabel}</p>
+      {filesQuery.isError ? (
+        <LoadError label="Files couldn't be loaded." onRetry={() => void filesQuery.refetch()} />
+      ) : filesQuery.isPending ? (
+        <NotebookLoading className="py-6 text-sm text-muted-foreground">Loading files…</NotebookLoading>
+      ) : shown.length === 0 ? (
+        <NotebookEmpty className={desktopReview ? "py-6 text-sm text-muted-foreground" : "panel p-6 text-sm text-muted-foreground"}>{emptyLabel}</NotebookEmpty>
       ) : (
         <ul aria-label="Shared files" className={desktopReview ? "min-w-0 divide-y divide-border" : "panel divide-y divide-border"}>
           {shown.map((f) => {

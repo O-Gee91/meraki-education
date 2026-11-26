@@ -7,11 +7,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { selectNotebookStyle, useNotebookStyle } from "@/components/NotebookStyle";
+import { resolveNotebookStyle } from "@/lib/notebook-style";
 
 export const THEME_STORAGE_KEY = "meraki-theme";
 
@@ -105,6 +108,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   const style = useNotebookStyle();
   const active = THEMES.find((t) => t.id === theme);
   if (!active) return null;
+  const styleLabel = style === "notebook" ? "Notebook" : "Standard";
 
   return (
     <DropdownMenu>
@@ -114,8 +118,8 @@ export function ThemeToggle({ className }: { className?: string }) {
           variant="ghost"
           size="icon"
           className={className}
-          aria-label={`Color scheme: ${active.label}`}
-          title={`Color scheme: ${active.label}`}
+          aria-label={`Color scheme: ${active.label}. Style: ${styleLabel}`}
+          title={`Color scheme: ${active.label}. Style: ${styleLabel}`}
         >
           <Palette className="size-4" />
         </Button>
@@ -149,12 +153,16 @@ export function ThemeToggle({ className }: { className?: string }) {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Style</DropdownMenuLabel>
-        {(["normal", "notebook"] as const).map((option) => (
-          <DropdownMenuItem key={option} onSelect={() => selectNotebookStyle(option)} className="min-h-11 gap-3">
-            <span className="flex-1">{option === "normal" ? "Standard" : "Notebook"}</span>
-            <Check className={cn("size-4", style === option ? "opacity-100" : "opacity-0")} />
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuRadioGroup
+          value={style}
+          onValueChange={(value) => selectNotebookStyle(resolveNotebookStyle(value))}
+        >
+          <DropdownMenuRadioItem value="normal" className="min-h-11">Standard</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="notebook" className="min-h-11">
+            Notebook
+            <span className="sr-only">Handwritten headings, paper, and marks across the site</span>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

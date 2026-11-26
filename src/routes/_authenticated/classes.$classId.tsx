@@ -19,6 +19,7 @@ import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll, fetchByIds } from "@/lib/query";
 import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -745,7 +746,7 @@ function ClassDetailPage() {
               }}
             />
           ) : gradebookLoading ? (
-            <p className="mt-6 text-sm text-muted-foreground">Loading the gradebook…</p>
+            <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading the gradebook…</NotebookLoading>
           ) : (
           <>
           {!isStaff && !showOverview && <PulseDashboard
@@ -779,11 +780,11 @@ function ClassDetailPage() {
           )}
           <section className="coursework-ledger mt-6 border-y border-border/70 bg-card">
             {roster.length === 0 || assignments.length === 0 ? (
-              <p className="p-6 text-sm text-muted-foreground">
+              <NotebookEmpty className="p-6 text-sm text-muted-foreground">
                 {isStaff
                   ? "Add students to the roster and create assignments to see the gradebook."
                   : "Your teacher will add assignments and scores here."}
-              </p>
+              </NotebookEmpty>
             ) : (
               <div>
                 <header className="border-b border-border/60 bg-card p-4">
@@ -1082,7 +1083,7 @@ function ClassDetailPage() {
                   }}
                 />
               ) : gradebookLoading ? (
-                <p className="mt-6 text-sm text-muted-foreground">Loading coursework…</p>
+                <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading coursework…</NotebookLoading>
               ) : (
               <AssignmentsTab
                 classId={classId}

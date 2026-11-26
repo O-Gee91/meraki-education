@@ -8,6 +8,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { LoadError } from "@/components/LoadError";
+import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelfStudents } from "@/hooks/useSelfStudents";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
@@ -151,7 +153,9 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
   });
 
   const notesPage = usePagedLimit(200);
-  const { data: notes = [], isFetching: notesFetching } = useNotes(notesPage.limit);
+  const notesQuery = useNotes(notesPage.limit);
+  const notes = notesQuery.data ?? [];
+  const notesFetching = notesQuery.isFetching;
   const [gradeFilter, setGradeFilter] = useState("all");
   const [kindFilter, setKindFilter] = useState("all");
   const [classFilter, setClassFilter] = useState(initialClassId ?? "all");
@@ -252,7 +256,7 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
     });
   }, [notes, gradeFilter, kindFilter, scope, classFilter, search, user?.id, myStudentIds, myClassIds, classStudents]);
 
-  const { studentIds } = useTeacherScope();
+  const { studentIds, scopeError } = useTeacherScope();
   const { data: allStudents = [] } = useQuery({
     queryKey: ["students"],
     enabled: isStaff,
@@ -269,9 +273,11 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
   // a chosen class narrows the picker to that roster.
   const formRoster = form.classId ? classStudents.get(form.classId) : undefined;
   const students = sortStudents(
-    allStudents.filter(
-      (s) => (!studentIds || studentIds.has(s.id)) && (!formRoster || formRoster.has(s.id)),
-    ),
+    scopeError
+      ? []
+      : allStudents.filter(
+          (s) => (!studentIds || studentIds.has(s.id)) && (!formRoster || formRoster.has(s.id)),
+        ),
     sortMode,
   );
   const formClassOptions = myClasses.filter(
@@ -371,6 +377,7 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
       {isStaff && (
         <section className="min-w-0 self-start border-b border-border pb-6 xl:border-b-0 xl:border-r xl:pr-6">
           <h2 className="text-lg font-semibold">Log a note</h2>
+          {scopeError ? <LoadError label="Your class list couldn't be loaded, so students stay hidden." /> : null}
           <div className="mt-4 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="student">Student</Label>
@@ -635,11 +642,15 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
             </Popover>
           </div>
           <p className="text-xs text-muted-foreground">
-            Showing {visibleNotes.length} of {notes.length} notes
+            {notesQuery.isError ? "Notes couldn't be loaded." : notesQuery.isPending ? "Loading notes…" : `Showing ${visibleNotes.length} of ${notes.length} notes`}
           </p>
         </div>
-        {visibleNotes.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No behavior notes match these filters.</p>
+        {notesQuery.isError ? (
+          <LoadError label="Behavior notes couldn't be loaded." onRetry={() => void notesQuery.refetch()} />
+        ) : notesQuery.isPending ? (
+          <NotebookLoading className="p-6 text-sm text-muted-foreground">Loading behavior notes…</NotebookLoading>
+        ) : visibleNotes.length === 0 ? (
+          <NotebookEmpty className="p-6 text-sm text-muted-foreground">No behavior notes match these filters.</NotebookEmpty>
         ) : (
           visibleNotes.map((n) => (
             <NoteRow
@@ -1006,7 +1017,8 @@ function StrikeRowItem({ row }: { row: StrikeRow }) {
 }
 
 function StrikeTracker() {
-  const { data: notes = [] } = useNotes(1000);
+  const notesQuery = useNotes(1000);
+  const notes = notesQuery.data ?? [];
   const [gradeFilter, setGradeFilter] = useState("all");
 
   const rows = useMemo(() => {
@@ -1087,10 +1099,14 @@ function StrikeTracker() {
           </SelectContent>
         </Select>
       </div>
-      {visibleRows.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
+      {notesQuery.isError ? (
+        <LoadError label="Strikes couldn't be loaded." onRetry={() => void notesQuery.refetch()} />
+      ) : notesQuery.isPending ? (
+        <NotebookLoading className="mt-4 text-sm text-muted-foreground">Loading strikes…</NotebookLoading>
+      ) : visibleRows.length === 0 ? (
+        <NotebookEmpty className="mt-4 text-sm text-muted-foreground">
           {rows.length === 0 ? "No strikes on record." : "No strikes for this grade."}
-        </p>
+        </NotebookEmpty>
       ) : gradeFilter === "all" ? (
         <div className="mt-4 space-y-5">
           {groups.map((group) => (
@@ -1126,21 +1142,20 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
   const queryClient = useQueryClient();
 
   const previewIds = usePreviewStudentIds();
-  const { data: detentions = [] } = useQuery({
+  const detentionsQuery = useQuery({
     queryKey: ["detentions", previewIds],
-    queryFn: async () => {
-      let q = supabase
-        .from("detentions")
-        .select(
-          "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email, grade_level)",
-        );
-      if (previewIds) q = q.in("student_id", previewIds);
-      const base = q;
-      return fetchAll((from, to) =>
-        base.order("scheduled_date", { ascending: false }).order("id").range(from, to),
-      );
-    },
+    queryFn: () =>
+      fetchAll((from, to) => {
+        let page = supabase
+          .from("detentions")
+          .select(
+            "id, reason, strike_count, scheduled_date, status, notes, created_at, students(first_name, last_name, guardian_email, grade_level)",
+          );
+        if (previewIds) page = page.in("student_id", previewIds);
+        return page.order("scheduled_date", { ascending: false }).order("id").range(from, to);
+      }),
   });
+  const detentions = detentionsQuery.data ?? [];
 
   const update = useMutation({
     mutationFn: async (input: {
@@ -1159,12 +1174,18 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
 
   const [view, setView] = useState<"active" | "completed" | "all">("active");
 
+  if (detentionsQuery.isError) {
+    return <LoadError label="Detentions couldn't be loaded." onRetry={() => void detentionsQuery.refetch()} />;
+  }
+  if (detentionsQuery.isPending) {
+    return <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading detentions…</NotebookLoading>;
+  }
   if (detentions.length === 0) {
     return (
-      <p className="mt-6 border-t border-border py-6 text-sm text-muted-foreground">
+      <NotebookEmpty className="mt-6 border-t border-border py-6 text-sm text-muted-foreground">
         No detentions scheduled. They are created automatically when a student reaches three
         strikes.
-      </p>
+      </NotebookEmpty>
     );
   }
 
@@ -1203,11 +1224,11 @@ function Detentions({ isStaff }: { isStaff: boolean }) {
         ))}
       </div>
       {shown.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <NotebookEmpty className="text-sm text-muted-foreground">
           {view === "active"
             ? "No students currently need to serve detention."
             : "No completed or waived detentions yet."}
-        </p>
+        </NotebookEmpty>
       ) : null}
       {grades.map((g) => (
         <section key={g} aria-labelledby={`detention-grade-${g}`}>

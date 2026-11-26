@@ -26,7 +26,7 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
   const scope = useTeacherScope();
   const { ids: selfIds } = useSelfStudents();
   const studentView = !isStaff || previewingStudent;
-  const scopeKey = scope.classIds ? [...scope.classIds].sort().join(",") : "all";
+  const scopeKey = scope.scopeError ? "error" : scope.classIds ? [...scope.classIds].sort().join(",") : "all";
   const queryClient = useQueryClient();
 
   // Refresh right after this browser saves, edits or deletes coursework.
@@ -52,6 +52,7 @@ export function useCalendarCoursework(monthStart: string, monthEnd: string) {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<CourseworkItem[]> => {
+      if (scope.scopeError) throw new Error("Class list couldn't be loaded");
       let classIds: string[] | null = scope.classIds ? [...scope.classIds] : null;
       const childrenByClass = new Map<string, string[]>();
       if (studentView) {
