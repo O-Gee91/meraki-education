@@ -4,7 +4,7 @@ import { AlertCircle, ArrowDown, ArrowUp, Check, Circle, Eye, EyeOff, Plus, Aste
 import { Button } from "@/components/ui/button";
 import { letterFor, type GradingSetup } from "@/lib/grading";
 import { plannedAssignmentWeights, summarizeOverview, type OverviewStudent } from "@/lib/gradebook-overview";
-import { todayKey } from "@/lib/assignment-status";
+import { classCalendarDate } from "@/lib/late-penalty";
 import { NotebookGrade } from "@/components/Sketch";
 import { NotebookMarginNote } from "@/components/NotebookDecorations";
 
@@ -26,12 +26,13 @@ type Props = {
   classId?: string;
   useIds?: boolean;
   onToggleIds?: () => void;
+  today?: string;
 };
 
 const pct = (value: number | null) => value == null ? "—" : value.toFixed(1);
 const shortDate = (d: string | null) => { if (!d) return "—"; const [, m, day] = d.slice(0, 10).split("-"); return `${Number(m)}/${Number(day)}`; };
 
-export function GradebookOverview({ students, visibleStudents, assignments, allAssignments, setup, scoredCounts, ungradedCounts, hideGrades, onHideGrades, onStudent, onCoursework, classes = [], classId, useIds = false, onToggleIds }: Props) {
+export function GradebookOverview({ students, visibleStudents, assignments, allAssignments, setup, scoredCounts, ungradedCounts, hideGrades, onHideGrades, onStudent, onCoursework, classes = [], classId, useIds = false, onToggleIds, today = classCalendarDate() }: Props) {
   const [selectedBand, setSelectedBand] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
   const summary = useMemo(() => summarizeOverview(students, setup), [students, setup]);
@@ -42,8 +43,6 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
     .sort((a, b) => (sortDesc ? -1 : 1) * a.name.localeCompare(b.name));
   const maxCount = Math.max(1, ...summary.bands.map((b) => b.count));
   const medianLetter = summary.median != null ? letterFor(summary.median, setup.scale) : null;
-  const today = todayKey();
-
   return (
     <div className="flex min-w-0">
       {classes.length > 1 && (
@@ -96,6 +95,7 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
                 </tr>
                 {!hideGrades && <tr className="text-xs text-muted-foreground"><td className="px-3 pb-2">Mean · Missing</td><td className="px-1 pb-2 text-right tabular-nums">{pct(summary.mean)}</td><td className="px-3 pb-2 tabular-nums">{summary.missing}</td></tr>}
                 {!hideGrades && <tr><td colSpan={3} className="px-3 pb-2"><NotebookMarginNote percent={summary.mean} /></td></tr>}
+                {!hideGrades && <tr><td colSpan={3} className="px-3 pb-3 text-xs font-normal text-muted-foreground">The overall percentage counts posted scores only. A draft stays on the grade cell until you post it.</td></tr>}
               </tfoot>
             </table>
             <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-3 py-2">

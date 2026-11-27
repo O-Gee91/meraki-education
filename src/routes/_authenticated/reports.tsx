@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { missingPointsFor } from "@/lib/late-penalty";
+import { officialAverage } from "@/lib/official-average";
+import { classTimeZone } from "@/lib/coursework-window";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { directoryQueryKey } from "@/lib/api-query-policy";
 import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, gradeTone } from "@/lib/school";
-import { computeAverage, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
+import { letterFor, parseGradingSetup } from "@/lib/grading";
 import { ElaCatalog } from "@/components/standards/ElaCatalog";
 import { PrintTemplates } from "@/components/reports/PrintTemplates";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
@@ -97,7 +98,7 @@ function ReportsPage() {
   );
 }
 
-const reportClassColumns = "id, name, subject, term, weights";
+const reportClassColumns = "id, name, subject, term, weights, timezone";
 const reportStudentColumns = "id, first_name, last_name";
 
 function ReportCards({ isStaff }: { isStaff: boolean }) {
@@ -190,26 +191,14 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
       const grades = await fetchByIds(assignmentIds, (batch, from, to) =>
         supabase
           .from("grades")
-          .select("student_id, assignment_id, points_earned, comment")
+          .select("student_id, assignment_id, points_earned, comment, is_draft")
           .in("assignment_id", batch)
           .order("id")
           .range(from, to),
       );
 
       const rows = roster.map((r) => {
-        const pct = computeAverage(
-          assignments.map((assignment) => {
-            const grade = grades.find((g) => g.student_id === r.student_id && g.assignment_id === assignment.id);
-            return {
-              category: assignment.category,
-              pointsPossible: Number(assignment.points_possible),
-              pointsEarned: grade?.points_earned == null ? null : Number(grade.points_earned),
-              markCode: markCodeFromComment(grade?.comment),
-              missingPoints: missingPointsFor(assignment),
-            };
-          }),
-          setup,
-        );
+        const pct = officialAverage(assignments, grades, r.student_id, setup, classTimeZone(klass?.timezone));
         return {
           student_id: r.student_id,
           class_id: classId,

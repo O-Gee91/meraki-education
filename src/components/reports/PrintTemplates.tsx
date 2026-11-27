@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { missingPointsFor } from "@/lib/late-penalty";
+import { officialAverage } from "@/lib/official-average";
+import { classTimeZone } from "@/lib/coursework-window";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { directoryQueryKey } from "@/lib/api-query-policy";
 import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, percent } from "@/lib/school";
-import { computeAverage, isAutoGradeComment, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
+import { isAutoGradeComment, letterFor, parseGradingSetup } from "@/lib/grading";
 import { QUESTION_KIND_LABELS, type QuestionKind } from "@/lib/assessments";
 import { sortStudents } from "@/lib/student-sort";
 import {
@@ -76,7 +77,7 @@ const TEMPLATES: { id: TemplateId; name: string; blurb: string; needs: string }[
   },
 ];
 
-const printClassColumns = "id, name, subject, term, room, period, weights";
+const printClassColumns = "id, name, subject, term, room, period, weights, timezone";
 
 export function PrintTemplates() {
   const { user, primaryRole, previewingStudent } = useAuth();
@@ -165,36 +166,25 @@ export function PrintTemplates() {
       const grades = await fetchByIds(assignments.map((a) => a.id), (batch, from, to) =>
         supabase
           .from("grades")
-          .select("student_id, assignment_id, points_earned, comment")
+          .select("student_id, assignment_id, points_earned, comment, is_draft")
           .in("assignment_id", batch)
           .order("id")
           .range(from, to),
       );
 
+      const zone = classTimeZone(klass?.timezone);
       const pages = students.map((s) => {
         const card = (cards ?? []).find((c) => c.student_id === s.id);
         let earned = 0;
         let possible = 0;
         for (const g of grades ?? []) {
-          if (g.student_id !== s.id || g.points_earned == null) continue;
+          if (g.is_draft || g.student_id !== s.id || g.points_earned == null) continue;
           const a = (assignments ?? []).find((x) => x.id === g.assignment_id);
           if (!a) continue;
           earned += Number(g.points_earned);
           possible += Number(a.points_possible);
         }
-        const average = computeAverage(
-          (assignments ?? []).map((a) => {
-            const g = (grades ?? []).find((grade) => grade.student_id === s.id && grade.assignment_id === a.id);
-            return {
-              category: a.category,
-              pointsPossible: Number(a.points_possible),
-              pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
-              markCode: markCodeFromComment(g?.comment),
-              missingPoints: missingPointsFor(a),
-            };
-          }),
-          setup,
-        );
+        const average = officialAverage(assignments ?? [], grades ?? [], s.id, setup, zone);
         const pct = card?.grade_pct != null ? Number(card.grade_pct) : average;
         return `<section class="page">
           ${docHeader("Term report card", headerMeta([`${s.last_name}, ${s.first_name}`]))}
@@ -209,7 +199,7 @@ export function PrintTemplates() {
           <h2>Points summary</h2>
           <table><tr><th>Points earned</th><th>Points possible</th><th>Assignments graded</th></tr>
           <tr><td class="num">${earned}</td><td class="num">${possible}</td><td class="num">${
-            (grades ?? []).filter((g) => g.student_id === s.id && g.points_earned != null).length
+            (grades ?? []).filter((g) => !g.is_draft && g.student_id === s.id && g.points_earned != null).length
           }</td></tr></table>
           <h2>Teacher comment</h2>
           <div class="box lines">${
@@ -241,7 +231,7 @@ export function PrintTemplates() {
       const grades = await fetchByIds(assignments.map((a) => a.id), (batch, from, to) =>
         supabase
           .from("grades")
-          .select("student_id, assignment_id, points_earned, comment")
+          .select("student_id, assignment_id, points_earned, comment, is_draft")
           .in("assignment_id", batch)
           .order("id")
           .range(from, to),
@@ -249,7 +239,7 @@ export function PrintTemplates() {
 
       const pages = students.map((s) => {
         const rows = (assignments ?? []).map((a) => {
-          const g = (grades ?? []).find((x) => x.student_id === s.id && x.assignment_id === a.id);
+          const g = (grades ?? []).find((x) => x.student_id === s.id && x.assignment_id === a.id && !x.is_draft);
           const pts = g?.points_earned == null ? null : Number(g.points_earned);
           return `<tr><td>${escapeHtml(a.title)}</td><td>${escapeHtml(a.category)}</td>
             <td>${escapeHtml(formatDate(a.due_date))}</td>
@@ -258,19 +248,7 @@ export function PrintTemplates() {
             <td class="num">${pts == null ? "—" : `${percent(pts, Number(a.points_possible)).toFixed(0)}%`}</td>
             <td>${escapeHtml(g?.comment && !isAutoGradeComment(g.comment) ? g.comment.trim() : "")}</td></tr>`;
         });
-        const pct = computeAverage(
-          (assignments ?? []).map((a) => {
-            const g = (grades ?? []).find((grade) => grade.student_id === s.id && grade.assignment_id === a.id);
-            return {
-              category: a.category,
-              pointsPossible: Number(a.points_possible),
-              pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
-              markCode: markCodeFromComment(g?.comment),
-              missingPoints: missingPointsFor(a),
-            };
-          }),
-          setup,
-        );
+        const pct = officialAverage(assignments ?? [], grades ?? [], s.id, setup, classTimeZone(klass?.timezone));
         return `<section class="page">
           ${docHeader("Progress report", headerMeta([`${s.last_name}, ${s.first_name}`]))}
           <p class="muted">Grade ${s.grade_level} · current standing ${

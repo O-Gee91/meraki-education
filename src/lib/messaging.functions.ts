@@ -24,13 +24,16 @@ export const notifyMessageRecipient = createServerFn({ method: "POST" })
 
     const { data: people } = await supabase
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name")
       .in("id", [message.sender_id, message.recipient_id]);
 
     const recipient = people?.find((p) => p.id === message.recipient_id);
     const sender = people?.find((p) => p.id === message.sender_id);
-    const email = recipient?.email?.trim();
-    if (!email || !email.includes("@")) return { sent: false as const };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { verifiedLinkedEmails } = await import("./verified-email.server");
+    const verified = await verifiedLinkedEmails(supabaseAdmin, [message.recipient_id]);
+    const email = verified.get(message.recipient_id);
+    if (!email) return { sent: false as const };
 
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
     const origin = process.env["PUBLIC_SITE_URL"] ?? "https://meraki-education.app";

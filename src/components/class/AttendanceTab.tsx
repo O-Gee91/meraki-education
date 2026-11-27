@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { classCalendarDate } from "@/lib/late-penalty";
 import { attendanceTone, formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
@@ -27,11 +28,11 @@ import { attendanceReadKind, classAttendanceNotebookVisible } from "@/lib/notebo
 
 const STATUSES = ["present", "absent", "tardy", "excused"] as const;
 
-export function AttendanceTab({ classId }: { classId: string }) {
+export function AttendanceTab({ classId, timeZone }: { classId: string; timeZone?: string | null }) {
   const { isStaff } = useAuth();
   const style = useNotebookStyle();
   const queryClient = useQueryClient();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => classCalendarDate(new Date(), timeZone));
   const [sortMode, setSortMode] = useStudentSort(`attendance-${classId}`);
   const staffView = isStaff && attendanceReadKind(true) === "class-day";
 

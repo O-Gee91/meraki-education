@@ -1,5 +1,8 @@
 import { useServerFn } from "@tanstack/react-start";
-import { missingPointsFor } from "@/lib/late-penalty";
+import { classCalendarDate } from "@/lib/late-penalty";
+import { officialAverage, postedGradeFields } from "@/lib/official-average";
+import { classTimeZone } from "@/lib/coursework-window";
+import { useAuth } from "@/hooks/useAuth";
 import { getStudentEarlierWork } from "@/lib/earlier-work.functions";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -72,6 +75,7 @@ export function StudentClassReport({
   displayName,
   enrolledAt,
   droppedAt,
+  timeZone,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -86,11 +90,14 @@ export function StudentClassReport({
   enrolledAt?: string | null;
   /** When the student left; later ungraded work is left out (dropped students). */
   droppedAt?: string | null;
+  timeZone?: string | null;
 }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const zone = classTimeZone(timeZone);
   const [showBehavior, setShowBehavior] = useState(false);
   const [showComments, setShowComments] = useState(true);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = classCalendarDate(new Date(), zone);
   const assignmentIds = assignments.map((assignment) => assignment.id);
 
   const { data: submissions = [] } = useQuery({
@@ -296,21 +303,7 @@ export function StudentClassReport({
   ]);
 
   const studentAverage = student
-    ? computeAverage(
-        assignments.map((assignment) => {
-          const grade = grades.find(
-            (entry) => entry.student_id === student.id && entry.assignment_id === assignment.id,
-          );
-          return {
-            category: assignment.category,
-            pointsPossible: Number(assignment.points_possible),
-            pointsEarned: grade?.points_earned == null ? null : Number(grade.points_earned),
-            markCode: markCodeFromComment(grade?.comment),
-            missingPoints: missingPointsFor(assignment),
-          };
-        }),
-        setup,
-      )
+    ? officialAverage(assignments, grades, student.id, setup, zone)
     : null;
   const completedCount = rows.filter((row) => row.completed).length;
   const completionRate = rows.length ? (completedCount / rows.length) * 100 : 0;
@@ -350,7 +343,7 @@ export function StudentClassReport({
             student_id: student.id,
             points_earned: points,
             comment: mark ? `MARK:${mark.code}` : keptComment,
-            updated_at: new Date().toISOString(),
+            ...postedGradeFields(user?.id ?? null),
           },
           { onConflict: "assignment_id,student_id" },
         );
@@ -445,6 +438,7 @@ export function StudentClassReport({
             <p className="text-xs font-semibold uppercase text-muted-foreground">Current grade</p>
             <p className="mt-1 text-2xl font-semibold">{studentAverage == null ? "—" : `${studentAverage.toFixed(1)}%`}</p>
             <p className="text-sm text-muted-foreground">{studentAverage == null ? "No graded work" : letterFor(studentAverage, setup.scale)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">This percentage counts posted scores. A draft stays in the score box until you save it.</p>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-4">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Completion</p>

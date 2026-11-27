@@ -11,8 +11,10 @@ const { state, query } = vi.hoisted(() => {
     scopeError: null as DbError,
     readError: null as DbError,
     writeError: null as DbError,
+    answerError: null as DbError,
     tables: {} as Record<string, Row[]>,
     writes: [] as { table: string; rows: unknown; options?: unknown }[],
+    deletes: [] as { table: string; filters: Record<string, unknown> }[],
   };
 
   function matching(table: string, filters: Record<string, unknown>) {
@@ -52,16 +54,34 @@ const { state, query } = vi.hoisted(() => {
         return api;
       },
       insert(rows: unknown) {
+        const run = async () => {
+          state.writes.push({ table, rows, options: undefined });
+          const error = table === "assessment_answers" ? state.answerError : state.writeError;
+          if (error) return { data: null, error };
+          return { data: { id: "submission-1" }, error: null };
+        };
         return {
           select() {
-            return {
-              single: async () => {
-                state.writes.push({ table, rows, options: undefined });
-                return { data: null, error: state.writeError };
-              },
-            };
+            return { single: run };
+          },
+          then(resolve: (value: { data: unknown; error: DbError }) => unknown, reject?: (reason: unknown) => unknown) {
+            return run().then(resolve, reject);
           },
         };
+      },
+      delete() {
+        const filters: Record<string, unknown> = {};
+        const api = {
+          eq(key: string, value: unknown) {
+            filters[key] = value;
+            return api;
+          },
+          then(resolve: (value: { data: null; error: null }) => unknown, reject?: (reason: unknown) => unknown) {
+            state.deletes.push({ table, filters: { ...filters } });
+            return Promise.resolve({ data: null, error: null }).then(resolve, reject);
+          },
+        };
+        return api;
       },
       maybeSingle: async () => {
         const result = finish();
@@ -135,8 +155,10 @@ beforeEach(() => {
   state.scopeError = null;
   state.readError = null;
   state.writeError = null;
+  state.answerError = null;
   state.tables = {};
   state.writes = [];
+  state.deletes = [];
 });
 
 describe("applyMissedAssessmentZeros", () => {
@@ -280,5 +302,70 @@ describe("submitAssessment", () => {
       }),
     ).rejects.toMatchObject({ code: "validation" });
     expect(state.writes).toEqual([]);
+  });
+
+  function openAttempt(dueAt: string | null) {
+    state.tables["students"] = [{ id: "student-1", user_id: "user-1" }];
+    state.tables["assessments"] = [
+      {
+        id: assessmentId,
+        class_id: classId,
+        assignment_id: "assign-1",
+        published: true,
+        available_from: null,
+        closes_at: null,
+        due_at: dueAt,
+      },
+    ];
+    state.tables["classes"] = [{ id: classId, timezone: "Asia/Shanghai" }];
+    state.tables["enrollments"] = [{ id: "enr-1", class_id: classId, student_id: "student-1" }];
+    state.tables["assessment_submissions"] = [];
+  }
+
+  it("keeps a quiz with no questions in review and does not post a zero", async () => {
+    openAttempt(null);
+    state.tables["assessment_questions"] = [];
+    await expect(
+      submit({
+        data: { assessmentId, answers: [] },
+        context: { userId: "user-1", supabase: { from: query } },
+      }),
+    ).resolves.toMatchObject({ needsReview: true, autoScore: 0, isLate: false });
+    expect(state.writes.map((write) => write.table)).toEqual(["assessment_submissions"]);
+    expect(state.writes[0]?.rows).toMatchObject({ status: "needs_review", auto_score: 0 });
+    expect(state.writes.some((write) => write.table === "grades")).toBe(false);
+  });
+
+  it("marks an attempt late when only due_at is in the past", async () => {
+    openAttempt("2020-01-01T15:59:00.000Z");
+    state.tables["assessment_questions"] = [
+      { id: "q-1", assessment_id: assessmentId, kind: "short_answer", points: 5, answer_key: {} },
+    ];
+    await expect(
+      submit({
+        data: { assessmentId, answers: [{ questionId: "00000000-0000-4000-8000-000000000099", response: { text: "answer" } }] },
+        context: { userId: "user-1", supabase: { from: query } },
+      }),
+    ).resolves.toMatchObject({ isLate: true, needsReview: true });
+    expect(state.writes.find((write) => write.table === "assessment_submissions")?.rows).toMatchObject({
+      is_late: true,
+    });
+    expect(state.writes.some((write) => write.table === "grades")).toBe(false);
+  });
+
+  it("deletes the submission when saving answers fails", async () => {
+    openAttempt("2099-01-01T15:59:00.000Z");
+    state.tables["assessment_questions"] = [
+      { id: "q-1", assessment_id: assessmentId, kind: "short_answer", points: 5, answer_key: {} },
+    ];
+    state.answerError = { message: "answers failed", code: "23503" };
+    await expect(
+      submit({
+        data: { assessmentId, answers: [{ questionId: "00000000-0000-4000-8000-000000000099", response: { text: "answer" } }] },
+        context: { userId: "user-1", supabase: { from: query } },
+      }),
+    ).rejects.toMatchObject({ message: "answers failed" });
+    expect(state.deletes).toEqual([{ table: "assessment_submissions", filters: { id: "submission-1" } }]);
+    expect(state.writes.some((write) => write.table === "grades")).toBe(false);
   });
 });

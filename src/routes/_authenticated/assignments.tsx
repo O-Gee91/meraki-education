@@ -2,6 +2,7 @@ import { resolveWorkState } from "@/lib/coursework-state";
 import { assignmentSections } from "@/lib/assignment-sections";
 import { NotebookGrade, Sketch } from "@/components/Sketch";
 import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
+import { classCalendarDate } from "@/lib/late-penalty";
 import { isMissingWork } from "@/lib/missing-work";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { useMemo, useState } from "react";
@@ -79,7 +80,7 @@ function AssignmentsHubPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
   const [openId, setOpenId] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const todayKey = classCalendarDate();
 
   // Students resolve to their own record, guardians to every linked child and
   // staff previews to the demo Student Tester only.
@@ -94,7 +95,7 @@ function AssignmentsHubPage() {
     queryFn: () => fetchByIds(studentIds, (batch, from, to) =>
       supabase
         .from("enrollments")
-        .select("student_id, class_id, created_at, classes(id, name)")
+        .select("student_id, class_id, created_at, classes(id, name, timezone)")
         .in("student_id", batch)
         .order("id")
         .range(from, to),
@@ -180,6 +181,7 @@ function AssignmentsHubPage() {
     return assignments.map((a) => {
       // The child selector scopes the whole list to one student.
       const sid = studentIds[0];
+      const today = classCalendarDate(new Date(), enrollments.find((e) => e.class_id === a.class_id)?.classes?.timezone);
       const sub = submissions.find(
         (s) => s.assignment_id === a.id && s.student_id === sid,
       );
@@ -229,7 +231,7 @@ function AssignmentsHubPage() {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, submissions, grades, studentIds, today, enrollments]);
+  }, [assignments, submissions, grades, studentIds, todayKey, enrollments]);
 
   const classRows = rows.filter((r) => classFilter === "all" || r.classId === classFilter);
   const counts = {

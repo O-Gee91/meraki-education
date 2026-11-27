@@ -316,6 +316,13 @@
       "when": 1795758265475,
       "tag": "0044_apply_student_identity_update",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795804800000,
+      "tag": "0045_class_scoped_grade_and_attendance_writes",
+      "breakpoints": true
     }
   ]
 }
