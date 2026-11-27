@@ -23,6 +23,7 @@ import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
+import { directoryQueryKey } from "@/lib/api-query-policy";
 import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, gradeTone } from "@/lib/school";
 import { computeAverage, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
@@ -96,35 +97,31 @@ function ReportsPage() {
   );
 }
 
+const reportClassColumns = "id, name, subject, term, weights";
+const reportStudentColumns = "id, first_name, last_name";
+
 function ReportCards({ isStaff }: { isStaff: boolean }) {
-  const { user } = useAuth();
+  const { user, primaryRole, previewingStudent } = useAuth();
   const { classIds, studentIds, scopeError } = useTeacherScope();
   const queryClient = useQueryClient();
   const [classId, setClassId] = useState("");
   const [sortMode, setSortMode] = useStudentSort("report-cards");
+  const directoryViewer = { userId: user?.id, role: primaryRole, preview: previewingStudent };
 
   const { data: allClasses = [] } = useQuery({
-    queryKey: ["classes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("classes")
-        .select("id, name, subject, term, weights")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: directoryQueryKey("classes", reportClassColumns, directoryViewer),
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("classes").select(reportClassColumns).order("name").order("id").range(from, to),
+      ),
   });
 
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["students"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: directoryQueryKey("students", reportStudentColumns, directoryViewer),
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("students").select(reportStudentColumns).order("last_name").order("id").range(from, to),
+      ),
   });
 
   const cardsQuery = useQuery({
@@ -147,7 +144,6 @@ function ReportCards({ isStaff }: { isStaff: boolean }) {
     studentIds ? allStudents.filter((s) => studentIds.has(s.id)) : allStudents,
     sortMode,
   );
-  const { previewingStudent } = useAuth();
   const cards = [
     ...(classIds ? allCards.filter((c) => classIds.has(c.class_id)) : allCards).filter(
       // Student view: only the demo student's published cards.
@@ -502,21 +498,21 @@ function StandardsTab({ isStaff }: { isStaff: boolean }) {
 }
 
 function PortfoliosTab({ isStaff }: { isStaff: boolean }) {
-  const { user, previewingStudent } = useAuth();
+  const { user, primaryRole, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ studentId: "", title: "", link: "", description: "" });
   const [sortMode, setSortMode] = useStudentSort("portfolios");
 
   const { data: allPortfolioStudents = [] } = useQuery({
-    queryKey: ["students"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: directoryQueryKey("students", reportStudentColumns, {
+      userId: user?.id,
+      role: primaryRole,
+      preview: previewingStudent,
+    }),
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("students").select(reportStudentColumns).order("last_name").order("id").range(from, to),
+      ),
   });
   const previewScope = useTeacherScope();
   const students = previewingStudent

@@ -9,3 +9,27 @@ export function wellbeingFeedKey(userId: string | undefined, role: string, teach
 export function feedbackKey(userId: string | undefined, role: string, preview: boolean, studentId?: string | null) {
   return ["my-feedback", userId ?? null, role, preview, studentId ?? null] as const;
 }
+
+export type DirectoryViewer = {
+  userId?: string | null | undefined;
+  role?: string | null | undefined;
+  preview?: boolean | undefined;
+};
+
+/**
+ * Students and classes lists are cached per viewer and per column list.
+ * A narrower select must not reuse a row cached for a wider select.
+ */
+export function directoryQueryKey(
+  table: "students" | "classes",
+  columns: string,
+  viewer: DirectoryViewer,
+) {
+  return [
+    table,
+    columns,
+    viewer.userId ?? null,
+    viewer.role ?? null,
+    viewer.preview === true,
+  ] as const;
+}

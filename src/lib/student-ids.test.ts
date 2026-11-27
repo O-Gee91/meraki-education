@@ -349,6 +349,7 @@ const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
   maybeSingle: vi.fn(),
   inRows: vi.fn(),
+  writeError: vi.fn((): { message: string; code?: string } | null => null),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -385,8 +386,8 @@ function supabaseMock() {
     },
     in: () => Promise.resolve({ data: mocks.inRows(), error: null as null }),
     maybeSingle: () => mocks.maybeSingle(),
-    then(resolve: (value: { error: null }) => unknown) {
-      return resolve({ error: null });
+    then(resolve: (value: { error: { message: string; code?: string } | null }) => unknown) {
+      return resolve({ error: mocks.writeError() });
     },
   };
   return { rpc: mocks.rpc, from: () => query };
@@ -404,6 +405,7 @@ describe("student ID server functions", () => {
     });
     mocks.maybeSingle.mockResolvedValue({ data: { student_number: "MK0000018" }, error: null });
     mocks.inRows.mockReturnValue([]);
+    mocks.writeError.mockReturnValue(null);
   });
 
   it("does not call the correction RPC unless the caller is an admin", async () => {
@@ -515,8 +517,41 @@ describe("student ID server functions", () => {
         data: { rows: [{ first_name: "New", last_name: "Student", grade_level: 6, student_number: "OTHER" }] },
         context: { supabase: supabaseMock() },
       }),
-    ).rejects.toThrow(/already assigned/);
+    ).rejects.toMatchObject({ code: "conflict", message: expect.stringMatching(/already assigned/) });
     expect(mocks.insert).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it("maps invalid student id input to validation", async () => {
+    const { issueStudentNumber } = await import("./student-ids.functions");
+    const issue = issueStudentNumber as unknown as (input: {
+      data: { studentId: string };
+      context: { supabase: ReturnType<typeof supabaseMock> };
+    }) => Promise<unknown>;
+    await expect(
+      issue({ data: { studentId: "not-a-uuid" }, context: { supabase: supabaseMock() } }),
+    ).rejects.toMatchObject({ code: "validation" });
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps a unique student ID violation to conflict", async () => {
+    mocks.writeError.mockReturnValue({
+      code: "23505",
+      message: 'duplicate key value violates unique constraint "students_student_number_key"',
+    });
+    const { importStudentIdentities } = await import("./student-ids.functions");
+    const run = importStudentIdentities as unknown as (input: {
+      data: { rows: { first_name: string; last_name: string; grade_level: number; student_number: null }[] };
+      context: { supabase: ReturnType<typeof supabaseMock> };
+    }) => Promise<unknown>;
+    await expect(
+      run({
+        data: { rows: [{ first_name: "Ada", last_name: "Lovelace", grade_level: 7, student_number: null }] },
+        context: { supabase: supabaseMock() },
+      }),
+    ).rejects.toMatchObject({
+      code: "conflict",
+      message: "That student ID is already assigned to another student.",
+    });
   });
 });

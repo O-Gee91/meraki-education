@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ApiError, apiErrorFromDb, parseApiInput } from "./api-error";
 import {
   STUDENT_STATUSES,
   importedStudentPatch,
@@ -52,54 +53,54 @@ export type ImportedStudent = {
   guardian_user_id: string | null;
 };
 
-function dbError(error: { message: string }): Error {
-  return new Error(studentIdWriteError(error.message));
+function dbError(error: { message: string; code?: string }): ApiError {
+  const message = studentIdWriteError(error.message);
+  if (error.code === "23505" || message !== error.message) return new ApiError("conflict", message);
+  return apiErrorFromDb({ ...error, message });
+}
+
+function rejectImport(reason: string): never {
+  const code = /already assigned|retired/i.test(reason) ? "conflict" : "validation";
+  throw new ApiError(code, reason);
 }
 
 export const issueStudentNumber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    studentIdInput.parse(input);
-    return input as z.infer<typeof studentIdInput>;
-  })
+  .inputValidator((input: unknown) => parseApiInput(studentIdInput, input))
   .handler(async ({ data, context }) => {
-    const parsed = studentIdInput.parse(data);
+    const parsed = parseApiInput(studentIdInput, data);
     const { data: studentNumber, error } = await context.supabase.rpc("issue_student_number", {
       _student_id: parsed.studentId,
     });
     if (error) throw dbError(error);
-    if (!studentNumber) throw new Error("Could not issue a student ID.");
+    if (!studentNumber) throw new ApiError("failed", "Could not issue a student ID.");
     return { studentNumber };
   });
 
 export const correctStudentNumber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    correctInput.parse(input);
-    return input as z.infer<typeof correctInput>;
-  })
+  .inputValidator((input: unknown) => parseApiInput(correctInput, input))
   .handler(async ({ data, context }) => {
-    const parsed = correctInput.parse(data);
-    const { data: isAdmin } = await context.supabase.rpc("is_admin");
-    if (!isAdmin) throw new Error("Only an administrator can correct a student ID.");
+    const parsed = parseApiInput(correctInput, data);
+    const { data: isAdmin, error: adminError } = await context.supabase.rpc("is_admin");
+    if (adminError) throw dbError(adminError);
+    if (!isAdmin)
+      throw new ApiError("forbidden", "Only an administrator can correct a student ID.");
     const { data: studentNumber, error } = await context.supabase.rpc("correct_student_number", {
       _student_id: parsed.studentId,
       _new_number: parsed.newNumber,
       _reason: parsed.reason,
     });
     if (error) throw dbError(error);
-    if (!studentNumber) throw new Error("Could not correct the student ID.");
+    if (!studentNumber) throw new ApiError("failed", "Could not correct the student ID.");
     return { studentNumber };
   });
 
 export const setStudentStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    statusInput.parse(input);
-    return input as z.infer<typeof statusInput>;
-  })
+  .inputValidator((input: unknown) => parseApiInput(statusInput, input))
   .handler(async ({ data, context }) => {
-    const parsed = statusInput.parse(data);
+    const parsed = parseApiInput(statusInput, data);
     const { data: status, error } = await context.supabase.rpc("set_student_status", {
       _student_id: parsed.studentId,
       _status: parsed.status,
@@ -114,14 +115,12 @@ export const setStudentStatus = createServerFn({ method: "POST" })
  */
 export const importStudentIdentities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    importRowsInput.parse(input);
-    return input as z.infer<typeof importRowsInput>;
-  })
+  .inputValidator((input: unknown) => parseApiInput(importRowsInput, input))
   .handler(async ({ data, context }) => {
-    const parsed = importRowsInput.parse(data);
-    const { data: isStaff } = await context.supabase.rpc("is_staff");
-    if (!isStaff) throw new Error("Only teachers and admins can import students");
+    const parsed = parseApiInput(importRowsInput, data);
+    const { data: isStaff, error: staffError } = await context.supabase.rpc("is_staff");
+    if (staffError) throw dbError(staffError);
+    if (!isStaff) throw new ApiError("forbidden", "Only teachers and admins can import students");
 
     const numbers = parsed.rows
       .map((row) => normalizeStudentNumber(row.student_number))
@@ -144,7 +143,7 @@ export const importStudentIdentities = createServerFn({ method: "POST" })
 
     const plan = planStudentImport(parsed.rows, lookup);
     const rejected = plan.find((item) => item.action === "reject");
-    if (rejected && rejected.action === "reject") throw new Error(rejected.reason);
+    if (rejected && rejected.action === "reject") rejectImport(rejected.reason);
 
     const students: ImportedStudent[] = [];
     for (const item of plan) {
@@ -186,9 +185,12 @@ export const importStudentIdentities = createServerFn({ method: "POST" })
           .maybeSingle();
         studentNumber = created?.student_number ?? null;
         if (!studentNumber) {
-          const { data: issued, error: issueError } = await context.supabase.rpc("issue_student_number", {
-            _student_id: id,
-          });
+          const { data: issued, error: issueError } = await context.supabase.rpc(
+            "issue_student_number",
+            {
+              _student_id: id,
+            },
+          );
           if (!issueError && issued) studentNumber = issued;
         }
       }
@@ -204,7 +206,9 @@ export const importStudentIdentities = createServerFn({ method: "POST" })
       });
     }
 
-    const matchedIds = students.filter((student) => student.action === "matched").map((student) => student.id);
+    const matchedIds = students
+      .filter((student) => student.action === "matched")
+      .map((student) => student.id);
     if (matchedIds.length > 0) {
       const { data: existing, error } = await context.supabase
         .from("students")

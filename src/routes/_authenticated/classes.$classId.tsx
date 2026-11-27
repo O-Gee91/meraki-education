@@ -18,7 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { StudentPreviewContext } from "@/hooks/useStudentPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll, fetchByIds } from "@/lib/query";
-import { READ_REUSE_MS } from "@/lib/api-query-policy";
+import { directoryQueryKey, READ_REUSE_MS } from "@/lib/api-query-policy";
+import { gradebookReadGate, showsEmptyGradebook } from "@/lib/gradebook-read";
 import { LoadError } from "@/components/LoadError";
 import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,7 @@ export const Route = createFileRoute("/_authenticated/classes/$classId")({
 
 function ClassDetailPage() {
   const { classId } = Route.useParams();
-  const { realStaff, previewingStudent, isAdmin, user, profile } = useAuth();
+  const { realStaff, previewingStudent, isAdmin, primaryRole, user, profile } = useAuth();
   const [classTab, setClassTab] = useState("gradebook");
   const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [courseworkAttention, setCourseworkAttention] = useState<{ key: QuickKey; request: number } | null>(null);
@@ -198,21 +199,29 @@ function ClassDetailPage() {
   });
 
   // Classes this staff member can hop between via the title switcher.
+  const classSwitcherColumns = "id, name, period, term, teacher_id, teacher_name";
   const { data: switcherClasses = [] } = useQuery({
-    queryKey: ["class-switcher", user?.id, profile?.full_name, isAdmin],
+    queryKey: [
+      ...directoryQueryKey("classes", classSwitcherColumns, {
+        userId: user?.id,
+        role: primaryRole,
+        preview: previewingStudent,
+      }),
+      "switcher",
+      profile?.full_name ?? null,
+      isAdmin,
+    ],
     enabled: realStaff && !!user,
     staleTime: READ_REUSE_MS,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("classes")
-        .select("id, name, period, term, teacher_id, teacher_name")
-        .order("name");
-      if (error) throw error;
+      const data = await fetchAll((from, to) =>
+        supabase.from("classes").select(classSwitcherColumns).order("name").order("id").range(from, to),
+      );
       // Admin mode sees every class; everyone else only their own.
-      if (isAdmin) return data ?? [];
+      if (isAdmin) return data;
       const myName = (profile?.full_name ?? "").trim().toLowerCase();
       const coTaught = await fetchCoTaughtClassIds(user!.id);
-      return (data ?? []).filter(
+      return data.filter(
         (c) =>
           c.teacher_id === user!.id ||
           coTaught.has(c.id) ||
@@ -231,7 +240,7 @@ function ClassDetailPage() {
     EXTRA_CREDIT_CATEGORY,
   ];
 
-  const { data: fullRoster = [] } = useQuery({
+  const rosterQuery = useQuery({
     queryKey: ["roster", classId],
     staleTime: READ_REUSE_MS,
     queryFn: async () => {
@@ -242,6 +251,7 @@ function ClassDetailPage() {
       return data.filter((r) => r.students);
     },
   });
+  const fullRoster = rosterQuery.data ?? [];
   const [showDropped, setShowDropped] = useState(false);
   const { data: droppedRoster = [] } = useQuery({
     queryKey: ["dropped-roster", classId],
@@ -294,7 +304,7 @@ function ClassDetailPage() {
       .includes(query);
   });
 
-  const { data: assignments = [] } = useQuery({
+  const assignmentsQuery = useQuery({
     queryKey: ["assignments", classId],
     staleTime: READ_REUSE_MS,
     queryFn: async () => {
@@ -307,6 +317,7 @@ function ClassDetailPage() {
         .order("due_date", { ascending: true }).order("id").range(from, to));
     },
   });
+  const assignments = assignmentsQuery.data ?? [];
 
   const assignmentIds = assignments.map((a) => a.id);
   const assignmentKey = [...assignmentIds].sort().join(",");
@@ -360,9 +371,26 @@ function ClassDetailPage() {
     },
   });
   const gradebookSubmissions = useMemo(() => submissionsQuery.data ?? [], [submissionsQuery.data]);
-  const needsGradeReads = assignmentIds.length > 0;
-  const gradebookFailed = needsGradeReads && (gradesQuery.isError || submissionsQuery.isError);
-  const gradebookLoading = needsGradeReads && !gradebookFailed && (gradesQuery.isPending || submissionsQuery.isPending);
+  const needsGradeReads = (assignmentsQuery.data?.length ?? 0) > 0;
+  const readStatus = (query: { isError: boolean; isPending: boolean }, needed = true) =>
+    !needed ? "idle" as const : query.isError ? "error" as const : query.isPending ? "pending" as const : "success" as const;
+  const gradebookGate = gradebookReadGate({
+    roster: readStatus(rosterQuery),
+    assignments: readStatus(assignmentsQuery),
+    grades: readStatus(gradesQuery, needsGradeReads),
+    submissions: readStatus(submissionsQuery, needsGradeReads),
+  });
+  const gradebookFailed = gradebookGate === "error";
+  const gradebookLoading = gradebookGate === "loading";
+  const retryGradebookReads = () => {
+    void rosterQuery.refetch();
+    void assignmentsQuery.refetch();
+    void gradesQuery.refetch();
+    void submissionsQuery.refetch();
+  };
+  const gradebookErrorLabel = rosterQuery.isError || assignmentsQuery.isError
+    ? "The class roster or assignments couldn't be loaded. Scores stay hidden so a failed read is not shown as an empty class."
+    : "Grades couldn't be loaded. Scores stay hidden until this succeeds, so nothing here is treated as missing.";
   const submittedKeys = useMemo(
     () => new Set(gradebookSubmissions.map((s) => `${s.student_id}:${s.assignment_id}`)),
     [gradebookSubmissions],
@@ -682,10 +710,7 @@ function ClassDetailPage() {
         gradingSummary={snapshotGrading}
         onGradingAttention={openGradingAttention}
         academicReads={gradebookFailed ? "error" : gradebookLoading ? "loading" : "ready"}
-        onRetryAcademic={() => {
-          void gradesQuery.refetch();
-          void submissionsQuery.refetch();
-        }}
+        onRetryAcademic={retryGradebookReads}
       />}
       <div className={isStaff ? "mt-4 space-y-6" : undefined}>
       <Tabs value={previewing ? previewTab : classTab} onValueChange={previewing ? setPreviewTab : setClassTab} key={previewing ? "preview" : "staff"}>
@@ -757,13 +782,7 @@ function ClassDetailPage() {
 
         <TabsContent value="gradebook">
           {gradebookFailed ? (
-            <LoadError
-              label="Grades couldn't be loaded. Scores stay hidden until this succeeds, so nothing here is treated as missing."
-              onRetry={() => {
-                void gradesQuery.refetch();
-                void submissionsQuery.refetch();
-              }}
-            />
+            <LoadError label={gradebookErrorLabel} onRetry={retryGradebookReads} />
           ) : gradebookLoading ? (
             <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading the gradebook…</NotebookLoading>
           ) : (
@@ -798,7 +817,7 @@ function ClassDetailPage() {
             </details>
           )}
           <section className="coursework-ledger mt-6 border-y border-border/70 bg-card">
-            {roster.length === 0 || assignments.length === 0 ? (
+            {showsEmptyGradebook(gradebookGate, roster.length, assignments.length) ? (
               <NotebookEmpty className="p-6 text-sm text-muted-foreground">
                 {isStaff
                   ? "Add students to the roster and create assignments to see the gradebook."
@@ -1091,13 +1110,7 @@ function ClassDetailPage() {
             </TabsList>
             <TabsContent value="assignments">
               {gradebookFailed ? (
-                <LoadError
-                  label="Grades couldn't be loaded. Scores stay hidden until this succeeds, so nothing here is treated as missing."
-                  onRetry={() => {
-                    void gradesQuery.refetch();
-                    void submissionsQuery.refetch();
-                  }}
-                />
+                <LoadError label={gradebookErrorLabel} onRetry={retryGradebookReads} />
               ) : gradebookLoading ? (
                 <NotebookLoading className="mt-6 text-sm text-muted-foreground">Loading coursework…</NotebookLoading>
               ) : (
@@ -2440,19 +2453,19 @@ function RosterTab({
   const [sortMode, setSortMode] = useStudentSort(`class-roster-${classId}`);
   const [reportStudentId, setReportStudentId] = useState<string | null>(null);
 
+  const { user, primaryRole, previewingStudent } = useAuth();
+  const rosterPickerColumns = "id, first_name, last_name, grade_level, student_number, user_id, guardian_user_id";
   const { data: students = [] } = useQuery({
-    queryKey: ["students"],
+    queryKey: directoryQueryKey("students", rosterPickerColumns, {
+      userId: user?.id,
+      role: primaryRole,
+      preview: previewingStudent,
+    }),
     enabled: isStaff,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select(
-          "id, first_name, last_name, grade_level, student_number, user_id, guardian_user_id",
-        )
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("students").select(rosterPickerColumns).order("last_name").order("id").range(from, to),
+      ),
   });
 
   const enroll = useMutation({

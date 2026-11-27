@@ -1,6 +1,9 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { fetchAll } from "@/lib/query";
 import { fail, ok, supabaseForUser, unauthenticated } from "../supabase";
+
+const UPCOMING_EVENTS = 100;
 
 export default defineTool({
   name: "list_calendar_events",
@@ -17,14 +20,22 @@ export default defineTool({
   handler: async ({ from_date }, ctx) => {
     if (!ctx.isAuthenticated()) return unauthenticated();
     const supabase = supabaseForUser(ctx);
-    let query = supabase
-      .from("calendar_events")
-      .select("id, title, description, event_date, start_time, end_time, location, category, audience")
-      .order("event_date")
-      .limit(100);
-    if (from_date) query = query.gte("event_date", from_date);
-    const { data, error } = await query;
-    if (error) return fail(error.message);
-    return ok({ events: data ?? [] });
+    try {
+      const events = await fetchAll((from, to) => {
+        if (from >= UPCOMING_EVENTS) return Promise.resolve({ data: [], error: null });
+        let query = supabase
+          .from("calendar_events")
+          .select(
+            "id, title, description, event_date, start_time, end_time, location, category, audience",
+          )
+          .order("event_date")
+          .order("id");
+        if (from_date) query = query.gte("event_date", from_date);
+        return query.range(from, Math.min(to, UPCOMING_EVENTS - 1));
+      });
+      return ok({ events });
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : "Could not list calendar events.");
+    }
   },
 });

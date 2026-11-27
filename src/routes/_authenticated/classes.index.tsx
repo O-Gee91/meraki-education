@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { LoadError } from "@/components/LoadError";
 import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { StudentImport } from "@/components/students/StudentImport";
+import { directoryQueryKey } from "@/lib/api-query-policy";
 import { fetchAll } from "@/lib/query";
 
 import { useTeacherScope } from "@/hooks/useTeacherScope";
@@ -60,7 +61,7 @@ const emptyForm = {
 };
 
 function ClassesPage() {
-  const { isStaff, isAdmin, teacherMode, user, profile, previewingStudent } = useAuth();
+  const { isStaff, isAdmin, teacherMode, primaryRole, user, profile, previewingStudent } = useAuth();
   const previewScope = useTeacherScope();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -73,16 +74,16 @@ function ClassesPage() {
     grade: number | null;
   } | null>(null);
 
+  const classIndexColumns = "id, name, subject, period, room, term, teacher_id, teacher_name, grade_level";
   const classesQuery = useQuery({
-    queryKey: ["classes"],
+    queryKey: directoryQueryKey("classes", classIndexColumns, {
+      userId: user?.id,
+      role: primaryRole,
+      preview: previewingStudent,
+    }),
     queryFn: () =>
       fetchAll((from, to) =>
-        supabase
-          .from("classes")
-          .select("id, name, subject, period, room, term, teacher_id, teacher_name, grade_level")
-          .order("period")
-          .order("id")
-          .range(from, to),
+        supabase.from("classes").select(classIndexColumns).order("period").order("id").range(from, to),
       ),
   });
   const allClasses = classesQuery.data ?? [];
