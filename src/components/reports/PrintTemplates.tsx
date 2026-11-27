@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { directoryQueryKey } from "@/lib/api-query-policy";
 import { fetchAll, fetchByIds } from "@/lib/query";
 import { formatDate, percent } from "@/lib/school";
 import { computeAverage, isAutoGradeComment, letterFor, markCodeFromComment, parseGradingSetup } from "@/lib/grading";
@@ -74,22 +76,25 @@ const TEMPLATES: { id: TemplateId; name: string; blurb: string; needs: string }[
   },
 ];
 
+const printClassColumns = "id, name, subject, term, room, period, weights";
+
 export function PrintTemplates() {
+  const { user, primaryRole, previewingStudent } = useAuth();
   const [template, setTemplate] = useState<TemplateId>("report_card");
   const [classId, setClassId] = useState("");
   const [assessmentId, setAssessmentId] = useState("");
   const [busy, setBusy] = useState(false);
 
   const { data: classes = [] } = useQuery({
-    queryKey: ["classes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("classes")
-        .select("id, name, subject, term, room, period, weights")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: directoryQueryKey("classes", printClassColumns, {
+      userId: user?.id,
+      role: primaryRole,
+      preview: previewingStudent,
+    }),
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("classes").select(printClassColumns).order("name").order("id").range(from, to),
+      ),
   });
 
   const { data: assessments = [] } = useQuery({

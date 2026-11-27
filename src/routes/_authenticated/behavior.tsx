@@ -46,7 +46,8 @@ import {
 } from "@/lib/behavior-reasons";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
-import { fetchAll } from "@/lib/query";
+import { directoryQueryKey } from "@/lib/api-query-policy";
+import { fetchAll, fetchByIds } from "@/lib/query";
 
 
 export const Route = createFileRoute("/_authenticated/behavior")({
@@ -140,7 +141,8 @@ function useNotes(limit: number) {
 
 function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialClassId?: string | undefined }) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, primaryRole, previewingStudent } = useAuth();
+  const directoryViewer = { userId: user?.id, role: primaryRole, preview: previewingStudent };
   const [form, setForm] = useState({
     studentId: "",
     classId: initialClassId ?? "",
@@ -167,22 +169,21 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
   const [sortMode, setSortMode] = useStudentSort("behavior-student-picker");
 
   // Classes this staff member teaches or co-teaches, with their enrollments.
+  const behaviorClassColumns = "id, name, teacher_id";
   const { data: myScope } = useQuery({
-    queryKey: ["behavior-my-classes", user?.id],
+    queryKey: [...directoryQueryKey("classes", behaviorClassColumns, directoryViewer), "behavior-scope"],
     enabled: isStaff && !!user,
     queryFn: async () => {
       const coTaught = await fetchCoTaughtClassIds(user!.id);
-      const { data: classes, error } = await supabase
-        .from("classes")
-        .select("id, name, teacher_id");
-      if (error) throw error;
-      const mine = (classes ?? []).filter((c) => c.teacher_id === user!.id || coTaught.has(c.id));
+      const classes = await fetchAll((from, to) =>
+        supabase.from("classes").select(behaviorClassColumns).order("name").order("id").range(from, to),
+      );
+      const mine = classes.filter((c) => c.teacher_id === user!.id || coTaught.has(c.id));
       const ids = mine.map((c) => c.id);
-      const { data: enr, error: eErr } = ids.length
-        ? await supabase.from("enrollments").select("student_id, class_id").in("class_id", ids)
-        : { data: [], error: null };
-      if (eErr) throw eErr;
-      return { classes: mine.sort((a, b) => a.name.localeCompare(b.name)), enrollments: enr ?? [] };
+      const enrollments = await fetchByIds(ids, (batch, from, to) =>
+        supabase.from("enrollments").select("student_id, class_id").in("class_id", batch).order("id").range(from, to),
+      );
+      return { classes: mine, enrollments };
     },
   });
   const myClasses = myScope?.classes ?? [];
@@ -257,17 +258,14 @@ function BehaviorLog({ isStaff, initialClassId }: { isStaff: boolean; initialCla
   }, [notes, gradeFilter, kindFilter, scope, classFilter, search, user?.id, myStudentIds, myClassIds, classStudents]);
 
   const { studentIds, scopeError } = useTeacherScope();
+  const behaviorStudentColumns = "id, first_name, last_name, grade_level";
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["students"],
+    queryKey: directoryQueryKey("students", behaviorStudentColumns, directoryViewer),
     enabled: isStaff,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name, grade_level")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("students").select(behaviorStudentColumns).order("last_name").order("id").range(from, to),
+      ),
   });
   // Teacher mode limits logging to students this person actually teaches;
   // a chosen class narrows the picker to that roster.

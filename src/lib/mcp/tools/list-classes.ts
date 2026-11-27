@@ -1,4 +1,5 @@
 import { defineTool } from "@lovable.dev/mcp-js";
+import { fetchAll } from "@/lib/query";
 import { fail, ok, supabaseForUser, unauthenticated } from "../supabase";
 
 export default defineTool({
@@ -11,11 +12,18 @@ export default defineTool({
   handler: async (_input, ctx) => {
     if (!ctx.isAuthenticated()) return unauthenticated();
     const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase
-      .from("classes")
-      .select("id, name, subject, period, room, term")
-      .order("name");
-    if (error) return fail(error.message);
-    return ok({ classes: data ?? [] });
+    try {
+      const classes = await fetchAll((from, to) =>
+        supabase
+          .from("classes")
+          .select("id, name, subject, period, room, term")
+          .order("name")
+          .order("id")
+          .range(from, to),
+      );
+      return ok({ classes });
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : "Could not list classes.");
+    }
   },
 });

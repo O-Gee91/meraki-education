@@ -25,6 +25,8 @@ import { PREVIEW_READ_ONLY } from "@/hooks/useStudentPreview";
 import { useTeacherScope } from "@/hooks/useTeacherScope";
 
 import { supabase } from "@/integrations/supabase/client";
+import { directoryQueryKey } from "@/lib/api-query-policy";
+import { fetchAll } from "@/lib/query";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
@@ -484,21 +486,23 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
 
 function AssistedCheckin({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const queryClient = useQueryClient();
+  const { user, primaryRole, previewingStudent } = useAuth();
   const { studentIds, scopeError, teacherMode, scoped: scopeReady } = useTeacherScope();
   const [sortMode, setSortMode] = useStudentSort("wellbeing-students");
   const [studentId, setStudentId] = useState("");
   const [mood, setMood] = useState<number | null>(null);
   const [note, setNote] = useState("");
+  const assistedStudentColumns = "id, first_name, last_name, grade_level";
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["students"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name, grade_level")
-        .order("last_name");
-      if (error) throw error;
-      return data;
-    },
+    queryKey: directoryQueryKey("students", assistedStudentColumns, {
+      userId: user?.id,
+      role: primaryRole,
+      preview: previewingStudent,
+    }),
+    queryFn: () =>
+      fetchAll((from, to) =>
+        supabase.from("students").select(assistedStudentColumns).order("last_name").order("id").range(from, to),
+      ),
   });
   const scopeLoading = teacherMode && !scopeReady && !scopeError;
   const students = scopeError || scopeLoading

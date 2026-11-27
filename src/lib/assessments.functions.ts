@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
+import { ApiError, apiErrorFromDb, parseApiInput } from "@/lib/api-error";
 import { isSystemGradeComment } from "@/lib/grading";
 import { boundedScoreError, overTotalScoreMessage, scoreExceedsTotal } from "@/lib/score-limit";
 
@@ -115,28 +116,27 @@ export const getAssessmentPaper = createServerFn({ method: "POST" })
     return { assessment, questions, timeZone };
   });
 
+const submitAssessmentInput = z.object({
+  assessmentId: z.string().uuid(),
+  answers: z.array(z.object({ questionId: z.string().uuid(), response: ResponseSchema })).max(200),
+});
+
+const ALREADY_SUBMITTED = "You have already submitted this assessment";
+
 /** Submit an attempt; objective questions are graded instantly. */
 export const submitAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        assessmentId: z.string().uuid(),
-        answers: z
-          .array(z.object({ questionId: z.string().uuid(), response: ResponseSchema }))
-          .max(200),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data, context }) => {
+  .inputValidator((input: unknown) => parseApiInput(submitAssessmentInput, input))
+  .handler(async ({ data: input, context }) => {
+    const data = parseApiInput(submitAssessmentInput, input);
     const { data: studentRows, error: sErr } = await context.supabase
       .from("students")
       .select("id")
       .eq("user_id", context.userId)
       .limit(1);
-    if (sErr) throw sErr;
+    if (sErr) throw apiErrorFromDb(sErr);
     const student = studentRows?.[0];
-    if (!student) throw new Error("Only enrolled students can submit an assessment");
+    if (!student) throw new ApiError("forbidden", "Only enrolled students can submit an assessment");
 
 
     const { data: assessment, error: aErr } = await context.supabase
@@ -144,24 +144,26 @@ export const submitAssessment = createServerFn({ method: "POST" })
       .select("id, class_id, assignment_id, published, available_from, closes_at")
       .eq("id", data.assessmentId)
       .maybeSingle();
-    if (aErr) throw aErr;
-    if (!assessment?.published) throw new Error("This assessment is not open");
+    if (aErr) throw apiErrorFromDb(aErr);
+    if (!assessment) throw new ApiError("not_found", "This assessment is not open");
+    if (!assessment.published) throw new ApiError("forbidden", "This assessment is not open");
 
     // Availability window. Before the start time nothing can be handed in; after
     // the end time the attempt is accepted but flagged late and left out of the
     // gradebook until the teacher chooses to count it.
     const now = Date.now();
     if (assessment.available_from && now < Date.parse(assessment.available_from))
-      throw new Error("This assessment is not yet available");
+      throw new ApiError("forbidden", "This assessment is not yet available");
     const isLate = Boolean(assessment.closes_at && now > Date.parse(assessment.closes_at));
 
-    const { data: enrollment } = await context.supabase
+    const { data: enrollment, error: enrollmentErr } = await context.supabase
       .from("enrollments")
       .select("id")
       .eq("class_id", assessment.class_id)
       .eq("student_id", student.id)
       .maybeSingle();
-    if (!enrollment) throw new Error("You are not enrolled in this class");
+    if (enrollmentErr) throw apiErrorFromDb(enrollmentErr);
+    if (!enrollment) throw new ApiError("forbidden", "You are not enrolled in this class");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { autoGrade } = await import("@/lib/grading.server");
@@ -170,15 +172,16 @@ export const submitAssessment = createServerFn({ method: "POST" })
       .from("assessment_questions")
       .select("id, kind, points, answer_key")
       .eq("assessment_id", assessment.id);
-    if (qErr) throw qErr;
+    if (qErr) throw apiErrorFromDb(qErr);
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingErr } = await supabaseAdmin
       .from("assessment_submissions")
       .select("id, status")
       .eq("assessment_id", assessment.id)
       .eq("student_id", student.id)
       .maybeSingle();
-    if (existing) throw new Error("You have already submitted this assessment");
+    if (existingErr) throw apiErrorFromDb(existingErr);
+    if (existing) throw new ApiError("conflict", ALREADY_SUBMITTED);
 
     const totalPoints = (questions ?? []).reduce((sum, q) => sum + Number(q.points), 0);
     let autoScore = 0;
@@ -206,7 +209,13 @@ export const submitAssessment = createServerFn({ method: "POST" })
     // Check the column before anything is saved so a too-small total cannot
     // leave a submission behind with no grade.
     if (assessment.assignment_id && !needsReview && !isLate) {
-      await assertGradeWithinColumn(supabaseAdmin, assessment.assignment_id, autoScore);
+      try {
+        await assertGradeWithinColumn(supabaseAdmin, assessment.assignment_id, autoScore);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        if (error instanceof Error) throw new ApiError("validation", error.message);
+        throw apiErrorFromDb(error as { message?: string; code?: string });
+      }
     }
 
     const { data: submission, error: subErr } = await supabaseAdmin
@@ -224,13 +233,16 @@ export const submitAssessment = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (subErr) throw subErr;
+    if (subErr) {
+      if (subErr.code === "23505") throw new ApiError("conflict", ALREADY_SUBMITTED);
+      throw apiErrorFromDb(subErr);
+    }
 
     if (graded.length > 0) {
       const { error: ansErr } = await supabaseAdmin
         .from("assessment_answers")
         .insert(graded.map((g) => ({ ...g, submission_id: submission.id })));
-      if (ansErr) throw ansErr;
+      if (ansErr) throw apiErrorFromDb(ansErr);
     }
 
     if (assessment.assignment_id && !needsReview && !isLate) {
@@ -252,7 +264,7 @@ export const submitAssessment = createServerFn({ method: "POST" })
       );
       if (gradeErr) {
         await supabaseAdmin.from("assessment_submissions").delete().eq("id", submission.id);
-        throw new Error(gradeErr.message);
+        throw apiErrorFromDb(gradeErr);
       }
     }
 
@@ -628,66 +640,88 @@ export const proofreadEssay = createServerFn({ method: "POST" })
     return review;
   });
 
+const missedZerosInput = z.object({ classId: z.string().uuid() });
+
+function unwrapList<T>(result: {
+  data: T[] | null;
+  error: { message?: string; code?: string } | null;
+}): T[] {
+  if (result.error) throw apiErrorFromDb(result.error);
+  return result.data ?? [];
+}
+
 /**
  * Assessments that have closed (or passed their due date) score a 0 for every
  * enrolled student who never handed anything in. Existing grades are never
- * touched, so a teacher's override always wins.
+ * touched, so a teacher's override always wins. A forbidden caller or a failed
+ * read/write throws, so a retry is not reported as "nothing to score".
  */
 export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ classId: z.string().uuid() }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { data: isStaff } = await context.supabase.rpc("is_staff");
-    if (!isStaff) return { zeroed: 0, synced: 0 };
-    const { data: managesClass, error: scopeErr } = await context.supabase.rpc("can_manage_class", { _class_id: data.classId });
-    if (scopeErr || managesClass !== true) return { zeroed: 0, synced: 0 };
+  .inputValidator((input: unknown) => parseApiInput(missedZerosInput, input))
+  .handler(async ({ data: input, context }) => {
+    const data = parseApiInput(missedZerosInput, input);
+    const { data: isStaff, error: staffErr } = await context.supabase.rpc("is_staff");
+    if (staffErr) throw apiErrorFromDb(staffErr);
+    if (isStaff !== true) {
+      throw new ApiError("forbidden", "Only teachers and admins can record automatic zeros.");
+    }
+    const { data: managesClass, error: scopeErr } = await context.supabase.rpc("can_manage_class", {
+      _class_id: data.classId,
+    });
+    if (scopeErr) throw apiErrorFromDb(scopeErr);
+    if (managesClass !== true) {
+      throw new ApiError("forbidden", "You can only record automatic zeros for a class you manage.");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: assessments } = await supabaseAdmin
-      .from("assessments")
-      .select("id, assignment_id, published, due_at, closes_at")
-      .eq("class_id", data.classId);
+    const assessments = unwrapList(
+      await supabaseAdmin
+        .from("assessments")
+        .select("id, assignment_id, published, due_at, closes_at")
+        .eq("class_id", data.classId),
+    );
 
     const now = Date.now();
-    const closed = (assessments ?? []).filter((a) => {
+    const closed = assessments.filter((a) => {
       if (!a.published || !a.assignment_id) return false;
       const end = a.closes_at ?? a.due_at;
       return end != null && Date.parse(end) < now;
     });
 
-    const { data: roster } = await supabaseAdmin
-      .from("enrollments")
-      .select("student_id")
-      .eq("class_id", data.classId);
-    const studentIds = (roster ?? []).map((r) => r.student_id);
+    const roster = unwrapList(
+      await supabaseAdmin.from("enrollments").select("student_id").eq("class_id", data.classId),
+    );
+    const studentIds = roster.map((r) => r.student_id);
 
     let zeroed = 0;
     for (const assessment of studentIds.length === 0 ? [] : closed) {
       const assignmentId = assessment.assignment_id!;
 
-      const { data: subs } = await supabaseAdmin
-        .from("assessment_submissions")
-        .select("student_id")
-        .eq("assessment_id", assessment.id);
-      const submitted = new Set((subs ?? []).map((s) => s.student_id));
+      const subs = unwrapList(
+        await supabaseAdmin
+          .from("assessment_submissions")
+          .select("student_id")
+          .eq("assessment_id", assessment.id),
+      );
+      const submitted = new Set(subs.map((s) => s.student_id));
 
-      const { data: existing } = await supabaseAdmin
-        .from("grades")
-        .select("student_id")
-        .eq("assignment_id", assignmentId);
-      const graded = new Set((existing ?? []).map((g) => g.student_id));
+      const existing = unwrapList(
+        await supabaseAdmin.from("grades").select("student_id").eq("assignment_id", assignmentId),
+      );
+      const graded = new Set(existing.map((g) => g.student_id));
 
       // Students the teacher reopened get a fresh chance, not another zero,
       // until their reopened window has passed.
-      const { data: resets } = await supabaseAdmin
-        .from("grade_reset_log")
-        .select("student_id, reopened_until")
-        .eq("assignment_id", assignmentId);
+      const resets = unwrapList(
+        await supabaseAdmin
+          .from("grade_reset_log")
+          .select("student_id, reopened_until")
+          .eq("assignment_id", assignmentId),
+      );
       const reopened = new Set(
-        (resets ?? [])
+        resets
           .filter((r) => !r.reopened_until || Date.parse(r.reopened_until) > now)
           .map((r) => r.student_id),
       );
@@ -697,7 +731,8 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       );
       if (targets.length === 0) continue;
 
-      const { error } = await supabaseAdmin.from("grades").insert(
+      // ignoreDuplicates keeps a grade saved between the read and this write.
+      const { error } = await supabaseAdmin.from("grades").upsert(
         targets.map((student_id) => ({
           assignment_id: assignmentId,
           student_id,
@@ -705,36 +740,43 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
           comment: "Not completed — automatic zero",
           updated_at: new Date().toISOString(),
         })),
+        { onConflict: "assignment_id,student_id", ignoreDuplicates: true },
       );
-      if (!error) zeroed += targets.length;
+      if (error) throw apiErrorFromDb(error);
+      zeroed += targets.length;
     }
 
     // Repair pass: graded attempts that never reached the gradebook (for
     // example the gradebook column was created after grading) get pushed in.
     // Teacher-entered grades are left untouched.
     let synced = 0;
-    for (const assessment of assessments ?? []) {
+    for (const assessment of assessments) {
       if (!assessment.assignment_id) continue;
       const assignmentId = assessment.assignment_id;
-      const { data: subs } = await supabaseAdmin
-        .from("assessment_submissions")
-        .select("student_id, status, auto_score, manual_score, is_late, late_accepted")
-        .eq("assessment_id", assessment.id)
-        .eq("status", "graded");
-      const countable = (subs ?? []).filter((s) => !s.is_late || s.late_accepted);
+      const subs = unwrapList(
+        await supabaseAdmin
+          .from("assessment_submissions")
+          .select("student_id, status, auto_score, manual_score, is_late, late_accepted")
+          .eq("assessment_id", assessment.id)
+          .eq("status", "graded"),
+      );
+      const countable = subs.filter((s) => !s.is_late || s.late_accepted);
       if (countable.length === 0) continue;
 
-      const { data: existing } = await supabaseAdmin
-        .from("grades")
-        .select("student_id, points_earned, comment")
-        .eq("assignment_id", assignmentId);
-      const byStudent = new Map((existing ?? []).map((g) => [g.student_id, g]));
+      const existing = unwrapList(
+        await supabaseAdmin
+          .from("grades")
+          .select("student_id, points_earned, comment")
+          .eq("assignment_id", assignmentId),
+      );
+      const byStudent = new Map(existing.map((g) => [g.student_id, g]));
 
-      const { data: column } = await supabaseAdmin
+      const { data: column, error: columnErr } = await supabaseAdmin
         .from("assignments")
         .select("points_possible, category")
         .eq("id", assignmentId)
         .maybeSingle();
+      if (columnErr) throw apiErrorFromDb(columnErr);
       const rows = countable
         .map((s) => {
           const current = byStudent.get(s.student_id);
@@ -766,7 +808,8 @@ export const applyMissedAssessmentZeros = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin
         .from("grades")
         .upsert(rows, { onConflict: "assignment_id,student_id" });
-      if (!error) synced += rows.length;
+      if (error) throw apiErrorFromDb(error);
+      synced += rows.length;
     }
 
     return { zeroed, synced };
