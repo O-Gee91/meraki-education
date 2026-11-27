@@ -8,24 +8,24 @@ export type NamedStudent = {
   student_number?: string | null;
 };
 
-/** "Doe, Jane" — or the student ID when privacy mode is on. Pulse keeps this wording. */
+/** "Doe, Jane" — or the bare student ID number when privacy mode is on. */
 export function studentLabel(student: NamedStudent | null | undefined, useIds: boolean) {
   if (!student) return "—";
   const name = `${student.last_name ?? ""}, ${student.first_name ?? ""}`.replace(/^, |, $/g, "");
   if (!useIds) return name || "—";
-  return student.student_number?.trim() ? `ID ${student.student_number.trim()}` : "No ID";
+  return student.student_number?.trim() || "No ID";
 }
 
-/** Screen-reader and class-roster wording for a student ID. */
+/** Screen-reader wording for a student ID. Visual surfaces show the bare number. */
 export function studentIdText(student: NamedStudent | null | undefined) {
   const number = student?.student_number?.trim();
   return number ? `Student ID ${number}` : "No ID";
 }
 
-/** Class tools name. With IDs on, the accessible text is "Student ID {number}". */
+/** Class tools name. With IDs on, the visible text is just the ID number. */
 export function rosterDisplayName(student: NamedStudent | null | undefined, useIds: boolean) {
   if (!useIds) return studentLabel(student, false);
-  return studentIdText(student);
+  return studentLabel(student, true);
 }
 
 /** Shorter form used in tight spaces such as seating charts. */
