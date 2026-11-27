@@ -35,7 +35,6 @@ export function CreateAccount() {
     last: "",
     chinese: "",
     grade: "7",
-    studentNumber: "",
     studentUsername: "",
     guardianUsername: "",
     guardianEmail: "",
@@ -66,10 +65,9 @@ export function CreateAccount() {
           last_name: last.slice(0, 60),
           chinese_name: form.chinese.trim().slice(0, 60) || null,
           grade_level: grade,
-          student_number: form.studentNumber.trim().slice(0, 20) || null,
           guardian_email: guardianEmail.slice(0, 255) || null,
         })
-        .select("id")
+        .select("id, student_number")
         .single();
       if (error) throw error;
 
@@ -124,8 +122,9 @@ export function CreateAccount() {
         <DialogHeader>
           <DialogTitle>Create a student or parent account</DialogTitle>
           <DialogDescription>
-            Adds the student to the directory and issues sign-in details you can print and hand
-            out. Emails are left blank — each person registers their own at first sign-in.
+            Adds the student to the directory, issues a student ID, and creates sign-in details you
+            can print and hand out. Emails are left blank — each person registers their own at first
+            sign-in. The student ID cannot be edited later.
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +149,7 @@ export function CreateAccount() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="acct-chinese">Chinese name</Label>
               <Input
@@ -169,16 +168,10 @@ export function CreateAccount() {
                 onChange={(e) => setForm({ ...form, grade: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="acct-number">Student ID</Label>
-              <Input
-                id="acct-number"
-                value={form.studentNumber}
-                maxLength={20}
-                onChange={(e) => setForm({ ...form, studentNumber: e.target.value })}
-              />
-            </div>
           </div>
+          <p className="text-sm text-muted-foreground">
+            A student ID is issued automatically and stays with this student.
+          </p>
 
           <label className="flex items-center gap-2 text-sm">
             <input

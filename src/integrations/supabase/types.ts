@@ -2235,6 +2235,30 @@ export type Database = {
           },
         ]
       }
+      retired_student_numbers: {
+        Row: {
+          reason: string
+          retired_at: string
+          retired_by: string | null
+          student_id: string | null
+          student_number: string
+        }
+        Insert: {
+          reason: string
+          retired_at?: string
+          retired_by?: string | null
+          student_id?: string | null
+          student_number: string
+        }
+        Update: {
+          reason?: string
+          retired_at?: string
+          retired_by?: string | null
+          student_id?: string | null
+          student_number?: string
+        }
+        Relationships: []
+      }
       rubric_scores: {
         Row: {
           assignment_id: string
@@ -2507,6 +2531,45 @@ export type Database = {
         }
         Relationships: []
       }
+      student_number_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          new_number: string | null
+          new_status: string | null
+          old_number: string | null
+          old_status: string | null
+          reason: string | null
+          student_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_number?: string | null
+          new_status?: string | null
+          old_number?: string | null
+          old_status?: string | null
+          reason?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_number?: string | null
+          new_status?: string | null
+          old_number?: string | null
+          old_status?: string | null
+          reason?: string | null
+          student_id?: string | null
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           chinese_name: string | null
@@ -2519,6 +2582,10 @@ export type Database = {
           is_tester: boolean
           last_name: string
           student_number: string | null
+          student_number_issued_at: string | null
+          student_number_issued_by: string | null
+          student_number_issuer: string | null
+          student_status: string
           user_id: string | null
         }
         Insert: {
@@ -2532,6 +2599,10 @@ export type Database = {
           is_tester?: boolean
           last_name: string
           student_number?: string | null
+          student_number_issued_at?: string | null
+          student_number_issued_by?: string | null
+          student_number_issuer?: string | null
+          student_status?: string
           user_id?: string | null
         }
         Update: {
@@ -2545,6 +2616,10 @@ export type Database = {
           is_tester?: boolean
           last_name?: string
           student_number?: string | null
+          student_number_issued_at?: string | null
+          student_number_issued_by?: string | null
+          student_number_issuer?: string | null
+          student_status?: string
           user_id?: string | null
         }
         Relationships: []
@@ -2681,6 +2756,10 @@ export type Database = {
       claim_first_admin: { Args: never; Returns: boolean }
       claim_recovery_email: { Args: { _key_hash: string }; Returns: boolean }
       co_teacher_level: { Args: { _class_id: string }; Returns: string }
+      correct_student_number: {
+        Args: { _new_number: string; _reason: string; _student_id: string }
+        Returns: string
+      }
       evaluated_feature_flags: {
         Args: { _assignment_id?: string; _submission_id?: string }
         Returns: {
@@ -2708,6 +2787,16 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_school_staff_email: { Args: { _email: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      issue_student_number: { Args: { _student_id: string }; Returns: string }
+      lookup_student_numbers: {
+        Args: { _numbers: string[] }
+        Returns: {
+          in_use: boolean
+          managed_id: string | null
+          retired: boolean
+          student_number: string
+        }[]
+      }
       list_staff: {
         Args: never
         Returns: {
@@ -2747,6 +2836,10 @@ export type Database = {
           option_index: number
           votes: number
         }[]
+      }
+      set_student_status: {
+        Args: { _status: string; _student_id: string }
+        Returns: string
       }
       soft_delete_discussion_post: {
         Args: { _post_id: string }
