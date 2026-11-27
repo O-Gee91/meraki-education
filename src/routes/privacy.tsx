@@ -35,7 +35,7 @@ function Privacy() {
       <section>
         <h2>Information we keep</h2>
         <ul>
-          <li><strong>Students:</strong> name, school email or username, grade level, classes, assignments and submitted work, grades and teacher feedback, attendance, behavior notes, class discussion posts, and private well-being check-ins.</li>
+          <li><strong>Students:</strong> name, student ID, school email or username, grade level, classes, assignments and submitted work, grades and teacher feedback, attendance, behavior notes, class discussion posts, and private well-being check-ins. A student ID is an education record. It is not directory information, and it is not shown on student or guardian screens.</li>
           <li><strong>Guardians:</strong> name, email and the students they are linked to.</li>
           <li><strong>Teachers and administrators:</strong> name, school email, classes taught, and the records they create.</li>
           <li><strong>Account security:</strong> sign-in times and two-step sign-in settings (authenticator or passkey). Passwords are never stored in readable form.</li>
@@ -78,7 +78,7 @@ function Privacy() {
       </section>
       <section>
         <h2>How long we keep information</h2>
-        <p>Records are kept while the school uses Meraki and as the school needs for its academic records. When a student moves classes, earlier grades stay with their record. A school can ask us to delete or export its information.</p>
+        <p>Records are kept while the school uses Meraki and as the school needs for its academic records. When a student moves classes, earlier grades stay with their record. A student ID is kept after the student withdraws, transfers, or graduates, so the school can still find the record. An ID that is corrected or destroyed is retired and is never given to another student. A school can ask us to delete or export its information.</p>
       </section>
       <section>
         <h2>Your choices</h2>

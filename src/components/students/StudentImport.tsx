@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionStudentAccounts } from "@/lib/roster.functions";
+import { importStudentIdentities } from "@/lib/student-ids.functions";
 import { isValidUsername, normalizeUsername, suggestUsername } from "@/lib/usernames";
 import { graduatingClassLabel } from "@/lib/academic";
 import { AccountResults, type ProvisionedAccount } from "./AccountResults";
@@ -108,7 +109,7 @@ function normalizeRow(
       first_name: first,
       last_name: last,
       grade_level: grade,
-      student_number: (mapped["student_number"] ?? "").slice(0, 20) || null,
+      student_number: (mapped["student_number"] ?? "").slice(0, 40) || null,
       chinese_name: (mapped["chinese_name"] ?? "").slice(0, 120) || null,
       class_name: (mapped["class_name"] ?? "").slice(0, 120) || null,
       guardian_email: email.slice(0, 255) || null,
@@ -153,6 +154,7 @@ export function StudentImport({
 
   const [accounts, setAccounts] = useState<ProvisionedAccount[]>([]);
   const provision = useServerFn(provisionStudentAccounts);
+  const importIdentities = useServerFn(importStudentIdentities);
 
   const reset = () => {
     setRows([]);
@@ -198,32 +200,20 @@ export function StudentImport({
     mutationFn: async () => {
       if (rows.length === 0) throw new Error("Nothing to import");
 
-      // Ids are generated here so enrollment never depends on rows coming back
-      // from the insert (visibility rules can hide brand-new students).
-      const ids = rows.map(() => crypto.randomUUID());
-
-      const { error } = await supabase.from("students").insert(
-        rows.map(
-          (
-            {
-              student_email: _email,
-              student_username: _su,
-              guardian_username: _gu,
-              class_name: _cn,
-              ...rest
-            },
-            i,
-          ) => ({ id: ids[i]!, ...rest }),
-        ),
-      );
-      if (error) throw error;
-
-      const data = rows.map((r, i) => ({
-        id: ids[i]!,
-        first_name: r.first_name,
-        last_name: r.last_name,
-        guardian_email: r.guardian_email,
-      }));
+      const imported = await importIdentities({
+        data: {
+          rows: rows.map((row) => ({
+            first_name: row.first_name,
+            last_name: row.last_name,
+            grade_level: row.grade_level,
+            student_number: row.student_number,
+            chinese_name: row.chinese_name,
+            guardian_email: row.guardian_email,
+          })),
+        },
+      });
+      const data = imported.students;
+      const ids = data.map((student) => student.id);
 
       if (classId) {
         const { error: enrollError } = await supabase
@@ -301,9 +291,11 @@ export function StudentImport({
               // Left blank on purpose — each person registers their own email at first sign-in.
               guardian_email: null,
               student_username:
-                loginMode === "parent" ? null : unique(rows[i]?.student_username || base),
+                loginMode === "parent" || inserted.user_id
+                  ? null
+                  : unique(rows[i]?.student_username || base),
               guardian_username:
-                loginMode === "student"
+                loginMode === "student" || inserted.guardian_user_id
                   ? null
                   : unique(rows[i]?.guardian_username || `${base}.parent`.slice(0, 30)),
             };
@@ -318,10 +310,12 @@ export function StudentImport({
           created = result.accounts as ProvisionedAccount[];
         }
       }
-      return { count: rows.length, accounts: created };
+      const matched = data.filter((student) => student.action === "matched").length;
+      return { count: data.length, matched, accounts: created };
     },
-    onSuccess: ({ count, accounts: created }) => {
-      toast.success(`Imported ${count} student${count === 1 ? "" : "s"}`);
+    onSuccess: ({ count, matched, accounts: created }) => {
+      const matchedNote = matched > 0 ? ` ${matched} matched an existing student ID.` : "";
+      toast.success(`Imported ${count} student${count === 1 ? "" : "s"}.${matchedNote}`);
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
@@ -358,7 +352,9 @@ export function StudentImport({
           <DialogDescription>
             Upload an .xlsx, .xls or .csv file. The first row should be headers — we recognise
             First name, Last name, Grade, Class, Chinese name, Student ID, Student email, Student
-            username, Guardian username and Guardian email. An email address is required for anyone
+            username, Guardian username and Guardian email. A student ID matches a returning student
+            and does not create a second record. Rows without a student ID are new students and
+            receive a new ID. A matching name alone is not used. An email address is required for anyone
             who gets a login. A Class column enrolls each student into the class with that exact
             name.
             {classId
@@ -416,7 +412,7 @@ export function StudentImport({
                         {graduatingClassLabel(r.grade_level)}
                       </td>
                       <td className="p-2 text-muted-foreground">{r.class_name ?? "—"}</td>
-                      <td className="p-2 text-muted-foreground">{r.student_number ?? "—"}</td>
+                      <td className="p-2 text-muted-foreground">{r.student_number ?? "Will be issued"}</td>
                       <td className="p-2 text-muted-foreground">{r.guardian_email ?? "—"}</td>
                     </tr>
                   ))}

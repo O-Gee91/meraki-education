@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Armchair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { studentShortLabel } from "@/lib/student-display";
+import { studentIdText, studentShortLabel } from "@/lib/student-display";
 
 export type SeatStudent = {
   id: string;
@@ -135,8 +135,11 @@ export function SeatingPlan({
                           : "rounded-md border border-dashed border-border p-3 text-center text-xs text-muted-foreground"
                       }
                     >
-                      <Armchair className="mx-auto mb-1 size-4 text-accent" />
-                      {student ? studentShortLabel(student, useIds) : "empty"}
+                      <Armchair className="mx-auto mb-1 size-4 text-accent" aria-hidden />
+                      {useIds && student ? <span className="sr-only">{studentIdText(student)}</span> : null}
+                      <span aria-hidden={useIds && !!student}>
+                        {student ? studentShortLabel(student, useIds) : "empty"}
+                      </span>
                     </div>
                   );
                 })}
@@ -163,7 +166,8 @@ export function SeatingPlan({
                   })
                 }
               >
-                Seat {studentShortLabel(s, useIds)}
+                {useIds ? <span className="sr-only">Seat {studentIdText(s)}</span> : null}
+                <span aria-hidden={useIds}>Seat {studentShortLabel(s, useIds)}</span>
               </Button>
             ))}
           </div>

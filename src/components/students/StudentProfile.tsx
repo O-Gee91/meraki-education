@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { GraduationCap, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { graduatingClassLabel } from "@/lib/academic";
+import { studentIdText } from "@/lib/student-display";
+import {
+  STUDENT_RECORD_QUERY_KEYS,
+  STUDENT_STATUSES,
+  studentStatusLabel,
+  type StudentStatus,
+} from "@/lib/student-ids";
+import {
+  correctStudentNumber,
+  issueStudentNumber,
+  setStudentStatus,
+} from "@/lib/student-ids.functions";
 import {
   Dialog,
   DialogContent,
@@ -25,43 +38,64 @@ export type StudentRow = {
   grade_level: number;
   guardian_email: string | null;
   student_number: string | null;
+  student_status?: string | null;
   chinese_name: string | null;
   user_id: string | null;
   guardian_user_id: string | null;
 };
 
+function refreshStudentRecords(queryClient: ReturnType<typeof useQueryClient>) {
+  for (const queryKey of STUDENT_RECORD_QUERY_KEYS) {
+    void queryClient.invalidateQueries({ queryKey: [...queryKey] });
+  }
+}
+
 export function StudentProfile({
   student,
   open,
   onOpenChange,
+  onStudentChange,
 }: {
   student: StudentRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStudentChange?: (student: StudentRow) => void;
 }) {
   const queryClient = useQueryClient();
-  const { isStaff } = useAuth();
+  const { isStaff, isAdmin } = useAuth();
+  const issueNumber = useServerFn(issueStudentNumber);
+  const correctNumber = useServerFn(correctStudentNumber);
+  const changeStatus = useServerFn(setStudentStatus);
   const [editing, setEditing] = useState(false);
   const [showGuardian, setShowGuardian] = useState(false);
+  const [correctOpen, setCorrectOpen] = useState(false);
+  const [correctValue, setCorrectValue] = useState("");
+  const [correctReason, setCorrectReason] = useState("");
+  const [destroyText, setDestroyText] = useState("");
+  const [statusChoice, setStatusChoice] = useState<StudentStatus>("active");
   const [form, setForm] = useState({
     first: "",
     last: "",
     chinese: "",
     grade: "",
-    number: "",
     guardianEmail: "",
   });
 
   useEffect(() => {
     setEditing(false);
     setShowGuardian(false);
+    setCorrectOpen(false);
+    setCorrectValue("");
+    setCorrectReason("");
+    setDestroyText("");
     if (!student) return;
+    const status = STUDENT_STATUSES.find((item) => item === student.student_status) ?? "active";
+    setStatusChoice(status);
     setForm({
       first: student.first_name ?? "",
       last: student.last_name ?? "",
       chinese: student.chinese_name ?? "",
       grade: String(student.grade_level ?? ""),
-      number: student.student_number ?? "",
       guardianEmail: student.guardian_email ?? "",
     });
   }, [student]);
@@ -82,7 +116,6 @@ export function StudentProfile({
           last_name: form.last.trim().slice(0, 60),
           chinese_name: form.chinese.trim().slice(0, 60) || null,
           grade_level: grade,
-          student_number: form.number.trim().slice(0, 20) || null,
           guardian_email: email.slice(0, 255) || null,
         })
         .eq("id", student!.id);
@@ -91,9 +124,18 @@ export function StudentProfile({
     onSuccess: () => {
       toast.success("Student information updated");
       setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      queryClient.invalidateQueries({ queryKey: ["roster"] });
-      queryClient.invalidateQueries({ queryKey: ["class-roster"] });
+      if (student) {
+        const next = {
+          ...student,
+          first_name: form.first.trim().slice(0, 60),
+          last_name: form.last.trim().slice(0, 60),
+          chinese_name: form.chinese.trim().slice(0, 60) || null,
+          grade_level: Number(form.grade),
+          guardian_email: form.guardianEmail.trim().slice(0, 255) || null,
+        };
+        onStudentChange?.(next);
+      }
+      refreshStudentRecords(queryClient);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -156,6 +198,61 @@ export function StudentProfile({
   });
 
   if (!student) return null;
+
+  const applyStudent = (patch: Partial<StudentRow>) => {
+    const next = { ...student!, ...patch };
+    onStudentChange?.(next);
+    refreshStudentRecords(queryClient);
+  };
+
+  const issue = async () => {
+    try {
+      const result = await issueNumber({ data: { studentId: student!.id } });
+      applyStudent({ student_number: result.studentNumber, student_status: student!.student_status ?? "active" });
+      toast.success(`Student ID ${result.studentNumber}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not issue a student ID");
+    }
+  };
+
+  const correct = async () => {
+    try {
+      const result = await correctNumber({
+        data: { studentId: student!.id, newNumber: correctValue, reason: correctReason },
+      });
+      applyStudent({ student_number: result.studentNumber });
+      setCorrectOpen(false);
+      setCorrectValue("");
+      setCorrectReason("");
+      toast.success(`Student ID is now ${result.studentNumber}. The previous ID is retired.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not correct the student ID");
+    }
+  };
+
+  const updateStatus = async () => {
+    try {
+      const result = await changeStatus({ data: { studentId: student!.id, status: statusChoice } });
+      applyStudent({ student_status: result.status });
+      toast.success(`Status is now ${studentStatusLabel(result.status)}. The student ID stays on file.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update status");
+    }
+  };
+
+  const destroyConfirm = student.student_number?.trim() || "DELETE RECORD";
+  const destroy = async () => {
+    if (destroyText.trim() !== destroyConfirm) return;
+    const { error } = await supabase.from("students").delete().eq("id", student.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Student record destroyed. The student ID is retired and will not be reused.");
+    refreshStudentRecords(queryClient);
+    void queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,15 +318,6 @@ export function StudentProfile({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-number">Student ID</Label>
-                <Input
-                  id="edit-number"
-                  value={form.number}
-                  maxLength={20}
-                  onChange={(e) => setForm({ ...form, number: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
                 <Label htmlFor="edit-guardian">Guardian email</Label>
                 <Input
                   id="edit-guardian"
@@ -264,10 +352,24 @@ export function StudentProfile({
         </div>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Student ID</dt>
-            <dd className="font-medium">{student.student_number ?? "—"}</dd>
-          </div>
+          {isStaff ? (
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Student ID</dt>
+              <dd className="font-medium">
+                {student.student_number ? (
+                  <>
+                    <span className="sr-only">{studentIdText(student)}</span>
+                    <span aria-hidden>{student.student_number}</span>
+                  </>
+                ) : (
+                  "No ID"
+                )}
+              </dd>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Locked. Only an administrator can correct a typo, and the old ID is never reused.
+              </p>
+            </div>
+          ) : null}
           <div>
             <dt className="text-xs uppercase tracking-wide text-muted-foreground">Chinese name</dt>
             <dd className="font-medium">{student.chinese_name ?? "—"}</dd>
@@ -300,6 +402,109 @@ export function StudentProfile({
             </dd>
           </div>
         </dl>
+
+        {isStaff ? (
+          <div className="space-y-3 rounded-md border border-border p-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-status">School status</Label>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  id="profile-status"
+                  className="h-9 min-w-40 flex-1 rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={statusChoice}
+                  onChange={(event) => setStatusChoice(event.target.value as StudentStatus)}
+                >
+                  {STUDENT_STATUSES.map((option) => (
+                    <option key={option} value={option}>
+                      {studentStatusLabel(option)}
+                    </option>
+                  ))}
+                </select>
+                <Button type="button" variant="outline" onClick={() => void updateStatus()}>
+                  Update status
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Withdraw, transfer out, graduate, or no-show keeps this record and the student ID.
+                The student leaves the active directory.
+              </p>
+            </div>
+            {!student.student_number ? (
+              <Button type="button" variant="outline" onClick={() => void issue()}>
+                Issue student ID
+              </Button>
+            ) : null}
+            {isAdmin && student.student_number ? (
+              <div className="space-y-2">
+                <Button type="button" variant="outline" onClick={() => setCorrectOpen((open) => !open)}>
+                  Correct student ID
+                </Button>
+                {correctOpen ? (
+                  <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="correct-student-id">New student ID</Label>
+                      <Input
+                        id="correct-student-id"
+                        value={correctValue}
+                        maxLength={40}
+                        onChange={(event) => setCorrectValue(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="correct-student-id-reason">Reason</Label>
+                      <Input
+                        id="correct-student-id-reason"
+                        value={correctReason}
+                        maxLength={500}
+                        onChange={(event) => setCorrectReason(event.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      The current ID is retired and will never be used again.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => void correct()}
+                      disabled={correctReason.trim().length < 3 || correctValue.trim().length < 1}
+                    >
+                      Save corrected ID
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {isAdmin ? (
+              <div className="space-y-2 border-t border-border pt-3">
+                <h3 className="text-sm font-semibold">Destroy student record</h3>
+                <p className="text-xs text-muted-foreground">
+                  This permanently deletes the student and their grades, attendance, coursework, and
+                  other records. The student ID is retired and will never be reused. This is data
+                  destruction, not the way a student leaves the school. To keep the record, update
+                  the school status instead.
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="destroy-student-confirm">
+                    Type {destroyConfirm} to confirm
+                  </Label>
+                  <Input
+                    id="destroy-student-confirm"
+                    value={destroyText}
+                    onChange={(event) => setDestroyText(event.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={destroyText.trim() !== destroyConfirm}
+                  onClick={() => void destroy()}
+                >
+                  Destroy student record
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {showGuardian ? (
           <div className="rounded-md border border-border bg-secondary/30 p-3">

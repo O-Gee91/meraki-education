@@ -2,5 +2,5 @@
 export const LEGAL = {
   operator: "Meraki Education",
   contactEmail: "privacy@meraki-education.app",
-  updated: "November 25, 2026",
+  updated: "November 27, 2026",
 };

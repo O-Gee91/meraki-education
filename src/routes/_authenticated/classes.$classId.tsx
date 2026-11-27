@@ -68,7 +68,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { AttendanceTab } from "@/components/class/AttendanceTab";
 import { FileLibrary } from "@/components/files/FileLibrary";
 
-import { studentLabel, useRosterPrivacy } from "@/lib/student-display";
+import { rosterDisplayName, useRosterPrivacy } from "@/lib/student-display";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
 import { TestAccountBadge } from "@/components/students/TestAccountBadge";
@@ -506,7 +506,7 @@ function ClassDetailPage() {
   const showOverview = isStaff;
   const overviewStudents = showOverview ? gradebookRoster.map((row) => ({
     id: row.student_id,
-    name: studentLabel(row.students, useIds),
+    name: rosterDisplayName(row.students, useIds),
     average: studentAverage(row.student_id),
     missing: assignments.filter((assignment) => missingFor(row.student_id, assignment)).length,
     excluded: isTestStudent(row.students) || !!row.droppedAt,
@@ -546,11 +546,7 @@ function ClassDetailPage() {
             return `<td class="num">${Number(grade.points_earned).toLocaleString()}</td>`;
           })
           .join("");
-        return `<tr><td>${escapeHtml(studentLabel(row.students, useIds))}${
-          !useIds && row.students?.student_number
-            ? `<br /><span class="muted">ID ${escapeHtml(row.students.student_number)}</span>`
-            : ""
-        }</td><td class="num">${
+        return `<tr><td>${escapeHtml(rosterDisplayName(row.students, useIds))}</td><td class="num">${
           average == null
             ? "—"
             : `${average.toFixed(1)}% (${escapeHtml(letterFor(average, setup.scale))})`
@@ -981,14 +977,11 @@ function ClassDetailPage() {
                                    className="h-auto w-full justify-start whitespace-normal break-words p-0 text-left font-semibold text-foreground"
                                    onClick={() => setGradebookReportStudentId(row.student_id)}
                                  >
-                                   {studentLabel(row.students, useIds)}
+                                   {rosterDisplayName(row.students, useIds)}
                                  </Button>
                                  <TestAccountBadge student={row.students} />
                                  {row.droppedAt && (
                                    <p className="mt-0.5 text-xs text-muted-foreground">Dropped {new Date(row.droppedAt).toLocaleDateString()}</p>
-                                 )}
-                                 {!useIds && row.students?.student_number && (
-                                   <p className="mt-0.5 text-xs text-muted-foreground">ID {row.students.student_number}</p>
                                  )}
                                </td>}
                                 <td className="border-r border-border/60 bg-muted/15 px-4 py-3 text-center">
@@ -1074,7 +1067,7 @@ function ClassDetailPage() {
                 assignments={assignments}
                 grades={grades.filter((g) => !g.is_draft)}
                setup={setup}
-               displayName={studentLabel(gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
+               displayName={rosterDisplayName(gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
                enrolledAt={enrolledAtFor(gradebookReportStudentId ?? "")}
                droppedAt={gradebookEnrollmentFor(gradebookReportStudentId ?? "")?.droppedAt ?? null}
              />
@@ -2439,7 +2432,6 @@ function RosterTab({
     last: "",
     chinese: "",
     grade: gradeLevel ? String(gradeLevel) : "",
-    number: "",
     guardianEmail: "",
   };
   const [newForm, setNewForm] = useState(blankNew);
@@ -2519,7 +2511,6 @@ function RosterTab({
           last_name: last.slice(0, 60),
           chinese_name: newForm.chinese.trim().slice(0, 60) || null,
           grade_level: grade,
-          student_number: newForm.number.trim().slice(0, 40) || null,
           guardian_email: newForm.guardianEmail.trim().toLowerCase().slice(0, 255) || null,
         })
         .select("id")
@@ -2606,7 +2597,7 @@ function RosterTab({
                 ) : (
                   available.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {studentLabel(s, useIds)} (Gr {s.grade_level})
+                      {rosterDisplayName(s, useIds)} (Gr {s.grade_level})
                     </SelectItem>
                   ))
                 )}
@@ -2666,28 +2657,20 @@ function RosterTab({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ns-grade">Grade level</Label>
-                    <Input
-                      id="ns-grade"
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={newForm.grade}
-                      onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ns-number">Student ID (optional)</Label>
-                    <Input
-                      id="ns-number"
-                      value={newForm.number}
-                      maxLength={40}
-                      onChange={(e) => setNewForm({ ...newForm, number: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ns-grade">Grade level</Label>
+                  <Input
+                    id="ns-grade"
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={newForm.grade}
+                    onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })}
+                  />
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  A student ID is issued automatically and stays with this student.
+                </p>
               </div>
               <DialogFooter>
                 <Button onClick={() => createAndEnroll.mutate()} disabled={createAndEnroll.isPending}>
@@ -2826,10 +2809,10 @@ function RosterTab({
                      className="h-auto p-0 font-semibold"
                      onClick={() => setReportStudentId(r.student_id)}
                    >
-                     {studentLabel(r.students, useIds)}
+                     {rosterDisplayName(r.students, useIds)}
                    </Button>
                  ) : (
-                   studentLabel(r.students, useIds)
+                   rosterDisplayName(r.students, useIds)
                  )}
                  <TestAccountBadge student={r.students} />
               </span>
@@ -2872,7 +2855,7 @@ function RosterTab({
         assignments={assignments}
         grades={grades}
         setup={setup}
-        displayName={studentLabel(reportStudent, useIds)}
+        displayName={rosterDisplayName(reportStudent, useIds)}
         enrolledAt={(roster.find((r) => r.student_id === reportStudentId) as { created_at?: string | null } | undefined)?.created_at ?? null}
       />
     </div>

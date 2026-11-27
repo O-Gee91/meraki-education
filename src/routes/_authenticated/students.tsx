@@ -7,7 +7,9 @@ import { LoadError } from "@/components/LoadError";
 import { NotebookEmpty, NotebookLoading } from "@/components/NotebookDecorations";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll, fetchByIds } from "@/lib/query";
-import { writeInBatches } from "@/lib/notebook-attendance";
+import { READ_REUSE_MS } from "@/lib/api-query-policy";
+import { studentStatusLabel, tryNormalizeStudentNumber, type StudentStatus } from "@/lib/student-ids";
+import { studentIdText } from "@/lib/student-display";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,11 +27,14 @@ import { CreateLogins } from "@/components/students/CreateLogins";
 import { CreateAccount } from "@/components/students/CreateAccount";
 import { UnlinkedAccounts } from "@/components/students/UnlinkedAccounts";
 import { StudentProfile, type StudentRow } from "@/components/students/StudentProfile";
+import { StudentExitDialog } from "@/components/students/StudentExitDialog";
 import { graduatingClassLabel } from "@/lib/academic";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { sortStudents } from "@/lib/student-sort";
-import { ChevronDown, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
+
+type DirectoryStatus = StudentStatus | "all";
 
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
@@ -55,6 +60,8 @@ function StudentsPage() {
   const [query, setQuery] = useState("");
   const [profileStudent, setProfileStudent] = useState<StudentRow | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<DirectoryStatus>("active");
+  const [exitIds, setExitIds] = useState<string[] | null>(null);
   const [sortMode, setSortMode] = useStudentSort("students-directory");
 
   const [form, setForm] = useState({
@@ -62,7 +69,6 @@ function StudentsPage() {
     last: "",
     grade: "7",
     guardianEmail: "",
-    studentNumber: "",
   });
 
   // While working as a teacher, the directory is limited to students enrolled in
@@ -92,12 +98,13 @@ function StudentsPage() {
 
   const studentsQuery = useQuery({
     queryKey: ["students", "directory", user?.id, teacherMode],
+    staleTime: READ_REUSE_MS,
     queryFn: () =>
       fetchAll((from, to) =>
         supabase
           .from("students")
           .select(
-            "id, first_name, last_name, grade_level, guardian_email, student_number, chinese_name, user_id, guardian_user_id",
+            "id, first_name, last_name, grade_level, guardian_email, student_number, student_status, chinese_name, user_id, guardian_user_id",
           )
           .order("last_name")
           .order("id")
@@ -116,79 +123,52 @@ function StudentsPage() {
       const email = form.guardianEmail.trim();
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         throw new Error("Guardian email looks invalid");
-      const { error } = await supabase.from("students").insert({
-        first_name: form.first.trim().slice(0, 60),
-        last_name: form.last.trim().slice(0, 60),
-        grade_level: grade,
-        guardian_email: email.slice(0, 255) || null,
-        student_number: form.studentNumber.trim().slice(0, 20) || null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Student added");
-      setOpen(false);
-      setForm({ first: "", last: "", grade: "7", guardianEmail: "", studentNumber: "" });
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const saveNumber = useMutation({
-    mutationFn: async (input: { id: string; value: string }) => {
-      const value = input.value.trim().slice(0, 20);
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("students")
-        .update({ student_number: value || null })
-        .eq("id", input.id);
+        .insert({
+          first_name: form.first.trim().slice(0, 60),
+          last_name: form.last.trim().slice(0, 60),
+          grade_level: grade,
+          guardian_email: email.slice(0, 255) || null,
+        })
+        .select("student_number")
+        .single();
       if (error) throw error;
+      return data?.student_number ?? null;
     },
-    onSuccess: () => {
-      toast.success("Student ID saved");
+    onSuccess: (studentNumber) => {
+      toast.success(
+        studentNumber ? `Student added. Student ID ${studentNumber}` : "Student added",
+      );
+      setOpen(false);
+      setForm({ first: "", last: "", grade: "7", guardianEmail: "" });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      queryClient.invalidateQueries({ queryKey: ["class-roster"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  const removeStudents = useMutation({
-    mutationFn: async (ids: string[]) => {
-      if (ids.length === 0) throw new Error("Select at least one student");
-      await writeInBatches(ids, async (batch) => {
-        const { error } = await supabase.from("students").delete().in("id", batch);
-        return { error };
-      });
-    },
-    onSuccess: (_d, ids) => {
-      toast.success(ids.length === 1 ? "Student removed" : `${ids.length} students removed`);
-      setSelected([]);
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const confirmRemove = (ids: string[]) => {
-    const label =
-      ids.length === 1
-        ? "Remove this student from the school directory? Their records will be deleted."
-        : `Remove ${ids.length} students from the school directory? Their records will be deleted.`;
-    if (window.confirm(label)) removeStudents.mutate(ids);
-  };
 
   const scopeFailed = teacherMode && scopeQuery.isError;
   const scopeLoading = teacherMode && scopeQuery.isPending;
-  const students = !teacherMode
-    ? allStudents
-    : myStudentIds
-      ? allStudents.filter((s) => myStudentIds.has(s.id))
-      : [];
+  const idQuery = tryNormalizeStudentNumber(query);
+  const students = allStudents.filter((s) => {
+    const exactId = !!idQuery && tryNormalizeStudentNumber(s.student_number) === idQuery;
+    if (teacherMode && myStudentIds && !myStudentIds.has(s.id) && !exactId) return false;
+    if (teacherMode && !myStudentIds && !exactId) return false;
+    return true;
+  });
 
   const filtered = sortStudents(
-    students.filter((s) =>
-      `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-    ),
+    students.filter((s) => {
+      const exactId = !!idQuery && tryNormalizeStudentNumber(s.student_number) === idQuery;
+      if (exactId) return true;
+      const hay = `${s.first_name} ${s.last_name} ${s.chinese_name ?? ""} ${s.student_number ?? ""}`.toLowerCase();
+      const q = query.trim().toLowerCase();
+      if (q && !hay.includes(q)) return false;
+      if (statusFilter === "all") return true;
+      return (s.student_status ?? "active") === statusFilter;
+    }),
     sortMode,
   );
 
@@ -241,26 +221,18 @@ function StudentsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="grade">Grade level</Label>
-                  <Input
-                    id="grade"
-                    inputMode="numeric"
-                    value={form.grade}
-                    onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="studentNumber">Student ID</Label>
-                  <Input
-                    id="studentNumber"
-                    value={form.studentNumber}
-                    maxLength={20}
-                    onChange={(e) => setForm({ ...form, studentNumber: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="grade">Grade level</Label>
+                <Input
+                  id="grade"
+                  inputMode="numeric"
+                  value={form.grade}
+                  onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                />
               </div>
+              <p className="text-sm text-muted-foreground">
+                A student ID is issued automatically and stays with this student. It cannot be edited later.
+              </p>
               <div className="space-y-1.5">
                 <Label htmlFor="guardianEmail">Guardian email</Label>
                 <Input
@@ -287,11 +259,31 @@ function StudentsPage() {
           <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
         <Input
           aria-label="Search students"
-          placeholder="Search by name or student ID"
+          aria-describedby="directory-search-hint"
+          placeholder="Search by name or full student ID"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9"
         />
+        <p id="directory-search-hint" className="sr-only">
+          A full student ID also finds withdrawn, transferred, graduated, and no-show students.
+        </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="directory-status">Show</Label>
+          <select
+            id="directory-status"
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as DirectoryStatus)}
+          >
+            <option value="active">Active students</option>
+            <option value="withdrawn">Withdrawn</option>
+            <option value="transferred_out">Transferred out</option>
+            <option value="graduated">Graduated</option>
+            <option value="no_show">No-show</option>
+            <option value="all">All records</option>
+          </select>
         </div>
         <StudentSortControl value={sortMode} onChange={setSortMode} />
         <span className="text-sm text-muted-foreground">{studentsQuery.isError || scopeFailed ? "Students couldn't be loaded." : scopeLoading || studentsQuery.isPending ? "Loading students…" : `${filtered.length} ${filtered.length === 1 ? "student" : "students"}`}</span>
@@ -310,13 +302,8 @@ function StudentsPage() {
         {isStaff && selected.length > 0 ? (
           <>
             <span className="text-sm text-muted-foreground">{selected.length} selected</span>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={removeStudents.isPending}
-              onClick={() => confirmRemove(selected)}
-            >
-              Remove selected
+            <Button size="sm" onClick={() => setExitIds(selected)}>
+              Withdraw selected
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
               Clear
@@ -328,11 +315,11 @@ function StudentsPage() {
         <div className="overflow-x-auto"><table className="w-full min-w-[40rem] table-fixed text-sm">
           <colgroup>
             {isStaff ? <col className="w-[5%]" /> : null}
-            <col className={isStaff ? "w-[26%]" : "w-[30%]"} />
+            <col className={isStaff ? "w-[24%]" : "w-[34%]"} />
             <col className="w-[18%]" />
-            <col className="w-[17%]" />
-            <col className={isStaff ? "w-[26%]" : "w-[35%]"} />
-            {isStaff ? <col className="w-[8%]" /> : null}
+            {isStaff ? <col className="w-[18%]" /> : null}
+            <col className={isStaff ? "w-[22%]" : "w-[48%]"} />
+            {isStaff ? <col className="w-[13%]" /> : null}
           </colgroup>
           <thead className="border-b border-border text-left text-xs text-muted-foreground">
             <tr>
@@ -348,7 +335,7 @@ function StudentsPage() {
               ) : null}
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Year group</th>
-              <th className="px-4 py-3">Student ID</th>
+              {isStaff ? <th className="px-4 py-3">Student ID</th> : null}
               <th className="px-4 py-3">Accounts &amp; guardian</th>
               {isStaff ? <th className="px-2 py-3"><span className="sr-only">Actions</span></th> : null}
             </tr>
@@ -356,7 +343,7 @@ function StudentsPage() {
           <tbody className="divide-y divide-border">
             {studentsQuery.isError || scopeFailed ? (
               <tr>
-                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6">
+                <td colSpan={isStaff ? 6 : 3} className="px-4 py-6">
                   <LoadError
                     label="Students couldn't be loaded. The directory stays hidden so a failed read is not treated as an empty school."
                     onRetry={() => {
@@ -368,13 +355,13 @@ function StudentsPage() {
               </tr>
             ) : scopeLoading || studentsQuery.isPending ? (
               <tr>
-                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6">
+                <td colSpan={isStaff ? 6 : 3} className="px-4 py-6">
                   <NotebookLoading className="text-sm text-muted-foreground">Loading students…</NotebookLoading>
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={isStaff ? 6 : 4} className="px-4 py-6 text-muted-foreground">
+                <td colSpan={isStaff ? 6 : 3} className="px-4 py-6 text-muted-foreground">
                   <NotebookEmpty>No students found.</NotebookEmpty>
                 </td>
               </tr>
@@ -382,7 +369,7 @@ function StudentsPage() {
               groups.flatMap((group) => [
                 <tr key={`grade-${group.grade}`} className="bg-secondary/30">
                   <td
-                    colSpan={isStaff ? 6 : 4}
+                    colSpan={isStaff ? 6 : 3}
                     className="px-4 py-2 text-xs font-medium text-muted-foreground"
                   >
                     Grade {group.grade} · {group.students.length}{" "}
@@ -412,29 +399,25 @@ function StudentsPage() {
                     {s.chinese_name ? (
                       <span className="mt-1 block text-xs font-normal text-muted-foreground">{s.chinese_name}</span>
                     ) : null}
+                    {s.student_status && s.student_status !== "active" ? (
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        {studentStatusLabel(s.student_status)}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="break-words px-4 py-3">Grade {s.grade_level}<span className="mt-1 block text-xs text-muted-foreground">{graduatingClassLabel(s.grade_level)}</span></td>
-                  <td
-                    className="px-4 py-3 text-muted-foreground"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isStaff ? (
-                      <Input
-                        key={s.student_number ?? ""}
-                        aria-label={`Student ID for ${s.first_name} ${s.last_name}`}
-                        className="h-8 w-full max-w-28"
-                        placeholder="Add ID"
-                        maxLength={20}
-                        defaultValue={s.student_number ?? ""}
-                        onBlur={(e) => {
-                          if (e.target.value.trim() === (s.student_number ?? "")) return;
-                          saveNumber.mutate({ id: s.id, value: e.target.value });
-                        }}
-                      />
-                    ) : (
-                      (s.student_number ?? "—")
-                    )}
-                  </td>
+                  {isStaff ? (
+                    <td className="px-4 py-3 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      {s.student_number ? (
+                        <>
+                          <span className="sr-only">{studentIdText(s)}</span>
+                          <span aria-hidden>{s.student_number}</span>
+                        </>
+                      ) : (
+                        "No ID"
+                      )}
+                    </td>
+                  ) : null}
                   <td className="break-words px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-col items-start gap-1.5">
                       <span className="text-xs text-muted-foreground">
@@ -450,14 +433,11 @@ function StudentsPage() {
                     <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        aria-label={`Remove ${s.first_name} ${s.last_name}`}
-                        title="Remove student"
-                        className="text-destructive"
-                        disabled={removeStudents.isPending}
-                        onClick={() => confirmRemove([s.id])}
+                        size="sm"
+                        aria-label={`Withdraw ${s.first_name} ${s.last_name}`}
+                        onClick={() => setExitIds([s.id])}
                       >
-                        <Trash2 className="size-4" />
+                        Withdraw
                       </Button>
                     </td>
                   ) : null}
@@ -474,6 +454,18 @@ function StudentsPage() {
         open={!!profileStudent}
         onOpenChange={(o) => {
           if (!o) setProfileStudent(null);
+        }}
+        onStudentChange={setProfileStudent}
+      />
+      <StudentExitDialog
+        students={allStudents.filter((student) => exitIds?.includes(student.id))}
+        open={!!exitIds}
+        onOpenChange={(open) => {
+          if (!open) setExitIds(null);
+        }}
+        onComplete={() => {
+          setExitIds(null);
+          setSelected([]);
         }}
       />
     </AppShell>

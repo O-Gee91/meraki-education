@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { compareStudentNames } from "@/lib/student-sort";
+import { normalizeStudentNumber } from "@/lib/student-ids";
 
 export type UnlinkedAccount = {
   user_id: string;
@@ -168,7 +169,7 @@ export async function linkAccountToStudent(
         first_name: first.slice(0, 60),
         last_name: last.slice(0, 60),
         grade_level: grade,
-        student_number: (input.student_number ?? "").trim().slice(0, 20) || null,
+        student_number: normalizeStudentNumber(input.student_number),
         user_id: input.user_id,
       })
       .select("id")

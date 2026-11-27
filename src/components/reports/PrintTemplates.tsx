@@ -196,7 +196,7 @@ export function PrintTemplates() {
           <table>
             <tr><th>Student</th><td>${escapeHtml(`${s.first_name} ${s.last_name}`)}</td>
               <th>Grade level</th><td>${s.grade_level}</td></tr>
-            <tr><th>Student #</th><td>${escapeHtml(s.student_number ?? "—")}</td>
+            <tr><th>Student #</th><td>${escapeHtml(s.student_number ?? "No ID")}</td>
               <th>Term</th><td>${escapeHtml(card?.term ?? klass?.term ?? "—")}</td></tr>
             <tr><th>Overall</th><td class="num">${pct == null ? "—" : `${pct.toFixed(1)}%`}</td>
               <th>Letter</th><td>${escapeHtml(card?.letter ?? (pct == null ? "—" : letterFor(pct, setup.scale)))}</td></tr>
