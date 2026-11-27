@@ -1,5 +1,6 @@
 import { isMissingWork } from "@/lib/missing-work";
-import { missingPointsFor } from "@/lib/late-penalty";
+import { classCalendarDate, missingPointsFor } from "@/lib/late-penalty";
+import { applyClassScope } from "@/lib/dashboard-upcoming";
 import { fetchDiscussionCompletions } from "@/lib/discussion-completion";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -72,7 +73,7 @@ function DashboardPage() {
     queryFn: () => fetchAll((from, to) =>
       supabase
         .from("classes")
-        .select("id, name, subject, period, room, term, grade_level, weights")
+        .select("id, name, subject, period, room, term, grade_level, weights, timezone")
         .order("period")
         .order("id")
         .range(from, to),
@@ -181,48 +182,50 @@ function DashboardPage() {
     : upcomingEventsRaw
   ).slice(0, 8);
 
+  const upcomingScopeKey = classIds ? [...classIds].sort().join(",") : "all";
   const { data: upcomingAssignments = [] } = useQuery({
-    queryKey: ["upcoming-assignments", user?.id, primaryRole, previewingStudent, today],
+    queryKey: ["upcoming-assignments", user?.id, primaryRole, previewingStudent, today, upcomingScopeKey],
     enabled: Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assignments")
-        .select("id, title, category, due_date, points_possible, class_id, classes(name)")
-        .not("due_date", "is", null)
-        .gte("due_date", today)
-        .order("due_date")
-        .limit(15);
+      const { data, error } = await applyClassScope(
+        supabase
+          .from("assignments")
+          .select("id, title, category, due_date, points_possible, class_id, classes(name)")
+          .not("due_date", "is", null)
+          .gte("due_date", today)
+          .order("due_date"),
+        classIds,
+        15,
+      );
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
   const { data: upcomingAssessments = [] } = useQuery({
-    queryKey: ["upcoming-assessments", user?.id, primaryRole, previewingStudent, today],
+    queryKey: ["upcoming-assessments", user?.id, primaryRole, previewingStudent, today, upcomingScopeKey],
     enabled: Boolean(user) && !loading,
     staleTime: READ_REUSE_MS,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assessments")
-        .select("id, title, kind, due_at, class_id, published, classes(name)")
-        .eq("published", true)
-        .not("due_at", "is", null)
-        .gte("due_at", new Date().toISOString())
-        .order("due_at")
-        .limit(15);
+      const { data, error } = await applyClassScope(
+        supabase
+          .from("assessments")
+          .select("id, title, kind, due_at, class_id, published, classes(name)")
+          .eq("published", true)
+          .not("due_at", "is", null)
+          .gte("due_at", new Date().toISOString())
+          .order("due_at"),
+        classIds,
+        15,
+      );
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
-  // Teacher mode: only work from their own classes.
-  const scopedAssignments = classIds
-    ? upcomingAssignments.filter((a) => classIds.has(a.class_id))
-    : upcomingAssignments;
-  const scopedAssessments = classIds
-    ? upcomingAssessments.filter((a) => classIds.has(a.class_id))
-    : upcomingAssessments;
+  const scopedAssignments = upcomingAssignments;
+  const scopedAssessments = upcomingAssessments;
 
   const upcoming = [
     ...scopedAssignments.map((a) => ({
@@ -276,7 +279,7 @@ function DashboardPage() {
           pointsEarned:
             grade.points_earned == null ? null : Number(grade.points_earned),
           markCode: markCodeFromComment(grade.comment),
-          missingPoints: grade.assignments ? missingPointsFor(grade.assignments) : undefined,
+          missingPoints: grade.assignments ? missingPointsFor(grade.assignments, klass.timezone) : undefined,
         })),
       setup,
     );
@@ -597,7 +600,7 @@ function MissingWorkCard() {
 }
 
 function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = classCalendarDate();
   const { previewingStudent } = useAuth();
   const { classIds: scopeIds } = useTeacherScope();
   const scopeKey = previewingStudent ? [...(scopeIds ?? [])].sort().join(",") : "";
@@ -609,7 +612,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
       const enrols = await fetchAll((from, to) =>
         supabase
           .from("enrollments")
-          .select("class_id, created_at")
+          .select("class_id, created_at, classes(timezone)")
           .eq("student_id", me!.id)
           .order("id")
           .range(from, to),
@@ -658,7 +661,7 @@ function MissingWorkRow({ me, label }: { me: { id: string }; label: string }) {
           assignment: a,
           grade: graded.find((g) => g.assignment_id === a.id),
           submitted: submitted.has(a.id),
-          today,
+          today: classCalendarDate(new Date(), enrols.find((e) => e.class_id === a.class_id)?.classes?.timezone),
           enrolledAt: enrols.find((e) => e.class_id === a.class_id)?.created_at ?? null,
         }),
       ).length;

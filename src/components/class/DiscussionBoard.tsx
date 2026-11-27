@@ -27,7 +27,8 @@ import { boundedScoreError, discussionTotalError } from "@/lib/score-limit";
 import { ScoreLimitAlert } from "@/components/class/ScoreLimitAlert";
 import { DraftStatus, readDraft, useAutosaveDraft } from "@/hooks/useAutosaveDraft";
 import { FormattedEditor, FormattedText } from "@/components/class/FormattedText";
-import { formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import { classCalendarDate } from "@/lib/late-penalty";
+import { discussionPastDue, formatZoned, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
 import { isWithinEnrollmentWindow } from "@/lib/assignment-status";
 import { withoutTestStudents } from "@/lib/student-sort";
 
@@ -495,7 +496,7 @@ export function DiscussionBoard({
               </div>
             </div>
             <FormattedText text={d.prompt} className="mt-3 max-w-prose" />
-            {openId === d.id && (isStaff || !isLocked(d)) && <Thread discussion={d} isStaff={isStaff} />}
+            {openId === d.id && (isStaff || !isLocked(d)) && <Thread discussion={d} isStaff={isStaff} timeZone={timeZone} />}
           </article>
         ))
       )}
@@ -630,7 +631,7 @@ function EditDiscussionDialog({ discussion: d, timeZone, categories, currentCate
   );
 }
 
-function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: boolean }) {
+function Thread({ discussion, isStaff, timeZone }: { discussion: Discussion; isStaff: boolean; timeZone: string }) {
   const { user, isAdmin, primaryRole, previewingStudent } = useAuth();
   const queryClient = useQueryClient();
   const threadId = discussion.thread_id ?? discussion.id;
@@ -768,7 +769,7 @@ function Thread({ discussion, isStaff }: { discussion: Discussion; isStaff: bool
       )}
 
       {view === "grade" && isStaff ? (
-        <GradeByStudent discussion={discussion} threadId={threadId} posts={posts} scores={scores} />
+        <GradeByStudent discussion={discussion} threadId={threadId} posts={posts} scores={scores} timeZone={timeZone} />
       ) : (
         <>
           {isStaff && authorIds.length > 0 && (
@@ -924,11 +925,13 @@ function GradeByStudent({
   threadId,
   posts,
   scores,
+  timeZone,
 }: {
   discussion: Discussion;
   threadId: string;
   posts: Post[];
   scores: Score[];
+  timeZone: string;
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1075,9 +1078,9 @@ function GradeByStudent({
           if (raw === undefined || raw.trim() === "") return false;
           return boundedScoreError(Number(raw), maxFor(d, !!p.parent_id), p.parent_id ? "reply" : "response") != null;
         });
-        const dueKey = d.due_at ?? (d.due_date ? `${d.due_date}T23:59:59` : null);
-        const pastDue = !!dueKey && new Date(dueKey).getTime() < Date.now() && isWithinEnrollmentWindow(
-          { created_at: d.created_at, due_date: dueKey },
+        const dueDate = d.due_date ?? (d.due_at ? classCalendarDate(new Date(d.due_at), timeZone) : null);
+        const pastDue = discussionPastDue(d, timeZone) && isWithinEnrollmentWindow(
+          { created_at: d.created_at, due_date: dueDate },
           { enrolledAt: st.enrolled_at },
         );
         const ds = resolveDiscussionState({ rootCount: main.length, replyCount: replies.length, requiredReplies: d.required_replies, pastDue, graded: total !== null });

@@ -1,5 +1,5 @@
 import { resolveWorkState } from "@/lib/coursework-state";
-import { missingMarkValue, type LatePenaltySettings } from "@/lib/late-penalty";
+import { classCalendarDate, missingMarkValue, type LatePenaltySettings } from "@/lib/late-penalty";
 import { useStudentPreviewId } from "@/hooks/useStudentPreview";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -564,6 +564,7 @@ function StaffCollectPanel({
     },
   });
   const marks = setup?.marks ?? [];
+  const classToday = classCalendarDate(new Date(), timeZone);
 
   const { data: grades = [] } = useQuery({
     queryKey: ["assignment-grades", assignment.id],
@@ -1573,13 +1574,14 @@ function StaffCollectPanel({
                                   // teacher records a status themselves.
                                   if (isMissingWork({
                                     assignment,
-                                    grade,
+                                    grade: grade?.is_draft ? null : grade,
                                     submitted: false,
+                                    today: classToday,
                                     enrolledAt: student.created_at ?? null,
                                     droppedAt: student.droppedAt ?? null,
                                   }))
                                     return <span className="inline-flex items-center gap-1 font-medium"><span className="size-1.5 rounded-full bg-warning" aria-hidden />Missing</span>;
-                                  return assignment.due_date < new Date().toISOString().slice(0, 10)
+                                  return assignment.due_date < classToday
                                     ? <span>Assigned</span>
                                     : <span>Not due yet</span>;
                                 }

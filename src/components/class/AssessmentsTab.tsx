@@ -52,7 +52,7 @@ import {
   CourseworkWindowFields,
   WindowBadge,
 } from "@/components/class/CourseworkWindowFields";
-import { isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
+import { dueDateEndIso, isoToZonedInput, zonedInputToIso } from "@/lib/coursework-window";
 import {
   REOPEN_DEFAULTS,
   ReopenOptions,
@@ -447,7 +447,7 @@ function NewAssessment({
         title,
         kind: form.kind,
         instructions: form.instructions.trim().slice(0, 2000) || null,
-        due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+        due_at: dueDateEndIso(form.due, timeZone),
         available_from: zonedInputToIso(form.availableFrom, timeZone),
         closes_at: zonedInputToIso(form.closesAt, timeZone),
         time_limit_minutes: form.limit ? Number(form.limit) : null,
@@ -686,7 +686,7 @@ function EditAssessment({
           title,
           kind: form.kind,
           instructions: form.instructions.trim().slice(0, 2000) || null,
-          due_at: form.due ? new Date(`${form.due}T23:59:00`).toISOString() : null,
+          due_at: dueDateEndIso(form.due, timeZone),
           available_from: zonedInputToIso(form.availableFrom, timeZone),
           closes_at: zonedInputToIso(form.closesAt, timeZone),
           time_limit_minutes: form.limit ? Number(form.limit) : null,

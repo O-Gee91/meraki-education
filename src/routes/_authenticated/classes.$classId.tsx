@@ -1,10 +1,11 @@
 import { SchoolCalendar } from "@/components/SchoolCalendar";
-import { missingMarkValue, missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
+import { classCalendarDate, missingMarkValue, type LatePenaltySettings } from "@/lib/late-penalty";
 import { isMissingWork } from "@/lib/missing-work";
 import { gradingAttentionSummary } from "@/lib/class-attention";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
 import { courseworkBucket, isDueSoon, needsCourseworkAttention } from "@/lib/coursework-view";
-import { todayKey } from "@/lib/assignment-status";
+import { officialAverage, printStanding } from "@/lib/official-average";
+import { columnPercents } from "@/lib/scored-percent";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -104,12 +105,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { notifyGradesPosted } from "@/lib/grade-notify.functions";
 
 import {
-  computeAverage,
-  findMark,
   isExtraCredit,
   letterFor,
   markCodeFromComment,
   parseGradingSetup,
+  roundPercent,
   EXTRA_CREDIT_CATEGORY,
 } from "@/lib/grading";
 
@@ -233,6 +233,7 @@ function ClassDetailPage() {
   const setup = parseGradingSetup(klass?.weights);
   // All start/end times are shown in the class's own time zone.
   const timeZone = classTimeZone(klass?.timezone);
+  const classToday = classCalendarDate(new Date(), timeZone);
   const categoryNames = setup.categories.map((c) => c.name).filter(Boolean);
   // Every class also gets a bonus bucket teachers can use however they like.
   const assignmentCategories = [
@@ -292,6 +293,10 @@ function ClassDetailPage() {
     ],
     gradebookSort,
     (row) => row.students,
+  );
+  const countedStudentIds = useMemo(
+    () => new Set(gradebookRoster.filter((row) => !isTestStudent(row.students) && !row.droppedAt).map((row) => row.student_id)),
+    [gradebookRoster],
   );
   const visibleGradebookRoster = gradebookRoster.filter((row) => {
     const query = gradebookSearch.trim().toLocaleLowerCase();
@@ -399,14 +404,17 @@ function ClassDetailPage() {
     gradebookRoster.find((r) => r.student_id === studentId);
   const enrolledAtFor = (studentId: string) =>
     gradebookEnrollmentFor(studentId)?.created_at ?? null;
-  const missingFor = (studentId: string, assignment: { id: string; due_date?: string | null; created_at?: string | null; status?: string | null }) =>
-    isMissingWork({
+  const missingFor = (studentId: string, assignment: { id: string; due_date?: string | null; created_at?: string | null; status?: string | null }) => {
+    const grade = gradeFor(studentId, assignment.id);
+    return isMissingWork({
       assignment,
-      grade: gradeFor(studentId, assignment.id),
+      grade: grade?.is_draft ? null : grade,
       submitted: submittedKeys.has(`${studentId}:${assignment.id}`),
+      today: classToday,
       enrolledAt: enrolledAtFor(studentId),
       droppedAt: gradebookEnrollmentFor(studentId)?.droppedAt ?? null,
     });
+  };
 
   // Per-assignment counts for the Coursework tab quick filters (test accounts excluded).
   const { courseworkMissing, courseworkUngraded } = useMemo(() => {
@@ -421,29 +429,19 @@ function ClassDetailPage() {
       for (const sid of realStudents) {
         const g = grades.find((x) => x.student_id === sid && x.assignment_id === a.id);
         const submitted = submittedKeys.has(`${sid}:${a.id}`);
-        if (isMissingWork({ assignment: a, grade: g, submitted, enrolledAt: enrolledAtFor(sid), droppedAt: gradebookEnrollmentFor(sid)?.droppedAt ?? null })) m++;
+        if (isMissingWork({ assignment: a, grade: g?.is_draft ? null : g, submitted, today: classToday, enrolledAt: enrolledAtFor(sid), droppedAt: gradebookEnrollmentFor(sid)?.droppedAt ?? null })) m++;
         if (submitted && (g?.points_earned == null) && !markCodeFromComment(g?.comment)) u++;
       }
       missing[a.id] = m;
       ungraded[a.id] = u;
     }
     return { courseworkMissing: missing, courseworkUngraded: ungraded };
-  }, [assignments, grades, gradebookRoster, submittedKeys]);
+  }, [assignments, grades, gradebookRoster, submittedKeys, classToday]);
 
   function studentAverage(studentId: string) {
-    return computeAverage(
-      assignments.map((a) => {
-        const g = gradeFor(studentId, a.id);
-        return {
-          category: a.category,
-          pointsPossible: Number(a.points_possible),
-          pointsEarned: g?.points_earned == null ? null : Number(g.points_earned),
-          markCode: markCodeFromComment(g?.comment),
-          missingPoints: missingPointsFor(a, timeZone),
-        };
-      }),
-      setup,
-    );
+    // Posted scores only. A draft on the cell does not move this percentage
+    // until the teacher posts it, so it matches the guardian's number.
+    return officialAverage(assignments, grades, studentId, setup, timeZone);
   }
 
   const gradebookRows = useMemo(() => {
@@ -459,27 +457,7 @@ function ClassDetailPage() {
       .filter((assignment) => !gradebookDueFrom || (assignment.due_date ?? "") >= gradebookDueFrom)
       .filter((assignment) => !gradebookDueTo || (assignment.due_date ?? "") <= gradebookDueTo)
       .map((assignment) => {
-        const possible = Number(assignment.points_possible);
-        // Honour special marks the same way each student's average does:
-        // "M" (missing) counts as zero, excused work is excluded entirely.
-        const countedScores = possible > 0
-          ? grades.flatMap((grade) => {
-              if (grade.assignment_id !== assignment.id) return [];
-              if (testerIds.has(grade.student_id)) return [];
-              const mark = findMark(markCodeFromComment(grade.comment), setup.marks);
-              let earned: number | null =
-                grade.points_earned == null ? null : Number(grade.points_earned);
-              if (mark) {
-                if (mark.behavior === "exclude") return [];
-                if (mark.behavior === "zero") earned = 0;
-                if (mark.behavior === "value") {
-                  earned = (Number(mark.value ?? 0) / 100) * possible;
-                }
-              }
-              if (earned == null) return [];
-              return [(earned / possible) * 100];
-            })
-          : [];
+        const countedScores = columnPercents(assignment, grades, countedStudentIds, setup.marks, timeZone);
         const average =
           countedScores.length > 0
             ? countedScores.reduce((sum, percentage) => sum + percentage, 0) /
@@ -523,7 +501,8 @@ function ClassDetailPage() {
     gradebookDueTo,
     gradebookSortDirection,
     setup,
-    testerIds,
+    countedStudentIds,
+    timeZone,
   ]);
 
   const perPage = gradebookPerPage;
@@ -563,8 +542,19 @@ function ClassDetailPage() {
     const bodyRows = visibleGradebookRoster
       .filter((row) => !testerIds.has(row.student_id))
       .map((row) => {
-        const average = studentAverage(row.student_id);
-        const missingCount = gradebookRows.filter(({ assignment }) => missingFor(row.student_id, assignment)).length;
+        const printed = printStanding({
+          assignments,
+          grades,
+          studentId: row.student_id,
+          setup,
+          timeZone,
+          today: classToday,
+          submitted: (assignmentId) => submittedKeys.has(`${row.student_id}:${assignmentId}`),
+          enrolledAt: enrolledAtFor(row.student_id),
+          droppedAt: gradebookEnrollmentFor(row.student_id)?.droppedAt ?? null,
+        });
+        const average = printed.percent;
+        const missingCount = printed.missing;
         const cells = gradebookRows
           .map(({ assignment }) => {
             const grade = gradeFor(row.student_id, assignment.id);
@@ -590,7 +580,7 @@ function ClassDetailPage() {
       ])}
       <table><tr><th>Student</th><th>Current grade</th><th>Missing</th>${headerCells}</tr>
       ${bodyRows || `<tr><td colspan="${gradebookRows.length + 3}" class="muted">No students match.</td></tr>`}</table>
-      <p class="muted">Missing = marked M, or past due with nothing turned in · blank = not yet graded. Current grade follows the class grading setup.</p>`,
+      <p class="muted">Missing = marked M, or past due with nothing turned in · blank = not yet graded. The current grade counts posted scores only, so a draft on a cell does not change it until you post. Current grade follows the class grading setup.</p>`,
     );
     printHtml(html);
   }
@@ -705,7 +695,7 @@ function ClassDetailPage() {
         studentAverage={studentAverage}
         teacherToday
         hideGrades={hideOverviewGrades}
-        dateKey={todayKey()}
+        dateKey={classToday}
         missingByStudent={snapshotMissing}
         gradingSummary={snapshotGrading}
         onGradingAttention={openGradingAttention}
@@ -797,6 +787,7 @@ function ClassDetailPage() {
             isStaff={isStaff}
             useIds={useIds}
             studentAverage={studentAverage}
+            dateKey={classToday}
           />}
           {!showOverview && assignments.length > 0 && (
             <details className="group/avg mt-6 rounded-lg border border-border bg-card">
@@ -811,6 +802,7 @@ function ClassDetailPage() {
                   grades={grades}
                   setup={setup}
                   isStaff={isStaff}
+                  timeZone={timeZone}
                   studentIds={roster.filter((r) => !testerIds.has(r.student_id)).map((r) => r.student_id)}
                 />
               </div>
@@ -888,6 +880,7 @@ function ClassDetailPage() {
                      onHideGrades={setHideOverviewGrades}
                      onStudent={setGradebookReportStudentId}
                      onCoursework={() => setClassTab("coursework")}
+                     today={classToday}
                      useIds={useIds}
                      onToggleIds={toggleIds}
                    />
@@ -1010,7 +1003,7 @@ function ClassDetailPage() {
                                    <span className="text-muted-foreground">—</span>
                                  ) : (
                                     <div className="inline-flex flex-wrap items-center justify-center gap-1">
-                                      <span className={`size-1.5 shrink-0 rounded-full ${average >= 80 ? "bg-success" : average >= 70 ? "bg-muted-foreground/60" : "bg-warning"}`} aria-hidden />
+                                      <span className={`size-1.5 shrink-0 rounded-full ${roundPercent(average) >= 80 ? "bg-success" : roundPercent(average) >= 70 ? "bg-muted-foreground/60" : "bg-warning"}`} aria-hidden />
                                       <span className="font-semibold tabular-nums text-foreground">
                                        {average.toFixed(1)}%
                                      </span>
@@ -1086,7 +1079,8 @@ function ClassDetailPage() {
                className={klass?.name ?? "Class"}
                 student={gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students ?? null}
                 assignments={assignments}
-                grades={grades.filter((g) => !g.is_draft)}
+                grades={grades}
+               timeZone={timeZone}
                setup={setup}
                displayName={rosterDisplayName(gradebookRoster.find((row) => row.student_id === gradebookReportStudentId)?.students, useIds)}
                enrolledAt={enrolledAtFor(gradebookReportStudentId ?? "")}
@@ -1191,11 +1185,12 @@ function ClassDetailPage() {
             assignments={assignments}
             grades={grades}
             setup={setup}
+            timeZone={timeZone}
           />
         </TabsContent>
 
         <TabsContent value="attendance">
-          <AttendanceTab classId={classId} />
+          <AttendanceTab classId={classId} timeZone={timeZone} />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-4">
@@ -1428,7 +1423,7 @@ function AssignmentsTab({
       droppedAt: r.droppedAt ?? null,
     }));
 
-  const today = todayKey();
+  const today = classCalendarDate(new Date(), timeZone);
   const draftGradeCount = (id: string) =>
     grades.filter((g) => g.assignment_id === id && g.is_draft).length;
   const bucketOf = (a: AssignmentRow) =>
@@ -2417,6 +2412,7 @@ function RosterTab({
   assignments,
   grades,
   setup,
+  timeZone,
 }: {
   classId: string;
   isStaff: boolean;
@@ -2438,6 +2434,7 @@ function RosterTab({
     comment: string | null;
   }[];
   setup: ReturnType<typeof parseGradingSetup>;
+  timeZone: string;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
@@ -2870,6 +2867,7 @@ function RosterTab({
         assignments={assignments}
         grades={grades}
         setup={setup}
+        timeZone={timeZone}
         displayName={rosterDisplayName(reportStudent, useIds)}
         enrolledAt={(roster.find((r) => r.student_id === reportStudentId) as { created_at?: string | null } | undefined)?.created_at ?? null}
       />

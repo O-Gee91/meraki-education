@@ -32,6 +32,16 @@ function localDate(now: Date, timezone: string) {
   }
 }
 
+/**
+ * Class calendar date (en-CA, YYYY-MM-DD) in `classes.timezone`.
+ * Missing work, the grace day, and attendance's default day use this
+ * instead of the UTC date.
+ */
+export function classCalendarDate(now: Date = new Date(), timezone?: string | null) {
+  if (Number.isNaN(now.getTime())) return "";
+  return localDate(now, timezone || DEFAULT_TIMEZONE);
+}
+
 /** Full days late after the due date ends (0 on or before the due date). */
 export function daysLate(dueDate: string | null | undefined, now: Date, timezone = DEFAULT_TIMEZONE) {
   if (!dueDate) return 0;

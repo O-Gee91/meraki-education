@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/school";
 import { StudentSortControl, useStudentSort } from "@/components/students/StudentSortControl";
 import { isTestStudent, sortStudents } from "@/lib/student-sort";
+import { classCalendarDate } from "@/lib/late-penalty";
 import { isMissingWork } from "@/lib/missing-work";
 import { NotebookEmpty, NotebookLoading, NotebookMarginNote } from "@/components/NotebookDecorations";
 import { withDiscussionSubmissions } from "@/lib/discussion-completion";
@@ -57,6 +58,8 @@ type GradeRow = {
   assignment_id: string;
   student_id: string;
   points_earned: number | null;
+  comment?: string | null;
+  is_draft?: boolean | null;
 };
 
 type Status = "green" | "yellow" | "red" | "none";
@@ -158,8 +161,7 @@ export function PulseDashboard({
       return !v;
     });
   };
-  const today = new Date();
-  const todayKey = dateKey ?? today.toISOString().slice(0, 10);
+  const todayKey = dateKey ?? classCalendarDate(new Date());
 
   const { data: myStudentIds = new Set<string>() } = useQuery({
     queryKey: ["pulse-my-students", user?.id],
@@ -229,8 +231,8 @@ export function PulseDashboard({
 
   // Teacher-only snapshot signals (last 14 days attendance/behavior, last 7 days wellbeing).
   const rosterIds = visibleRoster.map((r) => r.student_id);
-  const since14 = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
-  const since7 = new Date(today.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+  const since14 = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+  const since7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
 
   const attendanceQuery = useQuery({
     queryKey: ["pulse-attendance", classId, since14],
@@ -316,7 +318,7 @@ export function PulseDashboard({
     const g = grades.find((x) => x.student_id === studentId && x.assignment_id === assignment.id);
     return isMissingWork({
       assignment,
-      grade: g,
+      grade: g?.is_draft ? null : g,
       submitted: submissions.some((s) => s.assignment_id === assignment.id && s.student_id === studentId),
       today: todayKey,
       enrolledAt: roster.find((r) => r.student_id === studentId)?.created_at ?? null,

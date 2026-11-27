@@ -1,19 +1,23 @@
+import { roundPercent } from "@/lib/grading";
+
 export function percent(earned: number, possible: number) {
   if (!possible) return 0;
   return (earned / possible) * 100;
 }
 
 export function letterGrade(pct: number) {
-  if (pct >= 90) return "A";
-  if (pct >= 80) return "B";
-  if (pct >= 70) return "C";
-  if (pct >= 60) return "D";
+  const rounded = roundPercent(pct);
+  if (rounded >= 90) return "A";
+  if (rounded >= 80) return "B";
+  if (rounded >= 70) return "C";
+  if (rounded >= 60) return "D";
   return "F";
 }
 
 export function gradeTone(pct: number) {
-  if (pct >= 80) return "text-success";
-  if (pct >= 70) return "text-warning";
+  const rounded = roundPercent(pct);
+  if (rounded >= 80) return "text-success";
+  if (rounded >= 70) return "text-warning";
   return "text-destructive";
 }
 

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
+import { DEFAULT_TIMEZONE, missingPointsFor, type LatePenaltySettings } from "@/lib/late-penalty";
+import { scoredPercent } from "@/lib/scored-percent";
 import { ChevronDown, Info } from "lucide-react";
 import {
   computeAverage,
-  findMark,
   isExtraCredit,
   markCodeFromComment,
   type GradingSetup,
@@ -23,6 +23,7 @@ type Grade = {
   student_id: string;
   points_earned: number | null;
   comment: string | null;
+  is_draft?: boolean | null;
 };
 
 type Props = {
@@ -31,6 +32,7 @@ type Props = {
   setup: GradingSetup;
   isStaff: boolean;
   studentIds: string[];
+  timeZone?: string | null;
 };
 
 export function fmtPct(pct: number | null | undefined) {
@@ -55,26 +57,12 @@ function Pct({ value, size = "sm" }: { value: number | null; size?: "sm" | "lg" 
   );
 }
 
-/** Percentage one grade row contributes, honouring special marks. null = not counted. */
-function gradePct(g: Grade, a: Assignment, setup: GradingSetup): number | null {
-  const possible = Number(a.points_possible) || 0;
-  if (!possible) return null;
-  const mark = findMark(markCodeFromComment(g.comment), setup.marks);
-  if (mark) {
-    if (mark.behavior === "exclude") return null;
-    if (mark.behavior === "zero") return 0;
-    return Number(mark.value ?? 0);
-  }
-  if (g.points_earned == null) return null;
-  return (Number(g.points_earned) / possible) * 100;
-}
-
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
 
-export function CourseworkAverages({ assignments, grades, setup, isStaff, studentIds }: Props) {
+export function CourseworkAverages({ assignments, grades, setup, isStaff, studentIds, timeZone = DEFAULT_TIMEZONE }: Props) {
   const inRoster = useMemo(() => new Set(studentIds), [studentIds]);
   const relevant = useMemo(
-    () => (isStaff ? grades.filter((g) => inRoster.has(g.student_id)) : grades),
+    () => grades.filter((g) => !g.is_draft && (!isStaff || inRoster.has(g.student_id))),
     [grades, isStaff, inRoster],
   );
 
@@ -83,7 +71,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
       assignments.map((a) => {
         const pcts = relevant
           .filter((g) => g.assignment_id === a.id)
-          .map((g) => gradePct(g, a, setup))
+          .map((g) => scoredPercent(a, g, setup.marks, timeZone))
           .filter((p): p is number => p != null);
         return {
           a,
@@ -93,7 +81,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
           graded: pcts.length,
         };
       }),
-    [assignments, relevant, setup],
+    [assignments, relevant, setup, timeZone],
   );
 
   const rowsFor = (studentId: string | null, list: Assignment[]) =>
@@ -104,7 +92,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
         pointsPossible: Number(a.points_possible),
         pointsEarned: g?.points_earned ?? null,
         markCode: markCodeFromComment(g?.comment),
-        missingPoints: missingPointsFor(a),
+        missingPoints: missingPointsFor(a, timeZone),
       };
     });
 
@@ -116,7 +104,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
         .filter((p): p is number => p != null),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, relevant, setup, isStaff, studentIds]);
+  }, [assignments, relevant, setup, isStaff, studentIds, timeZone]);
 
   const categories = useMemo(() => {
     const names = [...new Set(assignments.map((a) => a.category))].filter((c) => !isExtraCredit(c));
@@ -133,7 +121,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
       return { name, avg, count: list.length };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, relevant, setup, isStaff, studentIds]);
+  }, [assignments, relevant, setup, isStaff, studentIds, timeZone]);
 
   const long = items.length > 8;
   const [listOpen, setListOpen] = useState(isStaff ? items.length <= 15 : !long);
@@ -218,7 +206,7 @@ export function CourseworkAverages({ assignments, grades, setup, isStaff, studen
       </div>
 
       <p className="inline-flex items-center gap-1 pb-4 text-xs text-muted-foreground">
-        <Info className="h-3.5 w-3.5" /> Excused work isn't counted; Missing counts as 0.
+        <Info className="h-3.5 w-3.5" /> Excused work isn't counted. Missing follows the late penalty, or counts as 0 when no penalty is set.{isStaff ? " Draft scores stay off this average until posted." : ""}
       </p>
     </section>
   );

@@ -98,10 +98,17 @@ export function quickScoreCellValue(q: QuickScore, pointsPossible: number) {
   return String(Math.round(pts * 100) / 100);
 }
 
+/** Same one-decimal rounding the percent label uses (`toFixed(1)`). */
+export function roundPercent(pct: number) {
+  if (!Number.isFinite(pct)) return pct;
+  return Number(pct.toFixed(1));
+}
+
 export function letterFor(pct: number, scale: GradeScaleBand[]) {
+  const rounded = roundPercent(pct);
   const sorted = [...scale].sort((a, b) => Number(b.min) - Number(a.min));
   for (const band of sorted) {
-    if (pct >= Number(band.min)) return band.letter;
+    if (rounded >= Number(band.min)) return band.letter;
   }
   return sorted.at(-1)?.letter ?? "—";
 }

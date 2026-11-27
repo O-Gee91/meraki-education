@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AnswerKey, EssayIssue, PaperQuestion, QuestionKind } from "@/lib/assessments";
 import { ApiError, apiErrorFromDb, parseApiInput } from "@/lib/api-error";
+import { classTimeZone, isLateAt } from "@/lib/coursework-window";
+import { classCalendarDate } from "@/lib/late-penalty";
 import { isSystemGradeComment } from "@/lib/grading";
 import { boundedScoreError, overTotalScoreMessage, scoreExceedsTotal } from "@/lib/score-limit";
 
@@ -141,7 +143,7 @@ export const submitAssessment = createServerFn({ method: "POST" })
 
     const { data: assessment, error: aErr } = await context.supabase
       .from("assessments")
-      .select("id, class_id, assignment_id, published, available_from, closes_at")
+      .select("id, class_id, assignment_id, published, available_from, closes_at, due_at")
       .eq("id", data.assessmentId)
       .maybeSingle();
     if (aErr) throw apiErrorFromDb(aErr);
@@ -154,7 +156,14 @@ export const submitAssessment = createServerFn({ method: "POST" })
     const now = Date.now();
     if (assessment.available_from && now < Date.parse(assessment.available_from))
       throw new ApiError("forbidden", "This assessment is not yet available");
-    const isLate = Boolean(assessment.closes_at && now > Date.parse(assessment.closes_at));
+    const { data: schoolClass } = await context.supabase
+      .from("classes")
+      .select("timezone")
+      .eq("id", assessment.class_id)
+      .maybeSingle();
+    const zone = classTimeZone(schoolClass?.timezone);
+    const dueDay = assessment.due_at ? classCalendarDate(new Date(assessment.due_at), zone) : null;
+    const isLate = isLateAt(now, assessment.closes_at, dueDay, zone);
 
     const { data: enrollment, error: enrollmentErr } = await context.supabase
       .from("enrollments")
@@ -204,6 +213,7 @@ export const submitAssessment = createServerFn({ method: "POST" })
         points_awarded: result?.pointsAwarded ?? null,
       };
     });
+    if ((questions ?? []).length === 0) needsReview = true;
 
     // Late work does not reach the gradebook until a teacher accepts it.
     // Check the column before anything is saved so a too-small total cannot
@@ -242,7 +252,10 @@ export const submitAssessment = createServerFn({ method: "POST" })
       const { error: ansErr } = await supabaseAdmin
         .from("assessment_answers")
         .insert(graded.map((g) => ({ ...g, submission_id: submission.id })));
-      if (ansErr) throw apiErrorFromDb(ansErr);
+      if (ansErr) {
+        await supabaseAdmin.from("assessment_submissions").delete().eq("id", submission.id);
+        throw apiErrorFromDb(ansErr);
+      }
     }
 
     if (assessment.assignment_id && !needsReview && !isLate) {

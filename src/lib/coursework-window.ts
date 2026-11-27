@@ -50,6 +50,13 @@ function offsetMs(ms: number, timeZone: string) {
   return asUtc - ms;
 }
 
+/** End of a due date (23:59) in the class zone, stored as an ISO instant. */
+export function dueDateEndIso(due: string | null | undefined, timeZone: string): string | null {
+  const day = due?.trim().slice(0, 10) ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  return zonedInputToIso(`${day}T23:59`, timeZone);
+}
+
 /** "YYYY-MM-DDTHH:mm" typed in the class zone -> ISO instant. */
 export function zonedInputToIso(local: string, timeZone: string): string | null {
   if (!local) return null;
@@ -136,8 +143,26 @@ export function isLateAt(
     if (!Number.isNaN(end)) return submittedAtMs > end;
   }
   if (dueDate) {
-    const end = zonedInputToIso(`${dueDate}T23:59`, timeZone);
+    const end = dueDateEndIso(dueDate, timeZone);
     if (end) return submittedAtMs > Date.parse(end);
   }
   return false;
+}
+
+/**
+ * A discussion is past due after its due instant, or after 23:59 on the due
+ * date in the class zone when only a calendar due date is stored.
+ */
+export function discussionPastDue(
+  discussion: { due_at?: string | null; due_date?: string | null },
+  timeZone: string,
+  now = Date.now(),
+): boolean {
+  if (discussion.due_at) {
+    const end = Date.parse(discussion.due_at);
+    return Number.isFinite(end) && now > end;
+  }
+  const endIso = dueDateEndIso(discussion.due_date, timeZone);
+  if (!endIso) return false;
+  return now > Date.parse(endIso);
 }
