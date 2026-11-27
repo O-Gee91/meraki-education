@@ -24,12 +24,14 @@ type Props = {
   onCoursework: () => void;
   classes?: RailClass[];
   classId?: string;
+  useIds?: boolean;
+  onToggleIds?: () => void;
 };
 
 const pct = (value: number | null) => value == null ? "—" : value.toFixed(1);
 const shortDate = (d: string | null) => { if (!d) return "—"; const [, m, day] = d.slice(0, 10).split("-"); return `${Number(m)}/${Number(day)}`; };
 
-export function GradebookOverview({ students, visibleStudents, assignments, allAssignments, setup, scoredCounts, ungradedCounts, hideGrades, onHideGrades, onStudent, onCoursework, classes = [], classId }: Props) {
+export function GradebookOverview({ students, visibleStudents, assignments, allAssignments, setup, scoredCounts, ungradedCounts, hideGrades, onHideGrades, onStudent, onCoursework, classes = [], classId, useIds = false, onToggleIds }: Props) {
   const [selectedBand, setSelectedBand] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
   const summary = useMemo(() => summarizeOverview(students, setup), [students, setup]);
@@ -96,7 +98,10 @@ export function GradebookOverview({ students, visibleStudents, assignments, allA
                 {!hideGrades && <tr><td colSpan={3} className="px-3 pb-2"><NotebookMarginNote percent={summary.mean} /></td></tr>}
               </tfoot>
             </table>
-            <div className="border-t border-border px-3 py-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-3 py-2">
+              {onToggleIds && <Button variant="link" size="sm" className="h-auto p-0" onClick={onToggleIds} aria-pressed={useIds}>
+                {useIds ? "Show student names" : "Show student IDs"}
+              </Button>}
               <Button variant="link" size="sm" className="h-auto p-0" onClick={() => { onHideGrades(!hideGrades); setSelectedBand(null); }} aria-pressed={hideGrades}>
                 {hideGrades ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}{hideGrades ? "Show class grades" : "Hide class grades"}
               </Button>

@@ -869,6 +869,8 @@ function ClassDetailPage() {
                      onHideGrades={setHideOverviewGrades}
                      onStudent={setGradebookReportStudentId}
                      onCoursework={() => setClassTab("coursework")}
+                     useIds={useIds}
+                     onToggleIds={toggleIds}
                    />
                  ) : gradebookRows.length === 0 ? (
                   <p className="p-8 text-center text-sm text-muted-foreground">
